@@ -5,6 +5,73 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
+export async function addOrderComment(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const body = String(formData.get("body") ?? "").trim();
+
+  if (!orderId || !body) {
+    redirect("/orders?error=" + encodeURIComponent("اكتب التعليق الأول"));
+  }
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login");
+  }
+
+  // اسم كاتب التعليق من جدول المستخدمين، ولو مش موجود نستخدم الإيميل
+  const { data: appUser } = await supabase
+    .from("app_users")
+    .select("full_name")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+  const authorName = appUser?.full_name || user.email || "غير معروف";
+
+  const { error } = await supabase.from("order_comments").insert({
+    order_id: orderId,
+    author_name: authorName,
+    body,
+  });
+
+  if (error) {
+    redirect(
+      "/orders?error=" +
+        encodeURIComponent("معرفناش نسجل التعليق: " + error.message)
+    );
+  }
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
+  redirect("/orders");
+}
+
+export async function deleteOrderComment(formData: FormData) {
+  const commentId = String(formData.get("comment_id") ?? "");
+  if (!commentId) {
+    redirect("/orders");
+  }
+
+  const supabase = await createClient();
+
+  const { error, count } = await supabase
+    .from("order_comments")
+    .delete({ count: "exact" })
+    .eq("id", commentId);
+
+  if (error || count === 0) {
+    redirect(
+      "/orders?error=" +
+        encodeURIComponent("معرفناش نمسح التعليق — اتأكد إن عندك صلاحية")
+    );
+  }
+
+  revalidatePath("/orders");
+  redirect("/orders");
+}
+
 export async function updateShippingPrice(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   const shippingPrice = Number(formData.get("shipping_price"));

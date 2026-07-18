@@ -6,7 +6,12 @@ import {
   formatMoney,
   orderStatusBadge,
 } from "@/lib/format";
-import { updateOrderStatus } from "./[id]/actions";
+import {
+  addOrderComment,
+  deleteOrderComment,
+  updateOrderStatus,
+} from "./[id]/actions";
+import { OrderComments } from "@/components/OrderComments";
 
 type OrderRow = {
   id: string;
@@ -16,6 +21,12 @@ type OrderRow = {
   shipping_price: number;
   customers: { full_name: string | null } | null;
   order_items: { quantity: number; sale_price_at_order: number }[];
+  order_comments: {
+    id: string;
+    author_name: string;
+    body: string;
+    created_at: string;
+  }[];
 };
 
 export default async function OrdersPage({
@@ -38,9 +49,10 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, shipping_price, customers(full_name), order_items(quantity, sale_price_at_order)"
+      "id, order_number, order_status, order_date, shipping_price, customers(full_name), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
-    .eq("archived", showArchived);
+    .eq("archived", showArchived)
+    .order("created_at", { referencedTable: "order_comments", ascending: true });
 
   if (status) {
     query = query.eq("order_status", status);
@@ -233,6 +245,14 @@ export default async function OrdersPage({
                         >
                           فتح
                         </Link>
+                        <OrderComments
+                          orderId={order.id}
+                          orderNumber={order.order_number ?? ""}
+                          comments={order.order_comments}
+                          isAdmin={!!isAdmin}
+                          addAction={addOrderComment}
+                          deleteAction={deleteOrderComment}
+                        />
                       </div>
                     </td>
                   </tr>
