@@ -1,11 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
+import { addCashTransaction } from "./actions";
 
 type CashRow = {
   id: string;
   direction: string;
   amount: number;
   source_type: string | null;
+  description: string | null;
   transaction_date: string | null;
   orders: { order_number: string | null } | null;
   expenses: { category: string | null; description: string | null } | null;
@@ -14,10 +16,13 @@ type CashRow = {
 const SOURCE_LABELS: Record<string, string> = {
   expense: "مصروف",
   order: "أوردر",
-  manual: "يدوي",
 };
 
 function sourceLabel(row: CashRow) {
+  if (row.source_type === "manual") {
+    const base = row.direction === "in" ? "إيداع يدوي" : "سحب يدوي";
+    return row.description ? `${base}: ${row.description}` : base;
+  }
   const base = SOURCE_LABELS[row.source_type ?? ""] ?? row.source_type ?? "—";
   if (row.expenses) {
     return `${base}: ${row.expenses.category ?? ""}${
@@ -30,8 +35,15 @@ function sourceLabel(row: CashRow) {
   return base;
 }
 
-export default async function CashPage() {
+export default async function CashPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; saved?: string }>;
+}) {
+  const { error: actionError, saved } = await searchParams;
   const supabase = await createClient();
+
+  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const [totalsResult, rowsResult] = await Promise.all([
     supabase
@@ -41,7 +53,7 @@ export default async function CashPage() {
     supabase
       .from("cash_transactions")
       .select(
-        "id, direction, amount, source_type, transaction_date, orders(order_number), expenses(category, description)"
+        "id, direction, amount, source_type, description, transaction_date, orders(order_number), expenses(category, description)"
       )
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -96,6 +108,86 @@ export default async function CashPage() {
           </p>
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
+      {saved && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          تم تسجيل الحركة في الخزنة
+        </div>
+      )}
+
+      {isAdmin && (
+        <form
+          action={addCashTransaction}
+          className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
+        >
+          <div className="flex flex-col gap-1">
+            <label htmlFor="direction" className="text-xs text-gray-500">
+              النوع
+            </label>
+            <select
+              id="direction"
+              name="direction"
+              required
+              defaultValue=""
+              className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            >
+              <option value="" disabled>
+                اختار
+              </option>
+              <option value="in">إيداع (فلوس داخلة)</option>
+              <option value="out">سحب (فلوس خارجة)</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="amount" className="text-xs text-gray-500">
+              المبلغ (جنيه)
+            </label>
+            <input
+              id="amount"
+              name="amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              required
+              className="w-28 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            />
+          </div>
+          <div className="flex min-w-48 flex-1 flex-col gap-1">
+            <label htmlFor="description" className="text-xs text-gray-500">
+              الوصف (زي: إيداع شريك، سحب أرباح...)
+            </label>
+            <input
+              id="description"
+              name="description"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="transaction_date" className="text-xs text-gray-500">
+              التاريخ
+            </label>
+            <input
+              id="transaction_date"
+              name="transaction_date"
+              type="date"
+              defaultValue={new Date().toISOString().slice(0, 10)}
+              required
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+          >
+            تسجيل
+          </button>
+        </form>
+      )}
 
       {transactions.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">

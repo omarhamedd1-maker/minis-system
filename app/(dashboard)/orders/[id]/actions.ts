@@ -92,8 +92,16 @@ export async function deleteOrder(formData: FormData) {
     );
   };
 
+  // الأوردرات القديمة اللي اتسجلت من غير خصم مخزون ملهاش حركات — فمنرجعش ليها مخزون
+  const { data: orderMovements } = await supabase
+    .from("stock_movements")
+    .select("id")
+    .eq("related_order_id", orderId)
+    .limit(1);
+  const hadStockMovements = (orderMovements ?? []).length > 0;
+
   // 1) نرجّع المخزون اللي الأوردر خصمه، ونسجل حركة تعويضية في السجل
-  for (const item of order.order_items) {
+  for (const item of hadStockMovements ? order.order_items : []) {
     if (!item.variant_id || item.quantity <= 0) continue;
 
     const { data: variant } = await supabase

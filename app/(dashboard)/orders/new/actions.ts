@@ -18,6 +18,8 @@ export async function createOrder(formData: FormData) {
     Number.isFinite(shippingPriceRaw) && shippingPriceRaw > 0
       ? shippingPriceRaw
       : 0;
+  // أوردر قديم من قبل السيستم: بنسجله من غير ما نلمس المخزون
+  const skipStock = formData.get("skip_stock") === "1";
 
   const items: { variantId: string; quantity: number }[] = [];
   for (let i = 0; i < MAX_ITEMS; i++) {
@@ -123,17 +125,19 @@ export async function createOrder(formData: FormData) {
       );
     }
 
-    await supabase.from("stock_movements").insert({
-      variant_id: item.variantId,
-      change_quantity: -item.quantity,
-      reason: "أوردر يدوي",
-      related_order_id: order.id,
-    });
+    if (!skipStock) {
+      await supabase.from("stock_movements").insert({
+        variant_id: item.variantId,
+        change_quantity: -item.quantity,
+        reason: "أوردر يدوي",
+        related_order_id: order.id,
+      });
 
-    await supabase
-      .from("product_variants")
-      .update({ quantity_on_hand: variant.quantity_on_hand - item.quantity })
-      .eq("id", item.variantId);
+      await supabase
+        .from("product_variants")
+        .update({ quantity_on_hand: variant.quantity_on_hand - item.quantity })
+        .eq("id", item.variantId);
+    }
   }
 
   revalidatePath("/orders");

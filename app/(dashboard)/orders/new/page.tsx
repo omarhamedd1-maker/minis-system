@@ -215,6 +215,15 @@ export default async function NewOrderPage({
               />
             </div>
           </div>
+          <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              name="skip_stock"
+              value="1"
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            أوردر قديم (من قبل السيستم) — متخصمش من المخزون
+          </label>
         </div>
 
         <div className="flex justify-end">
