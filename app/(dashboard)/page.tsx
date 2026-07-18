@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney, orderStatusBadge } from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
+import { DayPicker } from "@/components/DayPicker";
 
 type OrderRow = {
   id: string;
@@ -90,17 +91,25 @@ function itemsProfit(order: OrderRow) {
 export default async function StatsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; day?: string }>;
 }) {
-  const { period: rawPeriod } = await searchParams;
+  const { period: rawPeriod, day: rawDay } = await searchParams;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
 
   // اليوم الحالي بتوقيت مصر مش بتوقيت السيرفر
   const today = cairoDateOf(new Date());
   const [todayYear, todayMonth] = today.split("-").map(Number);
 
+  // يوم معين مختار من التقويم
+  const selectedDay =
+    rawDay && /^\d{4}-\d{2}-\d{2}$/.test(rawDay) ? rawDay : undefined;
+
   let periodStart: string;
-  if (period === "month") {
+  let periodEnd = today;
+  if (selectedDay) {
+    periodStart = selectedDay;
+    periodEnd = selectedDay;
+  } else if (period === "month") {
     periodStart = `${todayYear}-${String(todayMonth).padStart(2, "0")}-01`;
   } else if (period === "30d") {
     periodStart = shiftDays(today, -29);
@@ -109,6 +118,15 @@ export default async function StatsPage({
   } else {
     periodStart = `${todayYear}-01-01`;
   }
+
+  const periodLabel = selectedDay
+    ? new Date(selectedDay + "T12:00:00Z").toLocaleDateString("ar-EG", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : PERIODS[period].label;
 
   // بنجيب من أول 6 شهور فاتت عشان شارت مقارنة الشهور، مهما كانت الفترة المختارة
   const sixMonthsAgo = new Date(Date.UTC(todayYear, todayMonth - 1 - 5, 1))
@@ -137,6 +155,7 @@ export default async function StatsPage({
         .from("expenses")
         .select("category, amount, expense_date")
         .gte("expense_date", periodStart)
+        .lte("expense_date", periodEnd)
         .limit(2000)
         .overrideTypes<
           { category: string; amount: number; expense_date: string }[]
@@ -188,7 +207,9 @@ export default async function StatsPage({
   // تاريخ كل أوردر بتوقيت مصر
   const orderDay = (o: OrderRow) =>
     o.order_date ? cairoDateOf(o.order_date) : "";
-  const periodOrders = allOrders.filter((o) => orderDay(o) >= periodStart);
+  const periodOrders = allOrders.filter(
+    (o) => orderDay(o) >= periodStart && orderDay(o) <= periodEnd
+  );
   const validOrders = periodOrders.filter(
     (o) => !EXCLUDED.includes(o.order_status ?? "")
   );
@@ -312,7 +333,7 @@ export default async function StatsPage({
   const buckets = new Map<string, number>();
   if (daily) {
     const cursor = new Date(periodStart + "T00:00:00");
-    while (toDateString(cursor) <= today) {
+    while (toDateString(cursor) <= periodEnd) {
       buckets.set(toDateString(cursor), 0);
       cursor.setDate(cursor.getDate() + 1);
     }
@@ -454,7 +475,7 @@ export default async function StatsPage({
               key={key}
               href={`/?period=${key}`}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
-                period === key
+                !selectedDay && period === key
                   ? "bg-gray-900 text-white"
                   : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
               }`}
@@ -462,6 +483,7 @@ export default async function StatsPage({
               {p.label}
             </Link>
           ))}
+          <DayPicker selected={selectedDay} />
           <a
             href="/export"
             className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
@@ -503,7 +525,7 @@ export default async function StatsPage({
 
       <section>
         <h2 className="mb-3 text-sm font-bold text-gray-500">
-          {PERIODS[period].label}
+          {periodLabel}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -652,7 +674,7 @@ export default async function StatsPage({
 
       <div className="rounded-xl bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-bold text-gray-900">
-          المبيعات {daily ? "يوم بيوم" : "شهر بشهر"} ({PERIODS[period].label})
+          المبيعات {daily ? "يوم بيوم" : "شهر بشهر"} ({periodLabel})
         </h2>
         <LineChart points={timePoints} valueSuffix=" جنيه" />
       </div>
@@ -667,7 +689,7 @@ export default async function StatsPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-bold text-gray-900">
-            مبيعات أيام الأسبوع ({PERIODS[period].label})
+            مبيعات أيام الأسبوع ({periodLabel})
           </h2>
           <HBarList items={weekdayItems} />
           <p className="mt-3 text-xs text-gray-400">
@@ -676,7 +698,7 @@ export default async function StatsPage({
         </div>
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-sm font-bold text-gray-900">
-            الأوردرات حسب ساعات اليوم ({PERIODS[period].label})
+            الأوردرات حسب ساعات اليوم ({periodLabel})
           </h2>
           <LineChart points={hourPoints} valueSuffix=" أوردر" />
           <p className="mt-1 text-xs text-gray-400">
@@ -688,13 +710,13 @@ export default async function StatsPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-bold text-gray-900">
-            حالات الأوردرات ({PERIODS[period].label})
+            حالات الأوردرات ({periodLabel})
           </h2>
           <HBarList items={statusItems} />
         </div>
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="mb-4 text-sm font-bold text-gray-900">
-            المصاريف بالنوع ({PERIODS[period].label})
+            المصاريف بالنوع ({periodLabel})
           </h2>
           <HBarList items={expenseItems} />
         </div>
@@ -703,7 +725,7 @@ export default async function StatsPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
-            أفضل المنتجات ({PERIODS[period].label})
+            أفضل المنتجات ({periodLabel})
           </h2>
           {topProducts.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-gray-400">
@@ -751,7 +773,7 @@ export default async function StatsPage({
 
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
-            أفضل العملاء ({PERIODS[period].label})
+            أفضل العملاء ({periodLabel})
           </h2>
           {topCustomers.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-gray-400">
