@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
-import { ConfirmButton } from "@/components/ConfirmButton";
+import { CashManualRow } from "@/components/CashManualRow";
 import {
   addCashTransaction,
   deleteCashTransaction,
@@ -218,84 +218,18 @@ export default async function CashPage({
             <tbody>
               {transactions.map((row) =>
                 isAdmin && row.source_type === "manual" ? (
-                  <tr
+                  <CashManualRow
                     key={row.id}
-                    className="border-b border-gray-100 last:border-0"
-                  >
-                    <td className="px-4 py-3">
-                      <form id={`cash-${row.id}`} action={updateCashTransaction}>
-                        <input
-                          type="hidden"
-                          name="transaction_id"
-                          value={row.id}
-                        />
-                      </form>
-                      <input
-                        type="date"
-                        name="transaction_date"
-                        form={`cash-${row.id}`}
-                        defaultValue={row.transaction_date ?? ""}
-                        required
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        name="direction"
-                        form={`cash-${row.id}`}
-                        defaultValue={row.direction}
-                        className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      >
-                        <option value="in">إيداع</option>
-                        <option value="out">سحب</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        name="description"
-                        form={`cash-${row.id}`}
-                        defaultValue={row.description ?? ""}
-                        placeholder="الوصف"
-                        className="w-full min-w-32 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        name="amount"
-                        form={`cash-${row.id}`}
-                        defaultValue={row.amount}
-                        min="0.01"
-                        step="0.01"
-                        required
-                        className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="submit"
-                          form={`cash-${row.id}`}
-                          className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                        >
-                          حفظ
-                        </button>
-                        <form action={deleteCashTransaction}>
-                          <input
-                            type="hidden"
-                            name="transaction_id"
-                            value={row.id}
-                          />
-                          <ConfirmButton
-                            message="متأكد إنك عايز تمسح الحركة دي من الخزنة؟"
-                            className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                          >
-                            مسح
-                          </ConfirmButton>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
+                    row={{
+                      id: row.id,
+                      direction: row.direction,
+                      amount: row.amount,
+                      description: row.description,
+                      transaction_date: row.transaction_date,
+                    }}
+                    updateAction={updateCashTransaction}
+                    deleteAction={deleteCashTransaction}
+                  />
                 ) : (
                   <tr
                     key={row.id}
