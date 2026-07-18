@@ -178,22 +178,25 @@ export default async function OrdersPage({
                     </td>
                     <td className="px-4 py-3">
                       {isAdmin ? (
-                        <form
-                          action={updateOrderStatus}
-                          className="flex items-center gap-2"
-                        >
-                          <input
-                            type="hidden"
-                            name="order_id"
-                            value={order.id}
-                          />
-                          <input
-                            type="hidden"
-                            name="return_to"
-                            value={returnTo}
-                          />
+                        <>
+                          <form
+                            id={`status-${order.id}`}
+                            action={updateOrderStatus}
+                          >
+                            <input
+                              type="hidden"
+                              name="order_id"
+                              value={order.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="return_to"
+                              value={returnTo}
+                            />
+                          </form>
                           <select
                             name="status"
+                            form={`status-${order.id}`}
                             defaultValue={order.order_status ?? "new"}
                             className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
                             aria-label="حالة الأوردر"
@@ -204,13 +207,7 @@ export default async function OrdersPage({
                               </option>
                             ))}
                           </select>
-                          <button
-                            type="submit"
-                            className="rounded-lg bg-gray-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                          >
-                            حفظ
-                          </button>
-                        </form>
+                        </>
                       ) : (
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
@@ -220,12 +217,23 @@ export default async function OrdersPage({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/orders/${order.id}`}
-                        className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
-                      >
-                        فتح
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {isAdmin && (
+                          <button
+                            type="submit"
+                            form={`status-${order.id}`}
+                            className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                          >
+                            حفظ
+                          </button>
+                        )}
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        >
+                          فتح
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );
