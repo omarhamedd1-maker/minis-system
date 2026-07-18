@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv /c/dev/minis-system/CONTEXT.md /c/dev/minis-system/../CONTEXT.md.bak && ls -la /c/dev/minis-system/)",
+      "Bash(npx --yes create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --use-npm)",
+      "Bash(mv /c/dev/minis-system/../CONTEXT.md.bak /c/dev/minis-system/CONTEXT.md)",
+      "Bash(npm install *)",
+      "Bash(npx --yes @next/codemod@latest middleware-to-proxy .)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(curl -s \"https://febtncfjywlneithefyi.supabase.co/rest/v1/?apikey=sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C\")",
+      "Bash(python -c ' *)",
+      "Bash(curl -s https://febtncfjywlneithefyi.supabase.co/rest/v1/?apikey=sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C -o __TRACKED_VAR__/schema.json)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s \"https://febtncfjywlneithefyi.supabase.co/rest/v1/?apikey=sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C\" -o schema.json)",
+      "Bash(npx next *)",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/orders?select=id,order_number,order_status,order_date,customers\\(full_name\\),order_items\\(quantity,sale_price_at_order\\)&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/orders?select=id,order_number,order_status,order_date,customers\\(full_name,phone,address\\),order_items\\(id,quantity,sale_price_at_order,cost_price_at_order,product_variants\\(variant_name,products\\(name\\)\\)\\),shipments\\(id,bosta_tracking_number,shipping_status,shipping_cost,last_update\\)&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST https://febtncfjywlneithefyi.supabase.co/rest/v1/rpc/current_user_role -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Content-Type: application/json' -d '{}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST https://febtncfjywlneithefyi.supabase.co/rest/v1/rpc/is_admin -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Content-Type: application/json' -d '{}')",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/products?select=id,name,product_variants\\(id,variant_name,cost_price,sale_price,quantity_on_hand\\)&order=name&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/cash_transactions?select=id,direction,amount,source_type,transaction_date,orders\\(order_number\\),expenses\\(category,description\\)&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/products?select=id,name,product_variants\\(id,variant_name,sku,cost_price,sale_price,quantity_on_hand,variant_cost_components\\(component,amount\\)\\)&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST https://febtncfjywlneithefyi.supabase.co/functions/v1/bosta-webhook?key=wrong -H 'Content-Type: application/json' -d '{\"test\": true}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST https://febtncfjywlneithefyi.supabase.co/functions/v1/bosta-webhook?key=minis-bosta-x9k24fq7w3-secret -H 'Content-Type: application/json' -d '{\"trackingNumber\": \"TEST-123456\", \"state\": {\"value\": \"Created\"}, \"businessReference\": \"1354\"}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST https://febtncfjywlneithefyi.supabase.co/functions/v1/bosta-webhook?key=minis-bosta-x9k24fq7w3-secret -H 'Content-Type: application/json' -d '{\"trackingNumber\": \"TEST-123456\", \"state\": {\"value\": \"Delivered\"}}')",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

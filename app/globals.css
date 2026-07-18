@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: Lexend, Cairo, sans-serif;
+}
+
+body {
+  /* Lexend للإنجليزي والأرقام — مفيهوش حروف عربية فبتعدّي تلقائياً لخط Cairo */
+  font-family: Lexend, Cairo, sans-serif;
+}
