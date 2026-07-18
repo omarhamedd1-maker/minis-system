@@ -41,24 +41,44 @@ export default async function DashboardPage() {
   const monthStart = `${year}-${month}-01`;
   const today = `${year}-${month}-${String(now.getDate()).padStart(2, "0")}`;
 
-  const [ordersResult, expensesResult, missingCostResult] = await Promise.all([
-    supabase
-      .from("orders")
-      .select(
-        "id, order_status, order_date, order_items(quantity, sale_price_at_order, cost_price_at_order)"
-      )
-      .gte("order_date", monthStart)
-      .overrideTypes<OrderForStats[]>(),
-    supabase
-      .from("expenses")
-      .select("amount, expense_date")
-      .gte("expense_date", monthStart)
-      .overrideTypes<{ amount: number; expense_date: string }[]>(),
-    supabase
-      .from("product_variants")
-      .select("id", { count: "exact", head: true })
-      .eq("cost_price", 0),
-  ]);
+  const [ordersResult, expensesResult, missingCostResult, deliveredTodayResult] =
+    await Promise.all([
+      supabase
+        .from("orders")
+        .select(
+          "id, order_status, order_date, order_items(quantity, sale_price_at_order, cost_price_at_order)"
+        )
+        .gte("order_date", monthStart)
+        .overrideTypes<OrderForStats[]>(),
+      supabase
+        .from("expenses")
+        .select("amount, expense_date")
+        .gte("expense_date", monthStart)
+        .overrideTypes<{ amount: number; expense_date: string }[]>(),
+      supabase
+        .from("product_variants")
+        .select("id", { count: "exact", head: true })
+        .eq("cost_price", 0),
+      // شحنات اتحدثت النهارده — منها بنحسب تحصيل اليوم من بوسطة
+      supabase
+        .from("shipments")
+        .select(
+          "id, last_update, orders(id, order_status, shipping_price, order_items(quantity, sale_price_at_order))"
+        )
+        .gte("last_update", today)
+        .overrideTypes<
+          {
+            id: string;
+            last_update: string | null;
+            orders: {
+              id: string;
+              order_status: string | null;
+              shipping_price: number;
+              order_items: { quantity: number; sale_price_at_order: number }[];
+            } | null;
+          }[]
+        >(),
+    ]);
 
   if (ordersResult.error || expensesResult.error) {
     return (
@@ -84,6 +104,28 @@ export default async function DashboardPage() {
   const netProfit = monthStats.profit - monthExpenses;
   const missingCostCount = missingCostResult.count ?? 0;
 
+  // أوردرات اتسلمت الشهر ده
+  const deliveredMonthCount = monthOrders.filter(
+    (order) => order.order_status === "delivered"
+  ).length;
+
+  // تحصيل النهارده: أوردرات اتسلمت وشحنتها اتحدثت النهارده (من بوسطة)
+  const seenOrderIds = new Set<string>();
+  const todayCollections = (deliveredTodayResult.data ?? []).reduce(
+    (sum, shipment) => {
+      const order = shipment.orders;
+      if (!order || order.order_status !== "delivered") return sum;
+      if (seenOrderIds.has(order.id)) return sum;
+      seenOrderIds.add(order.id);
+      const itemsTotal = order.order_items.reduce(
+        (s, item) => s + item.quantity * item.sale_price_at_order,
+        0
+      );
+      return sum + itemsTotal + order.shipping_price;
+    },
+    0
+  );
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-gray-900">الداشبورد</h1>
@@ -100,7 +142,7 @@ export default async function DashboardPage() {
 
       <section>
         <h2 className="mb-3 text-sm font-bold text-gray-500">النهارده</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">مبيعات النهارده</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
@@ -119,12 +161,18 @@ export default async function DashboardPage() {
               {todayStats.count}
             </p>
           </div>
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">تحصيل النهارده (بوسطة)</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">
+              {formatMoney(todayCollections)}
+            </p>
+          </div>
         </div>
       </section>
 
       <section>
         <h2 className="mb-3 text-sm font-bold text-gray-500">الشهر ده</h2>
-        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">مبيعات الشهر</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
@@ -141,6 +189,12 @@ export default async function DashboardPage() {
             <p className="text-sm text-gray-500">أوردرات الشهر</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
               {monthStats.count}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">أوردرات اتسلمت الشهر ده</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">
+              {deliveredMonthCount}
             </p>
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">

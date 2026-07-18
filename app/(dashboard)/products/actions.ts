@@ -75,6 +75,36 @@ export async function saveStock(formData: FormData) {
   redirect(returnTo + "?saved=1");
 }
 
+export async function saveSku(formData: FormData) {
+  const variantId = String(formData.get("variant_id") ?? "");
+  const productId = String(formData.get("product_id") ?? "");
+  const sku = String(formData.get("sku") ?? "").trim();
+  const returnTo = `/products/${productId}`;
+
+  if (!variantId || !productId) {
+    redirect("/products?error=" + encodeURIComponent("المنتج ده مش موجود"));
+  }
+
+  const supabase = await createClient();
+
+  const { error, count } = await supabase
+    .from("product_variants")
+    .update({ sku: sku || null }, { count: "exact" })
+    .eq("id", variantId);
+
+  if (error || count === 0) {
+    redirect(
+      returnTo +
+        "?error=" +
+        encodeURIComponent("معرفناش نحفظ الكود — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath("/products");
+  revalidatePath(returnTo);
+  redirect(returnTo + "?saved=1");
+}
+
 export async function saveCostComponents(formData: FormData) {
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");

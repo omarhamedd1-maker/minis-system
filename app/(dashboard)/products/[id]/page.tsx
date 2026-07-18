@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS, formatMoney } from "@/lib/format";
-import { saveCostComponents, saveStock } from "../actions";
+import { saveCostComponents, saveSku, saveStock } from "../actions";
 
 type ProductDetails = {
   id: string;
@@ -90,13 +90,34 @@ export default async function ProductDetailsPage({
                 <h2 className="text-base font-bold text-gray-900">
                   {variant.variant_name ?? "افتراضي"}
                 </h2>
-                {variant.sku && (
-                  <span
-                    className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600"
-                    dir="ltr"
-                  >
-                    {variant.sku}
-                  </span>
+                {isAdmin ? (
+                  <form action={saveSku} className="flex items-center gap-2">
+                    <input type="hidden" name="variant_id" value={variant.id} />
+                    <input type="hidden" name="product_id" value={product.id} />
+                    <input
+                      name="sku"
+                      defaultValue={variant.sku ?? ""}
+                      placeholder="الكود (SKU)"
+                      dir="ltr"
+                      className="w-32 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                      aria-label="الكود"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    >
+                      حفظ الكود
+                    </button>
+                  </form>
+                ) : (
+                  variant.sku && (
+                    <span
+                      className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600"
+                      dir="ltr"
+                    >
+                      {variant.sku}
+                    </span>
+                  )
                 )}
               </div>
               <span className="text-sm text-gray-500">

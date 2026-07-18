@@ -19,9 +19,8 @@ export function formatDate(value: string | null) {
 const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> =
   {
     new: { label: "جديد", className: "bg-blue-50 text-blue-700" },
-    pending: { label: "قيد الانتظار", className: "bg-yellow-50 text-yellow-700" },
-    confirmed: { label: "مؤكد", className: "bg-blue-50 text-blue-700" },
-    processing: { label: "قيد التجهيز", className: "bg-blue-50 text-blue-700" },
+    confirmed: { label: "مؤكد", className: "bg-sky-50 text-sky-700" },
+    packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
     shipped: { label: "تم الشحن", className: "bg-indigo-50 text-indigo-700" },
     delivered: { label: "تم التسليم", className: "bg-green-50 text-green-700" },
     cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
