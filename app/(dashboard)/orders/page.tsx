@@ -13,6 +13,7 @@ type OrderRow = {
   order_number: string | null;
   order_status: string | null;
   order_date: string | null;
+  shipping_price: number;
   customers: { full_name: string | null } | null;
   order_items: { quantity: number; sale_price_at_order: number }[];
 };
@@ -37,7 +38,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, customers(full_name), order_items(quantity, sale_price_at_order)"
+      "id, order_number, order_status, order_date, shipping_price, customers(full_name), order_items(quantity, sale_price_at_order)"
     )
     .eq("archived", showArchived);
 
@@ -141,14 +142,17 @@ export default async function OrdersPage({
                 <th className="px-4 py-3 font-medium">التاريخ</th>
                 <th className="px-4 py-3 font-medium">الإجمالي</th>
                 <th className="px-4 py-3 font-medium">الحالة</th>
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {orders.map((order) => {
-                const total = order.order_items.reduce(
-                  (sum, item) => sum + item.quantity * item.sale_price_at_order,
-                  0
-                );
+                const total =
+                  order.order_items.reduce(
+                    (sum, item) =>
+                      sum + item.quantity * item.sale_price_at_order,
+                    0
+                  ) + order.shipping_price;
                 const badge = orderStatusBadge(order.order_status);
                 return (
                   <tr
@@ -214,6 +218,14 @@ export default async function OrdersPage({
                           {badge.label}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                      >
+                        فتح
+                      </Link>
                     </td>
                   </tr>
                 );

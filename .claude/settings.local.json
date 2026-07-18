@@ -29,7 +29,10 @@
       "Bash(git commit -m ' *)",
       "Bash(git config *)",
       "Bash(git remote *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/orders?select=shipping_price&limit=1' -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/orders?select=shipping_price&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(curl -s https://febtncfjywlneithefyi.supabase.co/rest/v1/orders?select=id,order_number,shipping_price -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')"
     ]
   }
 }

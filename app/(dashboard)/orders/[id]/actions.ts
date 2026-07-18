@@ -5,6 +5,36 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
+export async function updateShippingPrice(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const shippingPrice = Number(formData.get("shipping_price"));
+
+  if (!orderId || !Number.isFinite(shippingPrice) || shippingPrice < 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("سعر الشحن لازم يكون رقم موجب")
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { error, count } = await supabase
+    .from("orders")
+    .update({ shipping_price: shippingPrice }, { count: "exact" })
+    .eq("id", orderId);
+
+  if (error || count === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ سعر الشحن — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
 export async function toggleOrderArchive(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   const archive = formData.get("archive") === "1";

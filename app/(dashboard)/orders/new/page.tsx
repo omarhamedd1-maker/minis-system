@@ -200,6 +200,20 @@ export default async function NewOrderPage({
                 className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
               />
             </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="shipping_price" className="text-xs text-gray-500">
+                سعر الشحن من العميل (جنيه)
+              </label>
+              <input
+                id="shipping_price"
+                name="shipping_price"
+                type="number"
+                defaultValue={0}
+                min={0}
+                step="0.01"
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 

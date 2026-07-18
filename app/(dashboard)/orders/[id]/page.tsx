@@ -12,6 +12,7 @@ import {
   deleteOrder,
   toggleOrderArchive,
   updateOrderStatus,
+  updateShippingPrice,
 } from "./actions";
 
 type OrderDetails = {
@@ -20,6 +21,7 @@ type OrderDetails = {
   order_status: string | null;
   order_date: string | null;
   archived: boolean;
+  shipping_price: number;
   customers: {
     full_name: string | null;
     phone: string | null;
@@ -60,7 +62,7 @@ export default async function OrderDetailsPage({
   const { data: order, error } = await supabase
     .from("orders")
     .select(
-      `id, order_number, order_status, order_date, archived,
+      `id, order_number, order_status, order_date, archived, shipping_price,
        customers(full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
          product_variants(variant_name, products(name))),
@@ -262,11 +264,50 @@ export default async function OrderDetailsPage({
             ))}
           </tbody>
           <tfoot>
+            <tr className="border-t border-gray-200 text-gray-700">
+              <td className="px-4 py-2" colSpan={4}>
+                إجمالي المنتجات
+              </td>
+              <td className="px-4 py-2">{formatMoney(itemsTotal)}</td>
+            </tr>
+            <tr className="text-gray-700">
+              <td className="px-4 py-2" colSpan={4}>
+                <div className="flex items-center gap-3">
+                  <span>الشحن (مدفوع من العميل)</span>
+                  {isAdmin && (
+                    <form
+                      action={updateShippingPrice}
+                      className="flex items-center gap-2"
+                    >
+                      <input type="hidden" name="order_id" value={order.id} />
+                      <input
+                        type="number"
+                        name="shipping_price"
+                        defaultValue={order.shipping_price}
+                        min={0}
+                        step="0.01"
+                        className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                        aria-label="سعر الشحن"
+                      />
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                      >
+                        حفظ
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </td>
+              <td className="px-4 py-2">{formatMoney(order.shipping_price)}</td>
+            </tr>
             <tr className="border-t border-gray-200 font-bold text-gray-900">
               <td className="px-4 py-3" colSpan={4}>
                 إجمالي الأوردر
               </td>
-              <td className="px-4 py-3">{formatMoney(itemsTotal)}</td>
+              <td className="px-4 py-3">
+                {formatMoney(itemsTotal + order.shipping_price)}
+              </td>
             </tr>
           </tfoot>
         </table>

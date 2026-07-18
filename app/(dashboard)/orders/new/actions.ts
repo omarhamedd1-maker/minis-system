@@ -13,6 +13,11 @@ export async function createOrder(formData: FormData) {
   const address = String(formData.get("address") ?? "").trim();
   const orderNumber = String(formData.get("order_number") ?? "").trim();
   const orderDate = String(formData.get("order_date") ?? "");
+  const shippingPriceRaw = Number(formData.get("shipping_price") ?? 0);
+  const shippingPrice =
+    Number.isFinite(shippingPriceRaw) && shippingPriceRaw > 0
+      ? shippingPriceRaw
+      : 0;
 
   const items: { variantId: string; quantity: number }[] = [];
   for (let i = 0; i < MAX_ITEMS; i++) {
@@ -79,6 +84,7 @@ export async function createOrder(formData: FormData) {
       customer_id: finalCustomerId,
       order_status: "new",
       order_date: orderDate || new Date().toISOString().slice(0, 10),
+      shipping_price: shippingPrice,
     })
     .select("id")
     .single();
