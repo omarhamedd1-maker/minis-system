@@ -59,23 +59,19 @@ export default async function DashboardPage() {
         .from("product_variants")
         .select("id", { count: "exact", head: true })
         .eq("cost_price", 0),
-      // شحنات اتحدثت النهارده — منها بنحسب تحصيل اليوم من بوسطة
+      // أوردرات اتسلمت النهارده — منها بنحسب تحصيل اليوم
       supabase
-        .from("shipments")
+        .from("orders")
         .select(
-          "id, last_update, orders(id, order_status, shipping_price, order_items(quantity, sale_price_at_order))"
+          "id, shipping_price, order_items(quantity, sale_price_at_order)"
         )
-        .gte("last_update", today)
+        .eq("order_status", "delivered")
+        .gte("delivered_at", today)
         .overrideTypes<
           {
             id: string;
-            last_update: string | null;
-            orders: {
-              id: string;
-              order_status: string | null;
-              shipping_price: number;
-              order_items: { quantity: number; sale_price_at_order: number }[];
-            } | null;
+            shipping_price: number;
+            order_items: { quantity: number; sale_price_at_order: number }[];
           }[]
         >(),
     ]);
@@ -109,14 +105,9 @@ export default async function DashboardPage() {
     (order) => order.order_status === "delivered"
   ).length;
 
-  // تحصيل النهارده: أوردرات اتسلمت وشحنتها اتحدثت النهارده (من بوسطة)
-  const seenOrderIds = new Set<string>();
+  // تحصيل النهارده: إجمالي الأوردرات اللي اتسلمت النهارده (منتجات + شحن)
   const todayCollections = (deliveredTodayResult.data ?? []).reduce(
-    (sum, shipment) => {
-      const order = shipment.orders;
-      if (!order || order.order_status !== "delivered") return sum;
-      if (seenOrderIds.has(order.id)) return sum;
-      seenOrderIds.add(order.id);
+    (sum, order) => {
       const itemsTotal = order.order_items.reduce(
         (s, item) => s + item.quantity * item.sale_price_at_order,
         0

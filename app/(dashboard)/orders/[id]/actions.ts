@@ -179,9 +179,19 @@ export async function updateOrderStatus(formData: FormData) {
 
   const supabase = await createClient();
 
+  // نسجل تاريخ التسليم مع الحالة — عشان تحصيل اليوم يتحسب صح
+  const updateData: { order_status: string; delivered_at?: string | null } = {
+    order_status: status,
+  };
+  if (status === "delivered") {
+    updateData.delivered_at = new Date().toISOString();
+  } else {
+    updateData.delivered_at = null;
+  }
+
   const { error, count } = await supabase
     .from("orders")
-    .update({ order_status: status }, { count: "exact" })
+    .update(updateData, { count: "exact" })
     .eq("id", orderId);
 
   if (error || count === 0) {
