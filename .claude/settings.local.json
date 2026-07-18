@@ -25,7 +25,11 @@
       "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST https://febtncfjywlneithefyi.supabase.co/functions/v1/bosta-webhook?key=minis-bosta-x9k24fq7w3-secret -H 'Content-Type: application/json' -d '{\"trackingNumber\": \"TEST-123456\", \"state\": {\"value\": \"Created\"}, \"businessReference\": \"1354\"}')",
       "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST https://febtncfjywlneithefyi.supabase.co/functions/v1/bosta-webhook?key=minis-bosta-x9k24fq7w3-secret -H 'Content-Type: application/json' -d '{\"trackingNumber\": \"TEST-123456\", \"state\": {\"value\": \"Delivered\"}}')",
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(git remote *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -46,11 +46,6 @@ export default async function ProductsPage({
     (sum, product) => sum + product.product_variants.length,
     0
   );
-  const missingCostCount = products.reduce(
-    (sum, product) =>
-      sum + product.product_variants.filter((v) => v.cost_price === 0).length,
-    0
-  );
 
   return (
     <div className="space-y-4">
@@ -71,13 +66,6 @@ export default async function ProductsPage({
           تم حفظ التعديل
         </div>
       )}
-      {missingCostCount > 0 && (
-        <div className="rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-          فيه {missingCostCount} شكل منتج تكلفته صفر — افتح المنتج وسجّل مكونات
-          تكلفته عشان الأرباح تتحسب صح. الصفوف دي معلّمة باللون الأصفر.
-        </div>
-      )}
-
       {products.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
           لسه مفيش منتجات. المنتجات بتتسجل هنا تلقائياً مع أول أوردر ييجي من
