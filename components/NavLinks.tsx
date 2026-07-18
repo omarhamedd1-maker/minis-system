@@ -8,7 +8,6 @@ const navLinks = [
   { href: "/orders", label: "الأوردرات" },
   { href: "/products", label: "المنتجات والمخزون" },
   { href: "/expenses", label: "المصاريف" },
-  { href: "/reports", label: "الإحصائيات" },
   { href: "/cash", label: "الخزنة" },
 ];
 
