@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
-import { addCashTransaction } from "./actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import {
+  addCashTransaction,
+  deleteCashTransaction,
+  updateCashTransaction,
+} from "./actions";
 
 type CashRow = {
   id: string;
@@ -38,9 +43,9 @@ function sourceLabel(row: CashRow) {
 export default async function CashPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
 }) {
-  const { error: actionError, saved } = await searchParams;
+  const { error: actionError, saved, deleted } = await searchParams;
   const supabase = await createClient();
 
   const { data: isAdmin } = await supabase.rpc("is_admin");
@@ -116,7 +121,12 @@ export default async function CashPage({
       )}
       {saved && (
         <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
-          تم تسجيل الحركة في الخزنة
+          تم حفظ الحركة في الخزنة
+        </div>
+      )}
+      {deleted && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          تم مسح الحركة من الخزنة
         </div>
       )}
 
@@ -202,38 +212,125 @@ export default async function CashPage({
                 <th className="px-4 py-3 font-medium">الاتجاه</th>
                 <th className="px-4 py-3 font-medium">المصدر</th>
                 <th className="px-4 py-3 font-medium">المبلغ</th>
+                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
               </tr>
             </thead>
             <tbody>
-              {transactions.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-b border-gray-100 last:border-0"
-                >
-                  <td className="px-4 py-3 text-gray-700">
-                    {formatDate(row.transaction_date)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.direction === "in" ? (
-                      <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                        داخل
-                      </span>
-                    ) : (
-                      <span className="inline-block rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
-                        خارج
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">{sourceLabel(row)}</td>
-                  <td
-                    className={`px-4 py-3 font-medium ${
-                      row.direction === "in" ? "text-green-700" : "text-red-700"
-                    }`}
+              {transactions.map((row) =>
+                isAdmin && row.source_type === "manual" ? (
+                  <tr
+                    key={row.id}
+                    className="border-b border-gray-100 last:border-0"
                   >
-                    {formatMoney(row.amount)}
-                  </td>
-                </tr>
-              ))}
+                    <td className="px-4 py-3">
+                      <form id={`cash-${row.id}`} action={updateCashTransaction}>
+                        <input
+                          type="hidden"
+                          name="transaction_id"
+                          value={row.id}
+                        />
+                      </form>
+                      <input
+                        type="date"
+                        name="transaction_date"
+                        form={`cash-${row.id}`}
+                        defaultValue={row.transaction_date ?? ""}
+                        required
+                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        name="direction"
+                        form={`cash-${row.id}`}
+                        defaultValue={row.direction}
+                        className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                      >
+                        <option value="in">إيداع</option>
+                        <option value="out">سحب</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        name="description"
+                        form={`cash-${row.id}`}
+                        defaultValue={row.description ?? ""}
+                        placeholder="الوصف"
+                        className="w-full min-w-32 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        name="amount"
+                        form={`cash-${row.id}`}
+                        defaultValue={row.amount}
+                        min="0.01"
+                        step="0.01"
+                        required
+                        className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="submit"
+                          form={`cash-${row.id}`}
+                          className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                        >
+                          حفظ
+                        </button>
+                        <form action={deleteCashTransaction}>
+                          <input
+                            type="hidden"
+                            name="transaction_id"
+                            value={row.id}
+                          />
+                          <ConfirmButton
+                            message="متأكد إنك عايز تمسح الحركة دي من الخزنة؟"
+                            className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                          >
+                            مسح
+                          </ConfirmButton>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr
+                    key={row.id}
+                    className="border-b border-gray-100 last:border-0"
+                  >
+                    <td className="px-4 py-3 text-gray-700">
+                      {formatDate(row.transaction_date)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.direction === "in" ? (
+                        <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                          داخل
+                        </span>
+                      ) : (
+                        <span className="inline-block rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                          خارج
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {sourceLabel(row)}
+                    </td>
+                    <td
+                      className={`px-4 py-3 font-medium ${
+                        row.direction === "in"
+                          ? "text-green-700"
+                          : "text-red-700"
+                      }`}
+                    >
+                      {formatMoney(row.amount)}
+                    </td>
+                    {isAdmin && <td className="px-4 py-3"></td>}
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
         </div>
