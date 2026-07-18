@@ -109,7 +109,7 @@ export default async function ReportsPage({
   if (ordersResult.error || expensesResult.error || variantsResult.error) {
     return (
       <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-        حصل خطأ أثناء تحميل التقارير:{" "}
+        حصل خطأ أثناء تحميل الإحصائيات:{" "}
         {ordersResult.error?.message ??
           expensesResult.error?.message ??
           variantsResult.error?.message}
@@ -276,7 +276,7 @@ export default async function ReportsPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">التقارير</h1>
+        <h1 className="text-xl font-bold text-gray-900">الإحصائيات</h1>
         <div className="flex flex-wrap items-center gap-2">
           {Object.entries(PERIODS).map(([key, p]) => (
             <Link
