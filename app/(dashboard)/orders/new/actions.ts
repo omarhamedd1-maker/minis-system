@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { cairoToday } from "@/lib/format";
 
 const MAX_ITEMS = 5;
 
@@ -85,7 +86,7 @@ export async function createOrder(formData: FormData) {
       order_number: finalOrderNumber,
       customer_id: finalCustomerId,
       order_status: "new",
-      order_date: orderDate || new Date().toISOString().slice(0, 10),
+      order_date: orderDate || cairoToday(),
       shipping_price: shippingPrice,
     })
     .select("id")

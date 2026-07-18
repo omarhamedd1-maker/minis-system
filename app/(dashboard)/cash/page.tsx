@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney } from "@/lib/format";
+import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { CashManualRow } from "@/components/CashManualRow";
 import {
   addCashTransaction,
@@ -185,7 +185,7 @@ export default async function CashPage({
               id="transaction_date"
               name="transaction_date"
               type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
+              defaultValue={cairoToday()}
               required
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
             />

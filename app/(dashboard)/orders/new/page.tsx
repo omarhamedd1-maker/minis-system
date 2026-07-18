@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney } from "@/lib/format";
+import { cairoToday, formatMoney } from "@/lib/format";
 import { createOrder } from "./actions";
 
 const ITEM_ROWS = 5;
@@ -51,7 +51,7 @@ export default async function NewOrderPage({
     (a.products?.name ?? "").localeCompare(b.products?.name ?? "", "ar")
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = cairoToday();
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">

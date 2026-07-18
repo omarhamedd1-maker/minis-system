@@ -7,12 +7,20 @@ export function formatMoney(amount: number) {
   );
 }
 
+// تاريخ اليوم بتوقيت مصر — السيرفر بيشتغل بالتوقيت العالمي المتأخر عننا
+export function cairoToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(
+    new Date()
+  );
+}
+
 export function formatDate(value: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("ar-EG", {
     year: "numeric",
     month: "long",
     day: "numeric",
+    timeZone: "Africa/Cairo",
   });
 }
 

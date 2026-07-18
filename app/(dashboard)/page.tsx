@@ -56,6 +56,23 @@ function toDateString(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// تاريخ اليوم بتوقيت مصر (السيرفر شغال بالتوقيت العالمي المتأخر عننا)
+const cairoDateFormat = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Africa/Cairo",
+});
+function cairoDateOf(value: string | Date) {
+  return cairoDateFormat.format(
+    typeof value === "string" ? new Date(value) : value
+  );
+}
+
+// إزاحة تاريخ بعدد أيام (على مستوى التقويم فقط)
+function shiftDays(dateStr: string, days: number) {
+  const d = new Date(dateStr + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 function itemsTotal(order: OrderRow) {
   return order.order_items.reduce(
     (s, i) => s + i.quantity * i.sale_price_at_order,
@@ -78,29 +95,29 @@ export default async function StatsPage({
   const { period: rawPeriod } = await searchParams;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
 
-  const now = new Date();
-  const today = toDateString(now);
+  // اليوم الحالي بتوقيت مصر مش بتوقيت السيرفر
+  const today = cairoDateOf(new Date());
+  const [todayYear, todayMonth] = today.split("-").map(Number);
 
   let periodStart: string;
   if (period === "month") {
-    periodStart = toDateString(new Date(now.getFullYear(), now.getMonth(), 1));
+    periodStart = `${todayYear}-${String(todayMonth).padStart(2, "0")}-01`;
   } else if (period === "30d") {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 29);
-    periodStart = toDateString(d);
+    periodStart = shiftDays(today, -29);
   } else if (period === "3m") {
-    const d = new Date(now);
-    d.setDate(d.getDate() - 89);
-    periodStart = toDateString(d);
+    periodStart = shiftDays(today, -89);
   } else {
-    periodStart = `${now.getFullYear()}-01-01`;
+    periodStart = `${todayYear}-01-01`;
   }
 
   // بنجيب من أول 6 شهور فاتت عشان شارت مقارنة الشهور، مهما كانت الفترة المختارة
-  const sixMonthsAgo = toDateString(
-    new Date(now.getFullYear(), now.getMonth() - 5, 1)
+  const sixMonthsAgo = new Date(Date.UTC(todayYear, todayMonth - 1 - 5, 1))
+    .toISOString()
+    .slice(0, 10);
+  const fetchStart = shiftDays(
+    periodStart < sixMonthsAgo ? periodStart : sixMonthsAgo,
+    -1 // يوم زيادة ورا عشان فرق التوقيت بين مصر والسيرفر
   );
-  const fetchStart = periodStart < sixMonthsAgo ? periodStart : sixMonthsAgo;
 
   const supabase = await createClient();
 
@@ -138,15 +155,19 @@ export default async function StatsPage({
           }[]
         >(),
       // أوردرات اتسلمت النهارده — منها بنحسب تحصيل اليوم
+      // (بنوسّع البحث يوم ورا وبنفلتر بتوقيت مصر بعدين)
       supabase
         .from("orders")
-        .select("id, shipping_price, order_items(quantity, sale_price_at_order)")
+        .select(
+          "id, shipping_price, delivered_at, order_items(quantity, sale_price_at_order)"
+        )
         .eq("order_status", "delivered")
-        .gte("delivered_at", today)
+        .gte("delivered_at", shiftDays(today, -1))
         .overrideTypes<
           {
             id: string;
             shipping_price: number;
+            delivered_at: string | null;
             order_items: { quantity: number; sale_price_at_order: number }[];
           }[]
         >(),
@@ -164,31 +185,34 @@ export default async function StatsPage({
   }
 
   const allOrders = ordersResult.data;
-  const periodOrders = allOrders.filter(
-    (o) => (o.order_date ?? "").slice(0, 10) >= periodStart
-  );
+  // تاريخ كل أوردر بتوقيت مصر
+  const orderDay = (o: OrderRow) =>
+    o.order_date ? cairoDateOf(o.order_date) : "";
+  const periodOrders = allOrders.filter((o) => orderDay(o) >= periodStart);
   const validOrders = periodOrders.filter(
     (o) => !EXCLUDED.includes(o.order_status ?? "")
   );
 
   // النهارده
   const todayValidOrders = allOrders.filter(
-    (o) =>
-      (o.order_date ?? "").slice(0, 10) === today &&
-      !EXCLUDED.includes(o.order_status ?? "")
+    (o) => orderDay(o) === today && !EXCLUDED.includes(o.order_status ?? "")
   );
   const todaySales = todayValidOrders.reduce((s, o) => s + itemsTotal(o), 0);
   const todayProfit = todayValidOrders.reduce((s, o) => s + itemsProfit(o), 0);
-  const todayCollections = (deliveredTodayResult.data ?? []).reduce(
-    (sum, order) =>
-      sum +
-      order.order_items.reduce(
-        (s, item) => s + item.quantity * item.sale_price_at_order,
-        0
-      ) +
-      order.shipping_price,
-    0
-  );
+  const todayCollections = (deliveredTodayResult.data ?? [])
+    .filter(
+      (order) => order.delivered_at && cairoDateOf(order.delivered_at) === today
+    )
+    .reduce(
+      (sum, order) =>
+        sum +
+        order.order_items.reduce(
+          (s, item) => s + item.quantity * item.sale_price_at_order,
+          0
+        ) +
+        order.shipping_price,
+      0
+    );
 
   // ملخص الفترة
   const sales = validOrders.reduce((s, o) => s + itemsTotal(o), 0);
@@ -293,12 +317,12 @@ export default async function StatsPage({
       cursor.setDate(cursor.getDate() + 1);
     }
   } else {
-    for (let m = 0; m <= now.getMonth(); m++) {
-      buckets.set(`${now.getFullYear()}-${String(m + 1).padStart(2, "0")}`, 0);
+    for (let m = 1; m <= todayMonth; m++) {
+      buckets.set(`${todayYear}-${String(m).padStart(2, "0")}`, 0);
     }
   }
   for (const order of validOrders) {
-    const date = (order.order_date ?? "").slice(0, daily ? 10 : 7);
+    const date = orderDay(order).slice(0, daily ? 10 : 7);
     if (buckets.has(date)) {
       buckets.set(date, (buckets.get(date) ?? 0) + itemsTotal(order));
     }
@@ -316,11 +340,11 @@ export default async function StatsPage({
   // مقارنة آخر 6 شهور: مبيعات وأرباح
   const monthGroups: { label: string; a: number; b: number }[] = [];
   for (let offset = 5; offset >= 0; offset--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const d = new Date(Date.UTC(todayYear, todayMonth - 1 - offset, 1));
+    const key = d.toISOString().slice(0, 7);
     const monthOrders = allOrders.filter(
       (o) =>
-        (o.order_date ?? "").slice(0, 7) === key &&
+        orderDay(o).slice(0, 7) === key &&
         !EXCLUDED.includes(o.order_status ?? "")
     );
     monthGroups.push({

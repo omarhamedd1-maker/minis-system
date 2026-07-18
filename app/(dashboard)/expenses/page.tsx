@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney } from "@/lib/format";
+import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { addExpense, deleteExpense, updateExpense } from "./actions";
 
@@ -45,13 +45,11 @@ export default async function ExpensesPage({
     );
   }
 
-  const now = new Date();
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const today = cairoToday();
+  const monthStart = today.slice(0, 8) + "01";
   const monthTotal = expenses
     .filter((expense) => expense.expense_date >= monthStart)
     .reduce((sum, expense) => sum + expense.amount, 0);
-
-  const today = now.toISOString().slice(0, 10);
 
   return (
     <div className="space-y-4">
