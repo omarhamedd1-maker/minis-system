@@ -62,8 +62,7 @@ export default async function OrdersPage({
 
   const { data: fetchedOrders, error } = await query
     .order("order_date", { ascending: false })
-    // في البحث بنوسّع النطاق عشان يشمل الأوردرات القديمة كلها
-    .limit(searchTerm ? 1000 : 100)
+    .limit(3000)
     .overrideTypes<OrderRow[]>();
 
   if (error) {
