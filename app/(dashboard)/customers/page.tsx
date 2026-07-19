@@ -2,7 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
 import { CustomerRow } from "@/components/CustomerRow";
-import { deleteCustomer, updateCustomer } from "./actions";
 
 type CustomerData = {
   id: string;
@@ -14,6 +13,7 @@ type CustomerData = {
     order_date: string | null;
     order_status: string | null;
     shipping_price: number;
+    discount: number;
     order_items: { quantity: number; sale_price_at_order: number }[];
   }[];
 };
@@ -34,13 +34,11 @@ export default async function CustomersPage({
   const searchTerm = (q ?? "").trim();
   const supabase = await createClient();
 
-  const { data: isAdmin } = await supabase.rpc("is_admin");
-
   const { data: customers, error } = await supabase
     .from("customers")
     .select(
       `id, full_name, phone, address,
-       orders(id, order_date, order_status, shipping_price,
+       orders(id, order_date, order_status, shipping_price, discount,
          order_items(quantity, sale_price_at_order))`
     )
     .limit(1000)
@@ -67,7 +65,8 @@ export default async function CustomersPage({
           order.order_items.reduce(
             (s, item) => s + item.quantity * item.sale_price_at_order,
             0
-          ) +
+          ) -
+          order.discount +
           order.shipping_price,
         0
       );
@@ -165,13 +164,7 @@ export default async function CustomersPage({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <CustomerRow
-                  key={row.id}
-                  row={row}
-                  isAdmin={!!isAdmin}
-                  updateAction={updateCustomer}
-                  deleteAction={deleteCustomer}
-                />
+                <CustomerRow key={row.id} row={row} />
               ))}
             </tbody>
           </table>

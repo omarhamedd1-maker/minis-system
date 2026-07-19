@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { deleteCustomer } from "../actions";
+import { CustomerEdit } from "@/components/CustomerEdit";
+import { deleteCustomer, updateCustomer } from "../actions";
 
 type CustomerDetail = {
   id: string;
@@ -16,6 +17,7 @@ type CustomerDetail = {
     order_status: string | null;
     order_date: string | null;
     shipping_price: number;
+    discount: number;
     order_items: { quantity: number; sale_price_at_order: number }[];
   }[];
 };
@@ -24,10 +26,13 @@ const EXCLUDED = ["cancelled", "returned"];
 
 export default async function CustomerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
   const { id } = await params;
+  const { saved, error: actionError } = await searchParams;
   const supabase = await createClient();
 
   const { data: isAdmin } = await supabase.rpc("is_admin");
@@ -36,7 +41,7 @@ export default async function CustomerPage({
     .from("customers")
     .select(
       `id, full_name, phone, address,
-       orders(id, order_number, order_status, order_date, shipping_price,
+       orders(id, order_number, order_status, order_date, shipping_price, discount,
          order_items(quantity, sale_price_at_order))`
     )
     .eq("id", id)
@@ -61,7 +66,8 @@ export default async function CustomerPage({
     (o) => !EXCLUDED.includes(o.order_status ?? "")
   );
   const orderTotal = (o: CustomerDetail["orders"][number]) =>
-    o.order_items.reduce((s, i) => s + i.quantity * i.sale_price_at_order, 0) +
+    o.order_items.reduce((s, i) => s + i.quantity * i.sale_price_at_order, 0) -
+    o.discount +
     o.shipping_price;
   const total = validOrders.reduce((s, o) => s + orderTotal(o), 0);
   const deliveredCount = orders.filter(
@@ -83,22 +89,45 @@ export default async function CustomerPage({
         </Link>
       </div>
 
-      <div className="rounded-xl bg-white p-5 shadow-sm">
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <div className="flex justify-between gap-4">
-            <dt className="text-gray-500">التليفون</dt>
-            <dd className="text-gray-900" dir="ltr">
-              {customer.phone ?? "—"}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="shrink-0 text-gray-500">العنوان</dt>
-            <dd className="text-left text-gray-900">
-              {customer.address ?? "—"}
-            </dd>
-          </div>
-        </dl>
-      </div>
+      {actionError && (
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
+      {saved && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          تم حفظ بيانات العميل
+        </div>
+      )}
+
+      {isAdmin ? (
+        <CustomerEdit
+          customer={{
+            id: customer.id,
+            full_name: customer.full_name,
+            phone: customer.phone,
+            address: customer.address,
+          }}
+          updateAction={updateCustomer}
+        />
+      ) : (
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500">التليفون</dt>
+              <dd className="text-gray-900" dir="ltr">
+                {customer.phone ?? "—"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="shrink-0 text-gray-500">العنوان</dt>
+              <dd className="text-left text-gray-900">
+                {customer.address ?? "—"}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="rounded-xl bg-white p-5 shadow-sm">

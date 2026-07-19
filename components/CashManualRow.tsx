@@ -86,7 +86,7 @@ export function CashManualRow({
           type="date"
           name="transaction_date"
           form={formId}
-          defaultValue={row.transaction_date ?? ""}
+          defaultValue={(row.transaction_date ?? "").slice(0, 10)}
           required
           className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
         />

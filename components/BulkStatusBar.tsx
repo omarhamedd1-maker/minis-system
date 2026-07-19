@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Option = { value: string; label: string };
 
@@ -11,8 +12,9 @@ export function BulkStatusBar({
 }: {
   returnTo: string;
   options: Option[];
-  updateAction: (formData: FormData) => Promise<void>;
+  updateAction: (formData: FormData) => Promise<{ ok: boolean; error?: string }>;
 }) {
+  const router = useRouter();
   const [count, setCount] = useState(0);
   const [status, setStatus] = useState(options[0]?.value ?? "");
   const [pending, setPending] = useState(false);
@@ -39,7 +41,18 @@ export function BulkStatusBar({
     fd.append("status", status);
     fd.append("return_to", returnTo);
     setPending(true);
-    await updateAction(fd);
+    const result = await updateAction(fd);
+    setPending(false);
+    if (!result.ok) {
+      alert(result.error ?? "حصل خطأ");
+      return;
+    }
+    // نفك التحديد ونحدّث الصفحة من غير رستر
+    document
+      .querySelectorAll<HTMLInputElement>("input[data-order-checkbox]")
+      .forEach((el) => (el.checked = false));
+    setCount(0);
+    router.refresh();
   }
 
   if (count === 0) return null;

@@ -10,6 +10,7 @@ type OrderRow = {
   order_date: string | null;
   delivered_at: string | null;
   shipping_price: number;
+  discount: number;
   customers: { full_name: string | null } | null;
   order_items: {
     quantity: number;
@@ -150,7 +151,7 @@ export default async function StatsPage({
       supabase
         .from("orders")
         .select(
-          `id, order_status, order_date, delivered_at, shipping_price, customers(full_name),
+          `id, order_status, order_date, delivered_at, shipping_price, discount, customers(full_name),
            order_items(quantity, sale_price_at_order, cost_price_at_order,
              product_variants(id, variant_name, products(name)))`
         )
@@ -184,7 +185,7 @@ export default async function StatsPage({
       supabase
         .from("orders")
         .select(
-          "id, shipping_price, delivered_at, order_items(quantity, sale_price_at_order)"
+          "id, shipping_price, discount, delivered_at, order_items(quantity, sale_price_at_order)"
         )
         .eq("order_status", "delivered")
         .gte("delivered_at", shiftDays(periodStart, -1))
@@ -193,6 +194,7 @@ export default async function StatsPage({
           {
             id: string;
             shipping_price: number;
+            discount: number;
             delivered_at: string | null;
             order_items: { quantity: number; sale_price_at_order: number }[];
           }[]
@@ -234,14 +236,21 @@ export default async function StatsPage({
         order.order_items.reduce(
           (s, item) => s + item.quantity * item.sale_price_at_order,
           0
-        ) +
+        ) -
+        order.discount +
         order.shipping_price,
       0
     );
 
-  // ملخص الفترة
-  const sales = validOrders.reduce((s, o) => s + itemsTotal(o), 0);
-  const profit = validOrders.reduce((s, o) => s + itemsProfit(o), 0);
+  // ملخص الفترة — المبيعات والأرباح بعد خصم الخصومات
+  const sales = validOrders.reduce(
+    (s, o) => s + itemsTotal(o) - o.discount,
+    0
+  );
+  const profit = validOrders.reduce(
+    (s, o) => s + itemsProfit(o) - o.discount,
+    0
+  );
   const expensesTotal = expensesResult.data.reduce((s, e) => s + e.amount, 0);
   const netProfit = profit - expensesTotal;
   const orderCount = validOrders.length;
@@ -369,8 +378,8 @@ export default async function StatsPage({
     );
     monthGroups.push({
       label: d.toLocaleDateString("ar-EG", { month: "short" }),
-      a: monthOrders.reduce((s, o) => s + itemsTotal(o), 0),
-      b: monthOrders.reduce((s, o) => s + itemsProfit(o), 0),
+      a: monthOrders.reduce((s, o) => s + itemsTotal(o) - o.discount, 0),
+      b: monthOrders.reduce((s, o) => s + itemsProfit(o) - o.discount, 0),
     });
   }
 

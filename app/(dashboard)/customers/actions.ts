@@ -32,14 +32,15 @@ export async function updateCustomer(formData: FormData) {
 
   if (error || count === 0) {
     redirect(
-      "/customers?error=" +
+      `/customers/${id}?error=` +
         encodeURIComponent("معرفناش نعدل العميل — اتأكد إن عندك صلاحية تعديل")
     );
   }
 
   revalidatePath("/customers");
+  revalidatePath(`/customers/${id}`);
   revalidatePath("/orders");
-  redirect("/customers?saved=1");
+  redirect(`/customers/${id}?saved=1`);
 }
 
 export async function deleteCustomer(formData: FormData) {

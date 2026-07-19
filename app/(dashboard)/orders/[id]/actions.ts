@@ -95,18 +95,15 @@ export async function updateDiscount(formData: FormData) {
   redirect(`/orders/${orderId}?saved=1`);
 }
 
-export async function bulkUpdateStatus(formData: FormData) {
+export async function bulkUpdateStatus(
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
   const orderIds = formData.getAll("order_ids").map(String).filter(Boolean);
   const status = String(formData.get("status") ?? "");
-  const rawReturnTo = String(formData.get("return_to") ?? "");
-  const returnTo = rawReturnTo.startsWith("/orders") ? rawReturnTo : "/orders";
-  const joiner = returnTo.includes("?") ? "&" : "?";
 
   const isValidStatus = ORDER_STATUS_OPTIONS.some((o) => o.value === status);
   if (orderIds.length === 0 || !isValidStatus) {
-    redirect(
-      returnTo + joiner + "error=" + encodeURIComponent("اختار أوردرات وحالة صحيحة")
-    );
+    return { ok: false, error: "اختار أوردرات وحالة صحيحة" };
   }
 
   const supabase = await createClient();
@@ -122,16 +119,14 @@ export async function bulkUpdateStatus(formData: FormData) {
     .in("id", orderIds);
 
   if (error) {
-    redirect(
-      returnTo +
-        joiner +
-        "error=" +
-        encodeURIComponent("معرفناش نحفظ الحالة — اتأكد إن عندك صلاحية تعديل")
-    );
+    return {
+      ok: false,
+      error: "معرفناش نحفظ الحالة — اتأكد إن عندك صلاحية تعديل",
+    };
   }
 
   revalidatePath("/orders");
-  redirect(returnTo + joiner + "bulk=" + orderIds.length);
+  return { ok: true };
 }
 
 export async function addOrderComment(formData: FormData) {
