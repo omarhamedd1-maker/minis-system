@@ -17,6 +17,7 @@ type OrderRow = {
   order_status: string | null;
   order_date: string | null;
   shipping_price: number;
+  discount: number;
   customers: { full_name: string | null; phone: string | null } | null;
   order_items: { quantity: number; sale_price_at_order: number }[];
   order_comments: {
@@ -50,7 +51,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, shipping_price, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
+      "id, order_number, order_status, order_date, shipping_price, discount, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });
@@ -223,7 +224,9 @@ export default async function OrdersPage({
                     (sum, item) =>
                       sum + item.quantity * item.sale_price_at_order,
                     0
-                  ) + order.shipping_price;
+                  ) -
+                  order.discount +
+                  order.shipping_price;
                 return (
                   <tr
                     key={order.id}

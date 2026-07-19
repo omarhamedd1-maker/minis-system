@@ -5,6 +5,96 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
+export async function updateOrderItem(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const itemId = String(formData.get("item_id") ?? "");
+  const quantity = Number(formData.get("quantity"));
+  const salePrice = Number(formData.get("sale_price"));
+
+  if (
+    !orderId ||
+    !itemId ||
+    !Number.isInteger(quantity) ||
+    quantity <= 0 ||
+    !Number.isFinite(salePrice) ||
+    salePrice < 0
+  ) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("الكمية لازم رقم صحيح أكبر من صفر والسعر رقم موجب")
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { error, count } = await supabase
+    .from("order_items")
+    .update(
+      { quantity, sale_price_at_order: salePrice },
+      { count: "exact" }
+    )
+    .eq("id", itemId)
+    .eq("order_id", orderId);
+
+  if (error || count === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ البند — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
+export async function updateDiscount(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const mode = String(formData.get("discount_mode") ?? "amount");
+  const value = Number(formData.get("discount_value"));
+  const itemsTotal = Number(formData.get("items_total"));
+
+  if (!orderId || !Number.isFinite(value) || value < 0) {
+    redirect(
+      `/orders/${orderId}?error=` + encodeURIComponent("قيمة الخصم مش صحيحة")
+    );
+  }
+
+  // لو نسبة: نحولها لمبلغ من إجمالي المنتجات
+  let discount = value;
+  if (mode === "percent") {
+    if (value > 100) {
+      redirect(
+        `/orders/${orderId}?error=` +
+          encodeURIComponent("نسبة الخصم مينفعش تعدي 100%")
+      );
+    }
+    discount = Math.round((itemsTotal * value) / 100);
+  }
+
+  if (Number.isFinite(itemsTotal) && discount > itemsTotal) {
+    discount = itemsTotal;
+  }
+
+  const supabase = await createClient();
+
+  const { error, count } = await supabase
+    .from("orders")
+    .update({ discount }, { count: "exact" })
+    .eq("id", orderId);
+
+  if (error || count === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ الخصم — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
 export async function bulkUpdateStatus(formData: FormData) {
   const orderIds = formData.getAll("order_ids").map(String).filter(Boolean);
   const status = String(formData.get("status") ?? "");

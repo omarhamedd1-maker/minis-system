@@ -9,9 +9,12 @@ import {
 } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
+import { DiscountBox } from "@/components/DiscountBox";
 import {
   deleteOrder,
   toggleOrderArchive,
+  updateDiscount,
+  updateOrderItem,
   updateOrderStatus,
   updateShippingPrice,
 } from "./actions";
@@ -23,6 +26,7 @@ type OrderDetails = {
   order_date: string | null;
   archived: boolean;
   shipping_price: number;
+  discount: number;
   customers: {
     full_name: string | null;
     phone: string | null;
@@ -63,7 +67,7 @@ export default async function OrderDetailsPage({
   const { data: order, error } = await supabase
     .from("orders")
     .select(
-      `id, order_number, order_status, order_date, archived, shipping_price,
+      `id, order_number, order_status, order_date, archived, shipping_price, discount,
        customers(full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
          product_variants(variant_name, products(name))),
@@ -90,6 +94,7 @@ export default async function OrderDetailsPage({
     (sum, item) => sum + item.quantity * item.sale_price_at_order,
     0
   );
+  const grandTotal = itemsTotal - order.discount + order.shipping_price;
 
   return (
     <div className="space-y-6">
@@ -237,13 +242,65 @@ export default async function OrderDetailsPage({
                 <td className="px-4 py-3 text-gray-700">
                   {item.product_variants?.variant_name ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-gray-700">{item.quantity}</td>
-                <td className="px-4 py-3 text-gray-700">
-                  {formatMoney(item.sale_price_at_order)}
-                </td>
-                <td className="px-4 py-3 text-gray-700">
-                  {formatMoney(item.quantity * item.sale_price_at_order)}
-                </td>
+                {isAdmin ? (
+                  <>
+                    <td className="px-4 py-3">
+                      <form
+                        id={`item-${item.id}`}
+                        action={updateOrderItem}
+                      >
+                        <input type="hidden" name="order_id" value={order.id} />
+                        <input type="hidden" name="item_id" value={item.id} />
+                      </form>
+                      <input
+                        type="number"
+                        name="quantity"
+                        form={`item-${item.id}`}
+                        defaultValue={item.quantity}
+                        min={1}
+                        step={1}
+                        className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                        aria-label="الكمية"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        name="sale_price"
+                        form={`item-${item.id}`}
+                        defaultValue={item.sale_price_at_order}
+                        min={0}
+                        step="0.01"
+                        className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                        aria-label="سعر البيع"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-700">
+                          {formatMoney(item.quantity * item.sale_price_at_order)}
+                        </span>
+                        <button
+                          type="submit"
+                          form={`item-${item.id}`}
+                          className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        >
+                          حفظ
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="px-4 py-3 text-gray-700">{item.quantity}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {formatMoney(item.sale_price_at_order)}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {formatMoney(item.quantity * item.sale_price_at_order)}
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
@@ -285,13 +342,29 @@ export default async function OrderDetailsPage({
               </td>
               <td className="px-4 py-2">{formatMoney(order.shipping_price)}</td>
             </tr>
+            <tr className="text-gray-700">
+              <td className="px-4 py-2" colSpan={4}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span>الخصم</span>
+                  {isAdmin && (
+                    <DiscountBox
+                      orderId={order.id}
+                      itemsTotal={itemsTotal}
+                      currentDiscount={order.discount}
+                      updateAction={updateDiscount}
+                    />
+                  )}
+                </div>
+              </td>
+              <td className="px-4 py-2 text-red-600">
+                {order.discount > 0 ? `- ${formatMoney(order.discount)}` : "—"}
+              </td>
+            </tr>
             <tr className="border-t border-gray-200 font-bold text-gray-900">
               <td className="px-4 py-3" colSpan={4}>
                 إجمالي الأوردر
               </td>
-              <td className="px-4 py-3">
-                {formatMoney(itemsTotal + order.shipping_price)}
-              </td>
+              <td className="px-4 py-3">{formatMoney(grandTotal)}</td>
             </tr>
           </tfoot>
         </table>
