@@ -42,7 +42,8 @@
       "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/customers?select=id,full_name,phone,address,orders\\(id,order_date,order_status,shipping_price,order_items\\(quantity,sale_price_at_order\\)\\)&limit=1' -H 'apikey: __TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')",
       "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/orders?select=id,discount&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
       "Bash(ls -la \"/c/Users/holla/Downloads/MINIS \\(2\\).xlsx\" 2>&1)",
-      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/products?select=name,name_ar&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')"
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/products?select=name,name_ar&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(cat >> *)"
     ]
   }
 }

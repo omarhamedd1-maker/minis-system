@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -23,22 +24,55 @@ const CATEGORY_SUGGESTIONS = [
   "أخرى",
 ];
 
+const PERIODS: Record<string, string> = {
+  month: "الشهر ده",
+  "3m": "آخر 3 شهور",
+  year: "السنة دي",
+  all: "الكل",
+};
+
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+    cat?: string;
+    period?: string;
+  }>;
 }) {
-  const { error: actionError, saved, deleted } = await searchParams;
+  const {
+    error: actionError,
+    saved,
+    deleted,
+    cat: rawCat,
+    period: rawPeriod,
+  } = await searchParams;
+  const cat = CATEGORY_SUGGESTIONS.includes(rawCat ?? "") ? rawCat : undefined;
+  const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
   const supabase = await createClient();
 
   const { data: isAdmin } = await supabase.rpc("is_admin");
 
-  const { data: expenses, error } = await supabase
+  const today = cairoToday();
+  let periodStart: string | null = null;
+  if (period === "month") periodStart = today.slice(0, 8) + "01";
+  else if (period === "3m") {
+    const d = new Date(today + "T12:00:00Z");
+    d.setUTCDate(d.getUTCDate() - 89);
+    periodStart = d.toISOString().slice(0, 10);
+  } else if (period === "year") periodStart = today.slice(0, 4) + "-01-01";
+
+  let query = supabase
     .from("expenses")
     .select("id, category, description, amount, expense_date")
     .order("expense_date", { ascending: false })
-    .limit(100)
-    .overrideTypes<ExpenseRow[]>();
+    .limit(2000);
+  if (periodStart) query = query.gte("expense_date", periodStart);
+  if (cat) query = query.eq("category", cat);
+
+  const { data: expenses, error } = await query.overrideTypes<ExpenseRow[]>();
 
   if (error) {
     return (
@@ -48,19 +82,66 @@ export default async function ExpensesPage({
     );
   }
 
-  const today = cairoToday();
-  const monthStart = today.slice(0, 8) + "01";
-  const monthTotal = expenses
-    .filter((expense) => expense.expense_date >= monthStart)
-    .reduce((sum, expense) => sum + expense.amount, 0);
+  const shownTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  const buildHref = (next: { cat?: string | null; period?: string }) => {
+    const params = new URLSearchParams();
+    const c = next.cat === null ? undefined : next.cat ?? cat;
+    const p = next.period ?? period;
+    if (c) params.set("cat", c);
+    if (p && p !== "month") params.set("period", p);
+    const qs = params.toString();
+    return qs ? `/expenses?${qs}` : "/expenses";
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">المصاريف</h1>
         <span className="text-sm text-gray-500">
-          مصاريف الشهر ده: {formatMoney(monthTotal)}
+          {cat ? `${cat} — ` : ""}
+          {PERIODS[period]}: {formatMoney(shownTotal)}
         </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {Object.entries(PERIODS).map(([key, label]) => (
+          <Link
+            key={key}
+            href={buildHref({ period: key })}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              period === key
+                ? "bg-gray-900 text-white"
+                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+        <span className="mx-1 h-4 w-px bg-gray-300"></span>
+        <Link
+          href={buildHref({ cat: null })}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            !cat
+              ? "bg-gray-900 text-white"
+              : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+          }`}
+        >
+          كل الأنواع
+        </Link>
+        {CATEGORY_SUGGESTIONS.map((c) => (
+          <Link
+            key={c}
+            href={buildHref({ cat: c })}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              cat === c
+                ? "bg-gray-900 text-white"
+                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+            }`}
+          >
+            {c}
+          </Link>
+        ))}
       </div>
 
       {actionError && (
@@ -153,7 +234,9 @@ export default async function ExpensesPage({
 
       {expenses.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
-          لسه مفيش مصاريف مسجلة.
+          {cat || period !== "all"
+            ? "مفيش مصاريف بالفلتر ده."
+            : "لسه مفيش مصاريف مسجلة."}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
