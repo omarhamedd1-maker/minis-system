@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ConfirmButton } from "./ConfirmButton";
 import { formatDate, formatMoney } from "@/lib/format";
 
 type Row = {
@@ -31,7 +30,7 @@ export function CustomerRow({
 
   if (isAdmin && editing) {
     return (
-      <tr className="border-b border-gray-100 bg-gray-50 last:border-0">
+      <tr className="border-b border-gray-100 bg-yellow-50 last:border-0">
         <td className="px-4 py-3">
           <form id={formId} action={updateAction}>
             <input type="hidden" name="customer_id" value={row.id} />
@@ -119,24 +118,13 @@ export function CustomerRow({
             أوردراته
           </Link>
           {isAdmin && (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-              >
-                تعديل
-              </button>
-              <form action={deleteAction}>
-                <input type="hidden" name="customer_id" value={row.id} />
-                <ConfirmButton
-                  message={`متأكد إنك عايز تمسح العميل "${row.name}"؟`}
-                  className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                >
-                  مسح
-                </ConfirmButton>
-              </form>
-            </>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+            >
+              تعديل
+            </button>
           )}
         </div>
       </td>

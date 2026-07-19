@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { deleteCustomer } from "../actions";
 
 type CustomerDetail = {
   id: string;
@@ -27,6 +29,8 @@ export default async function CustomerPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+
+  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const { data: customer, error } = await supabase
     .from("customers")
@@ -181,6 +185,20 @@ export default async function CustomerPage({
           </table>
         )}
       </div>
+
+      {isAdmin && (
+        <div className="flex justify-end border-t border-gray-200 pt-6">
+          <form action={deleteCustomer}>
+            <input type="hidden" name="customer_id" value={customer.id} />
+            <ConfirmButton
+              message={`متأكد إنك عايز تمسح العميل "${customer.full_name ?? "بدون اسم"}"؟`}
+              className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+            >
+              مسح العميل
+            </ConfirmButton>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
