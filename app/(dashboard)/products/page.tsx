@@ -141,7 +141,7 @@ export default async function ProductsPage({
                     <td className="px-4 py-3 font-medium text-gray-900">
                       {index === 0 ? product.name_ar ?? product.name ?? "بدون اسم" : ""}
                     </td>
-                    <td className="px-4 py-3 text-gray-500" dir="ltr">
+                    <td className="px-4 py-3 text-right text-gray-500" dir="ltr">
                       {index === 0 ? product.name ?? "—" : ""}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
