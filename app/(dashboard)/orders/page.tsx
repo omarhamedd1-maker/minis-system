@@ -19,7 +19,7 @@ type OrderRow = {
   order_status: string | null;
   order_date: string | null;
   shipping_price: number;
-  customers: { full_name: string | null } | null;
+  customers: { full_name: string | null; phone: string | null } | null;
   order_items: { quantity: number; sale_price_at_order: number }[];
   order_comments: {
     id: string;
@@ -37,10 +37,12 @@ export default async function OrdersPage({
     deleted?: string;
     archived?: string;
     saved?: string;
+    q?: string;
   }>;
 }) {
-  const { status, deleted, archived, saved } = await searchParams;
+  const { status, deleted, archived, saved, q } = await searchParams;
   const showArchived = archived === "1";
+  const searchTerm = (q ?? "").trim();
   const returnTo = `/orders${showArchived ? "?archived=1" : status ? `?status=${status}` : ""}`;
   const supabase = await createClient();
 
@@ -49,7 +51,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, shipping_price, customers(full_name), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
+      "id, order_number, order_status, order_date, shipping_price, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });
@@ -58,9 +60,10 @@ export default async function OrdersPage({
     query = query.eq("order_status", status);
   }
 
-  const { data: orders, error } = await query
+  const { data: fetchedOrders, error } = await query
     .order("order_date", { ascending: false })
-    .limit(100)
+    // في البحث بنوسّع النطاق عشان يشمل الأوردرات القديمة كلها
+    .limit(searchTerm ? 1000 : 100)
     .overrideTypes<OrderRow[]>();
 
   if (error) {
@@ -70,6 +73,23 @@ export default async function OrdersPage({
       </div>
     );
   }
+
+  // فلترة البحث: رقم الأوردر أو اسم العميل أو تليفونه
+  const normalized = searchTerm.toLowerCase().replace(/\s+/g, "");
+  const orders = searchTerm
+    ? fetchedOrders.filter((order) => {
+        const number = (order.order_number ?? "").toLowerCase();
+        const name = (order.customers?.full_name ?? "")
+          .toLowerCase()
+          .replace(/\s+/g, "");
+        const phone = (order.customers?.phone ?? "").replace(/\s+/g, "");
+        return (
+          number.includes(searchTerm.toLowerCase()) ||
+          name.includes(normalized) ||
+          phone.includes(normalized)
+        );
+      })
+    : fetchedOrders;
 
   return (
     <div>
@@ -134,15 +154,41 @@ export default async function OrdersPage({
         >
           الأرشيف
         </Link>
+        <form action="/orders" className="flex items-center gap-1">
+          {status && <input type="hidden" name="status" value={status} />}
+          {showArchived && <input type="hidden" name="archived" value="1" />}
+          <input
+            name="q"
+            defaultValue={searchTerm}
+            placeholder="دور برقم الأوردر أو اسم العميل أو تليفونه"
+            className="w-64 rounded-full border-0 bg-white px-3 py-1 text-xs text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+          />
+          <button
+            type="submit"
+            className="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+          >
+            بحث
+          </button>
+          {searchTerm && (
+            <Link
+              href={returnTo}
+              className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 shadow-sm hover:bg-gray-100"
+            >
+              ✕
+            </Link>
+          )}
+        </form>
       </div>
 
       {orders.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
-          {showArchived
-            ? "الأرشيف فاضي."
-            : status
-              ? "مفيش أوردرات بالحالة دي."
-              : "لسه مفيش أوردرات. أول ما ييجي أوردر من شوبيفاي هيظهر هنا تلقائياً."}
+          {searchTerm
+            ? `مفيش أوردرات فيها "${searchTerm}".`
+            : showArchived
+              ? "الأرشيف فاضي."
+              : status
+                ? "مفيش أوردرات بالحالة دي."
+                : "لسه مفيش أوردرات. أول ما ييجي أوردر من شوبيفاي هيظهر هنا تلقائياً."}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm">

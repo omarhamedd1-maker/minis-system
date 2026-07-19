@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navLinks = [
   { href: "/", label: "الداشبورد" },
   { href: "/orders", label: "الأوردرات" },
+  { href: "/customers", label: "العملاء" },
   { href: "/products", label: "المنتجات والمخزون" },
   { href: "/expenses", label: "المصاريف" },
   { href: "/cash", label: "الخزنة" },
