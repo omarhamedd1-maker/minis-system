@@ -47,8 +47,8 @@ const cairoWeekdayFormat = new Intl.DateTimeFormat("ar-EG", {
 const EXCLUDED = ["cancelled", "returned"];
 
 const PERIODS: Record<string, { label: string }> = {
+  today: { label: "النهارده" },
   month: { label: "الشهر ده" },
-  "30d": { label: "آخر 30 يوم" },
   "3m": { label: "آخر 3 شهور" },
   year: { label: "السنة دي" },
 };
@@ -109,10 +109,10 @@ export default async function StatsPage({
   if (selectedDay) {
     periodStart = selectedDay;
     periodEnd = selectedDay;
+  } else if (period === "today") {
+    periodStart = today;
   } else if (period === "month") {
     periodStart = `${todayYear}-${String(todayMonth).padStart(2, "0")}-01`;
-  } else if (period === "30d") {
-    periodStart = shiftDays(today, -29);
   } else if (period === "3m") {
     periodStart = shiftDays(today, -89);
   } else {
@@ -173,7 +173,7 @@ export default async function StatsPage({
             products: { name: string | null } | null;
           }[]
         >(),
-      // أوردرات اتسلمت النهارده — منها بنحسب تحصيل اليوم
+      // أوردرات اتسلمت في الفترة — منها بنحسب التحصيل
       // (بنوسّع البحث يوم ورا وبنفلتر بتوقيت مصر بعدين)
       supabase
         .from("orders")
@@ -181,7 +181,8 @@ export default async function StatsPage({
           "id, shipping_price, delivered_at, order_items(quantity, sale_price_at_order)"
         )
         .eq("order_status", "delivered")
-        .gte("delivered_at", shiftDays(today, -1))
+        .gte("delivered_at", shiftDays(periodStart, -1))
+        .limit(2000)
         .overrideTypes<
           {
             id: string;
@@ -214,16 +215,13 @@ export default async function StatsPage({
     (o) => !EXCLUDED.includes(o.order_status ?? "")
   );
 
-  // النهارده
-  const todayValidOrders = allOrders.filter(
-    (o) => orderDay(o) === today && !EXCLUDED.includes(o.order_status ?? "")
-  );
-  const todaySales = todayValidOrders.reduce((s, o) => s + itemsTotal(o), 0);
-  const todayProfit = todayValidOrders.reduce((s, o) => s + itemsProfit(o), 0);
-  const todayCollections = (deliveredTodayResult.data ?? [])
-    .filter(
-      (order) => order.delivered_at && cairoDateOf(order.delivered_at) === today
-    )
+  // التحصيل: الأوردرات اللي اتسلمت جوه الفترة المختارة (بتوقيت مصر)
+  const periodCollections = (deliveredTodayResult.data ?? [])
+    .filter((order) => {
+      if (!order.delivered_at) return false;
+      const day = cairoDateOf(order.delivered_at);
+      return day >= periodStart && day <= periodEnd;
+    })
     .reduce(
       (sum, order) =>
         sum +
@@ -494,36 +492,6 @@ export default async function StatsPage({
       </div>
 
       <section>
-        <h2 className="mb-3 text-sm font-bold text-gray-500">النهارده</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">مبيعات النهارده</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {formatMoney(todaySales)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">أرباح النهارده</p>
-            <p className="mt-1 text-2xl font-bold text-green-600">
-              {formatMoney(todayProfit)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">أوردرات النهارده</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {todayValidOrders.length}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">تحصيل النهارده (بوسطة)</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">
-              {formatMoney(todayCollections)}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section>
         <h2 className="mb-3 text-sm font-bold text-gray-500">
           {periodLabel}
         </h2>
@@ -554,6 +522,15 @@ export default async function StatsPage({
               }`}
             >
               {formatMoney(netProfit)}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">التحصيل (بوسطة)</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">
+              {formatMoney(periodCollections)}
+            </p>
+            <p className="text-xs text-gray-400">
+              فلوس الأوردرات اللي اتسلمت في {periodLabel}
             </p>
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">
