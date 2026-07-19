@@ -462,6 +462,13 @@ export default async function StatsPage({
         )
       : null;
 
+  // توقع قفلة الشهر: لو كملت بنفس معدل البيع اليومي
+  const todayDayOfMonth = Number(today.split("-")[2]);
+  const daysInMonth = new Date(todayYear, todayMonth, 0).getDate();
+  const monthDailyRate =
+    todayDayOfMonth > 0 ? currentMonthSales / todayDayOfMonth : 0;
+  const projectedMonthSales = Math.round(monthDailyRate * daysInMonth);
+
 
   return (
     <div className="space-y-6">
@@ -616,6 +623,24 @@ export default async function StatsPage({
             <p className="text-xs text-gray-400">
               الشهر ده مقارنة بالشهر اللي فات
             </p>
+          </div>
+          <div className="rounded-xl bg-white p-5 shadow-sm sm:col-span-2">
+            <p className="text-sm text-gray-500">توقع قفلة الشهر</p>
+            {currentMonthSales <= 0 ? (
+              <p className="mt-1 text-sm text-gray-400">
+                لسه مفيش مبيعات الشهر ده نتوقع منها
+              </p>
+            ) : (
+              <>
+                <p className="mt-1 text-2xl font-bold text-sky-600">
+                  ~{formatMoney(projectedMonthSales)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  لو كملت بنفس المعدل ({formatMoney(Math.round(monthDailyRate))}{" "}
+                  في اليوم) — فات {todayDayOfMonth} يوم من {daysInMonth}
+                </p>
+              </>
+            )}
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm sm:col-span-2">
             <p className="text-sm text-gray-500">نقطة التعادل</p>
