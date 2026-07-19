@@ -624,7 +624,10 @@ export default async function StatsPage({
               الشهر ده مقارنة بالشهر اللي فات
             </p>
           </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm sm:col-span-2">
+        </div>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">توقع قفلة الشهر</p>
             {currentMonthSales <= 0 ? (
               <p className="mt-1 text-sm text-gray-400">
@@ -642,7 +645,7 @@ export default async function StatsPage({
               </>
             )}
           </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm sm:col-span-2">
+          <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">نقطة التعادل</p>
             {breakEvenOrders === null ? (
               <p className="mt-1 text-sm text-gray-400">
