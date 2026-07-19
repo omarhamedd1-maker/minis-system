@@ -121,7 +121,7 @@ export function CustomerRow({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
             >
               تعديل
             </button>
