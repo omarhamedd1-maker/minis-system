@@ -605,6 +605,9 @@ export default async function StatsPage({
               من يوم الأوردر ليوم التسليم ({deliveryDurations.length} أوردر)
             </p>
           </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">نمو المبيعات الشهري</p>
             {monthGrowth === null ? (
@@ -623,27 +626,6 @@ export default async function StatsPage({
             <p className="text-xs text-gray-400">
               الشهر ده مقارنة بالشهر اللي فات
             </p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">توقع قفلة الشهر</p>
-            {currentMonthSales <= 0 ? (
-              <p className="mt-1 text-sm text-gray-400">
-                لسه مفيش مبيعات الشهر ده نتوقع منها
-              </p>
-            ) : (
-              <>
-                <p className="mt-1 text-2xl font-bold text-sky-600">
-                  ~{formatMoney(projectedMonthSales)}
-                </p>
-                <p className="text-xs text-gray-400">
-                  لو كملت بنفس المعدل ({formatMoney(Math.round(monthDailyRate))}{" "}
-                  في اليوم) — فات {todayDayOfMonth} يوم من {daysInMonth}
-                </p>
-              </>
-            )}
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">نقطة التعادل</p>
@@ -670,6 +652,24 @@ export default async function StatsPage({
                   محتاج {breakEvenOrders} أوردر لتغطية المصاريف — حققت{" "}
                   {orderCount} (بمتوسط ربح{" "}
                   {formatMoney(Math.round(avgProfitPerOrder))} للأوردر)
+                </p>
+              </>
+            )}
+          </div>
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">توقع قفلة الشهر</p>
+            {currentMonthSales <= 0 ? (
+              <p className="mt-1 text-sm text-gray-400">
+                لسه مفيش مبيعات الشهر ده نتوقع منها
+              </p>
+            ) : (
+              <>
+                <p className="mt-1 text-2xl font-bold text-sky-600">
+                  ~{formatMoney(projectedMonthSales)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  لو كملت بنفس المعدل ({formatMoney(Math.round(monthDailyRate))}{" "}
+                  في اليوم) — فات {todayDayOfMonth} يوم من {daysInMonth}
                 </p>
               </>
             )}
