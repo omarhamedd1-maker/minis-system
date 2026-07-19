@@ -75,6 +75,35 @@ export async function saveStock(formData: FormData) {
   redirect(returnTo + "?saved=1");
 }
 
+export async function saveProductName(formData: FormData) {
+  const productId = String(formData.get("product_id") ?? "");
+  const nameAr = String(formData.get("name_ar") ?? "").trim();
+  const returnTo = `/products/${productId}`;
+
+  if (!productId) {
+    redirect("/products?error=" + encodeURIComponent("المنتج ده مش موجود"));
+  }
+
+  const supabase = await createClient();
+
+  const { error, count } = await supabase
+    .from("products")
+    .update({ name_ar: nameAr || null }, { count: "exact" })
+    .eq("id", productId);
+
+  if (error || count === 0) {
+    redirect(
+      returnTo +
+        "?error=" +
+        encodeURIComponent("معرفناش نحفظ الاسم — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath("/products");
+  revalidatePath(returnTo);
+  redirect(returnTo + "?saved=1");
+}
+
 export async function saveSku(formData: FormData) {
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");

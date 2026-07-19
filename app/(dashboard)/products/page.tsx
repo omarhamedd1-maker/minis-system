@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
-import { saveStock } from "./actions";
 
 type ProductRow = {
   id: string;
   name: string | null;
+  name_ar: string | null;
   product_variants: {
     id: string;
     variant_name: string | null;
@@ -19,19 +19,20 @@ type ProductRow = {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; q?: string }>;
 }) {
-  const { error: actionError, saved } = await searchParams;
+  const { error: actionError, saved, q } = await searchParams;
+  const searchTerm = (q ?? "").trim();
   const supabase = await createClient();
 
   const { data: isAdmin } = await supabase.rpc("is_admin");
 
-  const { data: products, error } = await supabase
+  const { data: allProducts, error } = await supabase
     .from("products")
     .select(
-      "id, name, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
+      "id, name, name_ar, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
     )
-    .order("name")
+    .order("name_ar")
     .overrideTypes<ProductRow[]>();
 
   if (error) {
@@ -42,6 +43,20 @@ export default async function ProductsPage({
     );
   }
 
+  const normalized = searchTerm.toLowerCase().replace(/\s+/g, "");
+  const products = searchTerm
+    ? allProducts.filter((p) => {
+        const ar = (p.name_ar ?? "").toLowerCase().replace(/\s+/g, "");
+        const en = (p.name ?? "").toLowerCase().replace(/\s+/g, "");
+        const sku = (p.product_variants[0]?.sku ?? "").toLowerCase();
+        return (
+          ar.includes(normalized) ||
+          en.includes(normalized) ||
+          sku.includes(searchTerm.toLowerCase())
+        );
+      })
+    : allProducts;
+
   const variantCount = products.reduce(
     (sum, product) => sum + product.product_variants.length,
     0
@@ -49,11 +64,35 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-gray-900">المنتجات والمخزون</h1>
-        <span className="text-sm text-gray-500">
-          {products.length} منتج / {variantCount} شكل
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-gray-500">
+            {products.length} منتج / {variantCount} شكل
+          </span>
+          <form action="/products" className="flex items-center gap-1">
+            <input
+              name="q"
+              defaultValue={searchTerm}
+              placeholder="دور بالاسم أو الكود"
+              className="w-52 rounded-full border-0 bg-white px-3 py-1 text-xs text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            />
+            <button
+              type="submit"
+              className="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+            >
+              بحث
+            </button>
+            {searchTerm && (
+              <Link
+                href="/products"
+                className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 shadow-sm hover:bg-gray-100"
+              >
+                ✕
+              </Link>
+            )}
+          </form>
+        </div>
       </div>
 
       {actionError && (
@@ -68,8 +107,9 @@ export default async function ProductsPage({
       )}
       {products.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
-          لسه مفيش منتجات. المنتجات بتتسجل هنا تلقائياً مع أول أوردر ييجي من
-          شوبيفاي.
+          {searchTerm
+            ? `مفيش منتجات فيها "${searchTerm}".`
+            : "لسه مفيش منتجات. المنتجات بتتسجل هنا تلقائياً مع أول أوردر ييجي من شوبيفاي."}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
@@ -78,11 +118,12 @@ export default async function ProductsPage({
               <tr className="border-b border-gray-200 text-right text-gray-500">
                 <th className="px-4 py-3 font-medium">الكود</th>
                 <th className="px-4 py-3 font-medium">المنتج</th>
+                <th className="px-4 py-3 font-medium">الاسم في شوبيفاي</th>
                 <th className="px-4 py-3 font-medium">الشكل</th>
                 <th className="px-4 py-3 font-medium">سعر البيع</th>
                 <th className="px-4 py-3 font-medium">التكلفة</th>
                 <th className="px-4 py-3 font-medium">المخزون</th>
-                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -98,16 +139,10 @@ export default async function ProductsPage({
                       {variant.sku ?? "—"}
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      {index === 0 ? (
-                        <Link
-                          href={`/products/${product.id}`}
-                          className="hover:underline"
-                        >
-                          {product.name ?? "بدون اسم"}
-                        </Link>
-                      ) : (
-                        ""
-                      )}
+                      {index === 0 ? product.name_ar ?? product.name ?? "بدون اسم" : ""}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500" dir="ltr">
+                      {index === 0 ? product.name ?? "—" : ""}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
                       {variant.variant_name ?? "افتراضي"}
@@ -118,58 +153,19 @@ export default async function ProductsPage({
                     <td className="px-4 py-3 text-gray-700">
                       {formatMoney(variant.cost_price)}
                     </td>
-                    {isAdmin ? (
-                      <>
-                        <td className="px-4 py-3">
-                          <form
-                            id={`stock-${variant.id}`}
-                            action={saveStock}
-                          >
-                            <input
-                              type="hidden"
-                              name="variant_id"
-                              value={variant.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="return_to"
-                              value="/products"
-                            />
-                          </form>
-                          <input
-                            type="number"
-                            name="quantity"
-                            form={`stock-${variant.id}`}
-                            defaultValue={variant.quantity_on_hand}
-                            min={0}
-                            step={1}
-                            className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                            aria-label="المخزون"
-                          />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="submit"
-                              form={`stock-${variant.id}`}
-                              className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                            >
-                              حفظ
-                            </button>
-                            <Link
-                              href={`/products/${product.id}`}
-                              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
-                            >
-                              فتح
-                            </Link>
-                          </div>
-                        </td>
-                      </>
-                    ) : (
-                      <td className="px-4 py-3 text-gray-700">
-                        {variant.quantity_on_hand}
-                      </td>
-                    )}
+                    <td className="px-4 py-3 text-gray-700">
+                      {variant.quantity_on_hand}
+                    </td>
+                    <td className="px-4 py-3">
+                      {index === 0 && (
+                        <Link
+                          href={`/products/${product.id}`}
+                          className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        >
+                          فتح
+                        </Link>
+                      )}
+                    </td>
                   </tr>
                 ))
               )}

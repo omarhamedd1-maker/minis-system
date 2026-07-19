@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS, formatMoney } from "@/lib/format";
-import { saveCostComponents, saveSku, saveStock } from "../actions";
+import { saveCostComponents, saveProductName, saveSku, saveStock } from "../actions";
 
 type ProductDetails = {
   id: string;
   name: string | null;
+  name_ar: string | null;
   product_variants: {
     id: string;
     variant_name: string | null;
@@ -34,7 +35,7 @@ export default async function ProductDetailsPage({
   const { data: product, error } = await supabase
     .from("products")
     .select(
-      `id, name,
+      `id, name, name_ar,
        product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand,
          variant_cost_components(component, amount))`
     )
@@ -57,9 +58,16 @@ export default async function ProductDetailsPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">
-          {product.name ?? "بدون اسم"}
-        </h1>
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">
+            {product.name_ar ?? product.name ?? "بدون اسم"}
+          </h1>
+          {product.name && (
+            <p className="text-sm text-gray-400" dir="ltr">
+              {product.name}
+            </p>
+          )}
+        </div>
         <Link
           href="/products"
           className="text-sm text-gray-500 hover:text-gray-900"
@@ -67,6 +75,32 @@ export default async function ProductDetailsPage({
           الرجوع للمنتجات
         </Link>
       </div>
+
+      {isAdmin && (
+        <form
+          action={saveProductName}
+          className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
+        >
+          <input type="hidden" name="product_id" value={product.id} />
+          <div className="flex flex-col gap-1">
+            <label htmlFor="name_ar" className="text-xs text-gray-500">
+              الاسم بالعربي (اللي انت بتعرف بيه المنتج)
+            </label>
+            <input
+              id="name_ar"
+              name="name_ar"
+              defaultValue={product.name_ar ?? ""}
+              className="w-64 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+          >
+            حفظ الاسم
+          </button>
+        </form>
+      )}
 
       {actionError && (
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
