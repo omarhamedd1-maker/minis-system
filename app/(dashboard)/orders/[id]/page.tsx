@@ -27,6 +27,9 @@ type OrderDetails = {
   archived: boolean;
   shipping_price: number;
   discount: number;
+  bosta_state: string | null;
+  bosta_cod: number;
+  bosta_collected: boolean;
   customers: {
     full_name: string | null;
     phone: string | null;
@@ -68,6 +71,7 @@ export default async function OrderDetailsPage({
     .from("orders")
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
+       bosta_state, bosta_cod, bosta_collected,
        customers(full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
          product_variants(variant_name, products(name))),
@@ -177,8 +181,40 @@ export default async function OrderDetailsPage({
 
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-sm font-bold text-gray-900">الشحن</h2>
+
+          {order.bosta_state && (
+            <div className="mb-3 space-y-2 border-b border-gray-100 pb-3 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-gray-500">حالة بوسطة</dt>
+                <dd className="text-gray-900" dir="ltr">
+                  {order.bosta_state}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
+                <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-gray-500">حالة التحصيل</dt>
+                <dd>
+                  {order.bosta_collected ? (
+                    <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                      اتحصّل من العميل
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                      لسه ما اتحصّلش
+                    </span>
+                  )}
+                </dd>
+              </div>
+            </div>
+          )}
+
           {order.shipments.length === 0 ? (
-            <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
+            <p className="text-sm text-gray-500">
+              {order.bosta_state ? "" : "لسه مفيش شحنة للأوردر ده."}
+            </p>
           ) : (
             <dl className="space-y-2 text-sm">
               {order.shipments.map((shipment) => (

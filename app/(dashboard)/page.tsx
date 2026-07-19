@@ -180,23 +180,18 @@ export default async function StatsPage({
             products: { name: string | null } | null;
           }[]
         >(),
-      // أوردرات اتسلمت في الفترة — منها بنحسب التحصيل
-      // (بنوسّع البحث يوم ورا وبنفلتر بتوقيت مصر بعدين)
+      // التحصيل الحقيقي من بوسطة: مبالغ COD اللي اتحصّلت فعلاً
       supabase
         .from("orders")
-        .select(
-          "id, shipping_price, discount, delivered_at, order_items(quantity, sale_price_at_order)"
-        )
-        .eq("order_status", "delivered")
+        .select("id, bosta_cod, delivered_at")
+        .eq("bosta_collected", true)
         .gte("delivered_at", shiftDays(periodStart, -1))
-        .limit(2000)
+        .limit(3000)
         .overrideTypes<
           {
             id: string;
-            shipping_price: number;
-            discount: number;
+            bosta_cod: number;
             delivered_at: string | null;
-            order_items: { quantity: number; sale_price_at_order: number }[];
           }[]
         >(),
     ]);
@@ -223,24 +218,14 @@ export default async function StatsPage({
     (o) => !EXCLUDED.includes(o.order_status ?? "")
   );
 
-  // التحصيل: الأوردرات اللي اتسلمت جوه الفترة المختارة (بتوقيت مصر)
+  // التحصيل الحقيقي: مجموع مبالغ COD اللي بوسطة حصّلتها في الفترة (بتوقيت مصر)
   const periodCollections = (deliveredTodayResult.data ?? [])
     .filter((order) => {
       if (!order.delivered_at) return false;
       const day = cairoDateOf(order.delivered_at);
       return day >= periodStart && day <= periodEnd;
     })
-    .reduce(
-      (sum, order) =>
-        sum +
-        order.order_items.reduce(
-          (s, item) => s + item.quantity * item.sale_price_at_order,
-          0
-        ) -
-        order.discount +
-        order.shipping_price,
-      0
-    );
+    .reduce((sum, order) => sum + Number(order.bosta_cod ?? 0), 0);
 
   // ملخص الفترة — المبيعات والأرباح بعد خصم الخصومات
   const sales = validOrders.reduce(
@@ -543,12 +528,12 @@ export default async function StatsPage({
             </p>
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">التحصيل (بوسطة)</p>
+            <p className="text-sm text-gray-500">تحصيل بوسطة الفعلي (COD)</p>
             <p className="mt-1 text-2xl font-bold text-emerald-600">
               {formatMoney(periodCollections)}
             </p>
             <p className="text-xs text-gray-400">
-              فلوس الأوردرات اللي اتسلمت في {periodLabel}
+              فلوس الدفع عند الاستلام اللي بوسطة حصّلتها في {periodLabel}
             </p>
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">
