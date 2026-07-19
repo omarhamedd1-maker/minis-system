@@ -5,6 +5,45 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
+export async function bulkUpdateStatus(formData: FormData) {
+  const orderIds = formData.getAll("order_ids").map(String).filter(Boolean);
+  const status = String(formData.get("status") ?? "");
+  const rawReturnTo = String(formData.get("return_to") ?? "");
+  const returnTo = rawReturnTo.startsWith("/orders") ? rawReturnTo : "/orders";
+  const joiner = returnTo.includes("?") ? "&" : "?";
+
+  const isValidStatus = ORDER_STATUS_OPTIONS.some((o) => o.value === status);
+  if (orderIds.length === 0 || !isValidStatus) {
+    redirect(
+      returnTo + joiner + "error=" + encodeURIComponent("اختار أوردرات وحالة صحيحة")
+    );
+  }
+
+  const supabase = await createClient();
+
+  const update: { order_status: string; delivered_at?: string | null } = {
+    order_status: status,
+  };
+  update.delivered_at = status === "delivered" ? new Date().toISOString() : null;
+
+  const { error } = await supabase
+    .from("orders")
+    .update(update)
+    .in("id", orderIds);
+
+  if (error) {
+    redirect(
+      returnTo +
+        joiner +
+        "error=" +
+        encodeURIComponent("معرفناش نحفظ الحالة — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath("/orders");
+  redirect(returnTo + joiner + "bulk=" + orderIds.length);
+}
+
 export async function addOrderComment(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   const body = String(formData.get("body") ?? "").trim();

@@ -8,6 +8,8 @@ import {
 } from "./[id]/actions";
 import { OrderComments } from "@/components/OrderComments";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
+import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
+import { bulkUpdateStatus } from "./[id]/actions";
 
 type OrderRow = {
   id: string;
@@ -34,9 +36,10 @@ export default async function OrdersPage({
     archived?: string;
     saved?: string;
     q?: string;
+    bulk?: string;
   }>;
 }) {
-  const { status, deleted, archived, saved, q } = await searchParams;
+  const { status, deleted, archived, saved, q, bulk } = await searchParams;
   const showArchived = archived === "1";
   const searchTerm = (q ?? "").trim();
   const returnTo = `/orders${showArchived ? "?archived=1" : status ? `?status=${status}` : ""}`;
@@ -114,6 +117,11 @@ export default async function OrdersPage({
           تم حفظ الحالة الجديدة
         </div>
       )}
+      {bulk && (
+        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          تم تغيير حالة {bulk} أوردر
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link
@@ -187,10 +195,19 @@ export default async function OrdersPage({
                 : "لسه مفيش أوردرات. أول ما ييجي أوردر من شوبيفاي هيظهر هنا تلقائياً."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <>
+          <BulkStatusBar
+            returnTo={returnTo}
+            options={ORDER_STATUS_OPTIONS}
+            updateAction={bulkUpdateStatus}
+          />
+          <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-right text-gray-500">
+                <th className="px-4 py-3 font-medium">
+                  <SelectAllCheckbox />
+                </th>
                 <th className="px-4 py-3 font-medium">رقم الأوردر</th>
                 <th className="px-4 py-3 font-medium">العميل</th>
                 <th className="px-4 py-3 font-medium">التاريخ</th>
@@ -212,6 +229,15 @@ export default async function OrdersPage({
                     key={order.id}
                     className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        data-order-checkbox
+                        value={order.id}
+                        aria-label="تحديد الأوردر"
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/orders/${order.id}`}
@@ -261,7 +287,8 @@ export default async function OrdersPage({
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
