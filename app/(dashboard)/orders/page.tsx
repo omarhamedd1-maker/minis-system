@@ -1,17 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import {
-  ORDER_STATUS_OPTIONS,
-  formatDate,
-  formatMoney,
-  orderStatusBadge,
-} from "@/lib/format";
+import { ORDER_STATUS_OPTIONS, formatDate, formatMoney } from "@/lib/format";
 import {
   addOrderComment,
   deleteOrderComment,
   updateOrderStatus,
 } from "./[id]/actions";
 import { OrderComments } from "@/components/OrderComments";
+import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 
 type OrderRow = {
   id: string;
@@ -211,7 +207,6 @@ export default async function OrdersPage({
                       sum + item.quantity * item.sale_price_at_order,
                     0
                   ) + order.shipping_price;
-                const badge = orderStatusBadge(order.order_status);
                 return (
                   <tr
                     key={order.id}
@@ -235,56 +230,16 @@ export default async function OrdersPage({
                       {formatMoney(total)}
                     </td>
                     <td className="px-4 py-3">
-                      {isAdmin ? (
-                        <>
-                          <form
-                            id={`status-${order.id}`}
-                            action={updateOrderStatus}
-                          >
-                            <input
-                              type="hidden"
-                              name="order_id"
-                              value={order.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="return_to"
-                              value={returnTo}
-                            />
-                          </form>
-                          <select
-                            name="status"
-                            form={`status-${order.id}`}
-                            defaultValue={order.order_status ?? "new"}
-                            className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-                            aria-label="حالة الأوردر"
-                          >
-                            {ORDER_STATUS_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </>
-                      ) : (
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
-                        >
-                          {badge.label}
-                        </span>
-                      )}
+                      <OrderStatusSelect
+                        orderId={order.id}
+                        currentStatus={order.order_status ?? "new"}
+                        returnTo={returnTo}
+                        options={ORDER_STATUS_OPTIONS}
+                        updateAction={updateOrderStatus}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        {isAdmin && (
-                          <button
-                            type="submit"
-                            form={`status-${order.id}`}
-                            className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                          >
-                            حفظ
-                          </button>
-                        )}
                         <Link
                           href={`/orders/${order.id}`}
                           className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
@@ -295,7 +250,7 @@ export default async function OrdersPage({
                           orderId={order.id}
                           orderNumber={order.order_number ?? ""}
                           comments={order.order_comments}
-                          isAdmin={!!isAdmin}
+                          isAdmin={true}
                           addAction={addOrderComment}
                           deleteAction={deleteOrderComment}
                         />

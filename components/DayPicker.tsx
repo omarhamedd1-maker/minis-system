@@ -1,31 +1,40 @@
 "use client";
 
-import { useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function DayPicker({ selected }: { selected?: string }) {
+export function DayPicker({
+  from,
+  to,
+}: {
+  from?: string;
+  to?: string;
+}) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const active = !!(from || to);
 
-  const openPicker = () => {
-    const input = inputRef.current;
-    if (!input) return;
-    if (typeof input.showPicker === "function") {
-      input.showPicker();
-    } else {
-      input.click();
+  function apply(nextFrom: string, nextTo: string) {
+    if (!nextFrom && !nextTo) {
+      router.push("/");
+      return;
     }
-  };
+    const f = nextFrom || nextTo;
+    const t = nextTo || nextFrom;
+    // نضمن إن البداية قبل النهاية
+    const [lo, hi] = f <= t ? [f, t] : [t, f];
+    router.push(`/?from=${lo}&to=${hi}`);
+  }
 
   return (
     <span className="relative inline-flex items-center gap-1">
       <button
         type="button"
-        onClick={openPicker}
-        title="اختار يوم معين"
-        aria-label="اختار يوم معين من التقويم"
+        onClick={() => setOpen((v) => !v)}
+        title="اختار يوم أو فترة"
+        aria-label="اختار يوم أو فترة من التقويم"
         className={`rounded-full p-1.5 shadow-sm ${
-          selected
+          active
             ? "bg-gray-900 text-white"
             : "bg-white text-gray-600 hover:bg-gray-100"
         }`}
@@ -43,26 +52,49 @@ export function DayPicker({ selected }: { selected?: string }) {
           />
         </svg>
       </button>
-      <input
-        ref={inputRef}
-        type="date"
-        value={selected ?? ""}
-        onChange={(e) => {
-          router.push(e.target.value ? `/?day=${e.target.value}` : "/");
-        }}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="absolute bottom-0 right-0 h-px w-px opacity-0"
-      />
-      {selected && (
+
+      {active && (
         <button
           type="button"
           onClick={() => router.push("/")}
-          title="إلغاء اليوم المختار"
+          title="إلغاء الفترة المختارة"
           className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 shadow-sm hover:bg-gray-100"
         >
           ✕
         </button>
+      )}
+
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          ></div>
+          <div className="absolute top-full z-50 mt-2 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-xl ltr:left-0 rtl:right-0">
+            <label className="flex items-center justify-between gap-3 text-xs text-gray-600">
+              <span>من</span>
+              <input
+                type="date"
+                defaultValue={from ?? ""}
+                onChange={(e) => apply(e.target.value, to ?? "")}
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-xs text-gray-600">
+              <span>إلى</span>
+              <input
+                type="date"
+                defaultValue={to ?? ""}
+                onChange={(e) => apply(from ?? "", e.target.value)}
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </label>
+            <p className="text-[11px] text-gray-400">
+              سيب "إلى" فاضية عشان يوم واحد بس
+            </p>
+          </div>
+        </>
       )}
     </span>
   );

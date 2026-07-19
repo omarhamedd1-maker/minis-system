@@ -91,24 +91,33 @@ function itemsProfit(order: OrderRow) {
 export default async function StatsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; day?: string }>;
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
-  const { period: rawPeriod, day: rawDay } = await searchParams;
+  const { period: rawPeriod, from: rawFrom, to: rawTo } = await searchParams;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
 
   // اليوم الحالي بتوقيت مصر مش بتوقيت السيرفر
   const today = cairoDateOf(new Date());
   const [todayYear, todayMonth] = today.split("-").map(Number);
 
-  // يوم معين مختار من التقويم
-  const selectedDay =
-    rawDay && /^\d{4}-\d{2}-\d{2}$/.test(rawDay) ? rawDay : undefined;
+  // فترة مختارة من التقويم (يوم واحد أو مدى)
+  const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const rangeFrom = isDate(rawFrom) ? rawFrom! : undefined;
+  const rangeTo = isDate(rawTo) ? rawTo! : rangeFrom;
+  const hasRange = !!rangeFrom;
+
+  const fmtDay = (d: string) =>
+    new Date(d + "T12:00:00Z").toLocaleDateString("ar-EG", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
 
   let periodStart: string;
   let periodEnd = today;
-  if (selectedDay) {
-    periodStart = selectedDay;
-    periodEnd = selectedDay;
+  if (hasRange) {
+    periodStart = rangeFrom!;
+    periodEnd = rangeTo!;
   } else if (period === "today") {
     periodStart = today;
   } else if (period === "month") {
@@ -119,13 +128,10 @@ export default async function StatsPage({
     periodStart = `${todayYear}-01-01`;
   }
 
-  const periodLabel = selectedDay
-    ? new Date(selectedDay + "T12:00:00Z").toLocaleDateString("ar-EG", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
+  const periodLabel = hasRange
+    ? rangeFrom === rangeTo
+      ? fmtDay(rangeFrom!)
+      : `من ${fmtDay(rangeFrom!)} لـ ${fmtDay(rangeTo!)}`
     : PERIODS[period].label;
 
   // بنجيب من أول 6 شهور فاتت عشان شارت مقارنة الشهور، مهما كانت الفترة المختارة
@@ -272,11 +278,6 @@ export default async function StatsPage({
     totalCustomers > 0
       ? Math.round((repeatCustomers / totalCustomers) * 100)
       : 0;
-
-  // نقطة التعادل: كام أوردر يغطي المصاريف
-  const avgProfitPerOrder = orderCount > 0 ? profit / orderCount : 0;
-  const breakEvenOrders =
-    avgProfitPerOrder > 0 ? Math.ceil(expensesTotal / avgProfitPerOrder) : null;
 
   // متوسط زمن التوصيل: من تاريخ الأوردر لتاريخ التسليم
   const deliveryDurations = periodOrders
@@ -480,7 +481,7 @@ export default async function StatsPage({
               key={key}
               href={`/?period=${key}`}
               className={`rounded-full px-3 py-1 text-xs font-medium ${
-                !selectedDay && period === key
+                !hasRange && period === key
                   ? "bg-gray-900 text-white"
                   : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
               }`}
@@ -488,7 +489,7 @@ export default async function StatsPage({
               {p.label}
             </Link>
           ))}
-          <DayPicker selected={selectedDay} />
+          <DayPicker from={rangeFrom} to={rangeTo} />
           <a
             href="/export"
             className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
@@ -607,7 +608,7 @@ export default async function StatsPage({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">نمو المبيعات الشهري</p>
             {monthGrowth === null ? (
@@ -626,35 +627,6 @@ export default async function StatsPage({
             <p className="text-xs text-gray-400">
               الشهر ده مقارنة بالشهر اللي فات
             </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">نقطة التعادل</p>
-            {breakEvenOrders === null ? (
-              <p className="mt-1 text-sm text-gray-400">
-                محتاجين أوردرات بأرباح الأول عشان نحسبها
-              </p>
-            ) : orderCount >= breakEvenOrders ? (
-              <>
-                <p className="mt-1 text-2xl font-bold text-green-600">
-                  مصاريفك متغطية ✓
-                </p>
-                <p className="text-xs text-gray-400">
-                  محتاج {breakEvenOrders} أوردر لتغطية المصاريف — حققت{" "}
-                  {orderCount}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="mt-1 text-2xl font-bold text-orange-600">
-                  فاضل {breakEvenOrders - orderCount} أوردر
-                </p>
-                <p className="text-xs text-gray-400">
-                  محتاج {breakEvenOrders} أوردر لتغطية المصاريف — حققت{" "}
-                  {orderCount} (بمتوسط ربح{" "}
-                  {formatMoney(Math.round(avgProfitPerOrder))} للأوردر)
-                </p>
-              </>
-            )}
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">توقع قفلة الشهر</p>

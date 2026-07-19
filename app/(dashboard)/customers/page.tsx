@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
+import { CustomerRow } from "@/components/CustomerRow";
+import { deleteCustomer, updateCustomer } from "./actions";
 
-type CustomerRow = {
+type CustomerData = {
   id: string;
   full_name: string | null;
   phone: string | null;
@@ -21,11 +23,18 @@ const EXCLUDED = ["cancelled", "returned"];
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    saved?: string;
+    deleted?: string;
+    error?: string;
+  }>;
 }) {
-  const { q } = await searchParams;
+  const { q, saved, deleted, error: actionError } = await searchParams;
   const searchTerm = (q ?? "").trim();
   const supabase = await createClient();
+
+  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const { data: customers, error } = await supabase
     .from("customers")
@@ -35,7 +44,7 @@ export default async function CustomersPage({
          order_items(quantity, sale_price_at_order))`
     )
     .limit(1000)
-    .overrideTypes<CustomerRow[]>();
+    .overrideTypes<CustomerData[]>();
 
   if (error) {
     return (
@@ -118,6 +127,22 @@ export default async function CustomersPage({
         </div>
       </div>
 
+      {actionError && (
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
+      {saved && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          تم حفظ بيانات العميل
+        </div>
+      )}
+      {deleted && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          تم مسح العميل
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
           {searchTerm
@@ -140,35 +165,13 @@ export default async function CustomersPage({
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr
+                <CustomerRow
                   key={row.id}
-                  className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
-                >
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {row.name}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700" dir="ltr">
-                    {row.phone ?? "—"}
-                  </td>
-                  <td className="max-w-48 truncate px-4 py-3 text-gray-700">
-                    {row.address ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">{row.ordersCount}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {formatMoney(row.total)}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {formatDate(row.lastOrderDate)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/orders?q=${encodeURIComponent(row.phone ?? row.name)}`}
-                      className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
-                    >
-                      أوردراته
-                    </Link>
-                  </td>
-                </tr>
+                  row={row}
+                  isAdmin={!!isAdmin}
+                  updateAction={updateCustomer}
+                  deleteAction={deleteCustomer}
+                />
               ))}
             </tbody>
           </table>

@@ -8,6 +8,7 @@ import {
   orderStatusBadge,
 } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import {
   deleteOrder,
   toggleOrderArchive,
@@ -127,35 +128,18 @@ export default async function OrderDetailsPage({
         </div>
       )}
 
-      {isAdmin && (
-        <form
-          action={updateOrderStatus}
-          className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-4 shadow-sm"
-        >
-          <input type="hidden" name="order_id" value={order.id} />
-          <label htmlFor="status" className="text-sm font-medium text-gray-700">
-            تغيير حالة الأوردر
-          </label>
-          <select
-            id="status"
-            name="status"
-            defaultValue={order.order_status ?? "new"}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-          >
-            {ORDER_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
-          >
-            حفظ
-          </button>
-        </form>
-      )}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
+        <span className="text-sm font-medium text-gray-700">
+          تغيير حالة الأوردر
+        </span>
+        <OrderStatusSelect
+          orderId={order.id}
+          currentStatus={order.order_status ?? "new"}
+          returnTo={`/orders/${order.id}`}
+          options={ORDER_STATUS_OPTIONS}
+          updateAction={updateOrderStatus}
+        />
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-white p-5 shadow-sm">
