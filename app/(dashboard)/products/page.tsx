@@ -43,9 +43,14 @@ export default async function ProductsPage({
     );
   }
 
+  // نخفي صندوق تجميع الأوردرات القديمة من شاشة المنتجات (مش منتج حقيقي)
+  const visibleProducts = allProducts.filter(
+    (p) => p.name !== "أوردر قديم (منتجات متعددة)"
+  );
+
   const normalized = searchTerm.toLowerCase().replace(/\s+/g, "");
   const products = searchTerm
-    ? allProducts.filter((p) => {
+    ? visibleProducts.filter((p) => {
         const ar = (p.name_ar ?? "").toLowerCase().replace(/\s+/g, "");
         const en = (p.name ?? "").toLowerCase().replace(/\s+/g, "");
         const sku = (p.product_variants[0]?.sku ?? "").toLowerCase();
@@ -55,7 +60,7 @@ export default async function ProductsPage({
           sku.includes(searchTerm.toLowerCase())
         );
       })
-    : allProducts;
+    : visibleProducts;
 
   const variantCount = products.reduce(
     (sum, product) => sum + product.product_variants.length,

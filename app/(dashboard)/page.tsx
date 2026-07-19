@@ -436,6 +436,7 @@ export default async function StatsPage({
     }
   }
   const topProducts = [...productStats.entries()]
+    .filter(([name]) => name !== "أوردر قديم (منتجات متعددة)")
     .sort((a, b) => b[1].revenue - a[1].revenue)
     .slice(0, 5);
 
