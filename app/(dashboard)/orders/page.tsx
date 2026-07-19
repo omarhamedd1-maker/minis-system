@@ -209,8 +209,10 @@ export default async function OrdersPage({
                   <SelectAllCheckbox />
                 </th>
                 <th className="px-4 py-3 font-medium">رقم الأوردر</th>
-                <th className="px-4 py-3 font-medium">العميل</th>
-                <th className="px-4 py-3 font-medium">التاريخ</th>
+                <th className="w-full px-4 py-3 font-medium">العميل</th>
+                <th className="whitespace-nowrap px-4 py-3 font-medium">
+                  التاريخ
+                </th>
                 <th className="px-4 py-3 font-medium">الإجمالي</th>
                 <th className="px-4 py-3 font-medium">الحالة</th>
                 <th className="px-4 py-3 font-medium"></th>
@@ -248,10 +250,10 @@ export default async function OrdersPage({
                         {order.order_number ?? "بدون رقم"}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="w-full px-4 py-3 text-gray-700">
                       {order.customers?.full_name ?? "—"}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-700">
                       {formatDate(order.order_date)}
                     </td>
                     <td className="px-4 py-3 text-gray-700">
