@@ -5,6 +5,86 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
+export async function addOrderItem(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const variantId = String(formData.get("variant_id") ?? "");
+  const quantity = Number(formData.get("quantity"));
+  const rawPrice = formData.get("sale_price");
+
+  if (!orderId || !variantId || !Number.isInteger(quantity) || quantity <= 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("اختار منتج وكمية صحيحة")
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data: variant } = await supabase
+    .from("product_variants")
+    .select("cost_price, sale_price")
+    .eq("id", variantId)
+    .maybeSingle();
+  if (!variant) {
+    redirect(`/orders/${orderId}?error=` + encodeURIComponent("المنتج ده مش موجود"));
+  }
+
+  const salePrice =
+    rawPrice != null && String(rawPrice).trim() !== ""
+      ? Number(rawPrice)
+      : variant.sale_price;
+  if (!Number.isFinite(salePrice) || salePrice < 0) {
+    redirect(`/orders/${orderId}?error=` + encodeURIComponent("السعر مش صحيح"));
+  }
+
+  const { error } = await supabase.from("order_items").insert({
+    order_id: orderId,
+    variant_id: variantId,
+    quantity,
+    sale_price_at_order: salePrice,
+    cost_price_at_order: variant.cost_price,
+  });
+
+  if (error) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نضيف المنتج: " + error.message)
+    );
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
+export async function deleteOrderItem(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const itemId = String(formData.get("item_id") ?? "");
+
+  if (!orderId || !itemId) {
+    redirect(`/orders/${orderId}`);
+  }
+
+  const supabase = await createClient();
+
+  const { error, count } = await supabase
+    .from("order_items")
+    .delete({ count: "exact" })
+    .eq("id", itemId)
+    .eq("order_id", orderId);
+
+  if (error || count === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نمسح المنتج — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
 export async function updateOrderItem(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   const itemId = String(formData.get("item_id") ?? "");

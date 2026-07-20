@@ -11,7 +11,9 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { DiscountBox } from "@/components/DiscountBox";
 import {
+  addOrderItem,
   deleteOrder,
+  deleteOrderItem,
   toggleOrderArchive,
   updateDiscount,
   updateOrderItem,
@@ -88,6 +90,27 @@ export default async function OrderDetailsPage({
       </div>
     );
   }
+
+  // قايمة المنتجات لفورم إضافة منتج (للأدمن)
+  const { data: variantsData } = isAdmin
+    ? await supabase
+        .from("product_variants")
+        .select("id, variant_name, sale_price, products(name, name_ar)")
+        .overrideTypes<
+          {
+            id: string;
+            variant_name: string | null;
+            sale_price: number;
+            products: { name: string | null; name_ar: string | null } | null;
+          }[]
+        >()
+    : { data: [] };
+  const variants = (variantsData ?? []).sort((a, b) =>
+    (a.products?.name_ar ?? a.products?.name ?? "").localeCompare(
+      b.products?.name_ar ?? b.products?.name ?? "",
+      "ar"
+    )
+  );
 
   if (!order) {
     notFound();
@@ -323,6 +346,16 @@ export default async function OrderDetailsPage({
                         >
                           حفظ
                         </button>
+                        <form action={deleteOrderItem}>
+                          <input type="hidden" name="order_id" value={order.id} />
+                          <input type="hidden" name="item_id" value={item.id} />
+                          <ConfirmButton
+                            message="متأكد إنك عايز تمسح المنتج ده من الأوردر؟"
+                            className="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                          >
+                            مسح
+                          </ConfirmButton>
+                        </form>
                       </div>
                     </td>
                   </>
@@ -404,6 +437,64 @@ export default async function OrderDetailsPage({
             </tr>
           </tfoot>
         </table>
+
+        {isAdmin && (
+          <form
+            action={addOrderItem}
+            className="flex flex-wrap items-end gap-2 border-t border-gray-200 px-4 py-4"
+          >
+            <input type="hidden" name="order_id" value={order.id} />
+            <div className="flex min-w-56 flex-1 flex-col gap-1">
+              <label className="text-xs text-gray-500">إضافة منتج</label>
+              <select
+                name="variant_id"
+                required
+                defaultValue=""
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              >
+                <option value="" disabled>
+                  اختار منتج
+                </option>
+                {variants.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.products?.name_ar ?? v.products?.name ?? "بدون اسم"}
+                    {v.variant_name ? ` / ${v.variant_name}` : ""}
+                    {" — "}
+                    {formatMoney(v.sale_price)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500">الكمية</label>
+              <input
+                type="number"
+                name="quantity"
+                defaultValue={1}
+                min={1}
+                step={1}
+                className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500">السعر (اختياري)</label>
+              <input
+                type="number"
+                name="sale_price"
+                min={0}
+                step="0.01"
+                placeholder="سعر البيع"
+                className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+            >
+              إضافة
+            </button>
+          </form>
+        )}
       </div>
 
       {isAdmin && (
