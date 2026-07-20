@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
-import { ConfirmButton } from "@/components/ConfirmButton";
+import { ExpenseRow } from "@/components/ExpenseRow";
 import { addExpense, deleteExpense, updateExpense } from "./actions";
 
 type ExpenseRow = {
@@ -252,95 +252,13 @@ export default async function ExpensesPage({
             <tbody>
               {expenses.map((expense) =>
                 isAdmin ? (
-                  <tr
+                  <ExpenseRow
                     key={expense.id}
-                    className="border-b border-gray-100 last:border-0"
-                  >
-                    <td className="px-4 py-3">
-                      <form
-                        id={`expense-${expense.id}`}
-                        action={updateExpense}
-                      >
-                        <input
-                          type="hidden"
-                          name="expense_id"
-                          value={expense.id}
-                        />
-                      </form>
-                      <input
-                        type="date"
-                        name="expense_date"
-                        form={`expense-${expense.id}`}
-                        defaultValue={expense.expense_date}
-                        required
-                        className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        name="category"
-                        form={`expense-${expense.id}`}
-                        defaultValue={expense.category}
-                        required
-                        className="w-32 rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      >
-                        {CATEGORY_SUGGESTIONS.includes(expense.category) || (
-                          <option value={expense.category}>
-                            {expense.category}
-                          </option>
-                        )}
-                        {CATEGORY_SUGGESTIONS.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        name="description"
-                        form={`expense-${expense.id}`}
-                        defaultValue={expense.description ?? ""}
-                        className="w-full min-w-32 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        name="amount"
-                        form={`expense-${expense.id}`}
-                        defaultValue={expense.amount}
-                        min="0.01"
-                        step="0.01"
-                        required
-                        className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="submit"
-                          form={`expense-${expense.id}`}
-                          className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
-                        >
-                          حفظ
-                        </button>
-                        <form action={deleteExpense}>
-                          <input
-                            type="hidden"
-                            name="expense_id"
-                            value={expense.id}
-                          />
-                          <ConfirmButton
-                            message="متأكد إنك عايز تمسح المصروف ده؟ هيتشال من الخزنة كمان."
-                            className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                          >
-                            مسح
-                          </ConfirmButton>
-                        </form>
-                      </div>
-                    </td>
-                  </tr>
+                    expense={expense}
+                    categories={CATEGORY_SUGGESTIONS}
+                    updateAction={updateExpense}
+                    deleteAction={deleteExpense}
+                  />
                 ) : (
                   <tr
                     key={expense.id}
