@@ -33,6 +33,8 @@ type OrderDetails = {
   bosta_state: string | null;
   bosta_cod: number;
   bosta_collected: boolean;
+  bosta_tracking: string | null;
+  bosta_shipping_cost: number;
   customers: {
     full_name: string | null;
     phone: string | null;
@@ -74,7 +76,7 @@ export default async function OrderDetailsPage({
     .from("orders")
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
-       bosta_state, bosta_cod, bosta_collected,
+       bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        customers(full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
          product_variants(variant_name, products(name))),
@@ -233,9 +235,23 @@ export default async function OrderDetailsPage({
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-4">
+                <dt className="text-gray-500">رقم التتبع (بوسطة)</dt>
+                <dd className="text-gray-900" dir="ltr">
+                  {order.bosta_tracking ?? "—"}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
               </div>
+              {order.bosta_shipping_cost > 0 && (
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-gray-500">تكلفة بوسطة الفعلية</dt>
+                  <dd className="text-gray-900">
+                    {formatMoney(order.bosta_shipping_cost)}
+                  </dd>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">حالة التحصيل</dt>
                 <dd>
