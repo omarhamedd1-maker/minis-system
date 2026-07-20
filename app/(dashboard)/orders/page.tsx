@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { ORDER_STATUS_OPTIONS, formatDate, formatMoney } from "@/lib/format";
+import {
+  ORDER_STATUS_OPTIONS,
+  formatDate,
+  formatMoney,
+  orderStatusBadge,
+} from "@/lib/format";
+
+// الأوردر اللي مع شركة الشحن — حالته بتتغير من بوسطة، فبنقفل تعديلها من القايمة
+const AT_SHIPPING = ["shipped", "delivered", "returned"];
 import {
   addOrderComment,
   deleteOrderComment,
@@ -271,13 +279,22 @@ export default async function OrdersPage({
                       {formatMoney(total)}
                     </td>
                     <td className="px-4 py-3">
-                      <OrderStatusSelect
-                        orderId={order.id}
-                        currentStatus={order.order_status ?? "new"}
-                        returnTo={returnTo}
-                        options={ORDER_STATUS_OPTIONS}
-                        updateAction={updateOrderStatus}
-                      />
+                      {AT_SHIPPING.includes(order.order_status ?? "") ? (
+                        <span
+                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusBadge(order.order_status).className}`}
+                          title="مع شركة الشحن — تتغير من جوّه الأوردر"
+                        >
+                          {orderStatusBadge(order.order_status).label}
+                        </span>
+                      ) : (
+                        <OrderStatusSelect
+                          orderId={order.id}
+                          currentStatus={order.order_status ?? "new"}
+                          returnTo={returnTo}
+                          options={ORDER_STATUS_OPTIONS}
+                          updateAction={updateOrderStatus}
+                        />
+                      )}
                     </td>
                     <td className="w-full px-4 py-3">
                       <div className="flex items-center gap-2">

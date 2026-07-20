@@ -181,6 +181,13 @@ export default async function OrderDetailsPage({
           returnTo={`/orders/${order.id}`}
           options={ORDER_STATUS_OPTIONS}
           updateAction={updateOrderStatus}
+          confirmMessage={
+            ["shipped", "delivered", "returned"].includes(
+              order.order_status ?? ""
+            )
+              ? "الأوردر ده مع شركة الشحن وحالته بتتحدث من بوسطة تلقائياً. متأكد إنك عايز تغيّرها يدوياً؟"
+              : undefined
+          }
         />
       </div>
 

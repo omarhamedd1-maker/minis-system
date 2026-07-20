@@ -10,12 +10,14 @@ export function OrderStatusSelect({
   returnTo,
   options,
   updateAction,
+  confirmMessage,
 }: {
   orderId: string;
   currentStatus: string;
   returnTo: string;
   options: Option[];
   updateAction: (formData: FormData) => Promise<void>;
+  confirmMessage?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -26,7 +28,13 @@ export function OrderStatusSelect({
       <select
         name="status"
         defaultValue={currentStatus}
-        onChange={() => formRef.current?.requestSubmit()}
+        onChange={(e) => {
+          if (confirmMessage && !window.confirm(confirmMessage)) {
+            e.target.value = currentStatus;
+            return;
+          }
+          formRef.current?.requestSubmit();
+        }}
         className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
         aria-label="حالة الأوردر"
       >
