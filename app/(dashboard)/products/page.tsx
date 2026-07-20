@@ -50,9 +50,21 @@ export default async function ProductsPage({
   }
 
   // نخفي صندوق تجميع الأوردرات القديمة من شاشة المنتجات (مش منتج حقيقي)
-  const visibleProducts = allProducts.filter(
-    (p) => p.name !== "أوردر قديم (منتجات متعددة)"
-  );
+  // ونرتّب بالكود (الرقمي الأول، واللي مالوش كود في الآخر)
+  const skuOf = (p: ProductRow) => p.product_variants[0]?.sku ?? "";
+  const visibleProducts = allProducts
+    .filter((p) => p.name !== "أوردر قديم (منتجات متعددة)")
+    .sort((a, b) => {
+      const sa = skuOf(a);
+      const sb = skuOf(b);
+      if (!sa && !sb) return 0;
+      if (!sa) return 1;
+      if (!sb) return -1;
+      const na = Number(sa);
+      const nb = Number(sb);
+      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+      return sa.localeCompare(sb);
+    });
 
   const normalized = searchTerm.toLowerCase().replace(/\s+/g, "");
   const products = searchTerm
