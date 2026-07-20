@@ -2,11 +2,36 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
 
+const SHOPIFY_STATUS: Record<
+  string,
+  { label: string; className: string }
+> = {
+  active: { label: "نشط", className: "bg-green-50 text-green-700" },
+  draft: { label: "مسودة", className: "bg-gray-100 text-gray-600" },
+  archived: { label: "مؤرشف", className: "bg-orange-50 text-orange-700" },
+};
+
+function shopifyStatusBadge(status: string | null) {
+  if (!status) return <span className="text-xs text-gray-300">—</span>;
+  const s = SHOPIFY_STATUS[status.toLowerCase()] ?? {
+    label: status,
+    className: "bg-gray-100 text-gray-600",
+  };
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}
+    >
+      {s.label}
+    </span>
+  );
+}
+
 type ProductRow = {
   id: string;
   name: string | null;
   name_ar: string | null;
   deleted_in_shopify: boolean;
+  shopify_status: string | null;
   product_variants: {
     id: string;
     variant_name: string | null;
@@ -36,7 +61,7 @@ export default async function ProductsPage({
   const { data: allProducts, error } = await supabase
     .from("products")
     .select(
-      "id, name, name_ar, deleted_in_shopify, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
+      "id, name, name_ar, deleted_in_shopify, shopify_status, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
     )
     .order("name_ar")
     .overrideTypes<ProductRow[]>();
@@ -151,6 +176,7 @@ export default async function ProductsPage({
                 <th className="px-4 py-3 font-medium">سعر البيع</th>
                 <th className="px-4 py-3 font-medium">التكلفة</th>
                 <th className="px-4 py-3 font-medium">المخزون</th>
+                <th className="px-4 py-3 font-medium">الحالة</th>
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -190,6 +216,9 @@ export default async function ProductsPage({
                     </td>
                     <td className="px-4 py-3 text-gray-700">
                       {variant.quantity_on_hand}
+                    </td>
+                    <td className="px-4 py-3">
+                      {index === 0 && shopifyStatusBadge(product.shopify_status)}
                     </td>
                     <td className="px-4 py-3">
                       {index === 0 && (

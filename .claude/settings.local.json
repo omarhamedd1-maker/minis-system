@@ -50,7 +50,8 @@
       "WebFetch(domain:bosta.co)",
       "Bash(gh api *)",
       "WebFetch(domain:api.github.com)",
-      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/products?select=id,deleted_in_shopify&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')"
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/products?select=id,deleted_in_shopify&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')",
+      "Bash(curl -s 'https://febtncfjywlneithefyi.supabase.co/rest/v1/products?select=id,shopify_status&limit=1' -H 'apikey: sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C' -H 'Authorization: Bearer sb_publishable_zgfE8x93NBGWjdHkhlwBfw_RdRKi00C')"
     ]
   }
 }
