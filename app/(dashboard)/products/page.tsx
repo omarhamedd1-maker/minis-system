@@ -6,6 +6,7 @@ type ProductRow = {
   id: string;
   name: string | null;
   name_ar: string | null;
+  deleted_in_shopify: boolean;
   product_variants: {
     id: string;
     variant_name: string | null;
@@ -30,7 +31,7 @@ export default async function ProductsPage({
   const { data: allProducts, error } = await supabase
     .from("products")
     .select(
-      "id, name, name_ar, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
+      "id, name, name_ar, deleted_in_shopify, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
     )
     .order("name_ar")
     .overrideTypes<ProductRow[]>();
@@ -144,7 +145,16 @@ export default async function ProductsPage({
                       {variant.sku ?? "—"}
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900">
-                      {index === 0 ? product.name_ar ?? product.name ?? "بدون اسم" : ""}
+                      {index === 0 && (
+                        <span className="flex items-center gap-2">
+                          {product.name_ar ?? product.name ?? "بدون اسم"}
+                          {product.deleted_in_shopify && (
+                            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                              اتمسح من شوبيفاي
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500" dir="ltr">
                       {index === 0 ? product.name ?? "—" : ""}
