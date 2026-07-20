@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { cairoToday, formatMoney } from "@/lib/format";
+import { cairoToday } from "@/lib/format";
+import { ProductPicker } from "@/components/ProductPicker";
 import { createOrder } from "./actions";
 
 const ITEM_ROWS = 5;
@@ -15,9 +16,9 @@ type CustomerOption = {
 type VariantOption = {
   id: string;
   variant_name: string | null;
+  sku: string | null;
   sale_price: number;
-  quantity_on_hand: number;
-  products: { name: string | null } | null;
+  products: { name: string | null; name_ar: string | null } | null;
 };
 
 export default async function NewOrderPage({
@@ -42,14 +43,26 @@ export default async function NewOrderPage({
       .overrideTypes<CustomerOption[]>(),
     supabase
       .from("product_variants")
-      .select("id, variant_name, sale_price, quantity_on_hand, products(name)")
+      .select("id, variant_name, sku, sale_price, products(name, name_ar)")
       .overrideTypes<VariantOption[]>(),
   ]);
 
   const customers = customersResult.data ?? [];
-  const variants = (variantsResult.data ?? []).sort((a, b) =>
-    (a.products?.name ?? "").localeCompare(b.products?.name ?? "", "ar")
-  );
+  const variants = (variantsResult.data ?? [])
+    .map((v) => ({
+      id: v.id,
+      sku: v.sku,
+      name_en: v.products?.name ?? null,
+      name_ar: v.products?.name_ar ?? null,
+      variant_name: v.variant_name,
+      sale_price: v.sale_price,
+    }))
+    .sort((a, b) =>
+      (a.name_ar ?? a.name_en ?? "").localeCompare(
+        b.name_ar ?? b.name_en ?? "",
+        "ar"
+      )
+    );
 
   const today = cairoToday();
 
@@ -137,24 +150,10 @@ export default async function NewOrderPage({
           <h2 className="mb-3 text-sm font-bold text-gray-900">المنتجات</h2>
           <div className="space-y-2">
             {Array.from({ length: ITEM_ROWS }, (_, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <select
-                  name={`variant_${i}`}
-                  defaultValue=""
-                  className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                  aria-label={`منتج ${i + 1}`}
-                >
-                  <option value="">— اختار منتج —</option>
-                  {variants.map((variant) => (
-                    <option key={variant.id} value={variant.id}>
-                      {variant.products?.name ?? "بدون اسم"}
-                      {variant.variant_name ? ` / ${variant.variant_name}` : ""}
-                      {" — "}
-                      {formatMoney(variant.sale_price)}
-                      {` (متاح: ${variant.quantity_on_hand})`}
-                    </option>
-                  ))}
-                </select>
+              <div key={i} className="flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <ProductPicker name={`variant_${i}`} variants={variants} />
+                </div>
                 <input
                   type="number"
                   name={`qty_${i}`}
@@ -168,8 +167,8 @@ export default async function NewOrderPage({
             ))}
           </div>
           <p className="mt-2 text-xs text-gray-400">
-            سيب الصفوف الزيادة على "اختار منتج" — السعر بيتاخد من سعر البيع
-            الحالي، والمخزون بيتخصم تلقائياً
+            سيب الصفوف اللي مش محتاجها فاضية — السعر بيتاخد من سعر البيع الحالي،
+            والمخزون بيتخصم تلقائياً
           </p>
         </div>
 
