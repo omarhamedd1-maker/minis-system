@@ -7,6 +7,7 @@ import {
   deleteProduct,
   saveCostComponents,
   saveProductName,
+  saveSalePrice,
   saveSku,
   saveStock,
 } from "../actions";
@@ -161,9 +162,35 @@ export default async function ProductDetailsPage({
                   )
                 )}
               </div>
-              <span className="text-sm text-gray-500">
-                سعر البيع: {formatMoney(variant.sale_price)}
-              </span>
+              {isAdmin ? (
+                <form
+                  action={saveSalePrice}
+                  className="flex items-center gap-2"
+                >
+                  <input type="hidden" name="variant_id" value={variant.id} />
+                  <input type="hidden" name="product_id" value={product.id} />
+                  <label className="text-sm text-gray-500">سعر البيع</label>
+                  <input
+                    type="number"
+                    name="sale_price"
+                    defaultValue={variant.sale_price}
+                    min={0}
+                    step="0.01"
+                    className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                    aria-label="سعر البيع"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                  >
+                    حفظ
+                  </button>
+                </form>
+              ) : (
+                <span className="text-sm text-gray-500">
+                  سعر البيع: {formatMoney(variant.sale_price)}
+                </span>
+              )}
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
