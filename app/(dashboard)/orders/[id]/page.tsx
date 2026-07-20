@@ -182,6 +182,7 @@ export default async function OrderDetailsPage({
           options={ORDER_STATUS_OPTIONS}
           updateAction={updateOrderStatus}
           confirmMessage={
+            order.bosta_state &&
             ["shipped", "delivered", "returned"].includes(
               order.order_status ?? ""
             )

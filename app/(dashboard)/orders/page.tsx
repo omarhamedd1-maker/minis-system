@@ -26,6 +26,7 @@ type OrderRow = {
   order_date: string | null;
   shipping_price: number;
   discount: number;
+  bosta_state: string | null;
   customers: { full_name: string | null; phone: string | null } | null;
   order_items: { quantity: number; sale_price_at_order: number }[];
   order_comments: {
@@ -66,7 +67,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, shipping_price, discount, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
+      "id, order_number, order_status, order_date, shipping_price, discount, bosta_state, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });
@@ -279,7 +280,8 @@ export default async function OrdersPage({
                       {formatMoney(total)}
                     </td>
                     <td className="px-4 py-3">
-                      {AT_SHIPPING.includes(order.order_status ?? "") ? (
+                      {order.bosta_state &&
+                      AT_SHIPPING.includes(order.order_status ?? "") ? (
                         <span
                           className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusBadge(order.order_status).className}`}
                           title="مع شركة الشحن — تتغير من جوّه الأوردر"
@@ -330,6 +332,7 @@ export default async function OrdersPage({
           {!searchTerm && orders.length >= showCount && (
             <div className="mt-4 flex justify-center">
               <Link
+                scroll={false}
                 href={(() => {
                   const params = new URLSearchParams();
                   if (status) params.set("status", status);

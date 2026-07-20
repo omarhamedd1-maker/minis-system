@@ -95,7 +95,7 @@ export default async function StatsPage({
   searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
   const { period: rawPeriod, from: rawFrom, to: rawTo } = await searchParams;
-  const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
+  const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "today";
 
   // اليوم الحالي بتوقيت مصر مش بتوقيت السيرفر
   const today = cairoDateOf(new Date());

@@ -29,8 +29,8 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     new: { label: "جديد", className: "bg-blue-50 text-blue-700" },
     confirmed: { label: "مؤكد", className: "bg-sky-50 text-sky-700" },
     packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
-    shipped: { label: "تم الشحن", className: "bg-indigo-50 text-indigo-700" },
-    delivered: { label: "تم التسليم", className: "bg-green-50 text-green-700" },
+    shipped: { label: "تم الشحن", className: "bg-amber-100 text-amber-800" },
+    delivered: { label: "تم التسليم", className: "bg-green-100 text-green-700" },
     cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
     returned: { label: "مرتجع", className: "bg-orange-50 text-orange-700" },
   };
