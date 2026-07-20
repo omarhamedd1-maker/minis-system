@@ -20,9 +20,14 @@ type ProductRow = {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string; q?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+    q?: string;
+  }>;
 }) {
-  const { error: actionError, saved, q } = await searchParams;
+  const { error: actionError, saved, deleted, q } = await searchParams;
   const searchTerm = (q ?? "").trim();
   const supabase = await createClient();
 
@@ -111,6 +116,11 @@ export default async function ProductsPage({
           تم حفظ التعديل
         </div>
       )}
+      {deleted && (
+        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          تم مسح المنتج
+        </div>
+      )}
       {products.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
           {searchTerm
@@ -137,9 +147,7 @@ export default async function ProductsPage({
                 product.product_variants.map((variant, index) => (
                   <tr
                     key={variant.id}
-                    className={`border-b border-gray-100 last:border-0 ${
-                      variant.cost_price === 0 ? "bg-yellow-50" : ""
-                    }`}
+                    className="border-b border-gray-100 last:border-0"
                   >
                     <td className="px-4 py-3 text-gray-700" dir="ltr">
                       {variant.sku ?? "—"}

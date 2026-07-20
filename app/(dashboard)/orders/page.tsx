@@ -38,12 +38,19 @@ export default async function OrdersPage({
     saved?: string;
     q?: string;
     bulk?: string;
+    show?: string;
   }>;
 }) {
-  const { status, deleted, archived, saved, q, bulk } = await searchParams;
+  const { status, deleted, archived, saved, q, bulk, show } = await searchParams;
   const showArchived = archived === "1";
   const searchTerm = (q ?? "").trim();
   const returnTo = `/orders${showArchived ? "?archived=1" : status ? `?status=${status}` : ""}`;
+  // عدد المعروض: 50 افتراضي، وبيزيد بزرار "عرض المزيد". في البحث بنجيب أكتر
+  const showCount = Math.min(
+    Math.max(Number(show) || 50, 50),
+    5000
+  );
+  const fetchLimit = searchTerm ? 3000 : showCount;
   const supabase = await createClient();
 
   const { data: isAdmin } = await supabase.rpc("is_admin");
@@ -62,7 +69,7 @@ export default async function OrdersPage({
 
   const { data: fetchedOrders, error } = await query
     .order("order_date", { ascending: false })
-    .limit(3000)
+    .limit(fetchLimit)
     .overrideTypes<OrderRow[]>();
 
   if (error) {
@@ -208,14 +215,18 @@ export default async function OrdersPage({
                 <th className="px-4 py-3 font-medium">
                   <SelectAllCheckbox />
                 </th>
-                <th className="px-4 py-3 font-medium">رقم الأوردر</th>
-                <th className="w-full px-4 py-3 font-medium">العميل</th>
+                <th className="whitespace-nowrap px-4 py-3 font-medium">
+                  رقم الأوردر
+                </th>
+                <th className="px-4 py-3 font-medium">العميل</th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
                   التاريخ
                 </th>
-                <th className="px-4 py-3 font-medium">الإجمالي</th>
+                <th className="whitespace-nowrap px-4 py-3 font-medium">
+                  الإجمالي
+                </th>
                 <th className="px-4 py-3 font-medium">الحالة</th>
-                <th className="px-4 py-3 font-medium"></th>
+                <th className="w-full px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -250,7 +261,7 @@ export default async function OrdersPage({
                         {order.order_number ?? "بدون رقم"}
                       </Link>
                     </td>
-                    <td className="w-full px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-gray-700">
                       {order.customers?.full_name ?? "—"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-gray-700">
@@ -268,7 +279,7 @@ export default async function OrdersPage({
                         updateAction={updateOrderStatus}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="w-full px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/orders/${order.id}`}
@@ -281,6 +292,13 @@ export default async function OrdersPage({
                           orderNumber={order.order_number ?? ""}
                           comments={order.order_comments}
                           isAdmin={true}
+                          hideDot={[
+                            "packed",
+                            "shipped",
+                            "delivered",
+                            "returned",
+                            "cancelled",
+                          ].includes(order.order_status ?? "")}
                           addAction={addOrderComment}
                           deleteAction={deleteOrderComment}
                         />
@@ -292,6 +310,22 @@ export default async function OrdersPage({
             </tbody>
           </table>
           </div>
+          {!searchTerm && orders.length >= showCount && (
+            <div className="mt-4 flex justify-center">
+              <Link
+                href={(() => {
+                  const params = new URLSearchParams();
+                  if (status) params.set("status", status);
+                  if (showArchived) params.set("archived", "1");
+                  params.set("show", String(showCount + 50));
+                  return `/orders?${params.toString()}`;
+                })()}
+                className="rounded-lg bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100"
+              >
+                عرض المزيد
+              </Link>
+            </div>
+          )}
         </>
       )}
     </div>

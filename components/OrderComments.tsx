@@ -15,6 +15,7 @@ export function OrderComments({
   orderNumber,
   comments,
   isAdmin,
+  hideDot = false,
   addAction,
   deleteAction,
 }: {
@@ -22,6 +23,7 @@ export function OrderComments({
   orderNumber: string;
   comments: Comment[];
   isAdmin: boolean;
+  hideDot?: boolean;
   addAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -52,7 +54,7 @@ export function OrderComments({
             clipRule="evenodd"
           />
         </svg>
-        {comments.length > 0 && (
+        {comments.length > 0 && !hideDot && (
           <span className="absolute -top-1 -left-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"></span>
         )}
       </button>

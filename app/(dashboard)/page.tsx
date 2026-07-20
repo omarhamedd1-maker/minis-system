@@ -282,7 +282,8 @@ export default async function StatsPage({
           new Date(o.order_date!).getTime()) /
         86400000
     )
-    .filter((days) => days >= 0);
+    // بنستبعد صفر (الأوردرات المستوردة اتحطلها نفس تاريخ الأوردر) والقيم الشاذة
+    .filter((days) => days > 0 && days < 60);
   const avgDeliveryDays =
     deliveryDurations.length > 0
       ? deliveryDurations.reduce((s, d) => s + d, 0) / deliveryDurations.length

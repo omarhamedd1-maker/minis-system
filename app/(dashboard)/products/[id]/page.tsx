@@ -2,7 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS, formatMoney } from "@/lib/format";
-import { saveCostComponents, saveProductName, saveSku, saveStock } from "../actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import {
+  deleteProduct,
+  saveCostComponents,
+  saveProductName,
+  saveSku,
+  saveStock,
+} from "../actions";
 
 type ProductDetails = {
   id: string;
@@ -276,6 +283,20 @@ export default async function ProductDetailsPage({
           </div>
         );
       })}
+
+      {isAdmin && (
+        <div className="flex justify-end border-t border-gray-200 pt-6">
+          <form action={deleteProduct}>
+            <input type="hidden" name="product_id" value={product.id} />
+            <ConfirmButton
+              message={`متأكد إنك عايز تمسح المنتج "${product.name_ar ?? product.name ?? ""}"؟`}
+              className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+            >
+              مسح المنتج
+            </ConfirmButton>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

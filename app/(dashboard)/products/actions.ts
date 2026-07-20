@@ -5,6 +5,63 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS } from "@/lib/format";
 
+export async function deleteProduct(formData: FormData) {
+  const productId = String(formData.get("product_id") ?? "");
+  if (!productId) {
+    redirect("/products");
+  }
+
+  const supabase = await createClient();
+
+  // نجيب أشكال المنتج
+  const { data: variants } = await supabase
+    .from("product_variants")
+    .select("id")
+    .eq("product_id", productId);
+  const variantIds = (variants ?? []).map((v) => v.id);
+
+  // مينفعش نمسح منتج عليه أوردرات — التاريخ لازم يفضل سليم
+  if (variantIds.length > 0) {
+    const { count } = await supabase
+      .from("order_items")
+      .select("id", { count: "exact", head: true })
+      .in("variant_id", variantIds);
+    if ((count ?? 0) > 0) {
+      redirect(
+        `/products/${productId}?error=` +
+          encodeURIComponent(
+            "المنتج ده عليه أوردرات مسجلة فمينفعش يتمسح — التاريخ لازم يفضل موجود"
+          )
+      );
+    }
+  }
+
+  // نمسح حركات المخزون ثم الأشكال ثم المنتج
+  if (variantIds.length > 0) {
+    await supabase.from("stock_movements").delete().in("variant_id", variantIds);
+    await supabase
+      .from("variant_cost_components")
+      .delete()
+      .in("variant_id", variantIds);
+    await supabase.from("product_variants").delete().eq("product_id", productId);
+  }
+
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId);
+
+  if (error) {
+    redirect(
+      `/products/${productId}?error=` +
+        encodeURIComponent("معرفناش نمسح المنتج: " + error.message)
+    );
+  }
+
+  revalidatePath("/products");
+  redirect("/products?deleted=1");
+}
+
 export async function saveStock(formData: FormData) {
   const variantId = String(formData.get("variant_id") ?? "");
   const quantity = Number(formData.get("quantity"));
