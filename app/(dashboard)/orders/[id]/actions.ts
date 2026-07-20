@@ -5,6 +5,35 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
+type Supa = Awaited<ReturnType<typeof createClient>>;
+
+// بيظبط المخزون ويسجّل الحركة. change موجب = رجوع للمخزون، سالب = خصم
+async function adjustStock(
+  supabase: Supa,
+  variantId: string | null,
+  change: number,
+  orderId: string,
+  reason: string
+) {
+  if (!variantId || change === 0) return;
+  const { data: v } = await supabase
+    .from("product_variants")
+    .select("quantity_on_hand")
+    .eq("id", variantId)
+    .maybeSingle();
+  if (!v) return;
+  await supabase
+    .from("product_variants")
+    .update({ quantity_on_hand: v.quantity_on_hand + change })
+    .eq("id", variantId);
+  await supabase.from("stock_movements").insert({
+    variant_id: variantId,
+    change_quantity: change,
+    reason,
+    related_order_id: orderId,
+  });
+}
+
 export async function addOrderItem(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   const variantId = String(formData.get("variant_id") ?? "");
@@ -52,8 +81,12 @@ export async function addOrderItem(formData: FormData) {
     );
   }
 
+  // خصم من المخزون
+  await adjustStock(supabase, variantId, -quantity, orderId, "إضافة منتج لأوردر");
+
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
+  revalidatePath("/products");
   redirect(`/orders/${orderId}?saved=1`);
 }
 
@@ -66,6 +99,14 @@ export async function deleteOrderItem(formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  // نجيب بيانات البند قبل المسح عشان نرجّع مخزونه
+  const { data: item } = await supabase
+    .from("order_items")
+    .select("variant_id, quantity")
+    .eq("id", itemId)
+    .eq("order_id", orderId)
+    .maybeSingle();
 
   const { error, count } = await supabase
     .from("order_items")
@@ -80,8 +121,20 @@ export async function deleteOrderItem(formData: FormData) {
     );
   }
 
+  // نرجّع المخزون
+  if (item) {
+    await adjustStock(
+      supabase,
+      item.variant_id,
+      item.quantity,
+      orderId,
+      "مسح منتج من أوردر"
+    );
+  }
+
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
+  revalidatePath("/products");
   redirect(`/orders/${orderId}?saved=1`);
 }
 
@@ -107,6 +160,14 @@ export async function updateOrderItem(formData: FormData) {
 
   const supabase = await createClient();
 
+  // نجيب الكمية القديمة عشان نظبط فرق المخزون
+  const { data: oldItem } = await supabase
+    .from("order_items")
+    .select("variant_id, quantity")
+    .eq("id", itemId)
+    .eq("order_id", orderId)
+    .maybeSingle();
+
   const { error, count } = await supabase
     .from("order_items")
     .update(
@@ -123,8 +184,21 @@ export async function updateOrderItem(formData: FormData) {
     );
   }
 
+  // فرق الكمية: زيادة = خصم أكتر، نقصان = رجوع للمخزون
+  if (oldItem) {
+    const delta = quantity - oldItem.quantity;
+    await adjustStock(
+      supabase,
+      oldItem.variant_id,
+      -delta,
+      orderId,
+      "تعديل كمية بند في أوردر"
+    );
+  }
+
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
+  revalidatePath("/products");
   redirect(`/orders/${orderId}?saved=1`);
 }
 
