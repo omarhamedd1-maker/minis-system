@@ -13,14 +13,25 @@ type Supa = Awaited<ReturnType<typeof createClient>>;
 function pushOrderToShopify(orderId: string) {
   const key = process.env.SYNC_KEY;
   if (!key) return;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   after(async () => {
+    // شوبيفاي: تحديث البنود/السعر
     try {
       await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
+        `${base}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
         { method: "GET", signal: AbortSignal.timeout(20000) }
       );
     } catch {
       // فشل الدفع لشوبيفاي ما يوقفش التعديل المحلي (مثلاً أوردر متشحن)
+    }
+    // بوسطة: تحديث مبلغ التحصيل (طول ما الشحنة لسه ماتاخدتش)
+    try {
+      await fetch(
+        `${base}/functions/v1/bosta-update?key=${key}&order=${orderId}`,
+        { method: "GET", signal: AbortSignal.timeout(20000) }
+      );
+    } catch {
+      // فشل تحديث بوسطة ما يوقفش التعديل المحلي
     }
   });
 }
