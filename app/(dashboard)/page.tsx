@@ -11,6 +11,7 @@ type OrderRow = {
   delivered_at: string | null;
   shipping_price: number;
   discount: number;
+  bosta_shipping_cost: number;
   customers: { full_name: string | null } | null;
   order_items: {
     quantity: number;
@@ -151,7 +152,7 @@ export default async function StatsPage({
       supabase
         .from("orders")
         .select(
-          `id, order_status, order_date, delivered_at, shipping_price, discount, customers(full_name),
+          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, customers(full_name),
            order_items(quantity, sale_price_at_order, cost_price_at_order,
              product_variants(id, variant_name, products(name)))`
         )
@@ -237,7 +238,12 @@ export default async function StatsPage({
     0
   );
   const expensesTotal = expensesResult.data.reduce((s, e) => s + e.amount, 0);
-  const netProfit = profit - expensesTotal;
+  // تكلفة شحن بوسطة الحقيقية للأوردرات في الفترة
+  const bostaShippingTotal = validOrders.reduce(
+    (s, o) => s + Number(o.bosta_shipping_cost ?? 0),
+    0
+  );
+  const netProfit = profit - expensesTotal - bostaShippingTotal;
   const orderCount = validOrders.length;
   const avgOrder = orderCount > 0 ? sales / orderCount : 0;
   const deliveredCount = periodOrders.filter(
@@ -516,6 +522,15 @@ export default async function StatsPage({
             <p className="text-sm text-gray-500">المصاريف</p>
             <p className="mt-1 text-2xl font-bold text-red-600">
               {formatMoney(expensesTotal)}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">تكلفة شحن بوسطة</p>
+            <p className="mt-1 text-2xl font-bold text-red-600">
+              {formatMoney(bostaShippingTotal)}
+            </p>
+            <p className="text-xs text-gray-400">
+              رسوم بوسطة الحقيقية (تحصيل + تحويل + تأمين + فتح + ضريبة)
             </p>
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -800,9 +815,9 @@ export default async function StatsPage({
       </div>
 
       <p className="text-xs text-gray-400">
-        كل الأرقام محسوبة لايف من الأوردرات والمصاريف — الأوردرات الملغية
-        والمرتجعة مستبعدة من المبيعات والأرباح، وبتظهر في توزيع الحالات
-        والفرص الضايعة بس
+        كل الأرقام محسوبة لايف من الأوردرات والمصاريف — صافي الربح بعد خصم
+        المصاريف وتكلفة شحن بوسطة الحقيقية. الأوردرات الملغية والمرتجعة مستبعدة
+        من المبيعات والأرباح، وبتظهر في توزيع الحالات والفرص الضايعة بس
       </p>
     </div>
   );
