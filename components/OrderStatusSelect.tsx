@@ -35,7 +35,7 @@ export function OrderStatusSelect({
           }
           formRef.current?.requestSubmit();
         }}
-        className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="w-28 rounded-lg border border-gray-300 bg-white px-3 py-1 text-right text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
         aria-label="حالة الأوردر"
       >
         {options.map((option) => (
