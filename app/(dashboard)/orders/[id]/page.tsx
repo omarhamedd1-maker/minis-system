@@ -129,6 +129,26 @@ export default async function OrderDetailsPage({
   );
   const grandTotal = itemsTotal - order.discount + order.shipping_price;
 
+  // الأوردر السابق (الأحدث) والتالي (الأقدم) بترتيب التاريخ زي القايمة
+  const [{ data: prevOrder }, { data: nextOrder }] = order.order_date
+    ? await Promise.all([
+        supabase
+          .from("orders")
+          .select("id")
+          .gt("order_date", order.order_date)
+          .order("order_date", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("orders")
+          .select("id")
+          .lt("order_date", order.order_date)
+          .order("order_date", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }];
+
   // لينك واتساب العميل: نحوّل الرقم لصيغة دولية (مصر 20)
   const rawPhone = (order.customers?.phone ?? "").replace(/\D/g, "");
   const intlPhone = rawPhone
@@ -157,12 +177,40 @@ export default async function OrderDetailsPage({
             </span>
           )}
         </div>
-        <Link
-          href="/orders"
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          الرجوع للأوردرات
-        </Link>
+        <div className="flex items-center gap-2">
+          {prevOrder ? (
+            <Link
+              href={`/orders/${prevOrder.id}`}
+              title="الأوردر السابق"
+              className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            >
+              ← السابق
+            </Link>
+          ) : (
+            <span className="rounded-lg bg-gray-50 px-3 py-1 text-sm text-gray-300">
+              ← السابق
+            </span>
+          )}
+          {nextOrder ? (
+            <Link
+              href={`/orders/${nextOrder.id}`}
+              title="الأوردر التالي"
+              className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            >
+              التالي →
+            </Link>
+          ) : (
+            <span className="rounded-lg bg-gray-50 px-3 py-1 text-sm text-gray-300">
+              التالي →
+            </span>
+          )}
+          <Link
+            href="/orders"
+            className="text-sm text-gray-500 hover:text-gray-900"
+          >
+            الرجوع للأوردرات
+          </Link>
+        </div>
       </div>
 
       {actionError && (
