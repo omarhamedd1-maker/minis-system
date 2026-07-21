@@ -158,31 +158,14 @@ export function LiveMoneyCards({
         </span>
       </Card>
       <Card
-        label="تكلفة شحن بوسطة"
-        hint="رسوم بوسطة الحقيقية (تحصيل + تحويل + تأمين + فتح + ضريبة)"
+        label="شحن دفعته فوق الـ90"
+        hint="رسوم بوسطة الحقيقية اللي دفعتها فوق الـ90 المحصّل من العملاء"
       >
         <span className="text-red-600">
           <CountUp
             key={key}
             baseline={base}
             value={s.bostaShippingTotal}
-            format={money}
-          />
-        </span>
-      </Card>
-      <Card
-        label="صافي الشحن (فوق الـ90)"
-        hint={
-          s.netShipping > 0
-            ? "دفعته من جيبك فوق الـ90 المحصّل"
-            : "الشحن كسّبك — رسوم بوسطة أقل من الـ90"
-        }
-      >
-        <span className={s.netShipping > 0 ? "text-red-600" : "text-green-600"}>
-          <CountUp
-            key={key}
-            baseline={base}
-            value={s.netShipping}
             format={money}
           />
         </span>
