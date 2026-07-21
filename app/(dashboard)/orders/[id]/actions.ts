@@ -2,23 +2,27 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
 
-// بعد أي تعديل بنود: نبعت التعديل لشوبيفاي تلقائياً (بيشتغل بس قبل الشحن)
-async function pushOrderToShopify(orderId: string) {
+// بعد أي تعديل بنود: نبعت التعديل لشوبيفاي في الخلفية (بعد ما الرد يوصل المستخدم)
+// عشان المنتج يظهر فوراً من غير ما يستنى المزامنة
+function pushOrderToShopify(orderId: string) {
   const key = process.env.SYNC_KEY;
   if (!key) return;
-  try {
-    await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
-      { method: "GET", signal: AbortSignal.timeout(15000) }
-    );
-  } catch {
-    // فشل الدفع لشوبيفاي ما يوقفش التعديل المحلي (مثلاً أوردر متشحن)
-  }
+  after(async () => {
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
+        { method: "GET", signal: AbortSignal.timeout(20000) }
+      );
+    } catch {
+      // فشل الدفع لشوبيفاي ما يوقفش التعديل المحلي (مثلاً أوردر متشحن)
+    }
+  });
 }
 
 // بيظبط المخزون ويسجّل الحركة. change موجب = رجوع للمخزون، سالب = خصم
