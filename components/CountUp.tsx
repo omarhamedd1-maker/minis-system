@@ -6,14 +6,16 @@ import { useEffect, useRef, useState } from "react";
 export function CountUp({
   value,
   format,
+  baseline,
   duration = 700,
 }: {
   value: number;
   format: (n: number) => string;
+  baseline?: number;
   duration?: number;
 }) {
-  const [display, setDisplay] = useState(value);
-  const displayRef = useRef(value);
+  const [display, setDisplay] = useState(baseline ?? value);
+  const displayRef = useRef(baseline ?? value);
 
   // نحتفظ بآخر قيمة معروضة عشان نبدأ منها لو اتغيرت وسط الانيميشن
   useEffect(() => {

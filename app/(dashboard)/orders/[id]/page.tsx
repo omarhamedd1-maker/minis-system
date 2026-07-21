@@ -238,9 +238,13 @@ export default async function OrderDetailsPage({
               </div>
               {order.bosta_shipping_cost > 0 && (
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-gray-500">تكلفة بوسطة الفعلية</dt>
-                  <dd className="text-gray-900">
-                    {formatMoney(order.bosta_shipping_cost)}
+                  <dt className="text-gray-500">الشحن توتال</dt>
+                  <dd className="text-left text-gray-900">
+                    {formatMoney(90 + order.bosta_shipping_cost)}
+                    <span className="block text-xs text-gray-400">
+                      90 شحن + {formatMoney(order.bosta_shipping_cost)} رسوم
+                      بوسطة
+                    </span>
                   </dd>
                 </div>
               )}

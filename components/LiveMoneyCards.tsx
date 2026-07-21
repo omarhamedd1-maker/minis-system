@@ -7,7 +7,6 @@ import {
   computeHeadline,
   resolvePeriod,
   type Headline,
-  type PeriodParams,
   type StatOrder,
   type StatExpense,
 } from "@/lib/dashboard-stats";
@@ -28,11 +27,22 @@ export function LiveMoneyCards({
   to?: string;
 }) {
   const [s, setS] = useState<Headline>(initial);
-  const [live, setLive] = useState(false);
+  // أنيميشن البداية من صفر — بس أول فتحة للسيستم في الجلسة
+  const [intro, setIntro] = useState(false);
 
   useEffect(() => {
     setS(initial);
   }, [initial]);
+
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      !sessionStorage.getItem("minisDashIntro")
+    ) {
+      sessionStorage.setItem("minisDashIntro", "1");
+      setIntro(true);
+    }
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,7 +76,6 @@ export function LiveMoneyCards({
           periodEnd
         )
       );
-      setLive(true);
     }
 
     load();
@@ -79,22 +88,60 @@ export function LiveMoneyCards({
 
   const money = (n: number) => formatMoney(n);
   const plain = (n: number) => new Intl.NumberFormat("en").format(n);
+  // نقطة بداية الأنيميشن: صفر أول فتحة، وبعد كده من القيمة الحالية عادي
+  const base = intro ? 0 : undefined;
+  const key = intro ? "i" : "d";
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card label="المبيعات">
         <span className="text-gray-900">
-          <CountUp value={s.sales} format={money} />
+          <CountUp key={key} baseline={base} value={s.sales} format={money} />
+        </span>
+      </Card>
+      <Card label="عدد الأوردرات">
+        <span className="text-gray-900">
+          <CountUp
+            key={key}
+            baseline={base}
+            value={s.orderCount}
+            format={plain}
+          />
         </span>
       </Card>
       <Card label="أرباح المنتجات">
         <span className="text-green-600">
-          <CountUp value={s.profit} format={money} />
+          <CountUp key={key} baseline={base} value={s.profit} format={money} />
         </span>
       </Card>
       <Card label="المصاريف">
         <span className="text-red-600">
-          <CountUp value={s.expensesTotal} format={money} />
+          <CountUp
+            key={key}
+            baseline={base}
+            value={s.expensesTotal}
+            format={money}
+          />
+        </span>
+      </Card>
+      <Card label="صافي الربح">
+        <span className={s.netProfit >= 0 ? "text-green-600" : "text-red-600"}>
+          <CountUp
+            key={key}
+            baseline={base}
+            value={s.netProfit}
+            format={money}
+          />
+        </span>
+      </Card>
+      <Card label="تحصيل بوسطة الفعلي (COD)">
+        <span className="text-emerald-600">
+          <CountUp key={key} baseline={base} value={s.cod} format={money} />
+        </span>
+      </Card>
+      <Card label="متوسط قيمة الأوردر">
+        <span className="text-gray-900">
+          <CountUp key={key} baseline={base} value={s.avgOrder} format={money} />
         </span>
       </Card>
       <Card
@@ -102,7 +149,12 @@ export function LiveMoneyCards({
         hint={`90 لكل أوردر × ${s.shippedCount} أوردر اتشحن`}
       >
         <span className="text-green-600">
-          <CountUp value={s.shippingRevenue} format={money} />
+          <CountUp
+            key={key}
+            baseline={base}
+            value={s.shippingRevenue}
+            format={money}
+          />
         </span>
       </Card>
       <Card
@@ -110,27 +162,12 @@ export function LiveMoneyCards({
         hint="رسوم بوسطة الحقيقية (تحصيل + تحويل + تأمين + فتح + ضريبة)"
       >
         <span className="text-red-600">
-          <CountUp value={s.bostaShippingTotal} format={money} />
-        </span>
-      </Card>
-      <Card label="صافي الربح">
-        <span className={s.netProfit >= 0 ? "text-green-600" : "text-red-600"}>
-          <CountUp value={s.netProfit} format={money} />
-        </span>
-      </Card>
-      <Card label="تحصيل بوسطة الفعلي (COD)">
-        <span className="text-emerald-600">
-          <CountUp value={s.cod} format={money} />
-        </span>
-      </Card>
-      <Card label="عدد الأوردرات">
-        <span className="text-gray-900">
-          <CountUp value={s.orderCount} format={plain} />
-        </span>
-      </Card>
-      <Card label="متوسط قيمة الأوردر">
-        <span className="text-gray-900">
-          <CountUp value={s.avgOrder} format={money} />
+          <CountUp
+            key={key}
+            baseline={base}
+            value={s.bostaShippingTotal}
+            format={money}
+          />
         </span>
       </Card>
     </div>
