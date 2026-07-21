@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cairo, Lexend } from "next/font/google";
 import "./globals.css";
 
@@ -15,8 +15,18 @@ const lexend = Lexend({
 });
 
 export const metadata: Metadata = {
-  title: "MINIS",
-  description: "نظام إدارة تشغيل MINIS",
+  title: "Minis System",
+  description: "نظام إدارة تشغيل Minis",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Minis System",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#efeeec",
 };
 
 export default function RootLayout({
