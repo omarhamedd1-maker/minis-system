@@ -69,6 +69,7 @@ export type Headline = {
   shippingRevenue: number;
   shippedCount: number;
   bostaShippingTotal: number;
+  netShipping: number;
   netProfit: number;
   cod: number;
   orderCount: number;
@@ -111,6 +112,8 @@ export function computeHeadline(
     (s, o) => s + Number(o.bosta_shipping_cost ?? 0),
     0
   );
+  // صافي الشحن اللي دفعته من جيبك: رسوم بوسطة − اللي محصّلته من العملاء (فوق الـ90)
+  const netShipping = bostaShippingTotal - shippingRevenue;
   const netProfit =
     profit + shippingRevenue - expensesTotal - bostaShippingTotal;
   const orderCount = validOrders.length;
@@ -132,6 +135,7 @@ export function computeHeadline(
     shippingRevenue,
     shippedCount,
     bostaShippingTotal,
+    netShipping,
     netProfit,
     cod,
     orderCount,
