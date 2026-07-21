@@ -13,6 +13,14 @@ const AT_SHIPPING = ["shipped", "delivered", "returned"];
 const LIST_STATUS_OPTIONS_EXCLUDED = ["shipped", "delivered", "returned"];
 // الأوردر الملغي بيتقفل تعديله من برة بعد دقيقتين
 const CANCEL_LOCK_MS = 2 * 60 * 1000;
+
+// لينك واتساب العميل بصيغة مصر الدولية (20)
+function waLink(phone: string | null) {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+  const intl = digits.startsWith("20") ? digits : "20" + digits.replace(/^0+/, "");
+  return `https://wa.me/${intl}`;
+}
 import {
   addOrderComment,
   deleteOrderComment,
@@ -359,6 +367,24 @@ export default async function OrdersPage({
                         >
                           فتح
                         </Link>
+                        {waLink(order.customers?.phone ?? null) && (
+                          <a
+                            href={waLink(order.customers?.phone ?? null)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="واتساب العميل"
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100"
+                          >
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            >
+                              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.87 9.87 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.2 8.2 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23-1.48 0-2.93-.39-4.19-1.15l-.3-.17-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.25 8.25-8.25m-2.16 4.42c-.2 0-.5.07-.77.36-.26.29-1 .98-1 2.4 0 1.42 1.03 2.79 1.17 2.98.14.19 1.99 3.04 4.83 4.26.68.29 1.21.46 1.62.6.68.21 1.3.18 1.79.11.55-.08 1.68-.69 1.92-1.35.24-.66.24-1.23.17-1.35-.07-.12-.26-.19-.55-.33-.29-.14-1.68-.83-1.94-.92-.26-.1-.45-.14-.64.14-.19.29-.74.92-.9 1.11-.17.19-.33.21-.62.07-.29-.14-1.2-.44-2.29-1.41-.85-.75-1.42-1.68-1.58-1.97-.17-.29-.02-.44.12-.58.13-.13.29-.33.43-.5.14-.17.19-.29.29-.48.1-.19.05-.36-.02-.5-.07-.14-.63-1.53-.87-2.1-.23-.55-.46-.47-.63-.48l-.53-.01" />
+                            </svg>
+                          </a>
+                        )}
                         <OrderComments
                           orderId={order.id}
                           orderNumber={order.order_number ?? ""}
