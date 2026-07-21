@@ -12,7 +12,7 @@ const AT_SHIPPING = ["shipped", "delivered", "returned"];
 import {
   addOrderComment,
   deleteOrderComment,
-  updateOrderStatus,
+  updateOrderStatusInline,
 } from "./[id]/actions";
 import { OrderComments } from "@/components/OrderComments";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
@@ -326,7 +326,7 @@ export default async function OrdersPage({
                           currentStatus={order.order_status ?? "new"}
                           returnTo={returnTo}
                           options={ORDER_STATUS_OPTIONS}
-                          updateAction={updateOrderStatus}
+                          updateAction={updateOrderStatusInline}
                         />
                       )}
                     </td>

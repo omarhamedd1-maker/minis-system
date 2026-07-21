@@ -249,6 +249,25 @@ export async function updateDiscount(formData: FormData) {
   redirect(`/orders/${orderId}?saved=1`);
 }
 
+// تحديث الحالة من قايمة الأوردرات من غير redirect — عشان الصفحة ماترجعش لفوق
+export async function updateOrderStatusInline(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const status = String(formData.get("status") ?? "");
+
+  const isValidStatus = ORDER_STATUS_OPTIONS.some((o) => o.value === status);
+  if (!orderId || !isValidStatus) return;
+
+  const supabase = await createClient();
+  const updateData: { order_status: string; delivered_at?: string | null } = {
+    order_status: status,
+    delivered_at: status === "delivered" ? new Date().toISOString() : null,
+  };
+  await supabase.from("orders").update(updateData).eq("id", orderId);
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
+}
+
 export async function bulkUpdateStatus(
   formData: FormData
 ): Promise<{ ok: boolean; error?: string }> {
