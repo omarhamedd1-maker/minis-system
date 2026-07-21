@@ -7,7 +7,7 @@ export function CountUp({
   value,
   format,
   baseline,
-  duration = 700,
+  duration = 1500,
 }: {
   value: number;
   format: (n: number) => string;
