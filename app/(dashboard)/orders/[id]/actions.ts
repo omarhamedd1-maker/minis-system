@@ -214,7 +214,8 @@ export async function updateOrderItem(formData: FormData) {
     );
   }
 
-  await pushOrderToShopify(orderId);
+  // مؤقت للتشخيص: الدفع الأوتوماتيكي متوقف — بنشغّله يدوي عشان نشوف الخطأ
+  // await pushOrderToShopify(orderId);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
