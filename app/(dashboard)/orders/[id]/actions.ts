@@ -264,6 +264,8 @@ export async function updateDiscount(formData: FormData) {
     );
   }
 
+  await pushOrderToShopify(orderId);
+
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(`/orders/${orderId}?saved=1`);
