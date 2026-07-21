@@ -231,7 +231,7 @@ export default async function OrdersPage({
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
                   رقم الأوردر
                 </th>
-                <th className="px-4 py-3 font-medium">العميل</th>
+                <th className="w-full px-4 py-3 font-medium">العميل</th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
                   التاريخ
                 </th>
@@ -245,7 +245,7 @@ export default async function OrdersPage({
                   عدد القطع
                 </th>
                 <th className="px-4 py-3 font-medium">الحالة</th>
-                <th className="w-full px-4 py-3 font-medium"></th>
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -284,7 +284,7 @@ export default async function OrdersPage({
                         {order.order_number ?? "بدون رقم"}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="w-full px-4 py-3 text-gray-700">
                       {order.customers?.full_name ?? "—"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-gray-700">
@@ -330,7 +330,7 @@ export default async function OrdersPage({
                         />
                       )}
                     </td>
-                    <td className="w-full px-4 py-3">
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/orders/${order.id}`}
