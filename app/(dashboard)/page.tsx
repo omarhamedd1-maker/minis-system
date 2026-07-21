@@ -48,6 +48,9 @@ const cairoWeekdayFormat = new Intl.DateTimeFormat("ar-EG", {
 
 const EXCLUDED = ["cancelled", "returned"];
 
+// اللي العميل بيدفعه شحن لكل أوردر (سهل تغييره)
+const SHIPPING_CHARGE = 90;
+
 const PERIODS: Record<string, { label: string }> = {
   today: { label: "النهارده" },
   month: { label: "الشهر ده" },
@@ -243,7 +246,13 @@ export default async function StatsPage({
     (s, o) => s + Number(o.bosta_shipping_cost ?? 0),
     0
   );
-  const netProfit = profit - expensesTotal - bostaShippingTotal;
+  // شحن محصّل من العملاء: 90 جنيه لكل أوردر اتشحن فعلاً (اللي ليه تكلفة بوسطة)
+  const shippedCount = validOrders.filter(
+    (o) => Number(o.bosta_shipping_cost ?? 0) > 0
+  ).length;
+  const shippingRevenue = shippedCount * SHIPPING_CHARGE;
+  const netProfit =
+    profit + shippingRevenue - expensesTotal - bostaShippingTotal;
   const orderCount = validOrders.length;
   const avgOrder = orderCount > 0 ? sales / orderCount : 0;
   const deliveredCount = periodOrders.filter(
@@ -522,6 +531,16 @@ export default async function StatsPage({
             <p className="text-sm text-gray-500">المصاريف</p>
             <p className="mt-1 text-2xl font-bold text-red-600">
               {formatMoney(expensesTotal)}
+            </p>
+          </div>
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <p className="text-sm text-gray-500">شحن محصّل من العملاء</p>
+            <p className="mt-1 text-2xl font-bold text-green-600">
+              {formatMoney(shippingRevenue)}
+            </p>
+            <p className="text-xs text-gray-400">
+              {formatMoney(SHIPPING_CHARGE)} لكل أوردر × {shippedCount} أوردر
+              اتشحن
             </p>
           </div>
           <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -815,9 +834,10 @@ export default async function StatsPage({
       </div>
 
       <p className="text-xs text-gray-400">
-        كل الأرقام محسوبة لايف من الأوردرات والمصاريف — صافي الربح بعد خصم
-        المصاريف وتكلفة شحن بوسطة الحقيقية. الأوردرات الملغية والمرتجعة مستبعدة
-        من المبيعات والأرباح، وبتظهر في توزيع الحالات والفرص الضايعة بس
+        كل الأرقام محسوبة لايف من الأوردرات والمصاريف — صافي الربح = أرباح
+        المنتجات + الشحن المحصّل من العملاء − المصاريف − تكلفة شحن بوسطة
+        الحقيقية. الأوردرات الملغية والمرتجعة مستبعدة من المبيعات والأرباح،
+        وبتظهر في توزيع الحالات والفرص الضايعة بس
       </p>
     </div>
   );
