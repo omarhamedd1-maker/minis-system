@@ -326,6 +326,7 @@ export default async function OrderDetailsPage({
                         <input type="hidden" name="item_id" value={item.id} />
                       </form>
                       <input
+                        key={`qty-${item.quantity}`}
                         type="number"
                         name="quantity"
                         form={`item-${item.id}`}
@@ -338,6 +339,7 @@ export default async function OrderDetailsPage({
                     </td>
                     <td className="px-4 py-3">
                       <input
+                        key={`price-${item.sale_price_at_order}`}
                         type="number"
                         name="sale_price"
                         form={`item-${item.id}`}
@@ -405,6 +407,7 @@ export default async function OrderDetailsPage({
                     >
                       <input type="hidden" name="order_id" value={order.id} />
                       <input
+                        key={`ship-${order.shipping_price}`}
                         type="number"
                         name="shipping_price"
                         defaultValue={order.shipping_price}

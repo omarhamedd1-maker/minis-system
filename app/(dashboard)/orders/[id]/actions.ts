@@ -84,13 +84,26 @@ export async function addOrderItem(formData: FormData) {
     redirect(`/orders/${orderId}?error=` + encodeURIComponent("السعر مش صحيح"));
   }
 
-  const { error } = await supabase.from("order_items").insert({
-    order_id: orderId,
-    variant_id: variantId,
-    quantity,
-    sale_price_at_order: salePrice,
-    cost_price_at_order: variant.cost_price,
-  });
+  // لو المنتج موجود أصلاً في الأوردر نزوّد كميته بدل ما نكرّره (يمنع تضخّم الكمية مع المزامنة)
+  const { data: existingItem } = await supabase
+    .from("order_items")
+    .select("id, quantity")
+    .eq("order_id", orderId)
+    .eq("variant_id", variantId)
+    .maybeSingle();
+
+  const { error } = existingItem
+    ? await supabase
+        .from("order_items")
+        .update({ quantity: existingItem.quantity + quantity })
+        .eq("id", existingItem.id)
+    : await supabase.from("order_items").insert({
+        order_id: orderId,
+        variant_id: variantId,
+        quantity,
+        sale_price_at_order: salePrice,
+        cost_price_at_order: variant.cost_price,
+      });
 
   if (error) {
     redirect(
