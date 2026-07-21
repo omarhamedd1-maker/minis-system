@@ -50,13 +50,6 @@ type OrderDetails = {
       products: { name: string | null } | null;
     } | null;
   }[];
-  shipments: {
-    id: string;
-    bosta_tracking_number: string | null;
-    shipping_status: string | null;
-    shipping_cost: number | null;
-    last_update: string | null;
-  }[];
 };
 
 export default async function OrderDetailsPage({
@@ -79,8 +72,7 @@ export default async function OrderDetailsPage({
        bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        customers(full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
-         product_variants(variant_name, products(name))),
-       shipments(id, bosta_tracking_number, shipping_status, shipping_cost, last_update)`
+         product_variants(variant_name, products(name)))`
     )
     .eq("id", id)
     .maybeSingle()
@@ -226,8 +218,8 @@ export default async function OrderDetailsPage({
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-sm font-bold text-gray-900">الشحن</h2>
 
-          {order.bosta_state && (
-            <div className="mb-3 space-y-2 border-b border-gray-100 pb-3 text-sm">
+          {order.bosta_state ? (
+            <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">حالة بوسطة</dt>
                 <dd className="text-gray-900" dir="ltr">
@@ -267,45 +259,8 @@ export default async function OrderDetailsPage({
                 </dd>
               </div>
             </div>
-          )}
-
-          {order.shipments.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              {order.bosta_state ? "" : "لسه مفيش شحنة للأوردر ده."}
-            </p>
           ) : (
-            <dl className="space-y-2 text-sm">
-              {order.shipments.map((shipment) => (
-                <div key={shipment.id} className="space-y-2">
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500">رقم التتبع (بوسطة)</dt>
-                    <dd className="text-gray-900" dir="ltr">
-                      {shipment.bosta_tracking_number ?? "—"}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500">حالة الشحن</dt>
-                    <dd className="text-gray-900">
-                      {shipment.shipping_status ?? "—"}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500">تكلفة الشحن</dt>
-                    <dd className="text-gray-900">
-                      {shipment.shipping_cost != null
-                        ? formatMoney(shipment.shipping_cost)
-                        : "—"}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500">آخر تحديث</dt>
-                    <dd className="text-gray-900">
-                      {formatDate(shipment.last_update)}
-                    </dd>
-                  </div>
-                </div>
-              ))}
-            </dl>
+            <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
           )}
         </div>
       </div>

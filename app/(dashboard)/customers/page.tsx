@@ -20,18 +20,32 @@ type CustomerData = {
 
 const EXCLUDED = ["cancelled", "returned"];
 
+const SORTS: Record<string, string> = {
+  total: "الأكبر مبلغاً",
+  orders: "الأكتر أوردرات",
+  recent: "آخر أوردر",
+};
+
 export default async function CustomersPage({
   searchParams,
 }: {
   searchParams: Promise<{
     q?: string;
+    sort?: string;
     saved?: string;
     deleted?: string;
     error?: string;
   }>;
 }) {
-  const { q, saved, deleted, error: actionError } = await searchParams;
+  const {
+    q,
+    sort: rawSort,
+    saved,
+    deleted,
+    error: actionError,
+  } = await searchParams;
   const searchTerm = (q ?? "").trim();
+  const sort = SORTS[rawSort ?? ""] ? (rawSort as string) : "total";
   const supabase = await createClient();
 
   const { data: customers, error } = await supabase
@@ -93,7 +107,20 @@ export default async function CustomersPage({
       const phone = (row.phone ?? "").replace(/\s+/g, "");
       return name.includes(normalized) || phone.includes(normalized);
     })
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => {
+      if (sort === "orders") return b.ordersCount - a.ordersCount;
+      if (sort === "recent")
+        return (b.lastOrderDate ?? "").localeCompare(a.lastOrderDate ?? "");
+      return b.total - a.total;
+    });
+
+  const sortHref = (key: string) => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set("q", searchTerm);
+    if (key !== "total") params.set("sort", key);
+    const qs = params.toString();
+    return qs ? `/customers?${qs}` : "/customers";
+  };
 
   return (
     <div className="space-y-4">
@@ -102,6 +129,9 @@ export default async function CustomersPage({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-gray-500">{rows.length} عميل</span>
           <form action="/customers" className="flex items-center gap-1">
+            {sort !== "total" && (
+              <input type="hidden" name="sort" value={sort} />
+            )}
             <input
               name="q"
               defaultValue={searchTerm}
@@ -124,6 +154,23 @@ export default async function CustomersPage({
             )}
           </form>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-gray-500">ترتيب حسب:</span>
+        {Object.entries(SORTS).map(([key, label]) => (
+          <Link
+            key={key}
+            href={sortHref(key)}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              sort === key
+                ? "bg-gray-900 text-white"
+                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       {actionError && (
