@@ -9,6 +9,10 @@ import {
 
 // الأوردر اللي مع شركة الشحن — حالته بتتغير من بوسطة، فبنقفل تعديلها من القايمة
 const AT_SHIPPING = ["shipped", "delivered", "returned"];
+// الحالات دي بتتغير من جوه صفحة الأوردر بس — مش من قايمة الاختيار برة
+const LIST_STATUS_OPTIONS_EXCLUDED = ["shipped", "delivered", "returned"];
+// الأوردر الملغي بيتقفل تعديله من برة بعد دقيقتين
+const CANCEL_LOCK_MS = 2 * 60 * 1000;
 import {
   addOrderComment,
   deleteOrderComment,
@@ -17,6 +21,7 @@ import {
 import { OrderComments } from "@/components/OrderComments";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { bulkUpdateStatus } from "./[id]/actions";
 
 type OrderRow = {
@@ -24,6 +29,7 @@ type OrderRow = {
   order_number: string | null;
   order_status: string | null;
   order_date: string | null;
+  cancelled_at: string | null;
   shipping_price: number;
   discount: number;
   bosta_state: string | null;
@@ -71,7 +77,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, shipping_price, discount, bosta_state, bosta_collected, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
+      "id, order_number, order_status, order_date, cancelled_at, shipping_price, discount, bosta_state, bosta_collected, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });
@@ -112,6 +118,7 @@ export default async function OrdersPage({
 
   return (
     <div>
+      <AutoRefresh seconds={10} />
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">الأوردرات</h1>
         <div className="flex items-center gap-3">
@@ -312,23 +319,37 @@ export default async function OrdersPage({
                       {pieces} قطعة
                     </td>
                     <td className="px-4 py-3">
-                      {order.bosta_state &&
-                      AT_SHIPPING.includes(order.order_status ?? "") ? (
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusBadge(order.order_status).className}`}
-                          title="مع شركة الشحن — تتغير من جوّه الأوردر"
-                        >
-                          {orderStatusBadge(order.order_status).label}
-                        </span>
-                      ) : (
-                        <OrderStatusSelect
-                          orderId={order.id}
-                          currentStatus={order.order_status ?? "new"}
-                          returnTo={returnTo}
-                          options={ORDER_STATUS_OPTIONS}
-                          updateAction={updateOrderStatusInline}
-                        />
-                      )}
+                      {(() => {
+                        const st = order.order_status ?? "new";
+                        // ملغي من أكتر من دقيقتين: التعديل من جوه الأوردر بس
+                        const cancelLocked =
+                          st === "cancelled" &&
+                          (!order.cancelled_at ||
+                            Date.now() - new Date(order.cancelled_at).getTime() >
+                              CANCEL_LOCK_MS);
+                        if (AT_SHIPPING.includes(st) || cancelLocked) {
+                          return (
+                            <span
+                              className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusBadge(st).className}`}
+                              title="التعديل من جوّه الأوردر بس"
+                            >
+                              {orderStatusBadge(st).label}
+                            </span>
+                          );
+                        }
+                        return (
+                          <OrderStatusSelect
+                            orderId={order.id}
+                            currentStatus={st}
+                            returnTo={returnTo}
+                            options={ORDER_STATUS_OPTIONS.filter(
+                              (o) =>
+                                !LIST_STATUS_OPTIONS_EXCLUDED.includes(o.value)
+                            )}
+                            updateAction={updateOrderStatusInline}
+                          />
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

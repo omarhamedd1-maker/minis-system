@@ -134,14 +134,14 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
-      <Card label="تحصيل بوسطة الفعلي (COD)">
-        <span className="text-emerald-600">
-          <CountUp key={key} baseline={base} value={s.cod} format={money} />
-        </span>
-      </Card>
       <Card label="متوسط قيمة الأوردر">
         <span className="text-gray-900">
           <CountUp key={key} baseline={base} value={s.avgOrder} format={money} />
+        </span>
+      </Card>
+      <Card label="تحصيل بوسطة الفعلي (COD)">
+        <span className="text-emerald-600">
+          <CountUp key={key} baseline={base} value={s.cod} format={money} />
         </span>
       </Card>
       <Card
@@ -159,13 +159,13 @@ export function LiveMoneyCards({
       </Card>
       <Card
         label="شحن دفعته فوق الـ90"
-        hint="رسوم بوسطة الحقيقية اللي دفعتها فوق الـ90 المحصّل من العملاء"
+        hint="رسوم بوسطة ناقص الـ90 المحصّل — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
       >
         <span className="text-red-600">
           <CountUp
             key={key}
             baseline={base}
-            value={s.bostaShippingTotal}
+            value={s.netShipping}
             format={money}
           />
         </span>

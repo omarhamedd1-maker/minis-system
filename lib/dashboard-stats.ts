@@ -104,18 +104,22 @@ export function computeHeadline(
     0
   );
   const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
-  const shippedCount = validOrders.filter(
-    (o) => Number(o.bosta_shipping_cost ?? 0) > 0
-  ).length;
+  // تكلفة الشحن بتتحسب بس بعد ما شركة الشحن تستلم الأوردر فعلاً
+  const shippedOrders = validOrders.filter(
+    (o) =>
+      ["shipped", "delivered"].includes(o.order_status ?? "") &&
+      Number(o.bosta_shipping_cost ?? 0) > 0
+  );
+  const shippedCount = shippedOrders.length;
   const shippingRevenue = shippedCount * SHIPPING_CHARGE;
-  const bostaShippingTotal = validOrders.reduce(
+  const bostaShippingTotal = shippedOrders.reduce(
     (s, o) => s + Number(o.bosta_shipping_cost ?? 0),
     0
   );
-  // صافي الشحن اللي دفعته من جيبك: رسوم بوسطة − اللي محصّلته من العملاء (فوق الـ90)
+  // اللي دفعته من جيبك فوق الـ90 المحصّل — ده اللي بيتخصم من الربح
   const netShipping = bostaShippingTotal - shippingRevenue;
-  const netProfit =
-    profit + shippingRevenue - expensesTotal - bostaShippingTotal;
+  // الشحن المحصّل مش بيتضاف للربح (محسوب ضمن توتال الأوردر) — بنخصم الزيادة بس
+  const netProfit = profit - expensesTotal - netShipping;
   const orderCount = validOrders.length;
   const avgOrder = orderCount > 0 ? sales / orderCount : 0;
 

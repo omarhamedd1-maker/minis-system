@@ -258,9 +258,14 @@ export async function updateOrderStatusInline(formData: FormData) {
   if (!orderId || !isValidStatus) return;
 
   const supabase = await createClient();
-  const updateData: { order_status: string; delivered_at?: string | null } = {
+  const updateData: {
+    order_status: string;
+    delivered_at?: string | null;
+    cancelled_at?: string | null;
+  } = {
     order_status: status,
     delivered_at: status === "delivered" ? new Date().toISOString() : null,
+    cancelled_at: status === "cancelled" ? new Date().toISOString() : null,
   };
   await supabase.from("orders").update(updateData).eq("id", orderId);
 
@@ -281,10 +286,15 @@ export async function bulkUpdateStatus(
 
   const supabase = await createClient();
 
-  const update: { order_status: string; delivered_at?: string | null } = {
+  const update: {
+    order_status: string;
+    delivered_at?: string | null;
+    cancelled_at?: string | null;
+  } = {
     order_status: status,
   };
   update.delivered_at = status === "delivered" ? new Date().toISOString() : null;
+  update.cancelled_at = status === "cancelled" ? new Date().toISOString() : null;
 
   const { error } = await supabase
     .from("orders")
@@ -551,15 +561,18 @@ export async function updateOrderStatus(formData: FormData) {
 
   const supabase = await createClient();
 
-  // نسجل تاريخ التسليم مع الحالة — عشان تحصيل اليوم يتحسب صح
-  const updateData: { order_status: string; delivered_at?: string | null } = {
+  // نسجل تاريخ التسليم/الإلغاء مع الحالة — عشان تحصيل اليوم وقفل الملغي يتحسبوا صح
+  const updateData: {
+    order_status: string;
+    delivered_at?: string | null;
+    cancelled_at?: string | null;
+  } = {
     order_status: status,
   };
-  if (status === "delivered") {
-    updateData.delivered_at = new Date().toISOString();
-  } else {
-    updateData.delivered_at = null;
-  }
+  updateData.delivered_at =
+    status === "delivered" ? new Date().toISOString() : null;
+  updateData.cancelled_at =
+    status === "cancelled" ? new Date().toISOString() : null;
 
   const { error, count } = await supabase
     .from("orders")

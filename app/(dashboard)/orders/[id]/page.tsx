@@ -8,6 +8,7 @@ import {
   orderStatusBadge,
 } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
@@ -128,8 +129,18 @@ export default async function OrderDetailsPage({
   );
   const grandTotal = itemsTotal - order.discount + order.shipping_price;
 
+  // لينك واتساب العميل: نحوّل الرقم لصيغة دولية (مصر 20)
+  const rawPhone = (order.customers?.phone ?? "").replace(/\D/g, "");
+  const intlPhone = rawPhone
+    ? rawPhone.startsWith("20")
+      ? rawPhone
+      : "20" + rawPhone.replace(/^0+/, "")
+    : null;
+  const whatsappLink = intlPhone ? `https://wa.me/${intlPhone}` : null;
+
   return (
     <div className="space-y-6">
+      <AutoRefresh seconds={10} />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-gray-900">
@@ -198,8 +209,18 @@ export default async function OrderDetailsPage({
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">التليفون</dt>
-              <dd className="text-gray-900" dir="ltr">
+              <dd className="flex items-center gap-2 text-gray-900" dir="ltr">
                 {order.customers?.phone ?? "—"}
+                {whatsappLink && (
+                  <a
+                    href={whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 hover:bg-green-100"
+                  >
+                    واتساب
+                  </a>
+                )}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -238,12 +259,11 @@ export default async function OrderDetailsPage({
               </div>
               {order.bosta_shipping_cost > 0 && (
                 <div className="flex items-center justify-between gap-4">
-                  <dt className="text-gray-500">الشحن توتال</dt>
+                  <dt className="text-gray-500">إجمالي تكلفة الشحن</dt>
                   <dd className="text-left text-gray-900">
                     {formatMoney(90 + order.bosta_shipping_cost)}
                     <span className="block text-xs text-gray-400">
-                      90 شحن + {formatMoney(order.bosta_shipping_cost)} رسوم
-                      بوسطة
+                      90 + {formatMoney(order.bosta_shipping_cost)} رسوم بوسطة
                     </span>
                   </dd>
                 </div>
