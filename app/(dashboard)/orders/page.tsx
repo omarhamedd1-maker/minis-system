@@ -11,8 +11,8 @@ import {
 const AT_SHIPPING = ["shipped", "delivered", "returned"];
 // الحالات دي بتتغير من جوه صفحة الأوردر بس — مش من قايمة الاختيار برة
 const LIST_STATUS_OPTIONS_EXCLUDED = ["shipped", "delivered", "returned"];
-// الأوردر الملغي بيتقفل تعديله من برة بعد دقيقتين
-const CANCEL_LOCK_MS = 2 * 60 * 1000;
+// الأوردر الملغي بيتقفل تعديله من برة بعد 30 ثانية
+const CANCEL_LOCK_MS = 30 * 1000;
 
 // لينك واتساب العميل بصيغة مصر الدولية (20)
 function waLink(phone: string | null) {
