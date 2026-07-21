@@ -1,4 +1,5 @@
 // حسابات كروت الداشبورد — مشتركة بين السيرفر (أول تحميل) والعميل (التحديث اللايف)
+import { AT_CARRIER_STATUSES } from "./format";
 
 export const SHIPPING_CHARGE = 90; // اللي العميل بيدفعه شحن لكل أوردر
 const EXCLUDED = ["cancelled", "returned"];
@@ -104,10 +105,10 @@ export function computeHeadline(
     0
   );
   const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
-  // تكلفة الشحن بتتحسب بعد ما شركة الشحن تستلم — وبوسطة بتاخد فلوسها حتى في المرتجع
+  // تكلفة الشحن بتتحسب بعد ما المندوب يستلم — وبوسطة بتاخد فلوسها حتى في المرتجع
   const bostaChargedOrders = periodOrders.filter(
     (o) =>
-      ["shipped", "delivered", "returned"].includes(o.order_status ?? "") &&
+      AT_CARRIER_STATUSES.includes(o.order_status ?? "") &&
       Number(o.bosta_shipping_cost ?? 0) > 0
   );
   const bostaShippingTotal = bostaChargedOrders.reduce(

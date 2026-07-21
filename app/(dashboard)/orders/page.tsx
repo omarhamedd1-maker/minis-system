@@ -2,15 +2,16 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
   ORDER_STATUS_OPTIONS,
+  SHIPMENT_STATUSES,
   formatDate,
   formatMoney,
   orderStatusBadge,
 } from "@/lib/format";
 
-// الأوردر اللي مع شركة الشحن — حالته بتتغير من بوسطة، فبنقفل تعديلها من القايمة
-const AT_SHIPPING = ["shipped", "delivered", "returned"];
-// الحالات دي بتتغير من جوه صفحة الأوردر بس — مش من قايمة الاختيار برة
-const LIST_STATUS_OPTIONS_EXCLUDED = ["shipped", "delivered", "returned"];
+// حالات الشحن بتتحدّث من بوسطة — بنقفل تغييرها من القايمة برة
+const AT_SHIPPING = SHIPMENT_STATUSES;
+// ونشيلها من قايمة الاختيار برة (التعديل اليدوي من جوه الأوردر بس)
+const LIST_STATUS_OPTIONS_EXCLUDED = SHIPMENT_STATUSES;
 // الأوردر الملغي بيتقفل تعديله من برة بعد 30 ثانية
 const CANCEL_LOCK_MS = 30 * 1000;
 

@@ -29,7 +29,12 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     new: { label: "جديد", className: "bg-blue-50 text-blue-700" },
     confirmed: { label: "مؤكد", className: "bg-sky-50 text-sky-700" },
     packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
-    shipped: { label: "جاري الشحن", className: "bg-indigo-50 text-indigo-700" },
+    ready: { label: "جاهزة للشحن", className: "bg-cyan-50 text-cyan-700" },
+    shipped: { label: "مع المندوب", className: "bg-indigo-50 text-indigo-700" },
+    out_for_delivery: {
+      label: "خرجت للتسليم",
+      className: "bg-violet-50 text-violet-700",
+    },
     delivered: { label: "تم التسليم", className: "bg-green-50 text-green-700" },
     cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
     returned: { label: "مرتجع", className: "bg-orange-50 text-orange-700" },
@@ -38,6 +43,22 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
 export const ORDER_STATUS_OPTIONS = Object.entries(ORDER_STATUS_LABELS).map(
   ([value, { label }]) => ({ value, label })
 );
+
+// حالات الشحن (بتتحدّث من بوسطة تلقائياً — مش بتتحط يدوي من القايمة)
+export const SHIPMENT_STATUSES = [
+  "ready",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "returned",
+];
+// من ساعة ما المندوب يستلم فما فوق (بتتحسب عليها تكلفة بوسطة)
+export const AT_CARRIER_STATUSES = [
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+  "returned",
+];
 
 export const COST_COMPONENTS = [
   "ستانليس",
