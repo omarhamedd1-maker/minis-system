@@ -7,6 +7,20 @@ import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
 
+// بعد أي تعديل بنود: نبعت التعديل لشوبيفاي تلقائياً (بيشتغل بس قبل الشحن)
+async function pushOrderToShopify(orderId: string) {
+  const key = process.env.SYNC_KEY;
+  if (!key) return;
+  try {
+    await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
+      { method: "GET", signal: AbortSignal.timeout(15000) }
+    );
+  } catch {
+    // فشل الدفع لشوبيفاي ما يوقفش التعديل المحلي (مثلاً أوردر متشحن)
+  }
+}
+
 // بيظبط المخزون ويسجّل الحركة. change موجب = رجوع للمخزون، سالب = خصم
 async function adjustStock(
   supabase: Supa,
@@ -84,6 +98,8 @@ export async function addOrderItem(formData: FormData) {
   // خصم من المخزون
   await adjustStock(supabase, variantId, -quantity, orderId, "إضافة منتج لأوردر");
 
+  await pushOrderToShopify(orderId);
+
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   revalidatePath("/products");
@@ -131,6 +147,8 @@ export async function deleteOrderItem(formData: FormData) {
       "مسح منتج من أوردر"
     );
   }
+
+  await pushOrderToShopify(orderId);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -195,6 +213,8 @@ export async function updateOrderItem(formData: FormData) {
       "تعديل كمية بند في أوردر"
     );
   }
+
+  await pushOrderToShopify(orderId);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
