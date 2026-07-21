@@ -264,7 +264,7 @@ export async function updateDiscount(formData: FormData) {
     );
   }
 
-  await pushOrderToShopify(orderId);
+  // الخصم دفتري (للأرباح) — مش بيتبعت لشوبيفاي (قيود تعديل الأسعار عندهم)
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
