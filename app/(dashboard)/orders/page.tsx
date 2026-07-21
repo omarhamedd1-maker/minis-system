@@ -27,13 +27,11 @@ type OrderRow = {
   shipping_price: number;
   discount: number;
   bosta_state: string | null;
-  bosta_cod: number;
   bosta_collected: boolean;
   customers: { full_name: string | null; phone: string | null } | null;
   order_items: {
     quantity: number;
     sale_price_at_order: number;
-    cost_price_at_order: number;
   }[];
   order_comments: {
     id: string;
@@ -73,7 +71,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, shipping_price, discount, bosta_state, bosta_cod, bosta_collected, customers(full_name, phone), order_items(quantity, sale_price_at_order, cost_price_at_order), order_comments(id, author_name, body, created_at)"
+      "id, order_number, order_status, order_date, shipping_price, discount, bosta_state, bosta_collected, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });
@@ -241,10 +239,10 @@ export default async function OrdersPage({
                   الإجمالي
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
-                  التحصيل (COD)
+                  التحصيل
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
-                  الربح
+                  عدد القطع
                 </th>
                 <th className="px-4 py-3 font-medium">الحالة</th>
                 <th className="w-full px-4 py-3 font-medium"></th>
@@ -260,14 +258,10 @@ export default async function OrdersPage({
                   ) -
                   order.discount +
                   order.shipping_price;
-                const profit =
-                  order.order_items.reduce(
-                    (sum, item) =>
-                      sum +
-                      item.quantity *
-                        (item.sale_price_at_order - item.cost_price_at_order),
-                    0
-                  ) - order.discount;
+                const pieces = order.order_items.reduce(
+                  (sum, item) => sum + item.quantity,
+                  0
+                );
                 return (
                   <tr
                     key={order.id}
@@ -301,30 +295,21 @@ export default async function OrdersPage({
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       {order.bosta_state ? (
-                        <span
-                          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            order.bosta_collected
-                              ? "bg-green-50 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                          title={
-                            order.bosta_collected
-                              ? "اتحصّل من العميل"
-                              : "لسه ما اتحصّلش"
-                          }
-                        >
-                          {formatMoney(order.bosta_cod)}
-                        </span>
+                        order.bosta_collected ? (
+                          <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                            اتحصّل
+                          </span>
+                        ) : (
+                          <span className="inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                            لسه
+                          </span>
+                        )
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
-                    <td
-                      className={`whitespace-nowrap px-4 py-3 font-medium ${
-                        profit >= 0 ? "text-green-700" : "text-red-600"
-                      }`}
-                    >
-                      {formatMoney(profit)}
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-700">
+                      {pieces} قطعة
                     </td>
                     <td className="px-4 py-3">
                       {order.bosta_state &&
