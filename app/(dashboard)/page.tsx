@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatMoney, orderStatusBadge } from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { DayPicker } from "@/components/DayPicker";
+import { LiveMoneyCards } from "@/components/LiveMoneyCards";
+import { computeHeadline, resolvePeriod } from "@/lib/dashboard-stats";
 
 type OrderRow = {
   id: string;
@@ -12,6 +14,8 @@ type OrderRow = {
   shipping_price: number;
   discount: number;
   bosta_shipping_cost: number;
+  bosta_cod: number | null;
+  bosta_collected: boolean | null;
   customers: { full_name: string | null } | null;
   order_items: {
     quantity: number;
@@ -47,9 +51,6 @@ const cairoWeekdayFormat = new Intl.DateTimeFormat("ar-EG", {
 });
 
 const EXCLUDED = ["cancelled", "returned"];
-
-// اللي العميل بيدفعه شحن لكل أوردر (سهل تغييره)
-const SHIPPING_CHARGE = 90;
 
 const PERIODS: Record<string, { label: string }> = {
   today: { label: "النهارده" },
@@ -150,12 +151,12 @@ export default async function StatsPage({
 
   const supabase = await createClient();
 
-  const [ordersResult, expensesResult, variantsResult, deliveredTodayResult] =
+  const [ordersResult, expensesResult, variantsResult] =
     await Promise.all([
       supabase
         .from("orders")
         .select(
-          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, customers(full_name),
+          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_cod, bosta_collected, customers(full_name),
            order_items(quantity, sale_price_at_order, cost_price_at_order,
              product_variants(id, variant_name, products(name)))`
         )
@@ -184,20 +185,6 @@ export default async function StatsPage({
             products: { name: string | null } | null;
           }[]
         >(),
-      // التحصيل الحقيقي من بوسطة: مبالغ COD اللي اتحصّلت فعلاً
-      supabase
-        .from("orders")
-        .select("id, bosta_cod, delivered_at")
-        .eq("bosta_collected", true)
-        .gte("delivered_at", shiftDays(periodStart, -1))
-        .limit(3000)
-        .overrideTypes<
-          {
-            id: string;
-            bosta_cod: number;
-            delivered_at: string | null;
-          }[]
-        >(),
     ]);
 
   if (ordersResult.error || expensesResult.error || variantsResult.error) {
@@ -222,39 +209,13 @@ export default async function StatsPage({
     (o) => !EXCLUDED.includes(o.order_status ?? "")
   );
 
-  // التحصيل الحقيقي: مجموع مبالغ COD اللي بوسطة حصّلتها في الفترة (بتوقيت مصر)
-  const periodCollections = (deliveredTodayResult.data ?? [])
-    .filter((order) => {
-      if (!order.delivered_at) return false;
-      const day = cairoDateOf(order.delivered_at);
-      return day >= periodStart && day <= periodEnd;
-    })
-    .reduce((sum, order) => sum + Number(order.bosta_cod ?? 0), 0);
-
-  // ملخص الفترة — المبيعات والأرباح بعد خصم الخصومات
-  const sales = validOrders.reduce(
-    (s, o) => s + itemsTotal(o) - o.discount,
-    0
+  // أرقام الكروت المالية (أول تحميل) — بتتحدّث لايف في العميل
+  const headline = computeHeadline(
+    allOrders,
+    expensesResult.data,
+    periodStart,
+    periodEnd
   );
-  const profit = validOrders.reduce(
-    (s, o) => s + itemsProfit(o) - o.discount,
-    0
-  );
-  const expensesTotal = expensesResult.data.reduce((s, e) => s + e.amount, 0);
-  // تكلفة شحن بوسطة الحقيقية للأوردرات في الفترة
-  const bostaShippingTotal = validOrders.reduce(
-    (s, o) => s + Number(o.bosta_shipping_cost ?? 0),
-    0
-  );
-  // شحن محصّل من العملاء: 90 جنيه لكل أوردر اتشحن فعلاً (اللي ليه تكلفة بوسطة)
-  const shippedCount = validOrders.filter(
-    (o) => Number(o.bosta_shipping_cost ?? 0) > 0
-  ).length;
-  const shippingRevenue = shippedCount * SHIPPING_CHARGE;
-  const netProfit =
-    profit + shippingRevenue - expensesTotal - bostaShippingTotal;
-  const orderCount = validOrders.length;
-  const avgOrder = orderCount > 0 ? sales / orderCount : 0;
   const deliveredCount = periodOrders.filter(
     (o) => o.order_status === "delivered"
   ).length;
@@ -514,75 +475,13 @@ export default async function StatsPage({
         <h2 className="mb-3 text-sm font-bold text-gray-500">
           {periodLabel}
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">المبيعات</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {formatMoney(sales)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">أرباح المنتجات</p>
-            <p className="mt-1 text-2xl font-bold text-green-600">
-              {formatMoney(profit)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">المصاريف</p>
-            <p className="mt-1 text-2xl font-bold text-red-600">
-              {formatMoney(expensesTotal)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">شحن محصّل من العملاء</p>
-            <p className="mt-1 text-2xl font-bold text-green-600">
-              {formatMoney(shippingRevenue)}
-            </p>
-            <p className="text-xs text-gray-400">
-              {formatMoney(SHIPPING_CHARGE)} لكل أوردر × {shippedCount} أوردر
-              اتشحن
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">تكلفة شحن بوسطة</p>
-            <p className="mt-1 text-2xl font-bold text-red-600">
-              {formatMoney(bostaShippingTotal)}
-            </p>
-            <p className="text-xs text-gray-400">
-              رسوم بوسطة الحقيقية (تحصيل + تحويل + تأمين + فتح + ضريبة)
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">صافي الربح</p>
-            <p
-              className={`mt-1 text-2xl font-bold ${
-                netProfit >= 0 ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {formatMoney(netProfit)}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">تحصيل بوسطة الفعلي (COD)</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">
-              {formatMoney(periodCollections)}
-            </p>
-            <p className="text-xs text-gray-400">
-              فلوس الدفع عند الاستلام اللي بوسطة حصّلتها في {periodLabel}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">عدد الأوردرات</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {orderCount}
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-gray-500">متوسط قيمة الأوردر</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {formatMoney(Math.round(avgOrder))}
-            </p>
-          </div>
+        <LiveMoneyCards
+          initial={headline}
+          period={period}
+          from={rangeFrom}
+          to={rangeTo}
+        />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <p className="text-sm text-gray-500">نسبة التسليم</p>
             <p className="mt-1 text-2xl font-bold text-emerald-600">
