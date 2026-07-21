@@ -16,6 +16,7 @@ import {
   addOrderItem,
   deleteOrder,
   deleteOrderItem,
+  linkBostaShipment,
   toggleOrderArchive,
   updateDiscount,
   updateOrderItem,
@@ -333,6 +334,35 @@ export default async function OrderDetailsPage({
             </div>
           ) : (
             <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
+          )}
+
+          {isAdmin && (
+            <form
+              action={linkBostaShipment}
+              className="mt-3 border-t border-gray-100 pt-3"
+            >
+              <input type="hidden" name="order_id" value={order.id} />
+              <label className="text-xs text-gray-500">
+                ربط شحنة يدوي (لإعادة استخدام شحنة عميل لغى)
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  name="tracking"
+                  placeholder="رقم التتبع بتاع بوسطة"
+                  dir="ltr"
+                  className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                >
+                  ربط
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-gray-400">
+                هيربط الشحنة دي بالأوردر، والمزامنة تجيب باقي التفاصيل تلقائياً
+              </p>
+            </form>
           )}
         </div>
       </div>

@@ -579,6 +579,57 @@ export async function deleteOrder(formData: FormData) {
   redirect("/orders?deleted=1");
 }
 
+// ربط شحنة بوسطة موجودة بالأوردر ده يدوياً (لإعادة استخدام شحنة عميل لغى)
+export async function linkBostaShipment(formData: FormData) {
+  const orderId = String(formData.get("order_id") ?? "");
+  const tracking = String(formData.get("tracking") ?? "").replace(/\D/g, "").trim();
+
+  if (!orderId || !tracking) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("اكتب رقم التتبع الأول")
+    );
+  }
+
+  const supabase = await createClient();
+
+  // نتأكد إن رقم التتبع ده مش مربوط بأوردر تاني
+  const { data: other } = await supabase
+    .from("orders")
+    .select("order_number")
+    .eq("bosta_tracking", tracking)
+    .neq("id", orderId)
+    .maybeSingle();
+  if (other) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent(
+          `رقم التتبع ده مربوط بأوردر تاني (${other.order_number}) — فكّه منه الأول`
+        )
+    );
+  }
+
+  // نربط التتبع بالأوردر ونخليه "جاري الشحن" — والمزامنة هتجيب باقي التفاصيل
+  const { error, count } = await supabase
+    .from("orders")
+    .update(
+      { bosta_tracking: tracking, order_status: "shipped", cancelled_at: null },
+      { count: "exact" }
+    )
+    .eq("id", orderId);
+
+  if (error || count === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نربط الشحنة — اتأكد إن عندك صلاحية تعديل")
+    );
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
 export async function updateOrderStatus(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   const status = String(formData.get("status") ?? "");
