@@ -331,6 +331,26 @@ export default async function OrderDetailsPage({
                   )}
                 </dd>
               </div>
+              {order.bosta_tracking && (
+                <a
+                  href={`/orders/${order.id}/awb`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="h-3.5 w-3.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+                  </svg>
+                  اطبع البوليصة
+                </a>
+              )}
             </div>
           ) : (
             <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
