@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logActivity } from "@/lib/activity";
 import {
   ALL_PERMISSION_KEYS,
   requirePermission,
@@ -33,7 +34,7 @@ async function ownerRoleId(admin: ReturnType<typeof createAdminClient>) {
 }
 
 export async function createUser(formData: FormData) {
-  await requirePermission("admin.users");
+  const me = await requirePermission("admin.users");
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -70,24 +71,35 @@ export async function createUser(formData: FormData) {
     back("معرفناش نحفظ صلاحيات اليوزر: " + rowError.message, false);
   }
 
+  await logActivity(me, "user.create", `أنشأ مستخدم ${fullName} (${email})`);
   revalidatePath("/users");
   back("تم إنشاء اليوزر", true);
 }
 
 export async function updateUserPermissions(formData: FormData) {
-  await requirePermission("admin.users");
+  const me = await requirePermission("admin.users");
 
   const authUserId = String(formData.get("auth_user_id") ?? "");
   if (!authUserId) back("اليوزر مش موجود", false);
   const permissions = readPermissions(formData);
 
   const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("app_users")
+    .select("full_name")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
   const { error } = await admin
     .from("app_users")
     .update({ permissions })
     .eq("auth_user_id", authUserId);
   if (error) back("معرفناش نحفظ الصلاحيات: " + error.message, false);
 
+  await logActivity(
+    me,
+    "user.permissions",
+    `عدّل صلاحيات ${target?.full_name ?? "مستخدم"} (${permissions.length} صلاحية)`
+  );
   revalidatePath("/users");
   back("تم حفظ الصلاحيات", true);
 }
@@ -112,12 +124,17 @@ export async function updateUserProfile(formData: FormData) {
     .eq("auth_user_id", authUserId);
   if (error) back("معرفناش نحفظ البيانات: " + error.message, false);
 
+  await logActivity(
+    me,
+    "user.profile",
+    `${active ? "فعّل" : "أوقف"} حساب ${fullName}`
+  );
   revalidatePath("/users");
   back("تم حفظ بيانات اليوزر", true);
 }
 
 export async function setUserEmail(formData: FormData) {
-  await requirePermission("admin.users");
+  const me = await requirePermission("admin.users");
 
   const authUserId = String(formData.get("auth_user_id") ?? "");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -131,12 +148,13 @@ export async function setUserEmail(formData: FormData) {
   });
   if (error) back("معرفناش نغير الإيميل: " + error.message, false);
 
+  await logActivity(me, "user.email", `غيّر إيميل مستخدم لـ ${email}`);
   revalidatePath("/users");
   back("تم تغيير الإيميل", true);
 }
 
 export async function setUserPassword(formData: FormData) {
-  await requirePermission("admin.users");
+  const me = await requirePermission("admin.users");
 
   const authUserId = String(formData.get("auth_user_id") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -144,11 +162,21 @@ export async function setUserPassword(formData: FormData) {
   if (password.length < 6) back("الباسورد لازم 6 حروف على الأقل", false);
 
   const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("app_users")
+    .select("full_name")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
   const { error } = await admin.auth.admin.updateUserById(authUserId, {
     password,
   });
   if (error) back("معرفناش نغير الباسورد: " + error.message, false);
 
+  await logActivity(
+    me,
+    "user.password",
+    `غيّر باسورد ${target?.full_name ?? "مستخدم"}`
+  );
   revalidatePath("/users");
   back("تم تغيير الباسورد", true);
 }
@@ -165,10 +193,10 @@ export async function deleteUser(formData: FormData) {
   // منع مسح أدمن (حماية لصاحب النظام)
   const { data: row } = await admin
     .from("app_users")
-    .select("roles(name)")
+    .select("full_name, roles(name)")
     .eq("auth_user_id", authUserId)
     .maybeSingle()
-    .overrideTypes<{ roles: { name: string | null } | null }>();
+    .overrideTypes<{ full_name: string | null; roles: { name: string | null } | null }>();
   if ((row?.roles?.name ?? "").toLowerCase() === "admin") {
     back("مينفعش تمسح أدمن", false);
   }
@@ -177,6 +205,7 @@ export async function deleteUser(formData: FormData) {
   const { error } = await admin.auth.admin.deleteUser(authUserId);
   if (error) back("معرفناش نمسح اليوزر: " + error.message, false);
 
+  await logActivity(me, "user.delete", `مسح مستخدم ${row?.full_name ?? ""}`.trim());
   revalidatePath("/users");
   back("تم مسح اليوزر", true);
 }

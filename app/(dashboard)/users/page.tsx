@@ -22,6 +22,27 @@ type AppUserRow = {
   roles: { name: string | null } | null;
 };
 
+type ActivityRow = {
+  id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  action: string;
+  summary: string | null;
+  created_at: string;
+};
+
+// وقت بصيغة بسيطة بتوقيت مصر
+function whenText(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("ar-EG", {
+    timeZone: "Africa/Cairo",
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default async function UsersPage({
   searchParams,
 }: {
@@ -32,18 +53,31 @@ export default async function UsersPage({
 
   const admin = createAdminClient();
 
-  const [{ data: appUsers }, authList] = await Promise.all([
-    admin
-      .from("app_users")
-      .select("auth_user_id, full_name, permissions, active, roles(name)")
-      .overrideTypes<AppUserRow[]>(),
-    admin.auth.admin.listUsers({ perPage: 200 }),
-  ]);
+  const [{ data: appUsers }, authList, { data: activityData }] =
+    await Promise.all([
+      admin
+        .from("app_users")
+        .select("auth_user_id, full_name, permissions, active, roles(name)")
+        .overrideTypes<AppUserRow[]>(),
+      admin.auth.admin.listUsers({ perPage: 200 }),
+      admin
+        .from("activity_log")
+        .select("id, actor_id, actor_name, action, summary, created_at")
+        .order("created_at", { ascending: false })
+        .limit(80)
+        .overrideTypes<ActivityRow[]>(),
+    ]);
 
   const emailById = new Map<string, string | null>();
+  const lastSignInById = new Map<string, string | null>();
+  const createdById = new Map<string, string | null>();
   for (const u of authList.data?.users ?? []) {
     emailById.set(u.id, u.email ?? null);
+    lastSignInById.set(u.id, u.last_sign_in_at ?? null);
+    createdById.set(u.id, u.created_at ?? null);
   }
+
+  const activity = activityData ?? [];
 
   const users: EditorUser[] = (appUsers ?? [])
     .map((u) => {
@@ -56,6 +90,12 @@ export default async function UsersPage({
         isAdmin,
         active: u.active ?? true,
         permissions: u.permissions ?? [],
+        lastSignInAt: lastSignInById.get(u.auth_user_id) ?? null,
+        createdAt: createdById.get(u.auth_user_id) ?? null,
+        recentActivity: activity
+          .filter((a) => a.actor_id === u.auth_user_id)
+          .slice(0, 6)
+          .map((a) => ({ summary: a.summary ?? a.action, when: whenText(a.created_at) })),
       };
     })
     // الأدمن الأول، بعدين بالاسم
@@ -186,9 +226,40 @@ export default async function UsersPage({
         ))}
       </div>
 
+      {/* سجل النشاط العام — آخر اللي اتعمل في السيستم */}
+      <div className="rounded-xl bg-white shadow-sm">
+        <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
+          سجل النشاط (آخر {activity.length})
+        </h2>
+        {activity.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-gray-500">
+            لسه مفيش نشاط مسجّل. أول ما حد يعمل حاجة مهمة (تغيير حالة، حذف، إرسال
+            لبوسطة، إدارة مستخدمين) هتظهر هنا.
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {activity.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-4 px-5 py-2.5 text-sm"
+              >
+                <span className="text-gray-900">
+                  <span className="font-medium">{a.actor_name ?? "غير معروف"}</span>{" "}
+                  <span className="text-gray-600">{a.summary ?? a.action}</span>
+                </span>
+                <span className="shrink-0 text-xs text-gray-400">
+                  {whenText(a.created_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <p className="text-xs text-gray-400">
         ملاحظة: الأدمن عنده كل الصلاحيات تلقائياً. المستخدمون الجدد بيتعملوا كأعضاء
-        (يقدروا يقرأوا حسب صلاحياتهم) ومش أدمن.
+        (يقدروا يقرأوا حسب صلاحياتهم) ومش أدمن. سجل النشاط بيتسجّل تلقائياً
+        للحاجات المهمة.
       </p>
     </div>
   );

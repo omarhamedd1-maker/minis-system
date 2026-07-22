@@ -14,7 +14,21 @@ export type EditorUser = {
   isAdmin: boolean;
   active: boolean;
   permissions: string[];
+  lastSignInAt: string | null;
+  createdAt: string | null;
+  recentActivity: { summary: string; when: string }[];
 };
+
+function whenText(iso: string | null): string {
+  if (!iso) return "لسه مادخلش";
+  return new Date(iso).toLocaleString("ar-EG", {
+    timeZone: "Africa/Cairo",
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export function UserEditor({
   user,
@@ -87,6 +101,9 @@ export function UserEditor({
               موقوف
             </span>
           )}
+          <span className="text-xs text-gray-400">
+            · آخر دخول: {whenText(user.lastSignInAt)}
+          </span>
         </div>
         <span className="text-xs text-gray-400">
           {user.isAdmin ? "كل الصلاحيات" : `${permCount} صلاحية`} {open ? "▲" : "▼"}
@@ -95,6 +112,35 @@ export function UserEditor({
 
       {open && (
         <div className="space-y-6 border-t border-gray-100 px-5 py-5">
+          {/* معلومات وسجل نشاط المستخدم */}
+          <div className="rounded-lg bg-gray-50 p-3 text-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-600">
+              <span>
+                آخر دخول:{" "}
+                <span className="text-gray-900">{whenText(user.lastSignInAt)}</span>
+              </span>
+              <span>
+                اتعمل الحساب:{" "}
+                <span className="text-gray-900">{whenText(user.createdAt)}</span>
+              </span>
+            </div>
+            {user.recentActivity.length > 0 && (
+              <div className="mt-3">
+                <div className="mb-1 text-xs font-medium text-gray-500">
+                  آخر نشاط ليه:
+                </div>
+                <ul className="space-y-1">
+                  {user.recentActivity.map((a, i) => (
+                    <li key={i} className="flex justify-between gap-3 text-gray-700">
+                      <span>{a.summary}</span>
+                      <span className="shrink-0 text-xs text-gray-400">{a.when}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
           {user.isAdmin ? (
             <p className="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">
               ده حساب أدمن — عنده كل الصلاحيات تلقائياً ومينفعش يتعدل من هنا.

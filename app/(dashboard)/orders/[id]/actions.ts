@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser, requirePermission } from "@/lib/permissions";
-import { ORDER_STATUS_OPTIONS } from "@/lib/format";
+import { logActivity } from "@/lib/activity";
+import { ORDER_STATUS_OPTIONS, orderStatusBadge } from "@/lib/format";
 
 type Supa = ReturnType<typeof createAdminClient>;
 
@@ -489,7 +490,7 @@ export async function toggleOrderArchive(formData: FormData) {
 }
 
 export async function deleteOrder(formData: FormData) {
-  await requirePermission("orders.delete");
+  const me = await requirePermission("orders.delete");
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) {
     redirect("/orders");
@@ -590,6 +591,7 @@ export async function deleteOrder(formData: FormData) {
     fail("الأوردر", orderError?.message ?? "اتأكد إن عندك صلاحية تعديل");
   }
 
+  await logActivity(me, "order.delete", `مسح أوردر ${order.order_number ?? ""}`.trim());
   revalidatePath("/orders");
   redirect("/orders?deleted=1");
 }
@@ -647,7 +649,7 @@ export async function linkBostaShipment(formData: FormData) {
 }
 
 export async function updateOrderStatus(formData: FormData) {
-  await requirePermission("orders.status");
+  const me = await requirePermission("orders.status");
   const orderId = String(formData.get("order_id") ?? "");
   const status = String(formData.get("status") ?? "");
   const rawReturnTo = String(formData.get("return_to") ?? "");
@@ -695,6 +697,17 @@ export async function updateOrderStatus(formData: FormData) {
     );
   }
 
+  const { data: o } = await supabase
+    .from("orders")
+    .select("order_number")
+    .eq("id", orderId)
+    .maybeSingle();
+  await logActivity(
+    me,
+    "order.status",
+    `غيّر حالة أوردر ${o?.order_number ?? ""} لـ ${orderStatusBadge(status).label}`.trim()
+  );
+
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(returnTo + joiner + "saved=1");
@@ -702,7 +715,7 @@ export async function updateOrderStatus(formData: FormData) {
 
 // إرسال الأوردر لبوسطة كشحنة (أوتوماتيك) — بننادي دالة bosta-create
 export async function sendOrderToBosta(formData: FormData) {
-  await requirePermission("ship.send");
+  const me = await requirePermission("ship.send");
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) redirect("/orders");
 
@@ -732,6 +745,9 @@ export async function sendOrderToBosta(formData: FormData) {
     message = "الاتصال ببوسطة فشل — جرّب تاني";
   }
 
+  if (ok) {
+    await logActivity(me, "bosta.send", `بعت أوردر لبوسطة كشحنة`);
+  }
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(
@@ -750,7 +766,8 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   error?: string;
   details?: string;
 }> {
-  if (!can(await getSessionUser(), "ship.send")) {
+  const me = await getSessionUser();
+  if (!can(me, "ship.send")) {
     return { ok: false, sent: 0, skipped: 0, failed: 0, error: "مالكش صلاحية الإرسال لبوسطة" };
   }
 
@@ -799,6 +816,9 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
     await Promise.all(orderIds.slice(i, i + CONCURRENCY).map(sendOne));
   }
 
+  if (sent > 0) {
+    await logActivity(me, "bosta.send", `بعت ${sent} أوردر لبوسطة كشحنات`);
+  }
   revalidatePath("/orders");
   const details = [...new Set(failMsgs)].slice(0, 3).join(" — ");
   return { ok: true, sent, skipped, failed, details };
