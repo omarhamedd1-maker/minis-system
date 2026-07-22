@@ -30,6 +30,7 @@ import {
 import { OrderComments } from "@/components/OrderComments";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
+import { SendBostaRowButton } from "@/components/SendBostaRowButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { bulkUpdateStatus, bulkSendToBosta } from "./[id]/actions";
 import { can, requirePagePermission } from "@/lib/permissions";
@@ -420,6 +421,13 @@ export default async function OrdersPage({
                               <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
                             </svg>
                           </a>
+                        )}
+                        {!order.bosta_tracking && canSend && (
+                          <SendBostaRowButton
+                            orderId={order.id}
+                            orderNumber={order.order_number ?? ""}
+                            sendAction={bulkSendToBosta}
+                          />
                         )}
                         <OrderComments
                           orderId={order.id}
