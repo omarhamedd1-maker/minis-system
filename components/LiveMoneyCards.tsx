@@ -94,7 +94,7 @@ export function LiveMoneyCards({
   const key = intro ? "i" : "d";
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <Card label="المبيعات">
         <span className="text-gray-900">
           <CountUp key={key} baseline={base} value={s.sales} format={money} />
@@ -185,10 +185,10 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{children}</p>
-      {hint && <p className="text-xs text-gray-400">{hint}</p>}
+    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+      <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
+      <p className="mt-1 text-xl font-bold sm:text-2xl">{children}</p>
+      {hint && <p className="text-[11px] text-gray-400 sm:text-xs">{hint}</p>}
     </div>
   );
 }

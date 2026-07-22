@@ -486,51 +486,51 @@ export default async function StatsPage({
           from={rangeFrom}
           to={rangeTo}
         />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">نسبة التسليم</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-600">
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-emerald-600">
               {deliveryRate}%
             </p>
             <p className="text-xs text-gray-400">
               {deliveredCount} من {periodOrders.length} أوردر
             </p>
           </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">نسبة الإلغاء والمرتجع</p>
-            <p className="mt-1 text-2xl font-bold text-orange-600">
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-orange-600">
               {cancelRate}%
             </p>
             <p className="text-xs text-gray-400">
               {excludedOrders.length} من {periodOrders.length} أوردر
             </p>
           </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">العملاء المكررين</p>
-            <p className="mt-1 text-2xl font-bold text-sky-600">
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-sky-600">
               {repeatRate}%
             </p>
             <p className="text-xs text-gray-400">
               {repeatCustomers} من {totalCustomers} عميل اشتروا أكتر من مرة
             </p>
           </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">فرص ضايعة (ملغي ومرتجع)</p>
-            <p className="mt-1 text-2xl font-bold text-red-600">
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-red-600">
               {formatMoney(lostValue)}
             </p>
             <p className="text-xs text-gray-400">
               {excludedOrders.length} أوردر ضاعوا
             </p>
           </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">متوسط زمن التوصيل</p>
             {avgDeliveryDays === null ? (
               <p className="mt-1 text-sm text-gray-400">
                 لسه مفيش تسليمات كفاية نحسب منها
               </p>
             ) : (
-              <p className="mt-1 text-2xl font-bold text-gray-900">
+              <p className="mt-1 text-xl font-bold sm:text-2xl text-gray-900">
                 {avgDeliveryDays < 1
                   ? "أقل من يوم"
                   : `${avgDeliveryDays.toFixed(1)} يوم`}
@@ -543,7 +543,7 @@ export default async function StatsPage({
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">نمو المبيعات الشهري</p>
             {monthGrowth === null ? (
               <p className="mt-1 text-sm text-gray-400">
@@ -562,7 +562,7 @@ export default async function StatsPage({
               الشهر ده مقارنة بالشهر اللي فات
             </p>
           </div>
-          <div className="rounded-xl bg-white p-5 shadow-sm">
+          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">توقع قفلة الشهر</p>
             {currentMonthSales <= 0 ? (
               <p className="mt-1 text-sm text-gray-400">
@@ -570,7 +570,7 @@ export default async function StatsPage({
               </p>
             ) : (
               <>
-                <p className="mt-1 text-2xl font-bold text-sky-600">
+                <p className="mt-1 text-xl font-bold sm:text-2xl text-sky-600">
                   ~{formatMoney(projectedMonthSales)}
                 </p>
                 <p className="text-xs text-gray-400">
@@ -583,14 +583,14 @@ export default async function StatsPage({
         </div>
       </section>
 
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
         <h2 className="mb-3 text-sm font-bold text-gray-900">
           المبيعات {daily ? "يوم بيوم" : "شهر بشهر"} ({periodLabel})
         </h2>
         <LineChart points={timePoints} valueSuffix=" جنيه" />
       </div>
 
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
         <h2 className="mb-3 text-sm font-bold text-gray-900">
           مقارنة آخر 6 شهور
         </h2>
@@ -598,7 +598,7 @@ export default async function StatsPage({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-sm font-bold text-gray-900">
             مبيعات أيام الأسبوع ({periodLabel})
           </h2>
@@ -607,7 +607,7 @@ export default async function StatsPage({
             يفيدك في توقيت الإعلانات والعروض
           </p>
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-3 text-sm font-bold text-gray-900">
             الأوردرات حسب ساعات اليوم ({periodLabel})
           </h2>
@@ -619,13 +619,13 @@ export default async function StatsPage({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-sm font-bold text-gray-900">
             حالات الأوردرات ({periodLabel})
           </h2>
           <HBarList items={statusItems} />
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-sm font-bold text-gray-900">
             المصاريف بالنوع ({periodLabel})
           </h2>
@@ -721,17 +721,17 @@ export default async function StatsPage({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
           <p className="text-sm text-gray-500">قيمة المخزون الحالي (بالتكلفة)</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+          <p className="mt-1 text-xl font-bold sm:text-2xl text-gray-900">
             {formatMoney(stockCostValue)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
           <p className="text-sm text-gray-500">
             قيمة المخزون لو اتباع كله (بسعر البيع)
           </p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+          <p className="mt-1 text-xl font-bold sm:text-2xl text-gray-900">
             {formatMoney(stockSaleValue)}
           </p>
         </div>
