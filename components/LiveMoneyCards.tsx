@@ -110,11 +110,6 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
-      <Card label="أرباح المنتجات">
-        <span className="text-green-600">
-          <CountUp key={key} baseline={base} value={s.profit} format={money} />
-        </span>
-      </Card>
       <Card label="المصاريف">
         <span className="text-red-600">
           <CountUp
@@ -123,6 +118,11 @@ export function LiveMoneyCards({
             value={s.expensesTotal}
             format={money}
           />
+        </span>
+      </Card>
+      <Card label="أرباح المنتجات">
+        <span className="text-green-600">
+          <CountUp key={key} baseline={base} value={s.profit} format={money} />
         </span>
       </Card>
       <Card label="صافي الربح">
