@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { logout } from "@/app/login/actions";
-import { NavLinks } from "@/components/NavLinks";
+import { AppNav } from "@/components/AppNav";
 import { getSessionUser } from "@/lib/permissions";
 
 export default async function DashboardLayout({
@@ -19,28 +18,20 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-6">
-            <span className="text-lg font-bold tracking-wide text-gray-900">
-              MINIS
-            </span>
-            <NavLinks isAdmin={user.isAdmin} permissions={user.permissions} />
-          </div>
-          <form action={logout}>
-            <button
-              type="submit"
-              className="text-sm text-gray-500 hover:text-gray-900"
-            >
-              تسجيل الخروج
-            </button>
-          </form>
-        </div>
+    <div className="min-h-screen">
+      {/* هيدر التليفون — اللوجو فقط (القائمة تحت) */}
+      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-gray-200 bg-white px-4 md:hidden">
+        <span className="text-lg font-bold tracking-wide text-gray-900">
+          MINIS
+        </span>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        {children}
-      </main>
+
+      <div className="flex">
+        <AppNav isAdmin={user.isAdmin} permissions={user.permissions} />
+        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 pb-24 md:pb-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
