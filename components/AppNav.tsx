@@ -21,10 +21,10 @@ const ITEMS: Item[] = [
 function Icon({ href, className }: { href: string; className?: string }) {
   const paths: Record<string, string> = {
     "/": "M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5Z",
-    "/orders":
-      "M4 4h16v4H4zM5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M9.5 12h5",
+    "/orders": "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM4 7.5 12 12l8-4.5M12 12v9",
     "/customers": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
-    "/products": "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM4 7.5 12 12l8-4.5M12 12v9",
+    "/products":
+      "M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3zM6 6h.008v.008H6V6z",
     "/expenses": "M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6",
     "/cash":
       "M20 8H5a2 2 0 0 1 0-4h13v4zM3 6v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1M16.5 13h.01",
@@ -160,7 +160,7 @@ export function AppNav({
       </aside>
 
       {/* ===== شريط سفلي (تليفون) ===== */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-gray-200 bg-white pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] md:hidden">
         {primary.map((i) => {
           const active = isActive(i.href);
           return (

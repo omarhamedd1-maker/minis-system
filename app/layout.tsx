@@ -27,6 +27,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#efeeec",
+  // عشان الشريط السفلي في التليفون يفضل فوق شريط الهوم مش ملزوق تحت خالص
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

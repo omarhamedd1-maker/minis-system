@@ -28,7 +28,7 @@ export default async function DashboardLayout({
 
       <div className="flex">
         <AppNav isAdmin={user.isAdmin} permissions={user.permissions} />
-        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 pb-24 md:pb-8">
+        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 pb-28 md:pb-8">
           {children}
         </main>
       </div>
