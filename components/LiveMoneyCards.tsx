@@ -58,7 +58,8 @@ export function LiveMoneyCards({
         supabase
           .from("orders")
           .select(ORDER_SELECT)
-          .gte("order_date", fetchStart)
+          // نجيب اللي اتعمل في الفترة أو اللي اتسلّم فيها (عشان التحصيل بيتحسب بتاريخ التسليم)
+          .or(`order_date.gte.${fetchStart},delivered_at.gte.${fetchStart}`)
           .limit(5000),
         supabase
           .from("expenses")
