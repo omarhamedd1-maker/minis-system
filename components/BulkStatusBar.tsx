@@ -179,7 +179,7 @@ export function BulkStatusBar({
           type="button"
           onClick={sendSelected}
           disabled={sending}
-          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+          className="rounded-lg bg-[#E30613] px-3 py-1 text-xs font-medium text-white hover:bg-[#b7050f] disabled:opacity-60"
         >
           {sending ? "بيبعت..." : "ابعت المحدد لبوسطة"}
         </button>

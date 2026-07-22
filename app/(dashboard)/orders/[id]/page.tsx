@@ -375,7 +375,7 @@ export default async function OrderDetailsPage({
               <input type="hidden" name="order_id" value={order.id} />
               <ConfirmButton
                 message={`متأكد إنك عايز تبعت أوردر ${order.order_number ?? ""} لبوسطة كشحنة؟`}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E30613] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#b7050f]"
               >
                 📦 ابعت لبوسطة كشحنة
               </ConfirmButton>
