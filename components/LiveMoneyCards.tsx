@@ -95,7 +95,7 @@ export function LiveMoneyCards({
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <Card label="المبيعات">
+      <Card label="المبيعات" className="col-span-2 lg:col-span-1">
         <span className="text-gray-900">
           <CountUp key={key} baseline={base} value={s.sales} format={money} />
         </span>
@@ -161,7 +161,6 @@ export function LiveMoneyCards({
       <Card
         label="شحن دفعته فوق الـ90"
         hint="رسوم بوسطة ناقص الـ90 المحصّل — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
-        className="col-span-2 lg:col-span-1"
       >
         <span className="text-red-600">
           <CountUp
