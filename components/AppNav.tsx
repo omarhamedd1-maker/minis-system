@@ -72,9 +72,12 @@ export function AppNav({
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // التليفون: كل الصفحات في البار (تجربة)
-  const primary = allowed;
-  const overflow: Item[] = [];
+  // التليفون: 4 ثابتة (داشبورد، أوردرات، منتجات، خزنة)، والباقي في "المزيد"
+  const PRIMARY_HREFS = ["/", "/orders", "/products", "/cash"];
+  const primary = PRIMARY_HREFS.map((h) =>
+    allowed.find((i) => i.href === h)
+  ).filter((i): i is Item => Boolean(i));
+  const overflow = allowed.filter((i) => !PRIMARY_HREFS.includes(i.href));
 
   return (
     <>

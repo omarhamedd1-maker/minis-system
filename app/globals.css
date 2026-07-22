@@ -11,6 +11,11 @@
   --font-sans: Lexend, Cairo, sans-serif;
 }
 
+/* الخلفية الأساسية رمادي فاتح من أول لحظة — عشان مفيش ومضة شاشة سودا وقت الفتح */
+html {
+  background-color: #efeeec;
+}
+
 body {
   /* Lexend للإنجليزي والأرقام — مفيهوش حروف عربية فبتعدّي تلقائياً لخط Cairo */
   font-family: Lexend, Cairo, sans-serif;

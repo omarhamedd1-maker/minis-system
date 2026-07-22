@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-// أيقونة الآيفون (تظهر على الشاشة الرئيسية)
+// أيقونة الآيفون (تظهر على الشاشة الرئيسية): خلفية سودا وحرف M رفيع رمادي فاتح
 export default function AppleIcon() {
   return new ImageResponse(
     (
@@ -14,15 +14,13 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#efeeec",
-          color: "#171717",
-          fontSize: 46,
-          fontWeight: 300,
-          letterSpacing: 6,
-          paddingLeft: 6,
+          background: "#171717",
+          color: "#e5e4e1",
+          fontSize: 108,
+          fontWeight: 200,
         }}
       >
-        MINIS
+        M
       </div>
     ),
     { ...size }

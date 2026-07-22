@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 512, height: 512 };
 export const contentType = "image/png";
 
-// أيقونة البرنامج: شعار MINIS على خلفية فاتحة
+// أيقونة البرنامج (المتصفح): دايرة سودا وفيها حرف M رفيع باللون الرمادي الفاتح بتاعنا
 export default function Icon() {
   return new ImageResponse(
     (
@@ -14,16 +14,14 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#efeeec",
-          color: "#171717",
-          fontSize: 132,
-          fontWeight: 300,
-          letterSpacing: 18,
-          // إزاحة بسيطة عشان التباعد بيزيح النص لليسار
-          paddingLeft: 18,
+          background: "#171717",
+          borderRadius: "50%",
+          color: "#e5e4e1",
+          fontSize: 300,
+          fontWeight: 200,
         }}
       >
-        MINIS
+        M
       </div>
     ),
     { ...size }
