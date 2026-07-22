@@ -139,7 +139,7 @@ export function LiveMoneyCards({
           <CountUp key={key} baseline={base} value={s.avgOrder} format={money} />
         </span>
       </Card>
-      <Card label="تحصيل بوسطة الفعلي (COD)">
+      <Card label="تحصيل بوسطة (المسلّمة)">
         <span className="text-emerald-600">
           <CountUp key={key} baseline={base} value={s.cod} format={money} />
         </span>

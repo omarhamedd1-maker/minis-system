@@ -127,14 +127,22 @@ export function computeHeadline(
   const orderCount = validOrders.length;
   const avgOrder = orderCount > 0 ? sales / orderCount : 0;
 
-  // تحصيل بوسطة الفعلي: مجموع COD اللي اتحصّل فعلاً في الفترة (حسب تاريخ التسليم)
+  // تحصيل بوسطة: مجموع COD الأوردرات اللي "تم تسليمها" في الفترة (حسب تاريخ التسليم)
+  // بنعتمد على حالة التسليم مش على علم التحصيل من بوسطة (اللي بيتأخر)
   const cod = orders
     .filter((o) => {
-      if (!o.bosta_collected || !o.delivered_at) return false;
+      if (o.order_status !== "delivered" || !o.delivered_at) return false;
       const d = cairoDateOf(o.delivered_at);
       return d >= periodStart && d <= periodEnd;
     })
-    .reduce((s, o) => s + Number(o.bosta_cod ?? 0), 0);
+    .reduce((s, o) => {
+      // قيمة التحصيل = COD بتاع بوسطة، ولو مش موجود نستخدم قيمة المنتجات بعد الخصم
+      const value =
+        Number(o.bosta_cod ?? 0) > 0
+          ? Number(o.bosta_cod)
+          : itemsTotal(o) - o.discount;
+      return s + value;
+    }, 0);
 
   return {
     sales,
