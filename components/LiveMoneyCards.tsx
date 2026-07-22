@@ -161,6 +161,7 @@ export function LiveMoneyCards({
       <Card
         label="شحن دفعته فوق الـ90"
         hint="رسوم بوسطة ناقص الـ90 المحصّل — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
+        className="col-span-2 lg:col-span-1"
       >
         <span className="text-red-600">
           <CountUp
@@ -179,13 +180,17 @@ function Card({
   label,
   hint,
   children,
+  className = "",
 }: {
   label: string;
   hint?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+    <div
+      className={`rounded-xl bg-white p-4 shadow-sm sm:p-5 ${className}`}
+    >
       <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
       <p className="mt-1 text-xl font-bold sm:text-2xl">{children}</p>
       {hint && <p className="text-[11px] text-gray-400 sm:text-xs">{hint}</p>}

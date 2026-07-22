@@ -523,7 +523,7 @@ export default async function StatsPage({
               {excludedOrders.length} أوردر ضاعوا
             </p>
           </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
             <p className="text-sm text-gray-500">متوسط زمن التوصيل</p>
             {avgDeliveryDays === null ? (
               <p className="mt-1 text-sm text-gray-400">
