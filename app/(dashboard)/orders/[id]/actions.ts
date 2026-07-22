@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { can, getSessionUser, requirePermission } from "@/lib/permissions";
 import { ORDER_STATUS_OPTIONS } from "@/lib/format";
 
-type Supa = Awaited<ReturnType<typeof createClient>>;
+type Supa = ReturnType<typeof createAdminClient>;
 
 // بعد أي تعديل بنود: نبعت التعديل لشوبيفاي في الخلفية (بعد ما الرد يوصل المستخدم)
 // عشان المنتج يظهر فوراً من غير ما يستنى المزامنة
@@ -64,6 +65,7 @@ async function adjustStock(
 }
 
 export async function addOrderItem(formData: FormData) {
+  await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const variantId = String(formData.get("variant_id") ?? "");
   const quantity = Number(formData.get("quantity"));
@@ -76,7 +78,7 @@ export async function addOrderItem(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: variant } = await supabase
     .from("product_variants")
@@ -135,6 +137,7 @@ export async function addOrderItem(formData: FormData) {
 }
 
 export async function deleteOrderItem(formData: FormData) {
+  await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const itemId = String(formData.get("item_id") ?? "");
 
@@ -142,7 +145,7 @@ export async function deleteOrderItem(formData: FormData) {
     redirect(`/orders/${orderId}`);
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // نجيب بيانات البند قبل المسح عشان نرجّع مخزونه
   const { data: item } = await supabase
@@ -185,6 +188,7 @@ export async function deleteOrderItem(formData: FormData) {
 }
 
 export async function updateOrderItem(formData: FormData) {
+  await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const itemId = String(formData.get("item_id") ?? "");
   const quantity = Number(formData.get("quantity"));
@@ -204,7 +208,7 @@ export async function updateOrderItem(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // نجيب الكمية القديمة عشان نظبط فرق المخزون
   const { data: oldItem } = await supabase
@@ -251,6 +255,7 @@ export async function updateOrderItem(formData: FormData) {
 }
 
 export async function updateDiscount(formData: FormData) {
+  await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const mode = String(formData.get("discount_mode") ?? "amount");
   const value = Number(formData.get("discount_value"));
@@ -278,7 +283,7 @@ export async function updateDiscount(formData: FormData) {
     discount = itemsTotal;
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("orders")
@@ -307,7 +312,9 @@ export async function updateOrderStatusInline(formData: FormData) {
   const isValidStatus = ORDER_STATUS_OPTIONS.some((o) => o.value === status);
   if (!orderId || !isValidStatus) return;
 
-  const supabase = await createClient();
+  if (!can(await getSessionUser(), "orders.status")) return;
+
+  const supabase = createAdminClient();
   const updateData: {
     order_status: string;
     delivered_at?: string | null;
@@ -334,7 +341,11 @@ export async function bulkUpdateStatus(
     return { ok: false, error: "اختار أوردرات وحالة صحيحة" };
   }
 
-  const supabase = await createClient();
+  if (!can(await getSessionUser(), "orders.status")) {
+    return { ok: false, error: "مالكش صلاحية تغيير حالة الأوردرات" };
+  }
+
+  const supabase = createAdminClient();
 
   const update: {
     order_status: string;
@@ -363,6 +374,7 @@ export async function bulkUpdateStatus(
 }
 
 export async function addOrderComment(formData: FormData) {
+  const me = await requirePermission("orders.comments");
   const orderId = String(formData.get("order_id") ?? "");
   const body = String(formData.get("body") ?? "").trim();
 
@@ -370,22 +382,10 @@ export async function addOrderComment(formData: FormData) {
     redirect("/orders?error=" + encodeURIComponent("اكتب التعليق الأول"));
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/login");
-  }
-
-  // اسم كاتب التعليق من جدول المستخدمين، ولو مش موجود نستخدم الإيميل
-  const { data: appUser } = await supabase
-    .from("app_users")
-    .select("full_name")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  const authorName = appUser?.full_name || user.email || "غير معروف";
+  // اسم كاتب التعليق من بيانات المستخدم الحالي
+  const authorName = me.fullName || me.email || "غير معروف";
 
   const { error } = await supabase.from("order_comments").insert({
     order_id: orderId,
@@ -406,12 +406,13 @@ export async function addOrderComment(formData: FormData) {
 }
 
 export async function deleteOrderComment(formData: FormData) {
+  await requirePermission("orders.comments");
   const commentId = String(formData.get("comment_id") ?? "");
   if (!commentId) {
     redirect("/orders");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("order_comments")
@@ -430,6 +431,7 @@ export async function deleteOrderComment(formData: FormData) {
 }
 
 export async function updateShippingPrice(formData: FormData) {
+  await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const shippingPrice = Number(formData.get("shipping_price"));
 
@@ -440,7 +442,7 @@ export async function updateShippingPrice(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("orders")
@@ -460,13 +462,14 @@ export async function updateShippingPrice(formData: FormData) {
 }
 
 export async function toggleOrderArchive(formData: FormData) {
+  await requirePermission("orders.archive");
   const orderId = String(formData.get("order_id") ?? "");
   const archive = formData.get("archive") === "1";
   if (!orderId) {
     redirect("/orders");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("orders")
@@ -486,12 +489,13 @@ export async function toggleOrderArchive(formData: FormData) {
 }
 
 export async function deleteOrder(formData: FormData) {
+  await requirePermission("orders.delete");
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) {
     redirect("/orders");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: order, error: fetchError } = await supabase
     .from("orders")
@@ -592,6 +596,7 @@ export async function deleteOrder(formData: FormData) {
 
 // ربط شحنة بوسطة موجودة بالأوردر ده يدوياً (لإعادة استخدام شحنة عميل لغى)
 export async function linkBostaShipment(formData: FormData) {
+  await requirePermission("ship.link");
   const orderId = String(formData.get("order_id") ?? "");
   const tracking = String(formData.get("tracking") ?? "").replace(/\D/g, "").trim();
 
@@ -602,7 +607,7 @@ export async function linkBostaShipment(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // نتأكد إن رقم التتبع ده مش مربوط بأوردر تاني
   const { data: other } = await supabase
@@ -642,6 +647,7 @@ export async function linkBostaShipment(formData: FormData) {
 }
 
 export async function updateOrderStatus(formData: FormData) {
+  await requirePermission("orders.status");
   const orderId = String(formData.get("order_id") ?? "");
   const status = String(formData.get("status") ?? "");
   const rawReturnTo = String(formData.get("return_to") ?? "");
@@ -660,7 +666,7 @@ export async function updateOrderStatus(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // نسجل تاريخ التسليم/الإلغاء مع الحالة — عشان تحصيل اليوم وقفل الملغي يتحسبوا صح
   const updateData: {
@@ -692,4 +698,45 @@ export async function updateOrderStatus(formData: FormData) {
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(returnTo + joiner + "saved=1");
+}
+
+// إرسال الأوردر لبوسطة كشحنة (أوتوماتيك) — بننادي دالة bosta-create
+export async function sendOrderToBosta(formData: FormData) {
+  await requirePermission("ship.send");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) redirect("/orders");
+
+  const key = process.env.SYNC_KEY;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!key || !base) {
+    redirect(
+      `/orders/${orderId}?error=` + encodeURIComponent("إعدادات الإرسال ناقصة")
+    );
+  }
+
+  let ok = false;
+  let message = "معرفناش نبعت الشحنة لبوسطة";
+  try {
+    const res = await fetch(
+      `${base}/functions/v1/bosta-create?key=${key}&order=${orderId}`,
+      { method: "GET", signal: AbortSignal.timeout(30000) }
+    );
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) {
+      ok = true;
+    } else if (data?.error) {
+      // رسالة الخطأ اللي رجّعتها الدالة (زي: معرفناش نحدد المدينة)
+      message = String(data.error);
+    }
+  } catch {
+    message = "الاتصال ببوسطة فشل — جرّب تاني";
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(
+    ok
+      ? `/orders/${orderId}?saved=1`
+      : `/orders/${orderId}?error=` + encodeURIComponent(message)
+  );
 }

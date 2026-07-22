@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/permissions";
 import { cairoToday } from "@/lib/format";
 
 const MAX_ITEMS = 5;
 
 export async function createOrder(formData: FormData) {
+  await requirePermission("orders.create");
   const customerId = String(formData.get("customer_id") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -48,7 +50,7 @@ export async function createOrder(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // 1) العميل: موجود أو جديد
   let finalCustomerId = customerId || null;

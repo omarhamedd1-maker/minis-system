@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/permissions";
 
 export async function updateCashTransaction(formData: FormData) {
+  await requirePermission("cash.edit");
   const id = String(formData.get("transaction_id") ?? "");
   const direction = String(formData.get("direction") ?? "");
   const amount = Number(formData.get("amount"));
@@ -24,7 +26,7 @@ export async function updateCashTransaction(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // التعديل مسموح للحركات اليدوية بس — اللي جاية من مصروف أو أوردر بتتعدل من مكانها
   const { error, count } = await supabase
@@ -53,12 +55,13 @@ export async function updateCashTransaction(formData: FormData) {
 }
 
 export async function deleteCashTransaction(formData: FormData) {
+  await requirePermission("cash.edit");
   const id = String(formData.get("transaction_id") ?? "");
   if (!id) {
     redirect("/cash?error=" + encodeURIComponent("الحركة دي مش موجودة"));
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("cash_transactions")
@@ -78,6 +81,7 @@ export async function deleteCashTransaction(formData: FormData) {
 }
 
 export async function addCashTransaction(formData: FormData) {
+  await requirePermission("cash.edit");
   const direction = String(formData.get("direction") ?? "");
   const amount = Number(formData.get("amount"));
   const description = String(formData.get("description") ?? "").trim();
@@ -95,7 +99,7 @@ export async function addCashTransaction(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error } = await supabase.from("cash_transactions").insert({
     direction,

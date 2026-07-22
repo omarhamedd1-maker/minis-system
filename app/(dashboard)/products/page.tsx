@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
+import { requirePagePermission } from "@/lib/permissions";
 
 const SHOPIFY_STATUS: Record<
   string,
@@ -54,9 +55,8 @@ export default async function ProductsPage({
 }) {
   const { error: actionError, saved, deleted, q } = await searchParams;
   const searchTerm = (q ?? "").trim();
+  await requirePagePermission("products.view");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const { data: allProducts, error } = await supabase
     .from("products")

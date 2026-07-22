@@ -3,21 +3,31 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navLinks = [
-  { href: "/", label: "الداشبورد" },
-  { href: "/orders", label: "الأوردرات" },
-  { href: "/customers", label: "العملاء" },
-  { href: "/products", label: "المنتجات والمخزون" },
-  { href: "/expenses", label: "المصاريف" },
-  { href: "/cash", label: "الخزنة" },
+const navLinks: { href: string; label: string; perm: string }[] = [
+  { href: "/", label: "الداشبورد", perm: "finance.dashboard" },
+  { href: "/orders", label: "الأوردرات", perm: "orders.view" },
+  { href: "/customers", label: "العملاء", perm: "customers.view" },
+  { href: "/products", label: "المنتجات والمخزون", perm: "products.view" },
+  { href: "/expenses", label: "المصاريف", perm: "expenses.view" },
+  { href: "/cash", label: "الخزنة", perm: "cash.view" },
+  { href: "/users", label: "المستخدمون", perm: "admin.users" },
 ];
 
-export function NavLinks() {
+export function NavLinks({
+  isAdmin,
+  permissions,
+}: {
+  isAdmin: boolean;
+  permissions: string[];
+}) {
   const pathname = usePathname();
+  const allowed = navLinks.filter(
+    (link) => isAdmin || permissions.includes(link.perm)
+  );
 
   return (
     <nav className="flex flex-wrap items-center gap-1">
-      {navLinks.map((link) => {
+      {allowed.map((link) => {
         const active =
           link.href === "/"
             ? pathname === "/"

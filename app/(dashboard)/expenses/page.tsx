@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { ExpenseRow } from "@/components/ExpenseRow";
+import { can, requirePagePermission } from "@/lib/permissions";
 import { addExpense, deleteExpense, updateExpense } from "./actions";
 
 type ExpenseRow = {
@@ -50,9 +51,9 @@ export default async function ExpensesPage({
   } = await searchParams;
   const cat = CATEGORY_SUGGESTIONS.includes(rawCat ?? "") ? rawCat : undefined;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
+  const user = await requirePagePermission("expenses.view");
+  const isAdmin = can(user, "expenses.edit");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const today = cairoToday();
   let periodStart: string | null = null;

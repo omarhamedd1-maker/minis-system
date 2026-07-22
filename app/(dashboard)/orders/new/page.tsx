@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday } from "@/lib/format";
 import { ProductPicker } from "@/components/ProductPicker";
+import { requirePagePermission } from "@/lib/permissions";
 import { createOrder } from "./actions";
 
 const ITEM_ROWS = 5;
@@ -27,12 +27,8 @@ export default async function NewOrderPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error: actionError } = await searchParams;
+  await requirePagePermission("orders.create");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
-  if (!isAdmin) {
-    redirect("/orders");
-  }
 
   const [customersResult, variantsResult] = await Promise.all([
     supabase

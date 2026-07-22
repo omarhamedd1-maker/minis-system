@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/permissions";
 
 export async function updateCustomer(formData: FormData) {
+  await requirePermission("customers.edit");
   const id = String(formData.get("customer_id") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -16,7 +18,7 @@ export async function updateCustomer(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("customers")
@@ -44,12 +46,13 @@ export async function updateCustomer(formData: FormData) {
 }
 
 export async function deleteCustomer(formData: FormData) {
+  await requirePermission("customers.edit");
   const id = String(formData.get("customer_id") ?? "");
   if (!id) {
     redirect("/customers");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // مينفعش نمسح عميل عليه أوردرات — التاريخ لازم يفضل سليم
   const { count: ordersCount } = await supabase

@@ -1,20 +1,21 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/login/actions";
 import { NavLinks } from "@/components/NavLinks";
+import { getSessionUser } from "@/lib/permissions";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   if (!user) {
     redirect("/login");
+  }
+
+  if (!user.active) {
+    redirect("/login?error=" + encodeURIComponent("حسابك موقوف"));
   }
 
   return (
@@ -25,7 +26,7 @@ export default async function DashboardLayout({
             <span className="text-lg font-bold tracking-wide text-gray-900">
               MINIS
             </span>
-            <NavLinks />
+            <NavLinks isAdmin={user.isAdmin} permissions={user.permissions} />
           </div>
           <form action={logout}>
             <button

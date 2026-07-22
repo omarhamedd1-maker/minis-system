@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { orderStatusBadge } from "@/lib/format";
+import { can, getSessionUser } from "@/lib/permissions";
 
 type ExportRow = {
   order_number: string | null;
@@ -25,6 +26,10 @@ export async function GET() {
 
   if (!user) {
     return new Response("Unauthorized", { status: 401 });
+  }
+
+  if (!can(await getSessionUser(), "finance.export")) {
+    return new Response("مالكش صلاحية تصدير البيانات", { status: 403 });
   }
 
   const { data: orders, error } = await supabase

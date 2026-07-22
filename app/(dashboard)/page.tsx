@@ -5,6 +5,7 @@ import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { DayPicker } from "@/components/DayPicker";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline, resolvePeriod } from "@/lib/dashboard-stats";
+import { can, requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
   id: string;
@@ -99,6 +100,8 @@ export default async function StatsPage({
 }: {
   searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
+  const dashUser = await requirePagePermission("finance.dashboard");
+  const canExport = can(dashUser, "finance.export");
   const { period: rawPeriod, from: rawFrom, to: rawTo } = await searchParams;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "today";
 
@@ -462,12 +465,14 @@ export default async function StatsPage({
             </Link>
           ))}
           <DayPicker from={rangeFrom} to={rangeTo} />
-          <a
-            href="/export"
-            className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-          >
-            تصدير Excel
-          </a>
+          {canExport && (
+            <a
+              href="/export"
+              className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+            >
+              تصدير Excel
+            </a>
+          )}
         </div>
       </div>
 

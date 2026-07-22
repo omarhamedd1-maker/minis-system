@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS, formatMoney } from "@/lib/format";
+import { can, requirePagePermission } from "@/lib/permissions";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import {
   deleteProduct,
@@ -36,9 +37,12 @@ export default async function ProductDetailsPage({
 }) {
   const { id } = await params;
   const { error: actionError, saved } = await searchParams;
+  const user = await requirePagePermission("products.view");
+  const isAdmin =
+    can(user, "products.edit") ||
+    can(user, "products.cost") ||
+    can(user, "products.stock");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const { data: product, error } = await supabase
     .from("products")

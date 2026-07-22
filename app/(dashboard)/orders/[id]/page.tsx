@@ -12,11 +12,13 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
+import { can, requirePagePermission } from "@/lib/permissions";
 import {
   addOrderItem,
   deleteOrder,
   deleteOrderItem,
   linkBostaShipment,
+  sendOrderToBosta,
   toggleOrderArchive,
   updateDiscount,
   updateOrderItem,
@@ -63,9 +65,15 @@ export default async function OrderDetailsPage({
 }) {
   const { id } = await params;
   const { error: actionError, saved } = await searchParams;
+  const user = await requirePagePermission("orders.view");
+  const canItems = can(user, "orders.items");
+  const canStatus = can(user, "orders.status");
+  const canArchive = can(user, "orders.archive");
+  const canDelete = can(user, "orders.delete");
+  const canLink = can(user, "ship.link");
+  const canSend = can(user, "ship.send");
+  const canPrint = can(user, "ship.print");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const { data: order, error } = await supabase
     .from("orders")
@@ -88,8 +96,8 @@ export default async function OrderDetailsPage({
     );
   }
 
-  // قايمة المنتجات لفورم إضافة منتج (للأدمن)
-  const { data: variantsData } = isAdmin
+  // قايمة المنتجات لفورم إضافة منتج (لمن يقدر يعدّل البنود)
+  const { data: variantsData } = canItems
     ? await supabase
         .from("product_variants")
         .select("id, variant_name, sku, sale_price, products(name, name_ar)")
@@ -225,26 +233,28 @@ export default async function OrderDetailsPage({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
-        <span className="text-sm font-medium text-gray-700">
-          تغيير حالة الأوردر
-        </span>
-        <OrderStatusSelect
-          orderId={order.id}
-          currentStatus={order.order_status ?? "new"}
-          returnTo={`/orders/${order.id}`}
-          options={ORDER_STATUS_OPTIONS}
-          updateAction={updateOrderStatus}
-          confirmMessage={
-            order.bosta_state &&
-            ["shipped", "delivered", "returned"].includes(
-              order.order_status ?? ""
-            )
-              ? "الأوردر ده مع شركة الشحن وحالته بتتحدث من بوسطة تلقائياً. متأكد إنك عايز تغيّرها يدوياً؟"
-              : undefined
-          }
-        />
-      </div>
+      {canStatus && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
+          <span className="text-sm font-medium text-gray-700">
+            تغيير حالة الأوردر
+          </span>
+          <OrderStatusSelect
+            orderId={order.id}
+            currentStatus={order.order_status ?? "new"}
+            returnTo={`/orders/${order.id}`}
+            options={ORDER_STATUS_OPTIONS}
+            updateAction={updateOrderStatus}
+            confirmMessage={
+              order.bosta_state &&
+              ["shipped", "delivered", "returned"].includes(
+                order.order_status ?? ""
+              )
+                ? "الأوردر ده مع شركة الشحن وحالته بتتحدث من بوسطة تلقائياً. متأكد إنك عايز تغيّرها يدوياً؟"
+                : undefined
+            }
+          />
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -331,7 +341,7 @@ export default async function OrderDetailsPage({
                   )}
                 </dd>
               </div>
-              {order.bosta_tracking && (
+              {order.bosta_tracking && canPrint && (
                 <a
                   href={`/orders/${order.id}/awb`}
                   target="_blank"
@@ -356,7 +366,27 @@ export default async function OrderDetailsPage({
             <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
           )}
 
-          {isAdmin && (
+          {/* إرسال الأوردر لبوسطة كشحنة (لو لسه مفيش شحنة) */}
+          {!order.bosta_tracking && canSend && (
+            <form
+              action={sendOrderToBosta}
+              className="mt-3 border-t border-gray-100 pt-3"
+            >
+              <input type="hidden" name="order_id" value={order.id} />
+              <ConfirmButton
+                message={`متأكد إنك عايز تبعت أوردر ${order.order_number ?? ""} لبوسطة كشحنة؟`}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+              >
+                📦 ابعت لبوسطة كشحنة
+              </ConfirmButton>
+              <p className="mt-1 text-xs text-gray-400">
+                هنعمل الشحنة في بوسطة تلقائياً ونجيب رقم التتبع. لو معرفناش نحدد
+                المدينة من العنوان هنوقف ونقوللك تراجعه.
+              </p>
+            </form>
+          )}
+
+          {canLink && (
             <form
               action={linkBostaShipment}
               className="mt-3 border-t border-gray-100 pt-3"
@@ -413,7 +443,7 @@ export default async function OrderDetailsPage({
                 <td className="px-4 py-3 text-gray-700">
                   {item.product_variants?.variant_name ?? "—"}
                 </td>
-                {isAdmin ? (
+                {canItems ? (
                   <>
                     <td className="px-4 py-3">
                       <form
@@ -498,7 +528,7 @@ export default async function OrderDetailsPage({
               <td className="px-4 py-2" colSpan={4}>
                 <div className="flex items-center gap-3">
                   <span>الشحن (مدفوع من العميل)</span>
-                  {isAdmin && (
+                  {canItems && (
                     <form
                       action={updateShippingPrice}
                       className="flex items-center gap-2"
@@ -530,7 +560,7 @@ export default async function OrderDetailsPage({
               <td className="px-4 py-2" colSpan={4}>
                 <div className="flex flex-wrap items-center gap-3">
                   <span>الخصم</span>
-                  {isAdmin && (
+                  {canItems && (
                     <DiscountBox
                       orderId={order.id}
                       itemsTotal={itemsTotal}
@@ -553,7 +583,7 @@ export default async function OrderDetailsPage({
           </tfoot>
         </table>
 
-        {isAdmin && (
+        {canItems && (
           <AddOrderItem
             orderId={order.id}
             variants={variants}
@@ -562,31 +592,35 @@ export default async function OrderDetailsPage({
         )}
       </div>
 
-      {isAdmin && (
+      {(canArchive || canDelete) && (
         <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
-          <form action={toggleOrderArchive}>
-            <input type="hidden" name="order_id" value={order.id} />
-            <input
-              type="hidden"
-              name="archive"
-              value={order.archived ? "0" : "1"}
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-amber-50 px-4 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100"
-            >
-              {order.archived ? "رجّع من الأرشيف" : "أرشفة الأوردر"}
-            </button>
-          </form>
-          <form action={deleteOrder}>
-            <input type="hidden" name="order_id" value={order.id} />
-            <ConfirmButton
-              message={`متأكد إنك عايز تمسح أوردر ${order.order_number ?? ""} نهائياً؟ هيتمسح ببنوده وشحناته، والمخزون هيرجع زي ما كان.`}
-              className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
-            >
-              مسح الأوردر نهائياً
-            </ConfirmButton>
-          </form>
+          {canArchive && (
+            <form action={toggleOrderArchive}>
+              <input type="hidden" name="order_id" value={order.id} />
+              <input
+                type="hidden"
+                name="archive"
+                value={order.archived ? "0" : "1"}
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-amber-50 px-4 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100"
+              >
+                {order.archived ? "رجّع من الأرشيف" : "أرشفة الأوردر"}
+              </button>
+            </form>
+          )}
+          {canDelete && (
+            <form action={deleteOrder}>
+              <input type="hidden" name="order_id" value={order.id} />
+              <ConfirmButton
+                message={`متأكد إنك عايز تمسح أوردر ${order.order_number ?? ""} نهائياً؟ هيتمسح ببنوده وشحناته، والمخزون هيرجع زي ما كان.`}
+                className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+              >
+                مسح الأوردر نهائياً
+              </ConfirmButton>
+            </form>
+          )}
         </div>
       )}
     </div>

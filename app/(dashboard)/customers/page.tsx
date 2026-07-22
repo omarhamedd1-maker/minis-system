@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
 import { CustomerRow } from "@/components/CustomerRow";
+import { requirePagePermission } from "@/lib/permissions";
 
 type CustomerData = {
   id: string;
@@ -46,6 +47,7 @@ export default async function CustomersPage({
   } = await searchParams;
   const searchTerm = (q ?? "").trim();
   const sort = SORTS[rawSort ?? ""] ? (rawSort as string) : "total";
+  await requirePagePermission("customers.view");
   const supabase = await createClient();
 
   const { data: customers, error } = await supabase

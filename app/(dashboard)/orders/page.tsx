@@ -32,6 +32,7 @@ import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { bulkUpdateStatus } from "./[id]/actions";
+import { can, requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
   id: string;
@@ -80,9 +81,12 @@ export default async function OrdersPage({
     5000
   );
   const fetchLimit = searchTerm ? 3000 : showCount;
+  const user = await requirePagePermission("orders.view");
+  const canCreate = can(user, "orders.create");
+  const canStatus = can(user, "orders.status");
+  const canPrint = can(user, "ship.print");
+  const canComments = can(user, "orders.comments");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   let query = supabase
     .from("orders")
@@ -133,7 +137,7 @@ export default async function OrdersPage({
         <h1 className="text-xl font-bold text-gray-900">الأوردرات</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">{orders.length} أوردر</span>
-          {isAdmin && (
+          {canCreate && (
             <Link
               href="/orders/new"
               className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
@@ -237,6 +241,8 @@ export default async function OrdersPage({
             returnTo={returnTo}
             options={ORDER_STATUS_OPTIONS}
             updateAction={bulkUpdateStatus}
+            canStatus={canStatus}
+            canPrint={canPrint}
           />
           <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <table className="w-full text-sm">
@@ -288,6 +294,7 @@ export default async function OrdersPage({
                       <input
                         type="checkbox"
                         data-order-checkbox
+                        data-has-awb={order.bosta_tracking ? "1" : "0"}
                         value={order.id}
                         aria-label="تحديد الأوردر"
                         className="h-4 w-4 rounded border-gray-300"
@@ -337,7 +344,11 @@ export default async function OrdersPage({
                           (!order.cancelled_at ||
                             Date.now() - new Date(order.cancelled_at).getTime() >
                               CANCEL_LOCK_MS);
-                        if (AT_SHIPPING.includes(st) || cancelLocked) {
+                        if (
+                          !canStatus ||
+                          AT_SHIPPING.includes(st) ||
+                          cancelLocked
+                        ) {
                           return (
                             <span
                               className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusBadge(st).className}`}
@@ -387,7 +398,7 @@ export default async function OrdersPage({
                             </svg>
                           </a>
                         )}
-                        {order.bosta_tracking && (
+                        {order.bosta_tracking && canPrint && (
                           <a
                             href={`/orders/${order.id}/awb`}
                             target="_blank"
@@ -411,7 +422,7 @@ export default async function OrdersPage({
                           orderId={order.id}
                           orderNumber={order.order_number ?? ""}
                           comments={order.order_comments}
-                          isAdmin={true}
+                          isAdmin={canComments}
                           hideDot={[
                             "packed",
                             "shipped",

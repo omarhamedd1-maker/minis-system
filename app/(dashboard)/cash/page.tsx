@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { CashManualRow } from "@/components/CashManualRow";
+import { can, requirePagePermission } from "@/lib/permissions";
 import {
   addCashTransaction,
   deleteCashTransaction,
@@ -46,9 +47,9 @@ export default async function CashPage({
   searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
 }) {
   const { error: actionError, saved, deleted } = await searchParams;
+  const user = await requirePagePermission("cash.view");
+  const isAdmin = can(user, "cash.edit");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const [totalsResult, rowsResult] = await Promise.all([
     supabase

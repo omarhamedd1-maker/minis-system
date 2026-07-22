@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { can, getSessionUser } from "@/lib/permissions";
 
 // بوليصة الشحن (AWB): بنجيبها من دالة بوسطة بالمفتاح السري (سيرفر) ونرجّعها PDF
 export async function GET(
@@ -12,6 +13,11 @@ export async function GET(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
+
+  const sessionUser = await getSessionUser();
+  if (!can(sessionUser, "ship.print")) {
+    return new Response("مالكش صلاحية طباعة البوالص", { status: 403 });
+  }
 
   const key = process.env.SYNC_KEY;
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;

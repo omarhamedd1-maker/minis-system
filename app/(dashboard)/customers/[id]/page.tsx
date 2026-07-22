@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CustomerEdit } from "@/components/CustomerEdit";
+import { can, requirePagePermission } from "@/lib/permissions";
 import { deleteCustomer, updateCustomer } from "../actions";
 
 type CustomerDetail = {
@@ -33,9 +34,9 @@ export default async function CustomerPage({
 }) {
   const { id } = await params;
   const { saved, error: actionError } = await searchParams;
+  const user = await requirePagePermission("customers.view");
+  const isAdmin = can(user, "customers.edit");
   const supabase = await createClient();
-
-  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   const { data: customer, error } = await supabase
     .from("customers")

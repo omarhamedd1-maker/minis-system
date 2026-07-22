@@ -2,16 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/permissions";
 import { COST_COMPONENTS } from "@/lib/format";
 
 export async function deleteProduct(formData: FormData) {
+  await requirePermission("products.edit");
   const productId = String(formData.get("product_id") ?? "");
   if (!productId) {
     redirect("/products");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // نجيب أشكال المنتج
   const { data: variants } = await supabase
@@ -63,6 +65,7 @@ export async function deleteProduct(formData: FormData) {
 }
 
 export async function saveStock(formData: FormData) {
+  await requirePermission("products.stock");
   const variantId = String(formData.get("variant_id") ?? "");
   const quantity = Number(formData.get("quantity"));
   const returnTo = String(formData.get("return_to") ?? "/products");
@@ -80,7 +83,7 @@ export async function saveStock(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: variant, error: fetchError } = await supabase
     .from("product_variants")
@@ -133,6 +136,7 @@ export async function saveStock(formData: FormData) {
 }
 
 export async function saveSalePrice(formData: FormData) {
+  await requirePermission("products.edit");
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");
   const salePrice = Number(formData.get("sale_price"));
@@ -142,7 +146,7 @@ export async function saveSalePrice(formData: FormData) {
     redirect(returnTo + "?error=" + encodeURIComponent("السعر لازم رقم موجب"));
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("product_variants")
@@ -163,6 +167,7 @@ export async function saveSalePrice(formData: FormData) {
 }
 
 export async function saveProductName(formData: FormData) {
+  await requirePermission("products.edit");
   const productId = String(formData.get("product_id") ?? "");
   const nameAr = String(formData.get("name_ar") ?? "").trim();
   const returnTo = `/products/${productId}`;
@@ -171,7 +176,7 @@ export async function saveProductName(formData: FormData) {
     redirect("/products?error=" + encodeURIComponent("المنتج ده مش موجود"));
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("products")
@@ -192,6 +197,7 @@ export async function saveProductName(formData: FormData) {
 }
 
 export async function saveSku(formData: FormData) {
+  await requirePermission("products.edit");
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");
   const sku = String(formData.get("sku") ?? "").trim();
@@ -201,7 +207,7 @@ export async function saveSku(formData: FormData) {
     redirect("/products?error=" + encodeURIComponent("المنتج ده مش موجود"));
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error, count } = await supabase
     .from("product_variants")
@@ -222,6 +228,7 @@ export async function saveSku(formData: FormData) {
 }
 
 export async function saveCostComponents(formData: FormData) {
+  await requirePermission("products.cost");
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");
   const returnTo = `/products/${productId}`;
@@ -246,7 +253,7 @@ export async function saveCostComponents(formData: FormData) {
 
   const total = amounts.reduce((sum, item) => sum + item.amount, 0);
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error: upsertError } = await supabase
     .from("variant_cost_components")

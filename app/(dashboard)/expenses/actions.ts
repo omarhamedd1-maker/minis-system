@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/permissions";
 
 export async function updateExpense(formData: FormData) {
+  await requirePermission("expenses.edit");
   const id = String(formData.get("expense_id") ?? "");
   const category = String(formData.get("category") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
@@ -24,7 +26,7 @@ export async function updateExpense(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { error: updateError, count } = await supabase
     .from("expenses")
@@ -65,12 +67,13 @@ export async function updateExpense(formData: FormData) {
 }
 
 export async function deleteExpense(formData: FormData) {
+  await requirePermission("expenses.edit");
   const id = String(formData.get("expense_id") ?? "");
   if (!id) {
     redirect("/expenses?error=" + encodeURIComponent("المصروف ده مش موجود"));
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // نمسح حركة الخزنة المرتبطة الأول عشان مفيش حركة تفضل من غير مصروف
   const { error: cashError } = await supabase
@@ -102,6 +105,7 @@ export async function deleteExpense(formData: FormData) {
 }
 
 export async function addExpense(formData: FormData) {
+  await requirePermission("expenses.edit");
   const category = String(formData.get("category") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const amount = Number(formData.get("amount"));
@@ -114,7 +118,7 @@ export async function addExpense(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: expense, error: expenseError } = await supabase
     .from("expenses")
