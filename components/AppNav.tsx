@@ -162,42 +162,48 @@ export function AppNav({
         </form>
       </aside>
 
-      {/* ===== شريط سفلي (تليفون) ===== */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-gray-200 bg-white pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] md:hidden">
-        {primary.map((i) => {
-          const active = isActive(i.href);
-          return (
-            <Link
-              key={i.href}
-              href={i.href}
-              className={`flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium ${
-                active ? "text-[#E30613]" : "text-gray-400"
-              }`}
+      {/* ===== قائمة عائمة (تليفون) — على شكل Pill زي شوبيفاي ===== */}
+      <nav className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-4 md:hidden">
+        <div className="flex items-center gap-1 rounded-full bg-white p-1.5 shadow-[0_6px_24px_rgba(0,0,0,0.14)] ring-1 ring-black/5">
+          {primary.map((i) => {
+            const active = isActive(i.href);
+            return (
+              <Link
+                key={i.href}
+                href={i.href}
+                title={i.label}
+                aria-label={i.label}
+                className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
+                  active
+                    ? "bg-[#E30613] text-white"
+                    : "text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                <Icon href={i.href} className="h-5 w-5" />
+              </Link>
+            );
+          })}
+          {overflow.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              title="المزيد"
+              aria-label="المزيد"
+              className="flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
             >
-              <Icon href={i.href} className="h-5 w-5" />
-              <span>{i.label}</span>
-            </Link>
-          );
-        })}
-        {overflow.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setMoreOpen(true)}
-            className="flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-medium text-gray-400"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              className="h-5 w-5"
-            >
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            </svg>
-            <span>المزيد</span>
-          </button>
-        )}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                className="h-5 w-5"
+              >
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+          )}
+        </div>
       </nav>
 
       {/* قائمة "المزيد" على التليفون */}
