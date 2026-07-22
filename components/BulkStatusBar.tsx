@@ -11,17 +11,29 @@ export function BulkStatusBar({
   updateAction,
   canPrint = false,
   canStatus = false,
+  canSend = false,
+  sendAction,
 }: {
   returnTo: string;
   options: Option[];
   updateAction: (formData: FormData) => Promise<{ ok: boolean; error?: string }>;
   canPrint?: boolean;
   canStatus?: boolean;
+  canSend?: boolean;
+  sendAction?: (formData: FormData) => Promise<{
+    ok: boolean;
+    sent: number;
+    skipped: number;
+    failed: number;
+    error?: string;
+    details?: string;
+  }>;
 }) {
   const router = useRouter();
   const [count, setCount] = useState(0);
   const [status, setStatus] = useState(options[0]?.value ?? "");
   const [pending, setPending] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const recount = () => {
@@ -83,6 +95,48 @@ export function BulkStatusBar({
     window.open(`/orders/print?ids=${ids}`, "_blank", "noopener");
   }
 
+  // إرسال الأوردرات المحددة لبوسطة (اللي لسه مالهاش شحنة بس)
+  async function sendSelected() {
+    if (!sendAction) return;
+    const checked = Array.from(
+      document.querySelectorAll<HTMLInputElement>(
+        "input[data-order-checkbox]:checked"
+      )
+    );
+    const sendable = checked.filter((el) => el.dataset.hasAwb !== "1");
+    const already = checked.length - sendable.length;
+    if (sendable.length === 0) {
+      alert("كل الأوردرات المحددة معاها شحنة بالفعل");
+      return;
+    }
+    let msg = `هنبعت ${sendable.length} أوردر لبوسطة كشحنات.`;
+    if (already > 0) msg += ` (${already} معاهم شحنة هنتخطّاهم)`;
+    msg += " تمام؟";
+    if (!confirm(msg)) return;
+
+    const fd = new FormData();
+    sendable.forEach((el) => fd.append("order_ids", el.value));
+    setSending(true);
+    const result = await sendAction(fd);
+    setSending(false);
+    if (!result.ok) {
+      alert(result.error ?? "حصل خطأ");
+      return;
+    }
+    let summary = `اتبعت: ${result.sent}`;
+    if (result.skipped) summary += ` — اتخطّى (معاهم شحنة): ${result.skipped}`;
+    if (result.failed) {
+      summary += ` — فشل: ${result.failed}`;
+      if (result.details) summary += `\nالسبب: ${result.details}`;
+    }
+    alert(summary);
+    document
+      .querySelectorAll<HTMLInputElement>("input[data-order-checkbox]")
+      .forEach((el) => (el.checked = false));
+    setCount(0);
+    router.refresh();
+  }
+
   if (count === 0) return null;
 
   return (
@@ -118,6 +172,16 @@ export function BulkStatusBar({
           className="rounded-lg bg-white px-3 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
         >
           طباعة البوالص المحددة
+        </button>
+      )}
+      {canSend && sendAction && (
+        <button
+          type="button"
+          onClick={sendSelected}
+          disabled={sending}
+          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+        >
+          {sending ? "بيبعت..." : "ابعت المحدد لبوسطة"}
         </button>
       )}
       <button

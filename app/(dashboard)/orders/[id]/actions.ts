@@ -740,3 +740,66 @@ export async function sendOrderToBosta(formData: FormData) {
       : `/orders/${orderId}?error=` + encodeURIComponent(message)
   );
 }
+
+// إرسال أكتر من أوردر لبوسطة مرة واحدة — بنرجّع ملخّص (اتبعت/اتخطّى/فشل)
+export async function bulkSendToBosta(formData: FormData): Promise<{
+  ok: boolean;
+  sent: number;
+  skipped: number;
+  failed: number;
+  error?: string;
+  details?: string;
+}> {
+  if (!can(await getSessionUser(), "ship.send")) {
+    return { ok: false, sent: 0, skipped: 0, failed: 0, error: "مالكش صلاحية الإرسال لبوسطة" };
+  }
+
+  const orderIds = formData
+    .getAll("order_ids")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 30); // حد أقصى للدفعة الواحدة
+  if (orderIds.length === 0) {
+    return { ok: false, sent: 0, skipped: 0, failed: 0, error: "محددتش أي أوردر" };
+  }
+
+  const key = process.env.SYNC_KEY;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!key || !base) {
+    return { ok: false, sent: 0, skipped: 0, failed: 0, error: "إعدادات الإرسال ناقصة" };
+  }
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+  const failMsgs: string[] = [];
+
+  async function sendOne(id: string) {
+    try {
+      const res = await fetch(
+        `${base}/functions/v1/bosta-create?key=${key}&order=${id}`,
+        { signal: AbortSignal.timeout(30000) }
+      );
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        if (data.already) skipped++;
+        else sent++;
+      } else {
+        failed++;
+        if (data?.error) failMsgs.push(String(data.error));
+      }
+    } catch {
+      failed++;
+    }
+  }
+
+  // بالدفعات (4 مع بعض) عشان ميطولش
+  const CONCURRENCY = 4;
+  for (let i = 0; i < orderIds.length; i += CONCURRENCY) {
+    await Promise.all(orderIds.slice(i, i + CONCURRENCY).map(sendOne));
+  }
+
+  revalidatePath("/orders");
+  const details = [...new Set(failMsgs)].slice(0, 3).join(" — ");
+  return { ok: true, sent, skipped, failed, details };
+}

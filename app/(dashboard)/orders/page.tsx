@@ -31,7 +31,7 @@ import { OrderComments } from "@/components/OrderComments";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { bulkUpdateStatus } from "./[id]/actions";
+import { bulkUpdateStatus, bulkSendToBosta } from "./[id]/actions";
 import { can, requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
@@ -85,6 +85,7 @@ export default async function OrdersPage({
   const canCreate = can(user, "orders.create");
   const canStatus = can(user, "orders.status");
   const canPrint = can(user, "ship.print");
+  const canSend = can(user, "ship.send");
   const canComments = can(user, "orders.comments");
   const supabase = await createClient();
 
@@ -243,6 +244,8 @@ export default async function OrdersPage({
             updateAction={bulkUpdateStatus}
             canStatus={canStatus}
             canPrint={canPrint}
+            canSend={canSend}
+            sendAction={bulkSendToBosta}
           />
           <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <table className="w-full text-sm">
