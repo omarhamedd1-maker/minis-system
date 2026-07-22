@@ -135,14 +135,14 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
-      <Card label="متوسط قيمة الأوردر">
-        <span className="text-gray-900">
-          <CountUp key={key} baseline={base} value={s.avgOrder} format={money} />
-        </span>
-      </Card>
       <Card label="تحصيل بوسطة (المسلّمة)">
         <span className="text-emerald-600">
           <CountUp key={key} baseline={base} value={s.cod} format={money} />
+        </span>
+      </Card>
+      <Card label="متوسط قيمة الأوردر">
+        <span className="text-gray-900">
+          <CountUp key={key} baseline={base} value={s.avgOrder} format={money} />
         </span>
       </Card>
       <Card

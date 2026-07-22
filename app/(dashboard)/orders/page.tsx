@@ -391,25 +391,31 @@ export default async function OrdersPage({
                     )}
                   </div>
 
-                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-600">
-                    <span>التاريخ: {formatDate(order.order_date)}</span>
-                    <span>الإجمالي: {formatMoney(total)}</span>
-                    <span>القطع: {pieces}</span>
-                    <span className="flex items-center gap-1">
-                      التحصيل:
-                      {order.bosta_state ? (
-                        order.bosta_collected ? (
-                          <span className="text-green-700">اتحصّل</span>
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-500">
+                      <span>{formatDate(order.order_date)}</span>
+                      <span>{pieces} قطعة</span>
+                      <span className="flex items-center gap-1">
+                        التحصيل:
+                        {order.bosta_state ? (
+                          order.bosta_collected ? (
+                            <span className="font-medium text-green-700">
+                              اتحصّل
+                            </span>
+                          ) : (
+                            <span className="text-gray-500">لسه</span>
+                          )
                         ) : (
-                          <span className="text-gray-500">لسه</span>
-                        )
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </span>
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="shrink-0 text-left text-lg font-bold text-gray-900">
+                      {formatMoney(total)}
+                    </div>
                   </div>
 
-                  <div className="relative z-10 mt-2 flex w-fit items-center gap-2 border-t border-gray-100 pt-2">
+                  <div className="relative z-10 mt-2 flex w-fit items-center gap-3 border-t border-gray-100 pt-2">
                     {wa && (
                       <a
                         href={wa}
