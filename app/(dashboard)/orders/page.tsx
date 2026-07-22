@@ -34,6 +34,9 @@ import { SendBostaRowButton } from "@/components/SendBostaRowButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { bulkUpdateStatus, bulkSendToBosta } from "./[id]/actions";
 import { can, requirePagePermission } from "@/lib/permissions";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { approveDeletion, rejectDeletion } from "./[id]/actions";
 
 type OrderRow = {
   id: string;
@@ -89,6 +92,25 @@ export default async function OrdersPage({
   const canSend = can(user, "ship.send");
   const canComments = can(user, "orders.comments");
   const supabase = await createClient();
+
+  // طلبات الحذف المستنية موافقة الأدمن (مبدأ الشخصين)
+  const pendingDeletions = user.isAdmin
+    ? (
+        await createAdminClient()
+          .from("deletion_requests")
+          .select("id, order_number, requested_by_name, created_at")
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .overrideTypes<
+            {
+              id: string;
+              order_number: string | null;
+              requested_by_name: string | null;
+              created_at: string;
+            }[]
+          >()
+      ).data ?? []
+    : [];
 
   let query = supabase
     .from("orders")
@@ -157,12 +179,55 @@ export default async function OrdersPage({
       )}
       {saved && (
         <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
-          تم حفظ الحالة الجديدة
+          {saved === "1" ? "تم حفظ الحالة الجديدة" : saved}
         </div>
       )}
       {bulk && (
         <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
           تم تغيير حالة {bulk} أوردر
+        </div>
+      )}
+
+      {pendingDeletions.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="mb-2 text-sm font-bold text-amber-800">
+            طلبات حذف مستنية موافقتك ({pendingDeletions.length})
+          </div>
+          <ul className="space-y-2">
+            {pendingDeletions.map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm"
+              >
+                <span className="text-gray-800">
+                  أوردر <span className="font-medium">{r.order_number ?? "—"}</span>{" "}
+                  <span className="text-gray-500">
+                    (طلبه {r.requested_by_name ?? "غير معروف"})
+                  </span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <form action={approveDeletion}>
+                    <input type="hidden" name="request_id" value={r.id} />
+                    <ConfirmButton
+                      message={`متأكد إنك عايز تمسح أوردر ${r.order_number ?? ""} نهائياً؟`}
+                      className="rounded-lg bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
+                    >
+                      وافق وامسح
+                    </ConfirmButton>
+                  </form>
+                  <form action={rejectDeletion}>
+                    <input type="hidden" name="request_id" value={r.id} />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    >
+                      ارفض
+                    </button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

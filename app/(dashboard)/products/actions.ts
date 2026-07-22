@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity";
 import { COST_COMPONENTS } from "@/lib/format";
 
 export async function deleteProduct(formData: FormData) {
-  await requirePermission("products.edit");
+  const me = await requirePermission("products.edit");
   const productId = String(formData.get("product_id") ?? "");
   if (!productId) {
     redirect("/products");
@@ -48,6 +49,12 @@ export async function deleteProduct(formData: FormData) {
     await supabase.from("product_variants").delete().eq("product_id", productId);
   }
 
+  const { data: prod } = await supabase
+    .from("products")
+    .select("name_ar, name")
+    .eq("id", productId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("products")
     .delete()
@@ -60,12 +67,13 @@ export async function deleteProduct(formData: FormData) {
     );
   }
 
+  await logActivity(me, "product.delete", `مسح منتج ${prod?.name_ar || prod?.name || ""}`.trim());
   revalidatePath("/products");
   redirect("/products?deleted=1");
 }
 
 export async function saveStock(formData: FormData) {
-  await requirePermission("products.stock");
+  const me = await requirePermission("products.stock");
   const variantId = String(formData.get("variant_id") ?? "");
   const quantity = Number(formData.get("quantity"));
   const returnTo = String(formData.get("return_to") ?? "/products");
@@ -130,13 +138,14 @@ export async function saveStock(formData: FormData) {
     }
   }
 
+  await logActivity(me, "product.stock", `عدّل مخزون منتج لـ ${quantity}`);
   revalidatePath("/products");
   revalidatePath(returnTo);
   redirect(returnTo + "?saved=1");
 }
 
 export async function saveSalePrice(formData: FormData) {
-  await requirePermission("products.edit");
+  const me = await requirePermission("products.edit");
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");
   const salePrice = Number(formData.get("sale_price"));
@@ -161,6 +170,7 @@ export async function saveSalePrice(formData: FormData) {
     );
   }
 
+  await logActivity(me, "product.price", `غيّر سعر بيع منتج لـ ${salePrice}`);
   revalidatePath("/products");
   revalidatePath(returnTo);
   redirect(returnTo + "?saved=1");
@@ -228,7 +238,7 @@ export async function saveSku(formData: FormData) {
 }
 
 export async function saveCostComponents(formData: FormData) {
-  await requirePermission("products.cost");
+  const me = await requirePermission("products.cost");
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");
   const returnTo = `/products/${productId}`;
@@ -309,6 +319,7 @@ export async function saveCostComponents(formData: FormData) {
     }
   }
 
+  await logActivity(me, "product.cost", `عدّل تكلفة منتج لـ ${total}`);
   revalidatePath("/products");
   revalidatePath(returnTo);
   redirect(returnTo + "?saved=1");

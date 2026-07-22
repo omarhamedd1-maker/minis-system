@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   PERMISSIONS,
@@ -8,6 +9,7 @@ import { UserEditor, type EditorUser } from "@/components/UserEditor";
 import {
   createUser,
   deleteUser,
+  lockUserNow,
   setUserEmail,
   setUserPassword,
   updateUserPermissions,
@@ -221,6 +223,7 @@ export default async function UsersPage({
             updatePermissionsAction={updateUserPermissions}
             setEmailAction={setUserEmail}
             setPasswordAction={setUserPassword}
+            lockAction={lockUserNow}
             deleteAction={deleteUser}
           />
         ))}
@@ -228,9 +231,17 @@ export default async function UsersPage({
 
       {/* سجل النشاط العام — آخر اللي اتعمل في السيستم */}
       <div className="rounded-xl bg-white shadow-sm">
-        <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
-          سجل النشاط (آخر {activity.length})
-        </h2>
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <h2 className="text-sm font-bold text-gray-900">
+            سجل النشاط (آخر {activity.length})
+          </h2>
+          <Link
+            href="/users/activity"
+            className="text-xs font-medium text-gray-500 hover:text-gray-900"
+          >
+            شوف السجل كامل مع الفلترة ←
+          </Link>
+        </div>
         {activity.length === 0 ? (
           <p className="px-5 py-6 text-sm text-gray-500">
             لسه مفيش نشاط مسجّل. أول ما حد يعمل حاجة مهمة (تغيير حالة، حذف، إرسال

@@ -38,6 +38,16 @@ function pushOrderToShopify(orderId: string) {
   });
 }
 
+// بيجيب رقم الأوردر عشان نكتبه في سجل النشاط
+async function orderNo(supabase: Supa, orderId: string): Promise<string> {
+  const { data } = await supabase
+    .from("orders")
+    .select("order_number")
+    .eq("id", orderId)
+    .maybeSingle();
+  return data?.order_number ?? "";
+}
+
 // بيظبط المخزون ويسجّل الحركة. change موجب = رجوع للمخزون، سالب = خصم
 async function adjustStock(
   supabase: Supa,
@@ -66,7 +76,7 @@ async function adjustStock(
 }
 
 export async function addOrderItem(formData: FormData) {
-  await requirePermission("orders.items");
+  const me = await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const variantId = String(formData.get("variant_id") ?? "");
   const quantity = Number(formData.get("quantity"));
@@ -130,6 +140,7 @@ export async function addOrderItem(formData: FormData) {
   await adjustStock(supabase, variantId, -quantity, orderId, "إضافة منتج لأوردر");
 
   await pushOrderToShopify(orderId);
+  await logActivity(me, "order.items", `أضاف منتج لأوردر ${await orderNo(supabase, orderId)}`);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -138,7 +149,7 @@ export async function addOrderItem(formData: FormData) {
 }
 
 export async function deleteOrderItem(formData: FormData) {
-  await requirePermission("orders.items");
+  const me = await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const itemId = String(formData.get("item_id") ?? "");
 
@@ -181,6 +192,7 @@ export async function deleteOrderItem(formData: FormData) {
   }
 
   await pushOrderToShopify(orderId);
+  await logActivity(me, "order.items", `مسح منتج من أوردر ${await orderNo(supabase, orderId)}`);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -189,7 +201,7 @@ export async function deleteOrderItem(formData: FormData) {
 }
 
 export async function updateOrderItem(formData: FormData) {
-  await requirePermission("orders.items");
+  const me = await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const itemId = String(formData.get("item_id") ?? "");
   const quantity = Number(formData.get("quantity"));
@@ -248,6 +260,7 @@ export async function updateOrderItem(formData: FormData) {
   }
 
   await pushOrderToShopify(orderId);
+  await logActivity(me, "order.items", `عدّل كمية بند في أوردر ${await orderNo(supabase, orderId)}`);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -256,7 +269,7 @@ export async function updateOrderItem(formData: FormData) {
 }
 
 export async function updateDiscount(formData: FormData) {
-  await requirePermission("orders.items");
+  const me = await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const mode = String(formData.get("discount_mode") ?? "amount");
   const value = Number(formData.get("discount_value"));
@@ -299,6 +312,7 @@ export async function updateDiscount(formData: FormData) {
   }
 
   await pushOrderToShopify(orderId);
+  await logActivity(me, "order.discount", `غيّر خصم أوردر ${await orderNo(supabase, orderId)} لـ ${discount}`);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -313,7 +327,8 @@ export async function updateOrderStatusInline(formData: FormData) {
   const isValidStatus = ORDER_STATUS_OPTIONS.some((o) => o.value === status);
   if (!orderId || !isValidStatus) return;
 
-  if (!can(await getSessionUser(), "orders.status")) return;
+  const me = await getSessionUser();
+  if (!can(me, "orders.status")) return;
 
   const supabase = createAdminClient();
   const updateData: {
@@ -327,6 +342,11 @@ export async function updateOrderStatusInline(formData: FormData) {
   };
   await supabase.from("orders").update(updateData).eq("id", orderId);
 
+  await logActivity(
+    me,
+    "order.status",
+    `غيّر حالة أوردر ${await orderNo(supabase, orderId)} لـ ${orderStatusBadge(status).label}`
+  );
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
 }
@@ -342,7 +362,8 @@ export async function bulkUpdateStatus(
     return { ok: false, error: "اختار أوردرات وحالة صحيحة" };
   }
 
-  if (!can(await getSessionUser(), "orders.status")) {
+  const me = await getSessionUser();
+  if (!can(me, "orders.status")) {
     return { ok: false, error: "مالكش صلاحية تغيير حالة الأوردرات" };
   }
 
@@ -370,6 +391,11 @@ export async function bulkUpdateStatus(
     };
   }
 
+  await logActivity(
+    me,
+    "order.status",
+    `غيّر حالة ${orderIds.length} أوردر لـ ${orderStatusBadge(status).label}`
+  );
   revalidatePath("/orders");
   return { ok: true };
 }
@@ -432,7 +458,7 @@ export async function deleteOrderComment(formData: FormData) {
 }
 
 export async function updateShippingPrice(formData: FormData) {
-  await requirePermission("orders.items");
+  const me = await requirePermission("orders.items");
   const orderId = String(formData.get("order_id") ?? "");
   const shippingPrice = Number(formData.get("shipping_price"));
 
@@ -457,6 +483,7 @@ export async function updateShippingPrice(formData: FormData) {
     );
   }
 
+  await logActivity(me, "order.shipping", `غيّر شحن أوردر ${await orderNo(supabase, orderId)} لـ ${shippingPrice}`);
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(`/orders/${orderId}?saved=1`);
@@ -489,13 +516,11 @@ export async function toggleOrderArchive(formData: FormData) {
   redirect(`/orders/${orderId}?saved=1`);
 }
 
-export async function deleteOrder(formData: FormData) {
-  const me = await requirePermission("orders.delete");
-  const orderId = String(formData.get("order_id") ?? "");
-  if (!orderId) {
-    redirect("/orders");
-  }
-
+// المسح الفعلي للأوردر (بيرجّع المخزون). بيرجّع نتيجة من غير تحويل — عشان يتنادى
+// من المسح المباشر (أدمن) ومن الموافقة على طلب المسح.
+async function performOrderDeletion(
+  orderId: string
+): Promise<{ ok: boolean; error?: string; orderNumber?: string }> {
   const supabase = createAdminClient();
 
   const { data: order, error: fetchError } = await supabase
@@ -508,20 +533,14 @@ export async function deleteOrder(formData: FormData) {
       order_items: { variant_id: string | null; quantity: number }[];
     }>();
 
-  if (fetchError || !order) {
-    redirect(
-      `/orders/${orderId}?error=` + encodeURIComponent("الأوردر ده مش موجود")
-    );
-  }
+  if (fetchError || !order) return { ok: false, error: "الأوردر ده مش موجود" };
 
-  const fail = (step: string, message: string) => {
-    redirect(
-      `/orders/${orderId}?error=` +
-        encodeURIComponent(`معرفناش نمسح الأوردر (${step}): ${message}`)
-    );
-  };
+  const orderNumber = order.order_number ?? "";
+  const fail = (step: string, message: string) => ({
+    ok: false as const,
+    error: `معرفناش نمسح الأوردر (${step}): ${message}`,
+  });
 
-  // الأوردرات القديمة اللي اتسجلت من غير خصم مخزون ملهاش حركات — فمنرجعش ليها مخزون
   const { data: orderMovements } = await supabase
     .from("stock_movements")
     .select("id")
@@ -529,76 +548,213 @@ export async function deleteOrder(formData: FormData) {
     .limit(1);
   const hadStockMovements = (orderMovements ?? []).length > 0;
 
-  // 1) نرجّع المخزون اللي الأوردر خصمه، ونسجل حركة تعويضية في السجل
   for (const item of hadStockMovements ? order.order_items : []) {
     if (!item.variant_id || item.quantity <= 0) continue;
-
     const { data: variant } = await supabase
       .from("product_variants")
       .select("quantity_on_hand")
       .eq("id", item.variant_id)
       .maybeSingle();
-
     if (variant) {
       const { error: stockError } = await supabase
         .from("product_variants")
         .update({ quantity_on_hand: variant.quantity_on_hand + item.quantity })
         .eq("id", item.variant_id);
-      if (stockError) fail("المخزون", stockError.message);
-
+      if (stockError) return fail("المخزون", stockError.message);
       const { error: movementError } = await supabase
         .from("stock_movements")
         .insert({
           variant_id: item.variant_id,
           change_quantity: item.quantity,
-          reason: `مسح أوردر ${order.order_number ?? ""}`.trim(),
+          reason: `مسح أوردر ${orderNumber}`.trim(),
         });
-      if (movementError) fail("سجل المخزون", movementError.message);
+      if (movementError) return fail("سجل المخزون", movementError.message);
     }
   }
 
-  // 2) نفك ربط حركات المخزون القديمة بالأوردر (تفضل في السجل للتاريخ)
   const { error: unlinkError } = await supabase
     .from("stock_movements")
     .update({ related_order_id: null })
     .eq("related_order_id", orderId);
-  if (unlinkError) fail("سجل المخزون", unlinkError.message);
+  if (unlinkError) return fail("سجل المخزون", unlinkError.message);
 
-  // 3) نمسح اللي مرتبط بالأوردر ثم الأوردر نفسه
   const { error: cashError } = await supabase
     .from("cash_transactions")
     .delete()
     .eq("related_order_id", orderId);
-  if (cashError) fail("الخزنة", cashError.message);
+  if (cashError) return fail("الخزنة", cashError.message);
 
   const { error: shipmentsError } = await supabase
     .from("shipments")
     .delete()
     .eq("order_id", orderId);
-  if (shipmentsError) fail("الشحنات", shipmentsError.message);
+  if (shipmentsError) return fail("الشحنات", shipmentsError.message);
 
   const { error: itemsError } = await supabase
     .from("order_items")
     .delete()
     .eq("order_id", orderId);
-  if (itemsError) fail("بنود الأوردر", itemsError.message);
+  if (itemsError) return fail("بنود الأوردر", itemsError.message);
 
   const { error: orderError, count } = await supabase
     .from("orders")
     .delete({ count: "exact" })
     .eq("id", orderId);
   if (orderError || count === 0) {
-    fail("الأوردر", orderError?.message ?? "اتأكد إن عندك صلاحية تعديل");
+    return fail("الأوردر", orderError?.message ?? "اتأكد إن عندك صلاحية");
   }
 
-  await logActivity(me, "order.delete", `مسح أوردر ${order.order_number ?? ""}`.trim());
+  return { ok: true, orderNumber };
+}
+
+export async function deleteOrder(formData: FormData) {
+  const me = await requirePermission("orders.delete");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) {
+    redirect("/orders");
+  }
+
+  const supabase = createAdminClient();
+
+  // الأدمن بيمسح على طول
+  if (me.isAdmin) {
+    const result = await performOrderDeletion(orderId);
+    if (!result.ok) {
+      redirect(`/orders/${orderId}?error=` + encodeURIComponent(result.error ?? "خطأ"));
+    }
+    await logActivity(me, "order.delete", `مسح أوردر ${result.orderNumber ?? ""}`.trim());
+    revalidatePath("/orders");
+    redirect("/orders?deleted=1");
+  }
+
+  // غير الأدمن: بيعمل طلب حذف يوافق عليه الأدمن (مبدأ الشخصين)
+  const { data: order } = await supabase
+    .from("orders")
+    .select("order_number")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  // منع تكرار الطلب لنفس الأوردر
+  const { data: existing } = await supabase
+    .from("deletion_requests")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (existing) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("فيه طلب حذف للأوردر ده بالفعل مستني موافقة الأدمن")
+    );
+  }
+
+  const { error: reqError } = await supabase.from("deletion_requests").insert({
+    order_id: orderId,
+    order_number: order?.order_number ?? null,
+    requested_by_id: me.authUserId,
+    requested_by_name: me.fullName ?? me.email ?? "غير معروف",
+    status: "pending",
+  });
+  if (reqError) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نسجّل طلب الحذف — كلّم الأدمن")
+    );
+  }
+
+  await logActivity(
+    me,
+    "order.delete_request",
+    `طلب حذف أوردر ${order?.order_number ?? ""}`.trim()
+  );
+  revalidatePath("/orders");
+  redirect(
+    `/orders/${orderId}?saved=` +
+      encodeURIComponent("اتبعت طلب حذف للأدمن — هيتمسح بعد موافقته")
+  );
+}
+
+// الأدمن بيوافق على طلب الحذف فيتم المسح فعلاً
+export async function approveDeletion(formData: FormData) {
+  const me = await requirePermission("orders.delete");
+  if (!me.isAdmin) {
+    redirect("/orders?error=" + encodeURIComponent("الموافقة على الحذف للأدمن بس"));
+  }
+  const requestId = String(formData.get("request_id") ?? "");
+  if (!requestId) redirect("/orders");
+
+  const admin = createAdminClient();
+  const { data: reqRow } = await admin
+    .from("deletion_requests")
+    .select("order_id, order_number, status")
+    .eq("id", requestId)
+    .maybeSingle()
+    .overrideTypes<{ order_id: string; order_number: string | null; status: string }>();
+  if (!reqRow || reqRow.status !== "pending") {
+    redirect("/orders?error=" + encodeURIComponent("الطلب مش موجود أو اتقفل خلاص"));
+  }
+
+  const result = await performOrderDeletion(reqRow!.order_id);
+  if (!result.ok) {
+    redirect("/orders?error=" + encodeURIComponent(result.error ?? "خطأ"));
+  }
+
+  await admin
+    .from("deletion_requests")
+    .update({
+      status: "approved",
+      resolved_by: me.fullName ?? me.email ?? "أدمن",
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", requestId);
+
+  await logActivity(
+    me,
+    "order.delete",
+    `وافق على حذف أوردر ${reqRow!.order_number ?? ""}`.trim()
+  );
   revalidatePath("/orders");
   redirect("/orders?deleted=1");
 }
 
+// الأدمن بيرفض طلب الحذف
+export async function rejectDeletion(formData: FormData) {
+  const me = await requirePermission("orders.delete");
+  if (!me.isAdmin) {
+    redirect("/orders?error=" + encodeURIComponent("رفض الحذف للأدمن بس"));
+  }
+  const requestId = String(formData.get("request_id") ?? "");
+  if (!requestId) redirect("/orders");
+
+  const admin = createAdminClient();
+  const { data: reqRow } = await admin
+    .from("deletion_requests")
+    .select("order_number")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  await admin
+    .from("deletion_requests")
+    .update({
+      status: "rejected",
+      resolved_by: me.fullName ?? me.email ?? "أدمن",
+      resolved_at: new Date().toISOString(),
+    })
+    .eq("id", requestId)
+    .eq("status", "pending");
+
+  await logActivity(
+    me,
+    "order.delete_reject",
+    `رفض حذف أوردر ${reqRow?.order_number ?? ""}`.trim()
+  );
+  revalidatePath("/orders");
+  redirect("/orders?saved=" + encodeURIComponent("اترفض طلب الحذف"));
+}
+
 // ربط شحنة بوسطة موجودة بالأوردر ده يدوياً (لإعادة استخدام شحنة عميل لغى)
 export async function linkBostaShipment(formData: FormData) {
-  await requirePermission("ship.link");
+  const me = await requirePermission("ship.link");
   const orderId = String(formData.get("order_id") ?? "");
   const tracking = String(formData.get("tracking") ?? "").replace(/\D/g, "").trim();
 
@@ -643,6 +799,7 @@ export async function linkBostaShipment(formData: FormData) {
     );
   }
 
+  await logActivity(me, "bosta.link", `ربط شحنة ${tracking} بأوردر ${await orderNo(supabase, orderId)}`);
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(`/orders/${orderId}?saved=1`);

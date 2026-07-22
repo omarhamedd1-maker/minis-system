@@ -133,6 +133,34 @@ export async function updateUserProfile(formData: FormData) {
   back("تم حفظ بيانات اليوزر", true);
 }
 
+// قفل فوري: بيوقف الحساب فيتقفل من كل الأجهزة (كل طلب بيتفحص active في الـ layout)
+export async function lockUserNow(formData: FormData) {
+  const me = await requirePermission("admin.users");
+  const authUserId = String(formData.get("auth_user_id") ?? "");
+  if (!authUserId) back("اليوزر مش موجود", false);
+  if (authUserId === me.authUserId) back("مينفعش تقفل حسابك إنت", false);
+
+  const admin = createAdminClient();
+  const { data: target } = await admin
+    .from("app_users")
+    .select("full_name")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
+  const { error } = await admin
+    .from("app_users")
+    .update({ active: false })
+    .eq("auth_user_id", authUserId);
+  if (error) back("معرفناش نقفل الحساب: " + error.message, false);
+
+  await logActivity(
+    me,
+    "user.lock",
+    `قفل حساب ${target?.full_name ?? "مستخدم"} (خروج من كل الأجهزة)`
+  );
+  revalidatePath("/users");
+  back("تم قفل الحساب — المستخدم اتسجّل خروجه من كل الأجهزة", true);
+}
+
 export async function setUserEmail(formData: FormData) {
   const me = await requirePermission("admin.users");
 

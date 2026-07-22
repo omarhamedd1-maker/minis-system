@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity";
 
 export async function updateCashTransaction(formData: FormData) {
-  await requirePermission("cash.edit");
+  const me = await requirePermission("cash.edit");
   const id = String(formData.get("transaction_id") ?? "");
   const direction = String(formData.get("direction") ?? "");
   const amount = Number(formData.get("amount"));
@@ -50,12 +51,13 @@ export async function updateCashTransaction(formData: FormData) {
     );
   }
 
+  await logActivity(me, "cash.edit", `عدّل حركة خزنة (${direction === "in" ? "إيداع" : "سحب"} ${amount})`);
   revalidatePath("/cash");
   redirect("/cash?saved=1");
 }
 
 export async function deleteCashTransaction(formData: FormData) {
-  await requirePermission("cash.edit");
+  const me = await requirePermission("cash.edit");
   const id = String(formData.get("transaction_id") ?? "");
   if (!id) {
     redirect("/cash?error=" + encodeURIComponent("الحركة دي مش موجودة"));
@@ -76,12 +78,13 @@ export async function deleteCashTransaction(formData: FormData) {
     );
   }
 
+  await logActivity(me, "cash.delete", "مسح حركة خزنة");
   revalidatePath("/cash");
   redirect("/cash?deleted=1");
 }
 
 export async function addCashTransaction(formData: FormData) {
-  await requirePermission("cash.edit");
+  const me = await requirePermission("cash.edit");
   const direction = String(formData.get("direction") ?? "");
   const amount = Number(formData.get("amount"));
   const description = String(formData.get("description") ?? "").trim();
@@ -118,6 +121,7 @@ export async function addCashTransaction(formData: FormData) {
     );
   }
 
+  await logActivity(me, "cash.add", `${direction === "in" ? "إيداع" : "سحب"} خزنة بمبلغ ${amount}`);
   revalidatePath("/cash");
   redirect("/cash?saved=1");
 }

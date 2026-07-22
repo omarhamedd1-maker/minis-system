@@ -73,6 +73,7 @@ export default async function OrderDetailsPage({
   const canLink = can(user, "ship.link");
   const canSend = can(user, "ship.send");
   const canPrint = can(user, "ship.print");
+  const isAdmin = user.isAdmin;
   const supabase = await createClient();
 
   const { data: order, error } = await supabase
@@ -229,7 +230,7 @@ export default async function OrderDetailsPage({
       )}
       {saved && (
         <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
-          تم حفظ الحالة الجديدة
+          {saved === "1" ? "تم حفظ الحالة الجديدة" : saved}
         </div>
       )}
 
@@ -614,10 +615,14 @@ export default async function OrderDetailsPage({
             <form action={deleteOrder}>
               <input type="hidden" name="order_id" value={order.id} />
               <ConfirmButton
-                message={`متأكد إنك عايز تمسح أوردر ${order.order_number ?? ""} نهائياً؟ هيتمسح ببنوده وشحناته، والمخزون هيرجع زي ما كان.`}
+                message={
+                  isAdmin
+                    ? `متأكد إنك عايز تمسح أوردر ${order.order_number ?? ""} نهائياً؟ هيتمسح ببنوده وشحناته، والمخزون هيرجع زي ما كان.`
+                    : `هتبعت طلب حذف لأوردر ${order.order_number ?? ""} للأدمن يوافق عليه. تمام؟`
+                }
                 className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
               >
-                مسح الأوردر نهائياً
+                {isAdmin ? "مسح الأوردر نهائياً" : "اطلب حذف الأوردر"}
               </ConfirmButton>
             </form>
           )}

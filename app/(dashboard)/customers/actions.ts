@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity";
 
 export async function updateCustomer(formData: FormData) {
-  await requirePermission("customers.edit");
+  const me = await requirePermission("customers.edit");
   const id = String(formData.get("customer_id") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -39,6 +40,7 @@ export async function updateCustomer(formData: FormData) {
     );
   }
 
+  await logActivity(me, "customer.edit", `عدّل بيانات عميل ${fullName}`);
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}`);
   revalidatePath("/orders");
@@ -46,7 +48,7 @@ export async function updateCustomer(formData: FormData) {
 }
 
 export async function deleteCustomer(formData: FormData) {
-  await requirePermission("customers.edit");
+  const me = await requirePermission("customers.edit");
   const id = String(formData.get("customer_id") ?? "");
   if (!id) {
     redirect("/customers");
@@ -81,6 +83,7 @@ export async function deleteCustomer(formData: FormData) {
     );
   }
 
+  await logActivity(me, "customer.delete", "مسح عميل");
   revalidatePath("/customers");
   redirect("/customers?deleted=1");
 }

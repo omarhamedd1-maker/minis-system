@@ -39,6 +39,7 @@ export function UserEditor({
   updatePermissionsAction,
   setEmailAction,
   setPasswordAction,
+  lockAction,
   deleteAction,
 }: {
   user: EditorUser;
@@ -49,6 +50,7 @@ export function UserEditor({
   updatePermissionsAction: (fd: FormData) => Promise<void>;
   setEmailAction: (fd: FormData) => Promise<void>;
   setPasswordAction: (fd: FormData) => Promise<void>;
+  lockAction: (fd: FormData) => Promise<void>;
   deleteAction: (fd: FormData) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -300,6 +302,35 @@ export function UserEditor({
               </div>
             </form>
           </div>
+
+          {/* قفل فوري */}
+          {!isSelf && !user.isAdmin && user.active && (
+            <form
+              action={lockAction}
+              className="border-t border-gray-100 pt-4"
+              onSubmit={(e) => {
+                if (
+                  !confirm(
+                    `تقفل حساب ${user.fullName ?? user.email} فوراً؟ هيتسجّل خروجه من كل الأجهزة ومش هيقدر يدخل تاني لحد ما تفعّله.`
+                  )
+                ) {
+                  e.preventDefault();
+                }
+              }}
+            >
+              <input type="hidden" name="auth_user_id" value={user.authUserId} />
+              <button
+                type="submit"
+                className="rounded-lg bg-orange-50 px-4 py-1.5 text-sm font-medium text-orange-700 hover:bg-orange-100"
+              >
+                اقفل الحساب فوراً (خروج من كل الأجهزة)
+              </button>
+              <p className="mt-1 text-xs text-gray-400">
+                بيوقف الحساب فوراً فيتقفل من أي جهاز خلال ثواني. تقدر تفعّله تاني من
+                خانة &quot;الحساب مُفعّل&quot; فوق.
+              </p>
+            </form>
+          )}
 
           {/* حذف */}
           {!isSelf && !user.isAdmin && (

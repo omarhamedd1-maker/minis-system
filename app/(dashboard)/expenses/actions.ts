@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity";
 
 export async function updateExpense(formData: FormData) {
-  await requirePermission("expenses.edit");
+  const me = await requirePermission("expenses.edit");
   const id = String(formData.get("expense_id") ?? "");
   const category = String(formData.get("category") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
@@ -62,12 +63,13 @@ export async function updateExpense(formData: FormData) {
     );
   }
 
+  await logActivity(me, "expense.edit", `عدّل مصروف ${category} (${amount})`);
   revalidatePath("/expenses");
   redirect("/expenses?saved=1");
 }
 
 export async function deleteExpense(formData: FormData) {
-  await requirePermission("expenses.edit");
+  const me = await requirePermission("expenses.edit");
   const id = String(formData.get("expense_id") ?? "");
   if (!id) {
     redirect("/expenses?error=" + encodeURIComponent("المصروف ده مش موجود"));
@@ -100,12 +102,13 @@ export async function deleteExpense(formData: FormData) {
     );
   }
 
+  await logActivity(me, "expense.delete", "مسح مصروف");
   revalidatePath("/expenses");
   redirect("/expenses?deleted=1");
 }
 
 export async function addExpense(formData: FormData) {
-  await requirePermission("expenses.edit");
+  const me = await requirePermission("expenses.edit");
   const category = String(formData.get("category") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const amount = Number(formData.get("amount"));
@@ -157,6 +160,7 @@ export async function addExpense(formData: FormData) {
     );
   }
 
+  await logActivity(me, "expense.add", `سجّل مصروف ${category} بمبلغ ${amount}`);
   revalidatePath("/expenses");
   redirect("/expenses?saved=1");
 }
