@@ -231,60 +231,64 @@ export default async function OrdersPage({
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link
-          href="/orders"
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            !status && !showArchived
-              ? "bg-gray-900 text-white"
-              : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
-          }`}
-        >
-          الكل
-        </Link>
-        {ORDER_STATUS_OPTIONS.map((option) => (
+      <div className="mb-4 space-y-2">
+        {/* شرائح الحالة — سطر واحد بيتزحلق لو ضاق */}
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
           <Link
-            key={option.value}
-            href={`/orders?status=${option.value}`}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              status === option.value && !showArchived
+            href="/orders"
+            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
+              !status && !showArchived
                 ? "bg-gray-900 text-white"
                 : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
             }`}
           >
-            {option.label}
+            الكل
           </Link>
-        ))}
-        <span className="mx-1 h-4 w-px bg-gray-300"></span>
-        <Link
-          href={showArchived ? "/orders" : "/orders?archived=1"}
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            showArchived
-              ? "bg-amber-600 text-white"
-              : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
-          }`}
-        >
-          الأرشيف
-        </Link>
-        <form action="/orders" className="flex items-center gap-1">
+          {ORDER_STATUS_OPTIONS.map((option) => (
+            <Link
+              key={option.value}
+              href={`/orders?status=${option.value}`}
+              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
+                status === option.value && !showArchived
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+              }`}
+            >
+              {option.label}
+            </Link>
+          ))}
+          <span className="mx-1 h-4 w-px shrink-0 bg-gray-300"></span>
+          <Link
+            href={showArchived ? "/orders" : "/orders?archived=1"}
+            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
+              showArchived
+                ? "bg-amber-600 text-white"
+                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+            }`}
+          >
+            الأرشيف
+          </Link>
+        </div>
+        {/* البحث — سطر لوحده، عرض كامل على الموبايل */}
+        <form action="/orders" className="flex items-center gap-2">
           {status && <input type="hidden" name="status" value={status} />}
           {showArchived && <input type="hidden" name="archived" value="1" />}
           <input
             name="q"
             defaultValue={searchTerm}
             placeholder="دور برقم الأوردر أو اسم العميل أو تليفونه"
-            className="w-64 rounded-full border-0 bg-white px-3 py-1 text-xs text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-full flex-1 rounded-full border-0 bg-white px-4 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 sm:max-w-xs"
           />
           <button
             type="submit"
-            className="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+            className="shrink-0 rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
           >
             بحث
           </button>
           {searchTerm && (
             <Link
               href={returnTo}
-              className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 shadow-sm hover:bg-gray-100"
+              className="shrink-0 rounded-full bg-white px-3 py-2 text-sm text-gray-500 shadow-sm hover:bg-gray-100"
             >
               ✕
             </Link>
@@ -338,8 +342,14 @@ export default async function OrdersPage({
               return (
                 <div
                   key={order.id}
-                  className="rounded-xl bg-white p-3 shadow-sm"
+                  className="relative rounded-xl bg-white p-3 shadow-sm"
                 >
+                  {/* الكارت كله بيفتح الأوردر — الأزرار فوقه بتشتغل عادي */}
+                  <Link
+                    href={`/orders/${order.id}`}
+                    aria-label={`فتح أوردر ${order.order_number ?? ""}`}
+                    className="absolute inset-0 z-0 rounded-xl"
+                  />
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
                       <input
@@ -348,17 +358,14 @@ export default async function OrdersPage({
                         data-has-awb={order.bosta_tracking ? "1" : "0"}
                         value={order.id}
                         aria-label="تحديد الأوردر"
-                        className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300"
+                        className="relative z-10 mt-1 h-5 w-5 shrink-0 rounded border-gray-300"
                       />
                       <div>
-                        <Link
-                          href={`/orders/${order.id}`}
-                          className="font-bold text-gray-900 hover:underline"
-                        >
-                          {order.order_number ?? "بدون رقم"}
-                        </Link>
+                        <div className="text-base font-bold text-gray-900">
+                          {order.customers?.full_name ?? "بدون اسم"}
+                        </div>
                         <div className="text-xs text-gray-500">
-                          {order.customers?.full_name ?? "—"}
+                          أوردر {order.order_number ?? "—"}
                         </div>
                       </div>
                     </div>
@@ -369,15 +376,18 @@ export default async function OrdersPage({
                         {orderStatusBadge(st).label}
                       </span>
                     ) : (
-                      <OrderStatusSelect
-                        orderId={order.id}
-                        currentStatus={st}
-                        returnTo={returnTo}
-                        options={ORDER_STATUS_OPTIONS.filter(
-                          (o) => !LIST_STATUS_OPTIONS_EXCLUDED.includes(o.value)
-                        )}
-                        updateAction={updateOrderStatusInline}
-                      />
+                      <div className="relative z-10 shrink-0">
+                        <OrderStatusSelect
+                          orderId={order.id}
+                          currentStatus={st}
+                          returnTo={returnTo}
+                          options={ORDER_STATUS_OPTIONS.filter(
+                            (o) =>
+                              !LIST_STATUS_OPTIONS_EXCLUDED.includes(o.value)
+                          )}
+                          updateAction={updateOrderStatusInline}
+                        />
+                      </div>
                     )}
                   </div>
 
@@ -399,13 +409,7 @@ export default async function OrdersPage({
                     </span>
                   </div>
 
-                  <div className="mt-2 flex items-center gap-2 border-t border-gray-100 pt-2">
-                    <Link
-                      href={`/orders/${order.id}`}
-                      className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
-                    >
-                      فتح
-                    </Link>
+                  <div className="relative z-10 mt-2 flex w-fit items-center gap-2 border-t border-gray-100 pt-2">
                     {wa && (
                       <a
                         href={wa}
