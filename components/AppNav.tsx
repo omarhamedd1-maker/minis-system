@@ -72,12 +72,9 @@ export function AppNav({
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // التليفون: 3 ثابتة تحت (داشبورد، أوردرات، خزنة)، والباقي في "المزيد"
-  const PRIMARY_HREFS = ["/", "/orders", "/cash"];
-  const primary = PRIMARY_HREFS.map((h) =>
-    allowed.find((i) => i.href === h)
-  ).filter((i): i is Item => Boolean(i));
-  const overflow = allowed.filter((i) => !PRIMARY_HREFS.includes(i.href));
+  // التليفون: كل الصفحات في البار (تجربة)
+  const primary = allowed;
+  const overflow: Item[] = [];
 
   return (
     <>
@@ -163,8 +160,8 @@ export function AppNav({
       </aside>
 
       {/* ===== قائمة عائمة (تليفون) — على شكل Pill زي شوبيفاي ===== */}
-      <nav className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-4 md:hidden">
-        <div className="flex items-center gap-1 rounded-full bg-white p-1.5 shadow-[0_6px_24px_rgba(0,0,0,0.14)] ring-1 ring-black/5">
+      <nav className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 md:hidden">
+        <div className="flex w-full max-w-md items-center justify-around gap-0.5 rounded-full bg-white p-1 shadow-[0_6px_24px_rgba(0,0,0,0.14)] ring-1 ring-black/5">
           {primary.map((i) => {
             const active = isActive(i.href);
             return (
@@ -173,9 +170,9 @@ export function AppNav({
                 href={i.href}
                 title={i.label}
                 aria-label={i.label}
-                className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
                   active
-                    ? "bg-[#E30613] text-white"
+                    ? "bg-gray-900 text-white"
                     : "text-gray-500 hover:bg-gray-100"
                 }`}
               >
