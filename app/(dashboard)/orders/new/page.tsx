@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday } from "@/lib/format";
 import { ProductPicker } from "@/components/ProductPicker";
+import { BackLink } from "@/components/BackLink";
 import { requirePagePermission } from "@/lib/permissions";
 import { createOrder } from "./actions";
 
@@ -66,12 +67,7 @@ export default async function NewOrderPage({
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">إضافة أوردر يدوي</h1>
-        <Link
-          href="/orders"
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          الرجوع للأوردرات
-        </Link>
+        <BackLink href="/orders" label="الرجوع للأوردرات" />
       </div>
 
       {actionError && (

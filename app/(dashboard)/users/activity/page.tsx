@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { BackLink } from "@/components/BackLink";
 import { requirePagePermission } from "@/lib/permissions";
 
 type ActivityRow = {
@@ -80,9 +81,7 @@ export default async function ActivityPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">سجل النشاط</h1>
-        <Link href="/users" className="text-sm text-gray-500 hover:text-gray-900">
-          الرجوع للمستخدمين
-        </Link>
+        <BackLink href="/users" label="الرجوع للمستخدمين" />
       </div>
 
       {/* فلاتر */}

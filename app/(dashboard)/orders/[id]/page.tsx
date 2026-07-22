@@ -12,6 +12,7 @@ import { AutoRefresh } from "@/components/AutoRefresh";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
+import { BackLink } from "@/components/BackLink";
 import { can, requirePagePermission } from "@/lib/permissions";
 import {
   addOrderItem,
@@ -171,55 +172,60 @@ export default async function OrderDetailsPage({
   return (
     <div className="space-y-6">
       <AutoRefresh seconds={10} />
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-gray-900">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">
             أوردر {order.order_number ?? "بدون رقم"}
           </h1>
           <span
-            className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
+            className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
           >
             {badge.label}
           </span>
           {order.archived && (
-            <span className="inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+            <span className="inline-block shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
               مؤرشف
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {prevOrder ? (
-            <Link
-              href={`/orders/${prevOrder.id}`}
-              title="الأوردر السابق"
-              className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200"
-            >
-              ← السابق
-            </Link>
-          ) : (
-            <span className="rounded-lg bg-gray-50 px-3 py-1 text-sm text-gray-300">
-              ← السابق
-            </span>
-          )}
+        <div className="flex shrink-0 items-center gap-1">
+          {/* السابق = الأقدم */}
           {nextOrder ? (
             <Link
               href={`/orders/${nextOrder.id}`}
-              title="الأوردر التالي"
-              className="rounded-lg bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              title="السابق (الأقدم)"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 active:scale-95"
             >
-              التالي →
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
             </Link>
           ) : (
-            <span className="rounded-lg bg-gray-50 px-3 py-1 text-sm text-gray-300">
-              التالي →
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-300">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
             </span>
           )}
-          <Link
-            href="/orders"
-            className="text-sm text-gray-500 hover:text-gray-900"
-          >
-            الرجوع للأوردرات
-          </Link>
+          {/* التالي = الأجدد */}
+          {prevOrder ? (
+            <Link
+              href={`/orders/${prevOrder.id}`}
+              title="التالي (الأجدد)"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </Link>
+          ) : (
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-300">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </span>
+          )}
+          <BackLink href="/orders" label="الرجوع للأوردرات" />
         </div>
       </div>
 

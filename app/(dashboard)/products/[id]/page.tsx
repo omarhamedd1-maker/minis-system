@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS, formatMoney } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { BackLink } from "@/components/BackLink";
 import {
   deleteProduct,
   saveCostComponents,
@@ -80,12 +81,7 @@ export default async function ProductDetailsPage({
             </p>
           )}
         </div>
-        <Link
-          href="/products"
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          الرجوع للمنتجات
-        </Link>
+        <BackLink href="/products" label="الرجوع للمنتجات" />
       </div>
 
       {isAdmin && (

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CustomerEdit } from "@/components/CustomerEdit";
+import { BackLink } from "@/components/BackLink";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { deleteCustomer, updateCustomer } from "../actions";
 
@@ -82,12 +83,7 @@ export default async function CustomerPage({
         <h1 className="text-xl font-bold text-gray-900">
           {customer.full_name ?? "بدون اسم"}
         </h1>
-        <Link
-          href="/customers"
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          الرجوع للعملاء
-        </Link>
+        <BackLink href="/customers" label="الرجوع للعملاء" />
       </div>
 
       {actionError && (
