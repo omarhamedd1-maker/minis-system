@@ -43,8 +43,13 @@ export function BulkStatusBar({
       setCount(checked.length);
     };
     document.addEventListener("change", recount);
+    // كروت الموبايل بتبلّغنا لما التحديد يتغيّر (ضغطة طويلة)
+    document.addEventListener("minis-selection-changed", recount);
     recount();
-    return () => document.removeEventListener("change", recount);
+    return () => {
+      document.removeEventListener("change", recount);
+      document.removeEventListener("minis-selection-changed", recount);
+    };
   }, []);
 
   async function apply() {
@@ -191,6 +196,10 @@ export function BulkStatusBar({
             .querySelectorAll<HTMLInputElement>('input[data-order-checkbox]')
             .forEach((el) => (el.checked = false));
           setCount(0);
+          // نخرج من وضع التحديد على الموبايل كمان
+          document.dispatchEvent(
+            new CustomEvent("minis-select-mode", { detail: false })
+          );
         }}
         className="text-xs text-gray-300 hover:text-white"
       >

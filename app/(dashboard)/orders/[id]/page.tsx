@@ -348,15 +348,45 @@ export default async function OrderDetailsPage({
                 <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
               </div>
+              {/* تقسيمة الشحن: العميل دفع كام، بوسطة خدت كام، والصافي عليك ولا ليك */}
               {order.bosta_shipping_cost > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <dt className="text-gray-500">إجمالي تكلفة الشحن</dt>
-                  <dd className="text-left text-gray-900">
-                    {formatMoney(90 + order.bosta_shipping_cost)}
-                    <span className="block text-xs text-gray-400">
-                      90 + {formatMoney(order.bosta_shipping_cost)} رسوم بوسطة
+                <div className="mt-1 rounded-lg bg-gray-50 p-2.5">
+                  <div className="mb-1 text-xs font-medium text-gray-500">
+                    تقسيمة الشحن
+                  </div>
+                  <div className="flex items-center justify-between gap-4 text-xs">
+                    <span className="text-gray-600">العميل دفع شحن</span>
+                    <span className="font-medium text-green-700">
+                      {formatMoney(order.shipping_price)}
                     </span>
-                  </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 text-xs">
+                    <span className="text-gray-600">
+                      مستحقات بوسطة
+                      <span className="block text-[10px] text-gray-400">
+                        فتح الشحنة + تأمين + تحصيل + تحويل + ض.ق.م 14%
+                      </span>
+                    </span>
+                    <span className="font-medium text-red-700">
+                      − {formatMoney(order.bosta_shipping_cost)}
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between gap-4 border-t border-gray-200 pt-1 text-xs">
+                    <span className="font-medium text-gray-700">صافي الشحن</span>
+                    {(() => {
+                      const net = order.shipping_price - order.bosta_shipping_cost;
+                      return (
+                        <span
+                          className={`font-bold ${net >= 0 ? "text-green-700" : "text-red-700"}`}
+                        >
+                          {net >= 0 ? "+" : "−"} {formatMoney(Math.abs(net))}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    الشحن الأساسي مغطّى من باقة بوسطة (بتتحسب مصروف شهري)
+                  </p>
                 </div>
               )}
               <div className="flex items-center justify-between gap-4">

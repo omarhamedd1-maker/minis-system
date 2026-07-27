@@ -26,6 +26,11 @@ const ORDER_PERIODS: Record<string, string> = {
   year: "السنة دي",
 };
 
+// وقت النداء — بره الرندر عشان الرندر يبقى نقي
+function currentMs() {
+  return Date.now();
+}
+
 // لينك واتساب العميل بصيغة مصر الدولية (20)
 function waLink(phone: string | null) {
   const digits = (phone ?? "").replace(/\D/g, "");
@@ -42,7 +47,7 @@ import { OrderComments } from "@/components/OrderComments";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
 import { SendBostaRowButton } from "@/components/SendBostaRowButton";
-import { AutoRefresh } from "@/components/AutoRefresh";
+import { SelectableOrderCard } from "@/components/SelectableOrderCard";
 import { bulkUpdateStatus, bulkSendToBosta } from "./[id]/actions";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -118,7 +123,7 @@ export default async function OrdersPage({
   if (period !== "all") returnParams.set("period", period);
   const returnTo = `/orders${returnParams.toString() ? `?${returnParams}` : ""}`;
   // بيبني لينك للأوردرات مع الحفاظ على فلتر الوقت
-  const nowMs = Date.now();
+  const nowMs = currentMs();
   const periodQS = (extra: string) => {
     const parts = [extra, period !== "all" ? `period=${period}` : ""].filter(
       Boolean
@@ -205,7 +210,6 @@ export default async function OrdersPage({
 
   return (
     <div>
-      <AutoRefresh seconds={30} />
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">الأوردرات</h1>
         <div className="flex items-center gap-3">
@@ -416,29 +420,14 @@ export default async function OrdersPage({
                     CANCEL_LOCK_MS);
               const wa = waLink(order.customers?.phone ?? null);
               return (
-                <div
+                <SelectableOrderCard
                   key={order.id}
-                  className="relative rounded-xl bg-white p-3 shadow-sm"
+                  orderId={order.id}
+                  hasAwb={Boolean(order.bosta_tracking)}
                 >
-                  {/* الكارت كله بيفتح الأوردر — الأزرار فوقه بتشتغل عادي */}
-                  <Link
-                    href={`/orders/${order.id}`}
-                    aria-label={`فتح أوردر ${order.order_number ?? ""}`}
-                    className="absolute inset-0 z-0 rounded-xl transition-colors active:bg-gray-900/[0.07]"
-                  />
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2">
-                      <input
-                        type="checkbox"
-                        data-order-checkbox
-                        data-has-awb={order.bosta_tracking ? "1" : "0"}
-                        value={order.id}
-                        aria-label="تحديد الأوردر"
-                        className="relative z-10 mt-1 h-5 w-5 shrink-0 rounded border-gray-300"
-                      />
-                      <div className="text-base font-bold text-gray-900">
-                        {order.order_number ?? "بدون رقم"}
-                      </div>
+                    <div className="min-w-0 text-base font-bold text-gray-900">
+                      {order.customers?.full_name ?? "بدون اسم"}
                     </div>
                     {!canStatus || AT_SHIPPING.includes(st) || cancelLocked ? (
                       <span
@@ -548,12 +537,12 @@ export default async function OrdersPage({
                       deleteAction={deleteOrderComment}
                     />
                   </div>
-                  {/* اسم العميل في نفس سطر الأيقونات على الشمال */}
-                  <span className="ms-auto truncate text-xs text-gray-500">
-                    {order.customers?.full_name ?? "—"}
+                  {/* رقم الأوردر في نفس سطر الأيقونات على الشمال */}
+                  <span className="ms-auto shrink-0 text-xs text-gray-500">
+                    {order.order_number ?? "بدون رقم"}
                   </span>
                   </div>
-                </div>
+                </SelectableOrderCard>
               );
             })}
           </div>
