@@ -165,7 +165,72 @@ export default async function ProductsPage({
             : "لسه مفيش منتجات. المنتجات بتتسجل هنا تلقائياً مع أول أوردر ييجي من شوبيفاي."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <>
+        {/* ===== موبايل: كروت (مفيش سحب جانبي) ===== */}
+        <div className="space-y-2 md:hidden">
+          {products.map((product) => {
+            const stock = product.product_variants.reduce(
+              (s, v) => s + v.quantity_on_hand,
+              0
+            );
+            const v0 = product.product_variants[0];
+            return (
+              <Link
+                key={product.id}
+                href={`/products/${product.id}`}
+                className="block rounded-xl bg-white p-3 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-bold text-gray-900">
+                      {product.name_ar ?? product.name ?? "بدون اسم"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-400" dir="ltr">
+                      {v0?.sku ?? "—"}
+                      {product.product_variants.length > 1 &&
+                        ` · ${product.product_variants.length} أشكال`}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    {shopifyStatusBadge(product.shopify_status)}
+                    {product.deleted_in_shopify && (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                        اتمسح من شوبيفاي
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 border-t border-gray-100 pt-2 text-xs">
+                  <span className="text-gray-600">
+                    البيع:{" "}
+                    <span className="font-medium text-gray-900">
+                      {v0 ? formatMoney(v0.sale_price) : "—"}
+                    </span>
+                  </span>
+                  <span className="text-gray-600">
+                    التكلفة:{" "}
+                    <span
+                      className={`font-medium ${v0 && v0.cost_price > 0 ? "text-gray-900" : "text-red-600"}`}
+                    >
+                      {v0 ? formatMoney(v0.cost_price) : "—"}
+                    </span>
+                  </span>
+                  <span className="text-gray-600">
+                    المخزون:{" "}
+                    <span
+                      className={`font-medium ${stock > 0 ? "text-gray-900" : "text-red-600"}`}
+                    >
+                      {stock}
+                    </span>
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* ===== كمبيوتر: جدول ===== */}
+        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-right text-gray-500">
@@ -236,6 +301,7 @@ export default async function ProductsPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

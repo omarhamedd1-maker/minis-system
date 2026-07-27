@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { EXCLUDED_STATUSES, formatMoney } from "@/lib/format";
+import { EXCLUDED_STATUSES, formatDate, formatMoney } from "@/lib/format";
 import { CustomerRow } from "@/components/CustomerRow";
 import { requirePagePermission } from "@/lib/permissions";
 
@@ -198,7 +198,38 @@ export default async function CustomersPage({
             : "لسه مفيش عملاء — بيتسجلوا تلقائياً مع الأوردرات."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <>
+        {/* ===== موبايل: كروت (مفيش سحب جانبي) ===== */}
+        <div className="space-y-2 md:hidden">
+          {rows.map((row) => (
+            <Link
+              key={row.id}
+              href={`/customers/${row.id}`}
+              className="block rounded-xl bg-white p-3 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold text-gray-900">
+                    {row.name}
+                  </div>
+                  <div className="mt-0.5 text-xs text-gray-500" dir="ltr">
+                    {row.phone ?? "—"}
+                  </div>
+                </div>
+                <div className="shrink-0 text-sm font-bold text-gray-900">
+                  {formatMoney(row.total)}
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-xs text-gray-600">
+                <span>{row.ordersCount} أوردر</span>
+                <span>آخر أوردر: {formatDate(row.lastOrderDate)}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* ===== كمبيوتر: جدول ===== */}
+        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-right text-gray-500">
@@ -218,6 +249,7 @@ export default async function CustomersPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
