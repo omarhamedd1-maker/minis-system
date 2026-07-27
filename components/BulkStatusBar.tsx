@@ -58,6 +58,16 @@ export function BulkStatusBar({
     };
   }, []);
 
+  function clearAll() {
+    document
+      .querySelectorAll<HTMLInputElement>("input[data-order-checkbox]")
+      .forEach((el) => (el.checked = false));
+    setCount(0);
+    document.dispatchEvent(
+      new CustomEvent("minis-select-mode", { detail: false })
+    );
+  }
+
   async function apply() {
     const checked = document.querySelectorAll<HTMLInputElement>(
       'input[data-order-checkbox]:checked'
@@ -74,11 +84,8 @@ export function BulkStatusBar({
       alert(result.error ?? "حصل خطأ");
       return;
     }
-    // نفك التحديد ونحدّث الصفحة من غير رستر
-    document
-      .querySelectorAll<HTMLInputElement>("input[data-order-checkbox]")
-      .forEach((el) => (el.checked = false));
-    setCount(0);
+    // نفك التحديد ونخرج من وضع التحديد ونحدّث الصفحة من غير رستر
+    clearAll();
     router.refresh();
   }
 
@@ -141,27 +148,14 @@ export function BulkStatusBar({
       if (result.details) summary += `\nالسبب: ${result.details}`;
     }
     alert(summary);
-    document
-      .querySelectorAll<HTMLInputElement>("input[data-order-checkbox]")
-      .forEach((el) => (el.checked = false));
-    setCount(0);
+    clearAll();
     router.refresh();
   }
 
   if (count === 0) return null;
 
-  function clearAll() {
-    document
-      .querySelectorAll<HTMLInputElement>("input[data-order-checkbox]")
-      .forEach((el) => (el.checked = false));
-    setCount(0);
-    document.dispatchEvent(
-      new CustomEvent("minis-select-mode", { detail: false })
-    );
-  }
-
   return (
-    <div className="sticky top-14 z-30 mb-4 rounded-xl bg-gray-900 p-3 text-white shadow-lg md:top-0">
+    <div className="sticky top-14 z-[35] mb-4 rounded-xl bg-gray-900 p-3 text-white shadow-lg md:top-0">
       {/* سطر فوق: العدد + إلغاء */}
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">

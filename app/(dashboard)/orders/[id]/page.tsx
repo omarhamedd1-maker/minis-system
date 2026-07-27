@@ -18,6 +18,7 @@ import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
 import { BackLink } from "@/components/BackLink";
+import { OrderItemRow } from "@/components/OrderItemRow";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -713,90 +714,37 @@ export default async function OrderDetailsPage({
             </tr>
           </thead>
           <tbody>
-            {order.order_items.map((item) => (
-              <tr
-                key={item.id}
-                className="border-b border-gray-100 last:border-0"
-              >
-                <td className="px-4 py-3 text-gray-900">
-                  {item.product_variants?.products?.name ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-gray-700">
-                  {item.product_variants?.variant_name ?? "—"}
-                </td>
-                {canItems ? (
-                  <>
-                    <td className="px-4 py-3">
-                      <form
-                        id={`item-${item.id}`}
-                        action={updateOrderItem}
-                      >
-                        <input type="hidden" name="order_id" value={order.id} />
-                        <input type="hidden" name="item_id" value={item.id} />
-                      </form>
-                      <input
-                        key={`qty-${item.quantity}`}
-                        type="number"
-                        name="quantity"
-                        form={`item-${item.id}`}
-                        defaultValue={item.quantity}
-                        min={1}
-                        step={1}
-                        className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                        aria-label="الكمية"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        key={`price-${item.sale_price_at_order}`}
-                        type="number"
-                        name="sale_price"
-                        form={`item-${item.id}`}
-                        defaultValue={item.sale_price_at_order}
-                        min={0}
-                        step="0.01"
-                        className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-                        aria-label="سعر البيع"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-700">
-                          {formatMoney(item.quantity * item.sale_price_at_order)}
-                        </span>
-                        <button
-                          type="submit"
-                          form={`item-${item.id}`}
-                          className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
-                        >
-                          حفظ
-                        </button>
-                        <form action={deleteOrderItem}>
-                          <input type="hidden" name="order_id" value={order.id} />
-                          <input type="hidden" name="item_id" value={item.id} />
-                          <ConfirmButton
-                            message="متأكد إنك عايز تمسح المنتج ده من الأوردر؟"
-                            className="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                          >
-                            مسح
-                          </ConfirmButton>
-                        </form>
-                      </div>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="px-4 py-3 text-gray-700">{item.quantity}</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {formatMoney(item.sale_price_at_order)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {formatMoney(item.quantity * item.sale_price_at_order)}
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
+            {order.order_items.map((item) =>
+              canItems ? (
+                <OrderItemRow
+                  key={item.id}
+                  orderId={order.id}
+                  itemId={item.id}
+                  productName={item.product_variants?.products?.name ?? "—"}
+                  variantName={item.product_variants?.variant_name ?? "—"}
+                  quantity={item.quantity}
+                  salePrice={item.sale_price_at_order}
+                  updateAction={updateOrderItem}
+                  deleteAction={deleteOrderItem}
+                />
+              ) : (
+                <tr key={item.id} className="border-b border-gray-100 last:border-0">
+                  <td className="px-4 py-3 text-gray-900">
+                    {item.product_variants?.products?.name ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {item.product_variants?.variant_name ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">{item.quantity}</td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {formatMoney(item.sale_price_at_order)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700">
+                    {formatMoney(item.quantity * item.sale_price_at_order)}
+                  </td>
+                </tr>
+              )
+            )}
           </tbody>
           <tfoot>
             <tr className="border-t border-gray-200 text-gray-700">

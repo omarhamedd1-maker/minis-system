@@ -51,7 +51,14 @@ export function SelectableOrderCard({
     );
   }
 
-  function start() {
+  // الأزرار والقوايم جوّه الكارت بتشتغل لوحدها — مانفتحش الأوردر ولا نحدّد بسببها
+  function isInteractive(target: EventTarget | null) {
+    const el = target as HTMLElement | null;
+    return Boolean(el?.closest?.("button, a, select, input, label, form, textarea"));
+  }
+
+  function start(e: React.PointerEvent) {
+    if (isInteractive(e.target)) return;
     longFired.current = false;
     timer.current = setTimeout(() => {
       longFired.current = true;
@@ -67,6 +74,8 @@ export function SelectableOrderCard({
   }
 
   function onClick(e: React.MouseEvent) {
+    // ضغطة على زرار/لينك جوّه الكارت (تعليق، واتساب، طباعة...) — نسيبها تشتغل لوحدها
+    if (isInteractive(e.target)) return;
     // لو الضغطة كانت طويلة، مانفتحش
     if (longFired.current) {
       e.preventDefault();
@@ -85,7 +94,7 @@ export function SelectableOrderCard({
 
   return (
     <div
-      onPointerDown={start}
+      onPointerDown={(e) => start(e)}
       onPointerUp={cancel}
       onPointerLeave={cancel}
       onPointerCancel={cancel}
