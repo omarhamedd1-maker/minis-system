@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   ORDER_STATUS_OPTIONS,
   SHIPMENT_STATUSES,
+  cairoToday,
   formatDate,
   formatMoney,
   orderStatusBadge,
@@ -14,6 +15,16 @@ const AT_SHIPPING = SHIPMENT_STATUSES;
 const LIST_STATUS_OPTIONS_EXCLUDED = SHIPMENT_STATUSES;
 // الأوردر الملغي بيتقفل تعديله من برة بعد 30 ثانية
 const CANCEL_LOCK_MS = 30 * 1000;
+
+// فلتر الوقت في قايمة الأوردرات
+const ORDER_PERIODS: Record<string, string> = {
+  all: "كل الوقت",
+  today: "النهارده",
+  week: "آخر 7 أيام",
+  month: "الشهر ده",
+  "3m": "آخر 3 شهور",
+  year: "السنة دي",
+};
 
 // لينك واتساب العميل بصيغة مصر الدولية (20)
 function waLink(phone: string | null) {
@@ -73,12 +84,46 @@ export default async function OrdersPage({
     q?: string;
     bulk?: string;
     show?: string;
+    period?: string;
   }>;
 }) {
-  const { status, deleted, archived, saved, q, bulk, show } = await searchParams;
+  const { status, deleted, archived, saved, q, bulk, show, period: rawPeriod } =
+    await searchParams;
   const showArchived = archived === "1";
   const searchTerm = (q ?? "").trim();
-  const returnTo = `/orders${showArchived ? "?archived=1" : status ? `?status=${status}` : ""}`;
+  const period = ORDER_PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "all";
+  // بداية الفترة بتوقيت مصر (all = من غير حد)
+  const periodStart = (() => {
+    if (period === "all") return null;
+    const today = cairoToday();
+    const [y, m] = today.split("-").map(Number);
+    if (period === "today") return today;
+    if (period === "week") {
+      const d = new Date(today + "T12:00:00Z");
+      d.setUTCDate(d.getUTCDate() - 6);
+      return d.toISOString().slice(0, 10);
+    }
+    if (period === "month") return `${y}-${String(m).padStart(2, "0")}-01`;
+    if (period === "3m") {
+      const d = new Date(today + "T12:00:00Z");
+      d.setUTCDate(d.getUTCDate() - 89);
+      return d.toISOString().slice(0, 10);
+    }
+    return `${y}-01-01`;
+  })();
+  // بنحافظ على الفلاتر في لينك الرجوع
+  const returnParams = new URLSearchParams();
+  if (showArchived) returnParams.set("archived", "1");
+  else if (status) returnParams.set("status", status);
+  if (period !== "all") returnParams.set("period", period);
+  const returnTo = `/orders${returnParams.toString() ? `?${returnParams}` : ""}`;
+  // بيبني لينك للأوردرات مع الحفاظ على فلتر الوقت
+  const periodQS = (extra: string) => {
+    const parts = [extra, period !== "all" ? `period=${period}` : ""].filter(
+      Boolean
+    );
+    return `/orders${parts.length ? `?${parts.join("&")}` : ""}`;
+  };
   // عدد المعروض: 50 افتراضي، وبيزيد بزرار "عرض المزيد". في البحث بنجيب أكتر
   const showCount = Math.min(
     Math.max(Number(show) || 50, 50),
@@ -122,6 +167,9 @@ export default async function OrdersPage({
 
   if (status) {
     query = query.eq("order_status", status);
+  }
+  if (periodStart) {
+    query = query.gte("order_date", periodStart);
   }
 
   const { data: fetchedOrders, error } = await query
@@ -232,10 +280,34 @@ export default async function OrdersPage({
       )}
 
       <div className="mb-4 space-y-2">
+        {/* فلتر الوقت */}
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+          <span className="shrink-0 text-xs text-gray-500">الفترة:</span>
+          {Object.entries(ORDER_PERIODS).map(([key, label]) => {
+            const p = new URLSearchParams();
+            if (status) p.set("status", status);
+            if (showArchived) p.set("archived", "1");
+            if (searchTerm) p.set("q", searchTerm);
+            if (key !== "all") p.set("period", key);
+            return (
+              <Link
+                key={key}
+                href={`/orders${p.toString() ? `?${p}` : ""}`}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
+                  period === key
+                    ? "bg-gray-900 text-white"
+                    : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                }`}
+              >
+                {label}
+              </Link>
+            );
+          })}
+        </div>
         {/* شرائح الحالة — سطر واحد بيتزحلق لو ضاق */}
         <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
           <Link
-            href="/orders"
+            href={periodQS("")}
             className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
               !status && !showArchived
                 ? "bg-gray-900 text-white"
@@ -247,7 +319,7 @@ export default async function OrdersPage({
           {ORDER_STATUS_OPTIONS.map((option) => (
             <Link
               key={option.value}
-              href={`/orders?status=${option.value}`}
+              href={periodQS(`status=${option.value}`)}
               className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
                 status === option.value && !showArchived
                   ? "bg-gray-900 text-white"
@@ -259,7 +331,7 @@ export default async function OrdersPage({
           ))}
           <span className="mx-1 h-4 w-px shrink-0 bg-gray-300"></span>
           <Link
-            href={showArchived ? "/orders" : "/orders?archived=1"}
+            href={showArchived ? periodQS("") : periodQS("archived=1")}
             className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
               showArchived
                 ? "bg-amber-600 text-white"
@@ -273,6 +345,9 @@ export default async function OrdersPage({
         <form action="/orders" className="flex items-center gap-2">
           {status && <input type="hidden" name="status" value={status} />}
           {showArchived && <input type="hidden" name="archived" value="1" />}
+          {period !== "all" && (
+            <input type="hidden" name="period" value={period} />
+          )}
           <input
             name="q"
             defaultValue={searchTerm}
