@@ -16,6 +16,7 @@ import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
 import { BackLink } from "@/components/BackLink";
 import { can, requirePagePermission } from "@/lib/permissions";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   addOrderItem,
   deleteOrder,
@@ -44,6 +45,7 @@ type OrderDetails = {
   bosta_collected: boolean;
   bosta_tracking: string | null;
   bosta_shipping_cost: number;
+  delivered_at: string | null;
   return_note: string | null;
   payment_method: string | null;
   amount_paid: number | null;
@@ -93,7 +95,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
-       return_note, payment_method, amount_paid,
+       delivered_at, return_note, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
          product_variants(variant_name, products(name)))`
@@ -174,6 +176,68 @@ export default async function OrderDetailsPage({
           .maybeSingle(),
       ])
     : [{ data: null }, { data: null }];
+
+  // ===== سجل الأوردر: بنجمّع الأحداث الثابتة + سجل النشاط + التعليقات =====
+  const fmtWhen = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleString("ar-EG", {
+          timeZone: "Africa/Cairo",
+          day: "numeric",
+          month: "short",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : "—";
+
+  const { data: orderLog } = order.order_number
+    ? await createAdminClient()
+        .from("activity_log")
+        .select("actor_name, action, summary, created_at")
+        .like("summary", `%${order.order_number}%`)
+        .order("created_at", { ascending: true })
+        .limit(60)
+        .overrideTypes<
+          {
+            actor_name: string | null;
+            action: string;
+            summary: string | null;
+            created_at: string;
+          }[]
+        >()
+    : { data: [] };
+
+  type Ev = { at: string; text: string; when: string; who?: string; dot: string };
+  const timeline: Ev[] = [];
+  if (order.order_date) {
+    timeline.push({
+      at: order.order_date,
+      text: "اتعمل الأوردر",
+      when: fmtWhen(order.order_date),
+      dot: "bg-blue-500",
+    });
+  }
+  for (const l of orderLog ?? []) {
+    timeline.push({
+      at: l.created_at,
+      text: l.summary ?? l.action,
+      when: fmtWhen(l.created_at),
+      who: l.actor_name ?? undefined,
+      dot: l.action.startsWith("bosta")
+        ? "bg-[#E30613]"
+        : l.action.includes("delete")
+          ? "bg-red-500"
+          : "bg-gray-400",
+    });
+  }
+  if (order.delivered_at) {
+    timeline.push({
+      at: order.delivered_at,
+      text: "اتسلّم للعميل",
+      when: fmtWhen(order.delivered_at),
+      dot: "bg-green-600",
+    });
+  }
+  timeline.sort((a, b) => a.at.localeCompare(b.at));
 
   // لينك واتساب العميل: نحوّل الرقم لصيغة دولية (مصر 20)
   const rawPhone = (order.customers?.phone ?? "").replace(/\D/g, "");
@@ -830,6 +894,37 @@ export default async function OrderDetailsPage({
           )}
         </div>
       )}
+
+      {/* ===== سجل الأوردر: من أول ما اتعمل لحد آخر حركة ===== */}
+      <div className="rounded-xl bg-white shadow-sm">
+        <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
+          سجل الأوردر
+        </h2>
+        <ol className="space-y-0 px-5 py-4">
+          {timeline.length === 0 ? (
+            <li className="text-sm text-gray-400">مفيش حركات مسجّلة.</li>
+          ) : (
+            timeline.map((t, i) => (
+              <li key={i} className="relative flex gap-3 pb-4 last:pb-0">
+                {/* خط رأسي بين النقط */}
+                {i < timeline.length - 1 && (
+                  <span className="absolute start-[5px] top-3 h-full w-px bg-gray-200" />
+                )}
+                <span
+                  className={`relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${t.dot}`}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-gray-900">{t.text}</div>
+                  <div className="text-xs text-gray-400">
+                    {t.when}
+                    {t.who ? ` · ${t.who}` : ""}
+                  </div>
+                </div>
+              </li>
+            ))
+          )}
+        </ol>
+      </div>
     </div>
   );
 }

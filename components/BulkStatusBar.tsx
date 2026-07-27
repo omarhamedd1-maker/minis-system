@@ -41,6 +41,12 @@ export function BulkStatusBar({
         'input[data-order-checkbox]:checked'
       );
       setCount(checked.length);
+      // مافيش حاجة متحددة؟ نقفل وضع التحديد على الموبايل
+      if (checked.length === 0) {
+        document.dispatchEvent(
+          new CustomEvent("minis-select-mode", { detail: false })
+        );
+      }
     };
     document.addEventListener("change", recount);
     // كروت الموبايل بتبلّغنا لما التحديد يتغيّر (ضغطة طويلة)
@@ -164,9 +170,25 @@ export function BulkStatusBar({
             type="button"
             onClick={apply}
             disabled={pending}
-            className="rounded-lg bg-white px-3 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100 disabled:opacity-60"
+            title="طبّق على المحدد"
+            aria-label="طبّق على المحدد"
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-gray-900 hover:bg-gray-100 disabled:opacity-60"
           >
-            {pending ? "بيحفظ..." : "طبّق على المحدد"}
+            {pending ? (
+              <span className="text-[10px]">…</span>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            )}
           </button>
         </>
       )}

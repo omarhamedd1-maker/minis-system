@@ -23,6 +23,16 @@ export function SelectableOrderCard({
   const [selected, setSelected] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longFired = useRef(false);
+  const firstRun = useRef(true);
+
+  // بنبلّغ الشريط بعد ما الـ DOM يتحدّث فعلاً — عشان الشريط يظهر من أول تحديد
+  useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
+    document.dispatchEvent(new Event("minis-selection-changed"));
+  }, [selected]);
 
   // وضع التحديد مشترك بين كل الكروت — بنسمع لحدث عام
   useEffect(() => {
@@ -48,10 +58,6 @@ export function SelectableOrderCard({
       if (navigator.vibrate) navigator.vibrate(15);
       enterSelectMode();
       setSelected(true);
-      // نبلّغ الشريط إن التحديد اتغيّر
-      requestAnimationFrame(() =>
-        document.dispatchEvent(new Event("minis-selection-changed"))
-      );
     }, LONG_PRESS_MS);
   }
 
@@ -71,9 +77,6 @@ export function SelectableOrderCard({
     if (selectMode) {
       e.preventDefault();
       setSelected((v) => !v);
-      requestAnimationFrame(() =>
-        document.dispatchEvent(new Event("minis-selection-changed"))
-      );
       return;
     }
     // عادي: نفتح الأوردر
@@ -104,9 +107,10 @@ export function SelectableOrderCard({
         aria-hidden="true"
         tabIndex={-1}
       />
+      {/* دايرة التحديد على اليمين — والمحتوى بيزحزح شمال عشان يفضّي مكانها */}
       {selectMode && (
         <span
-          className={`absolute end-2 top-2 z-20 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+          className={`absolute start-3 top-3.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
             selected
               ? "border-gray-900 bg-gray-900 text-white"
               : "border-gray-300 bg-white"
@@ -125,7 +129,11 @@ export function SelectableOrderCard({
           )}
         </span>
       )}
-      {children}
+      <div
+        className={`transition-[padding] ${selectMode ? "ps-7" : ""}`}
+      >
+        {children}
+      </div>
     </div>
   );
 }
