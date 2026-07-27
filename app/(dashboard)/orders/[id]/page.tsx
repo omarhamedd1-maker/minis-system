@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import {
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
-  RETURNED_AFTER_DELIVERY_BADGE,
   formatDate,
   formatMoney,
   orderStatusBadge,
@@ -24,7 +23,7 @@ import {
   linkBostaShipment,
   sendOrderToBosta,
   toggleOrderArchive,
-  toggleReturnedAfterDelivery,
+  saveReturnNote,
   updatePayment,
   updateDiscount,
   updateOrderItem,
@@ -45,7 +44,6 @@ type OrderDetails = {
   bosta_collected: boolean;
   bosta_tracking: string | null;
   bosta_shipping_cost: number;
-  returned_after_delivery: boolean | null;
   return_note: string | null;
   payment_method: string | null;
   amount_paid: number | null;
@@ -94,7 +92,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
-       returned_after_delivery, return_note, payment_method, amount_paid,
+       return_note, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
          product_variants(variant_name, products(name)))`
@@ -198,13 +196,6 @@ export default async function OrderDetailsPage({
           >
             {badge.label}
           </span>
-          {order.returned_after_delivery && (
-            <span
-              className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${RETURNED_AFTER_DELIVERY_BADGE.className}`}
-            >
-              {RETURNED_AFTER_DELIVERY_BADGE.label}
-            </span>
-          )}
           {order.archived && (
             <span className="inline-block shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
               مؤرشف
@@ -529,54 +520,39 @@ export default async function OrderDetailsPage({
           )}
         </div>
 
-        {/* مرتجع بعد التسليم (شحنة عكسية) */}
-        {canStatus && (
+        {/* تفاصيل المرتجع بعد التسليم — الحالة نفسها بتتغيّر من فوق */}
+        {isAdmin && (
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-bold text-gray-900">
-              مرتجع بعد التسليم
+              تفاصيل المرتجع
             </h2>
-            {order.returned_after_delivery ? (
-              <>
-                <p className="text-sm text-gray-700">
-                  الأوردر ده معلَّم كمرتجع بعد التسليم ومش محسوب في المبيعات.
-                </p>
-                {order.return_note && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    {order.return_note}
-                  </p>
-                )}
-                <form action={toggleReturnedAfterDelivery} className="mt-3">
-                  <input type="hidden" name="order_id" value={order.id} />
-                  <input type="hidden" name="on" value="0" />
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
-                  >
-                    فكّ العلامة
-                  </button>
-                </form>
-              </>
+            {order.order_status === "returned_after_delivery" ? (
+              <p className="mb-2 text-sm text-gray-700">
+                الأوردر ده مرتجع بعد التسليم ومش محسوب في المبيعات.
+              </p>
             ) : (
-              <form action={toggleReturnedAfterDelivery} className="space-y-2">
-                <input type="hidden" name="order_id" value={order.id} />
-                <input type="hidden" name="on" value="1" />
-                <input
-                  name="return_note"
-                  placeholder="إيه اللي رجع؟ (كله أو جزء) ورقم شحنة المرتجع لو فيه"
-                  className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-                />
-                <ConfirmButton
-                  message="تعلّم الأوردر ده كمرتجع بعد التسليم؟ هيتشال من المبيعات والأرباح."
-                  className="rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100"
-                >
-                  علّم كمرتجع بعد التسليم
-                </ConfirmButton>
-                <p className="text-xs text-gray-400">
-                  للحالة اللي العميل استلم وبعدين رجّع. اعمل شحنة المرتجع في بوسطة
-                  يدوي، وسجّل الفلوس اللي رجّعتها للعميل في الخزنة.
-                </p>
-              </form>
+              <p className="mb-2 text-xs text-gray-400">
+                لو العميل استلم وبعدين رجّع، غيّر الحالة لـ &quot;مرتجع بعد
+                التسليم&quot; من فوق، واكتب هنا إيه اللي رجع. اعمل شحنة المرتجع في
+                بوسطة يدوي، وسجّل الفلوس اللي رجّعتها للعميل في الخزنة.
+              </p>
             )}
+            <form action={saveReturnNote} className="space-y-2">
+              <input type="hidden" name="order_id" value={order.id} />
+              <input
+                key={`rn-${order.return_note ?? ""}`}
+                name="return_note"
+                defaultValue={order.return_note ?? ""}
+                placeholder="إيه اللي رجع؟ (كله أو جزء) + رقم شحنة المرتجع"
+                className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+              >
+                حفظ
+              </button>
+            </form>
           </div>
         )}
       </div>

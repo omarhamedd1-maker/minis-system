@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { ExpenseRow } from "@/components/ExpenseRow";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { addExpense, deleteExpense, updateExpense } from "./actions";
 
@@ -40,6 +41,7 @@ export default async function ExpensesPage({
     deleted?: string;
     cat?: string;
     period?: string;
+    edit?: string;
   }>;
 }) {
   const {
@@ -48,6 +50,7 @@ export default async function ExpensesPage({
     deleted,
     cat: rawCat,
     period: rawPeriod,
+    edit: editId,
   } = await searchParams;
   const cat = CATEGORY_SUGGESTIONS.includes(rawCat ?? "") ? rawCat : undefined;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
@@ -84,12 +87,13 @@ export default async function ExpensesPage({
 
   const shownTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-  const buildHref = (next: { cat?: string | null; period?: string }) => {
+  const buildHref = (next: { cat?: string | null; period?: string; edit?: string }) => {
     const params = new URLSearchParams();
     const c = next.cat === null ? undefined : next.cat ?? cat;
     const p = next.period ?? period;
     if (c) params.set("cat", c);
     if (p && p !== "month") params.set("period", p);
+    if (next.edit) params.set("edit", next.edit);
     const qs = params.toString();
     return qs ? `/expenses?${qs}` : "/expenses";
   };
@@ -239,7 +243,112 @@ export default async function ExpensesPage({
             : "لسه مفيش مصاريف مسجلة."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <>
+        {/* ===== موبايل: كروت والأزرار ظاهرة ===== */}
+        <div className="space-y-2 md:hidden">
+          {expenses.map((expense) => (
+            <div key={expense.id} className="rounded-xl bg-white p-3 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-gray-900">
+                    {expense.category}
+                  </div>
+                  {expense.description && (
+                    <div className="mt-0.5 text-xs text-gray-600">
+                      {expense.description}
+                    </div>
+                  )}
+                  <div className="mt-0.5 text-xs text-gray-400">
+                    {formatDate(expense.expense_date)}
+                  </div>
+                </div>
+                <div className="shrink-0 text-base font-bold text-red-700">
+                  {formatMoney(expense.amount)}
+                </div>
+              </div>
+              {isAdmin && (
+                <div className="mt-2 flex items-center gap-2 border-t border-gray-100 pt-2">
+                  <Link
+                    href={buildHref({ edit: expense.id })}
+                    className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white"
+                  >
+                    تعديل
+                  </Link>
+                  <form action={deleteExpense}>
+                    <input type="hidden" name="expense_id" value={expense.id} />
+                    <ConfirmButton
+                      message="متأكد إنك عايز تمسح المصروف ده؟"
+                      className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700"
+                    >
+                      مسح
+                    </ConfirmButton>
+                  </form>
+                </div>
+              )}
+              {isAdmin && editId === expense.id && (
+                <form
+                  action={updateExpense}
+                  className="minis-in mt-2 space-y-2 border-t border-gray-100 pt-2"
+                >
+                  <input type="hidden" name="expense_id" value={expense.id} />
+                  <div className="flex gap-2">
+                    <select
+                      name="category"
+                      defaultValue={expense.category}
+                      className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      aria-label="النوع"
+                    >
+                      {CATEGORY_SUGGESTIONS.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      name="amount"
+                      defaultValue={expense.amount}
+                      min="0.01"
+                      step="0.01"
+                      className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      aria-label="المبلغ"
+                    />
+                  </div>
+                  <input
+                    name="description"
+                    defaultValue={expense.description ?? ""}
+                    placeholder="الوصف"
+                    className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  />
+                  <input
+                    type="date"
+                    name="expense_date"
+                    defaultValue={expense.expense_date}
+                    className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                    aria-label="التاريخ"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+                    >
+                      حفظ
+                    </button>
+                    <Link
+                      href={buildHref({})}
+                      className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
+                    >
+                      إلغاء
+                    </Link>
+                  </div>
+                </form>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ===== كمبيوتر: جدول ===== */}
+        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-right text-gray-500">
@@ -283,6 +392,7 @@ export default async function ExpensesPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

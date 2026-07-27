@@ -981,38 +981,32 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   return { ok: true, sent, skipped, failed, details };
 }
 
-// تعليم/فك "مرتجع بعد التسليم" — علامة منفصلة عن الحالة عشان مزامنة بوسطة
-// (بتلمس order_status بس) مالغيهاش
-export async function toggleReturnedAfterDelivery(formData: FormData) {
+// حفظ تفاصيل المرتجع (إيه اللي رجع + رقم شحنة المرتجع)
+export async function saveReturnNote(formData: FormData) {
   const me = await requirePermission("orders.status");
   const orderId = String(formData.get("order_id") ?? "");
-  const on = formData.get("on") === "1";
   const note = String(formData.get("return_note") ?? "").trim();
   if (!orderId) redirect("/orders");
 
   const supabase = createAdminClient();
   const { error } = await supabase
     .from("orders")
-    .update({
-      returned_after_delivery: on,
-      return_note: on ? note || null : null,
-    })
+    .update({ return_note: note || null })
     .eq("id", orderId);
 
   if (error) {
     redirect(
       `/orders/${orderId}?error=` +
-        encodeURIComponent("معرفناش نحفظ المرتجع: " + error.message)
+        encodeURIComponent("معرفناش نحفظ تفاصيل المرتجع: " + error.message)
     );
   }
 
   await logActivity(
     me,
-    on ? "order.returned_after_delivery" : "order.return_undo",
-    `${on ? "علّم" : "فكّ"} مرتجع بعد التسليم لأوردر ${await orderNo(supabase, orderId)}`
+    "order.return_note",
+    `سجّل تفاصيل مرتجع لأوردر ${await orderNo(supabase, orderId)}`
   );
   revalidatePath(`/orders/${orderId}`);
-  revalidatePath("/orders");
   redirect(`/orders/${orderId}?saved=1`);
 }
 

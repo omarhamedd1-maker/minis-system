@@ -28,10 +28,10 @@ export function CashManualRow({
   if (!editing) {
     return (
       <tr className="border-b border-gray-100 last:border-0">
-        <td className="px-4 py-3 text-gray-700">
+        <td className="px-2 py-3 text-xs text-gray-700 sm:px-4 sm:text-sm">
           {formatDate(row.transaction_date)}
         </td>
-        <td className="px-4 py-3">
+        <td className="hidden px-4 py-3 sm:table-cell">
           {row.direction === "in" ? (
             <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
               داخل
@@ -42,22 +42,22 @@ export function CashManualRow({
             </span>
           )}
         </td>
-        <td className="px-4 py-3 text-gray-700">
+        <td className="break-words px-2 py-3 text-xs text-gray-700 sm:px-4 sm:text-sm">
           {row.description ? `${label}: ${row.description}` : label}
         </td>
         <td
-          className={`px-4 py-3 font-medium ${
+          className={`px-2 py-3 text-xs font-medium sm:px-4 sm:text-sm ${
             row.direction === "in" ? "text-green-700" : "text-red-700"
           }`}
         >
           {formatMoney(row.amount)}
         </td>
-        <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
+        <td className="px-2 py-3 sm:px-4">
+          <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+              className="rounded-lg bg-gray-900 px-2 py-1 text-xs font-medium text-white hover:bg-gray-700 sm:px-3"
             >
               تعديل
             </button>
@@ -65,7 +65,7 @@ export function CashManualRow({
               <input type="hidden" name="transaction_id" value={row.id} />
               <ConfirmButton
                 message="متأكد إنك عايز تمسح الحركة دي من الخزنة؟"
-                className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                className="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 sm:px-3"
               >
                 مسح
               </ConfirmButton>
