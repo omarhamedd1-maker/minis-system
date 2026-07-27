@@ -332,22 +332,106 @@ export default async function StatsPage({
     title: `${key}: ${value.toLocaleString("en")} جنيه`,
   }));
 
-  // مقارنة آخر 6 شهور: مبيعات وأرباح
-  const monthGroups: { label: string; a: number; b: number }[] = [];
-  for (let offset = 5; offset >= 0; offset--) {
-    const d = new Date(Date.UTC(todayYear, todayMonth - 1 - offset, 1));
-    const key = d.toISOString().slice(0, 7);
-    const monthOrders = allOrders.filter(
-      (o) =>
-        orderDay(o).slice(0, 7) === key &&
-        !EXCLUDED.includes(o.order_status ?? "")
+  // ===== شارت المقارنة: بيتقسّم حسب الفترة المختارة =====
+  // يوم واحد → بالساعات · لحد شهر → بالأيام · لحد 4 شهور → بالأسابيع · أكتر → بالشهور
+  const daysInPeriod =
+    Math.round(
+      (new Date(periodEnd + "T12:00:00Z").getTime() -
+        new Date(periodStart + "T12:00:00Z").getTime()) /
+        86400000
+    ) + 1;
+
+  const bucketMode: "hour" | "day" | "week" | "month" =
+    daysInPeriod <= 1
+      ? "hour"
+      : daysInPeriod <= 31
+        ? "day"
+        : daysInPeriod <= 120
+          ? "week"
+          : "month";
+
+  const comparisonTitle =
+    bucketMode === "hour"
+      ? "المبيعات والأرباح بالساعة"
+      : bucketMode === "day"
+        ? "المبيعات والأرباح بالأيام"
+        : bucketMode === "week"
+          ? "المبيعات والأرباح بالأسابيع"
+          : "المبيعات والأرباح بالشهور";
+
+  // بنحسب مفتاح كل أوردر حسب طريقة التقسيم
+  function bucketOf(o: OrderRow): string {
+    const day = orderDay(o);
+    if (bucketMode === "hour") {
+      return cairoHourFormat.format(new Date(o.order_date!)).padStart(2, "0");
+    }
+    if (bucketMode === "day") return day;
+    if (bucketMode === "month") return day.slice(0, 7);
+    // أسبوع: بنرجّع أول يوم في الأسبوع (بالنسبة لبداية الفترة)
+    const diff = Math.floor(
+      (new Date(day + "T12:00:00Z").getTime() -
+        new Date(periodStart + "T12:00:00Z").getTime()) /
+        86400000
     );
-    monthGroups.push({
-      label: d.toLocaleDateString("ar-EG", { month: "short" }),
-      a: monthOrders.reduce((s, o) => s + itemsTotal(o) - o.discount, 0),
-      b: monthOrders.reduce((s, o) => s + itemsProfit(o) - o.discount, 0),
-    });
+    return String(Math.floor(diff / 7));
   }
+
+  // بنبني قايمة الفترات الفاضية بالترتيب عشان الشارت يبان متصل
+  const cmpBuckets: { key: string; label: string }[] = [];
+  if (bucketMode === "hour") {
+    for (let h = 0; h < 24; h += 2) {
+      const k = String(h).padStart(2, "0");
+      cmpBuckets.push({ key: k, label: `${h}:00` });
+    }
+  } else if (bucketMode === "day") {
+    for (let i = 0; i < daysInPeriod; i++) {
+      const d = shiftDays(periodStart, i);
+      cmpBuckets.push({
+        key: d,
+        label: new Date(d + "T12:00:00Z").toLocaleDateString("ar-EG", {
+          day: "numeric",
+          month: "short",
+        }),
+      });
+    }
+  } else if (bucketMode === "week") {
+    const weeks = Math.ceil(daysInPeriod / 7);
+    for (let w = 0; w < weeks; w++) {
+      cmpBuckets.push({ key: String(w), label: `أسبوع ${w + 1}` });
+    }
+  } else {
+    const start = new Date(periodStart + "T12:00:00Z");
+    const end = new Date(periodEnd + "T12:00:00Z");
+    const months =
+      (end.getUTCFullYear() - start.getUTCFullYear()) * 12 +
+      (end.getUTCMonth() - start.getUTCMonth()) +
+      1;
+    for (let m = 0; m < months; m++) {
+      const d = new Date(
+        Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + m, 1)
+      );
+      cmpBuckets.push({
+        key: d.toISOString().slice(0, 7),
+        label: d.toLocaleDateString("ar-EG", { month: "short" }),
+      });
+    }
+  }
+
+  const monthGroups = cmpBuckets.map((b) => {
+    const rows = validOrders.filter((o) => {
+      // في وضع الساعات بنجمّع كل ساعتين مع بعض
+      if (bucketMode === "hour") {
+        const h = Number(bucketOf(o));
+        return h >= Number(b.key) && h < Number(b.key) + 2;
+      }
+      return bucketOf(o) === b.key;
+    });
+    return {
+      label: b.label,
+      a: rows.reduce((s, o) => s + itemsTotal(o) - o.discount, 0),
+      b: rows.reduce((s, o) => s + itemsProfit(o) - o.discount, 0),
+    };
+  });
 
   // توزيع الحالات
   const statusCounts = new Map<string, number>();
@@ -592,7 +676,7 @@ export default async function StatsPage({
 
       <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
         <h2 className="mb-3 text-sm font-bold text-gray-900">
-          مقارنة آخر 6 شهور
+          {comparisonTitle}
         </h2>
         <GroupedBars groups={monthGroups} aLabel="المبيعات" bLabel="الأرباح" />
       </div>

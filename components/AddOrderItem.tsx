@@ -50,12 +50,13 @@ export function AddOrderItem({
   return (
     <form
       action={addAction}
-      className="flex flex-wrap items-end gap-2 border-t border-gray-200 px-4 py-4"
+      className="space-y-2 border-t border-gray-200 px-4 py-4"
     >
       <input type="hidden" name="order_id" value={orderId} />
       <input type="hidden" name="variant_id" value={selected?.id ?? ""} />
 
-      <div className="relative flex min-w-64 flex-1 flex-col gap-1">
+      {/* البحث سطر لوحده بعرض كامل */}
+      <div className="relative flex flex-col gap-1">
         <label className="text-xs text-gray-500">إضافة منتج</label>
         <input
           value={query}
@@ -94,11 +95,8 @@ export function AddOrderItem({
                     >
                       {v.sku ?? "—"}
                     </span>
-                    <span className="text-gray-500" dir="ltr">
-                      {v.name_en ?? "—"}
-                    </span>
-                    <span className="font-medium text-gray-900">
-                      {v.name_ar ?? "—"}
+                    <span className="min-w-0 flex-1 truncate font-medium text-gray-900">
+                      {v.name_ar ?? v.name_en ?? "—"}
                     </span>
                   </button>
                 ))
@@ -108,38 +106,67 @@ export function AddOrderItem({
         )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-500">الكمية</label>
-        <input
-          type="number"
-          name="quantity"
-          defaultValue={1}
-          min={1}
-          step={1}
-          className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-        />
-      </div>
+      {/* المنتج المختار ظاهر واضح */}
+      {selected && (
+        <div className="minis-in flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs">
+          <span
+            className="shrink-0 rounded bg-white px-1.5 py-0.5 text-gray-600"
+            dir="ltr"
+          >
+            {selected.sku ?? "—"}
+          </span>
+          <span className="min-w-0 flex-1 truncate font-medium text-gray-900">
+            {selected.name_ar ?? selected.name_en ?? "—"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setSelected(null);
+              setQuery("");
+              setPrice("");
+            }}
+            title="شيل الاختيار"
+            className="shrink-0 rounded-lg px-1.5 text-gray-400 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-gray-500">السعر</label>
-        <input
-          type="number"
-          name="sale_price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          min={0}
-          step="0.01"
-          placeholder="سعر البيع"
-          className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-        />
+      {/* الكمية والسعر والإضافة في سطر واحد */}
+      <div className="flex items-end gap-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <label className="text-xs text-gray-500">الكمية</label>
+          <input
+            type="number"
+            name="quantity"
+            defaultValue={1}
+            min={1}
+            step={1}
+            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          />
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <label className="text-xs text-gray-500">السعر</label>
+          <input
+            type="number"
+            name="sale_price"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            min={0}
+            step="0.01"
+            placeholder="سعر البيع"
+            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={!selected}
+          className="shrink-0 rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40"
+        >
+          إضافة
+        </button>
       </div>
-
-      <button
-        type="submit"
-        className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
-      >
-        إضافة
-      </button>
     </form>
   );
 }
