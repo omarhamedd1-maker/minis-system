@@ -468,7 +468,12 @@ export default async function OrdersPage({
 
                   <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-600">
                     <span>التاريخ: {formatDate(order.order_date)}</span>
-                    <span>الإجمالي: {formatMoney(total)}</span>
+                    <span>
+                      الإجمالي:{" "}
+                      <span className="text-sm font-bold text-gray-900">
+                        {formatMoney(total)}
+                      </span>
+                    </span>
                     <span>القطع: {pieces}</span>
                     <span className="flex items-center gap-1">
                       فلوسك:

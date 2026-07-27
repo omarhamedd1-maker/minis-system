@@ -59,6 +59,8 @@ export type StatOrder = {
   bosta_shipping_cost: number | null;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
+  // علامة "مرتجع بعد التسليم" — بتستثني الأوردر من المبيعات والأرباح
+  returned_after_delivery?: boolean | null;
   order_items: OrderItem[];
 };
 export type StatExpense = { amount: number };
@@ -96,7 +98,8 @@ export function computeHeadline(
     (o) => day(o) >= periodStart && day(o) <= periodEnd
   );
   const validOrders = periodOrders.filter(
-    (o) => !EXCLUDED.includes(o.order_status ?? "")
+    (o) =>
+      !EXCLUDED.includes(o.order_status ?? "") && !o.returned_after_delivery
   );
 
   const sales = validOrders.reduce((s, o) => s + itemsTotal(o) - o.discount, 0);

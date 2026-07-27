@@ -42,12 +42,29 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
       label: "رجعت من الشحن",
       className: "bg-orange-50 text-orange-700",
     },
-    // اتسلّمت فعلاً وبعدين العميل رجّعها (كلها أو جزء) — بشحنة عكسية
-    returned_after_delivery: {
-      label: "مرتجع بعد التسليم",
-      className: "bg-rose-50 text-rose-700",
-    },
   };
+
+// "مرتجع بعد التسليم" علامة منفصلة على الأوردر (مش حالة) — عشان مزامنة بوسطة
+// بتلمس الحالة بس فالعلامة تفضل محفوظة
+export const RETURNED_AFTER_DELIVERY_BADGE = {
+  label: "مرتجع بعد التسليم",
+  className: "bg-rose-50 text-rose-700",
+};
+
+// طرق الدفع — كاش عند الاستلام / إنستا باي / فيزا / ديبوزيت (جزء مقدم)
+export const PAYMENT_METHODS: { value: string; label: string }[] = [
+  { value: "cod", label: "كاش عند الاستلام" },
+  { value: "instapay", label: "إنستا باي" },
+  { value: "visa", label: "فيزا / أونلاين" },
+  { value: "deposit", label: "ديبوزيت (جزء مقدم)" },
+];
+
+export function paymentMethodLabel(value: string | null) {
+  return (
+    PAYMENT_METHODS.find((m) => m.value === (value ?? "cod"))?.label ??
+    "كاش عند الاستلام"
+  );
+}
 
 export const ORDER_STATUS_OPTIONS = Object.entries(ORDER_STATUS_LABELS).map(
   ([value, { label }]) => ({ value, label })
@@ -62,21 +79,16 @@ export const SHIPMENT_STATUSES = [
   "returned",
 ];
 // من ساعة ما المندوب يستلم فما فوق (بتتحسب عليها تكلفة بوسطة)
-// المرتجع بعد التسليم متسلّم فعلاً — فبوسطة خدت رسومها كاملة عليه
 export const AT_CARRIER_STATUSES = [
   "shipped",
   "out_for_delivery",
   "delivered",
   "returned",
-  "returned_after_delivery",
 ];
 
 // الحالات اللي معناها الأوردر مش بيتحسب في المبيعات/الأرباح
-export const EXCLUDED_STATUSES = [
-  "cancelled",
-  "returned",
-  "returned_after_delivery",
-];
+// (المرتجع بعد التسليم بيتستثنى بعلامته المنفصلة returned_after_delivery)
+export const EXCLUDED_STATUSES = ["cancelled", "returned"];
 
 export const COST_COMPONENTS = [
   "ستانليس",

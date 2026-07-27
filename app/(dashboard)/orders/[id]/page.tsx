@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   ORDER_STATUS_OPTIONS,
+  PAYMENT_METHODS,
+  RETURNED_AFTER_DELIVERY_BADGE,
   formatDate,
   formatMoney,
   orderStatusBadge,
+  paymentMethodLabel,
 } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
@@ -21,6 +24,8 @@ import {
   linkBostaShipment,
   sendOrderToBosta,
   toggleOrderArchive,
+  toggleReturnedAfterDelivery,
+  updatePayment,
   updateDiscount,
   updateOrderItem,
   updateOrderStatus,
@@ -40,6 +45,10 @@ type OrderDetails = {
   bosta_collected: boolean;
   bosta_tracking: string | null;
   bosta_shipping_cost: number;
+  returned_after_delivery: boolean | null;
+  return_note: string | null;
+  payment_method: string | null;
+  amount_paid: number | null;
   customers: {
     id: string;
     full_name: string | null;
@@ -85,6 +94,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
+       returned_after_delivery, return_note, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
          product_variants(variant_name, products(name)))`
@@ -188,6 +198,13 @@ export default async function OrderDetailsPage({
           >
             {badge.label}
           </span>
+          {order.returned_after_delivery && (
+            <span
+              className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${RETURNED_AFTER_DELIVERY_BADGE.className}`}
+            >
+              {RETURNED_AFTER_DELIVERY_BADGE.label}
+            </span>
+          )}
           {order.archived && (
             <span className="inline-block shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
               مؤرشف
@@ -441,6 +458,127 @@ export default async function OrderDetailsPage({
             </form>
           )}
         </div>
+      </div>
+
+      {/* الدفع والمرتجع بعد التسليم */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-sm font-bold text-gray-900">الدفع</h2>
+          <dl className="space-y-2 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500">الطريقة</dt>
+              <dd className="text-gray-900">
+                {paymentMethodLabel(order.payment_method)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-gray-500">مدفوع مقدماً</dt>
+              <dd className="text-gray-900">
+                {formatMoney(order.amount_paid ?? 0)}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4 border-t border-gray-100 pt-2">
+              <dt className="font-medium text-gray-700">المطلوب تحصيله</dt>
+              <dd className="font-bold text-gray-900">
+                {formatMoney(Math.max(0, grandTotal - (order.amount_paid ?? 0)))}
+              </dd>
+            </div>
+          </dl>
+          {canItems && (
+            <form
+              action={updatePayment}
+              className="mt-3 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-3"
+            >
+              <input type="hidden" name="order_id" value={order.id} />
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500">طريقة الدفع</label>
+                <select
+                  name="payment_method"
+                  defaultValue={order.payment_method ?? "cod"}
+                  className="rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                >
+                  {PAYMENT_METHODS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-gray-500">مدفوع مقدماً</label>
+                <input
+                  key={`paid-${order.amount_paid}`}
+                  type="number"
+                  name="amount_paid"
+                  defaultValue={order.amount_paid ?? 0}
+                  min={0}
+                  step="0.01"
+                  className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+              >
+                حفظ
+              </button>
+              <p className="w-full text-xs text-gray-400">
+                المطلوب تحصيله من بوسطة = الإجمالي ناقص المدفوع مقدماً
+              </p>
+            </form>
+          )}
+        </div>
+
+        {/* مرتجع بعد التسليم (شحنة عكسية) */}
+        {canStatus && (
+          <div className="rounded-xl bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-sm font-bold text-gray-900">
+              مرتجع بعد التسليم
+            </h2>
+            {order.returned_after_delivery ? (
+              <>
+                <p className="text-sm text-gray-700">
+                  الأوردر ده معلَّم كمرتجع بعد التسليم ومش محسوب في المبيعات.
+                </p>
+                {order.return_note && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {order.return_note}
+                  </p>
+                )}
+                <form action={toggleReturnedAfterDelivery} className="mt-3">
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <input type="hidden" name="on" value="0" />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                  >
+                    فكّ العلامة
+                  </button>
+                </form>
+              </>
+            ) : (
+              <form action={toggleReturnedAfterDelivery} className="space-y-2">
+                <input type="hidden" name="order_id" value={order.id} />
+                <input type="hidden" name="on" value="1" />
+                <input
+                  name="return_note"
+                  placeholder="إيه اللي رجع؟ (كله أو جزء) ورقم شحنة المرتجع لو فيه"
+                  className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                />
+                <ConfirmButton
+                  message="تعلّم الأوردر ده كمرتجع بعد التسليم؟ هيتشال من المبيعات والأرباح."
+                  className="rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100"
+                >
+                  علّم كمرتجع بعد التسليم
+                </ConfirmButton>
+                <p className="text-xs text-gray-400">
+                  للحالة اللي العميل استلم وبعدين رجّع. اعمل شحنة المرتجع في بوسطة
+                  يدوي، وسجّل الفلوس اللي رجّعتها للعميل في الخزنة.
+                </p>
+              </form>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-xl bg-white shadow-sm">

@@ -980,3 +980,81 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   const details = [...new Set(failMsgs)].slice(0, 3).join(" — ");
   return { ok: true, sent, skipped, failed, details };
 }
+
+// تعليم/فك "مرتجع بعد التسليم" — علامة منفصلة عن الحالة عشان مزامنة بوسطة
+// (بتلمس order_status بس) مالغيهاش
+export async function toggleReturnedAfterDelivery(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  const on = formData.get("on") === "1";
+  const note = String(formData.get("return_note") ?? "").trim();
+  if (!orderId) redirect("/orders");
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      returned_after_delivery: on,
+      return_note: on ? note || null : null,
+    })
+    .eq("id", orderId);
+
+  if (error) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ المرتجع: " + error.message)
+    );
+  }
+
+  await logActivity(
+    me,
+    on ? "order.returned_after_delivery" : "order.return_undo",
+    `${on ? "علّم" : "فكّ"} مرتجع بعد التسليم لأوردر ${await orderNo(supabase, orderId)}`
+  );
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
+// طريقة الدفع والمدفوع مقدماً (إنستا باي / فيزا / ديبوزيت)
+// مبلغ التحصيل من بوسطة = إجمالي الأوردر ناقص المدفوع مقدماً
+export async function updatePayment(formData: FormData) {
+  const me = await requirePermission("orders.items");
+  const orderId = String(formData.get("order_id") ?? "");
+  const method = String(formData.get("payment_method") ?? "cod");
+  const paidRaw = formData.get("amount_paid");
+  const amountPaid =
+    paidRaw != null && String(paidRaw).trim() !== "" ? Number(paidRaw) : 0;
+
+  if (!orderId) redirect("/orders");
+  if (!Number.isFinite(amountPaid) || amountPaid < 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("المبلغ المدفوع لازم رقم موجب")
+    );
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ payment_method: method, amount_paid: amountPaid })
+    .eq("id", orderId);
+
+  if (error) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ طريقة الدفع: " + error.message)
+    );
+  }
+
+  // لو الدفع اتغيّر، مبلغ التحصيل في بوسطة لازم يتحدّث
+  await pushOrderToShopify(orderId);
+  await logActivity(
+    me,
+    "order.payment",
+    `غيّر طريقة الدفع لأوردر ${await orderNo(supabase, orderId)} (مدفوع ${amountPaid})`
+  );
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=1`);
+}

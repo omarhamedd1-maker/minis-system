@@ -13,7 +13,7 @@ import {
 import { CountUp } from "./CountUp";
 
 const ORDER_SELECT =
-  "order_status, order_date, delivered_at, discount, bosta_shipping_cost, bosta_cod, bosta_collected, order_items(quantity, sale_price_at_order, cost_price_at_order)";
+  "order_status, order_date, delivered_at, discount, bosta_shipping_cost, bosta_cod, bosta_collected, returned_after_delivery, order_items(quantity, sale_price_at_order, cost_price_at_order)";
 
 export function LiveMoneyCards({
   initial,

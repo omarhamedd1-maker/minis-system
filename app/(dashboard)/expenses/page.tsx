@@ -104,48 +104,44 @@ export default async function ExpensesPage({
         </span>
       </div>
 
-      {/* الفلاتر: كل مجموعة في سطر بيتزحلق — عشان مايزنقش على الموبايل */}
-      <div className="space-y-2">
-        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
-          {Object.entries(PERIODS).map(([key, label]) => (
-            <Link
-              key={key}
-              href={buildHref({ period: key })}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors active:scale-95 ${
-                period === key
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
-        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+      <div className="flex flex-wrap items-center gap-2">
+        {Object.entries(PERIODS).map(([key, label]) => (
           <Link
-            href={buildHref({ cat: null })}
-            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors active:scale-95 ${
-              !cat
+            key={key}
+            href={buildHref({ period: key })}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              period === key
                 ? "bg-gray-900 text-white"
                 : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
             }`}
           >
-            كل الأنواع
+            {label}
           </Link>
-          {CATEGORY_SUGGESTIONS.map((c) => (
-            <Link
-              key={c}
-              href={buildHref({ cat: c })}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors active:scale-95 ${
-                cat === c
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
-              }`}
-            >
-              {c}
-            </Link>
-          ))}
-        </div>
+        ))}
+        <span className="mx-1 h-4 w-px bg-gray-300"></span>
+        <Link
+          href={buildHref({ cat: null })}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            !cat
+              ? "bg-gray-900 text-white"
+              : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+          }`}
+        >
+          كل الأنواع
+        </Link>
+        {CATEGORY_SUGGESTIONS.map((c) => (
+          <Link
+            key={c}
+            href={buildHref({ cat: c })}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              cat === c
+                ? "bg-gray-900 text-white"
+                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+            }`}
+          >
+            {c}
+          </Link>
+        ))}
       </div>
 
       {actionError && (
@@ -243,96 +239,7 @@ export default async function ExpensesPage({
             : "لسه مفيش مصاريف مسجلة."}
         </div>
       ) : (
-        <>
-        {/* ===== موبايل: كروت (مفيش سحب جانبي) ===== */}
-        <div className="space-y-2 md:hidden">
-          {expenses.map((expense) => (
-            <div key={expense.id} className="rounded-xl bg-white p-3 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-bold text-gray-900">
-                    {expense.category}
-                  </div>
-                  {expense.description && (
-                    <div className="mt-0.5 truncate text-xs text-gray-600">
-                      {expense.description}
-                    </div>
-                  )}
-                  <div className="mt-0.5 text-xs text-gray-400">
-                    {formatDate(expense.expense_date)}
-                  </div>
-                </div>
-                <div className="shrink-0 text-base font-bold text-red-700">
-                  {formatMoney(expense.amount)}
-                </div>
-              </div>
-              {isAdmin && (
-                <details className="mt-2 border-t border-gray-100 pt-2">
-                  <summary className="cursor-pointer text-xs font-medium text-gray-500">
-                    تعديل
-                  </summary>
-                  <form action={updateExpense} className="mt-2 space-y-2">
-                    <input type="hidden" name="expense_id" value={expense.id} />
-                    <div className="flex gap-2">
-                      <input
-                        name="category"
-                        defaultValue={expense.category}
-                        list="exp-cats"
-                        className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                        aria-label="النوع"
-                      />
-                      <input
-                        type="number"
-                        name="amount"
-                        defaultValue={expense.amount}
-                        min={0}
-                        step="0.01"
-                        className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                        aria-label="المبلغ"
-                      />
-                    </div>
-                    <input
-                      name="description"
-                      defaultValue={expense.description ?? ""}
-                      placeholder="الوصف"
-                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                    />
-                    <input
-                      type="date"
-                      name="expense_date"
-                      defaultValue={expense.expense_date}
-                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                      aria-label="التاريخ"
-                    />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white active:scale-95"
-                    >
-                      حفظ
-                    </button>
-                  </form>
-                  <form action={deleteExpense} className="mt-2">
-                    <input type="hidden" name="expense_id" value={expense.id} />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 active:scale-95"
-                    >
-                      مسح
-                    </button>
-                  </form>
-                </details>
-              )}
-            </div>
-          ))}
-          <datalist id="exp-cats">
-            {CATEGORY_SUGGESTIONS.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-        </div>
-
-        {/* ===== كمبيوتر: جدول ===== */}
-        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-right text-gray-500">
@@ -376,7 +283,6 @@ export default async function ExpensesPage({
             </tbody>
           </table>
         </div>
-        </>
       )}
     </div>
   );

@@ -17,6 +17,7 @@ type OrderRow = {
   bosta_shipping_cost: number;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
+  returned_after_delivery: boolean | null;
   customers: { full_name: string | null } | null;
   order_items: {
     quantity: number;
@@ -159,7 +160,7 @@ export default async function StatsPage({
       supabase
         .from("orders")
         .select(
-          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_cod, bosta_collected, customers(full_name),
+          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_cod, bosta_collected, returned_after_delivery, customers(full_name),
            order_items(quantity, sale_price_at_order, cost_price_at_order,
              product_variants(id, variant_name, products(name)))`
         )
@@ -209,7 +210,8 @@ export default async function StatsPage({
     (o) => orderDay(o) >= periodStart && orderDay(o) <= periodEnd
   );
   const validOrders = periodOrders.filter(
-    (o) => !EXCLUDED.includes(o.order_status ?? "")
+    (o) =>
+      !EXCLUDED.includes(o.order_status ?? "") && !o.returned_after_delivery
   );
 
   // أرقام الكروت المالية (أول تحميل) — بتتحدّث لايف في العميل
