@@ -71,7 +71,7 @@ export function DayPicker({
             onClick={() => setOpen(false)}
             aria-hidden="true"
           ></div>
-          <div className="absolute top-full z-50 mt-2 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-xl ltr:left-0 rtl:right-0">
+          <div className="absolute top-full z-50 mt-2 flex w-max max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-xl ltr:left-0 rtl:left-0">
             <label className="flex items-center justify-between gap-3 text-xs text-gray-600">
               <span>من</span>
               <input

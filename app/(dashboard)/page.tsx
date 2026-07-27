@@ -450,36 +450,35 @@ export default async function StatsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-gray-900">الداشبورد</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          {Object.entries(PERIODS).map(([key, p]) => (
-            <Link
-              key={key}
-              href={`/?period=${key}`}
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                !hasRange && period === key
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
-              }`}
-            >
-              {p.label}
-            </Link>
-          ))}
-          <DayPicker from={rangeFrom} to={rangeTo} />
-          {canExport && (
-            <a
-              href="/export"
-              className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-            >
-              تصدير Excel
-            </a>
-          )}
-        </div>
+        {canExport && (
+          <a
+            href="/export"
+            className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+          >
+            تصدير Excel
+          </a>
+        )}
       </div>
 
       <section>
-        <h2 className="mb-3 text-sm font-bold text-gray-500">
-          {periodLabel}
-        </h2>
+        {/* الفترة المختارة على اليمين، والاختيارات التانية جنبها على الشمال */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h2 className="text-sm font-bold text-gray-900">{periodLabel}</h2>
+          <span className="h-4 w-px bg-gray-300"></span>
+          {Object.entries(PERIODS)
+            // نخفي الفترة المتحددة بالفعل — اسمها ظاهر على اليمين
+            .filter(([key]) => hasRange || period !== key)
+            .map(([key, p]) => (
+              <Link
+                key={key}
+                href={`/?period=${key}`}
+                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-100"
+              >
+                {p.label}
+              </Link>
+            ))}
+          <DayPicker from={rangeFrom} to={rangeTo} />
+        </div>
         <LiveMoneyCards
           initial={headline}
           period={period}
