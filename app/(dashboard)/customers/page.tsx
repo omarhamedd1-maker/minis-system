@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { EXCLUDED_STATUSES, formatDate, formatMoney } from "@/lib/format";
 import { CustomerRow } from "@/components/CustomerRow";
-import { requirePagePermission } from "@/lib/permissions";
+import { can, requirePagePermission } from "@/lib/permissions";
+import { mergeCustomers } from "./actions";
 
 type CustomerData = {
   id: string;
@@ -47,7 +48,8 @@ export default async function CustomersPage({
   } = await searchParams;
   const searchTerm = (q ?? "").trim();
   const sort = SORTS[rawSort ?? ""] ? (rawSort as string) : "total";
-  await requirePagePermission("customers.view");
+  const user = await requirePagePermission("customers.view");
+  const canEdit = can(user, "customers.edit");
   const supabase = await createClient();
 
   const { data: customers, error } = await supabase
@@ -115,6 +117,24 @@ export default async function CustomersPage({
         return (b.lastOrderDate ?? "").localeCompare(a.lastOrderDate ?? "");
       return b.total - a.total;
     });
+
+  // عملاء مكررين: نفس رقم التليفون (بعد التنظيف) لأكتر من عميل
+  const byPhone = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const digits = (r.phone ?? "").replace(/\D/g, "").replace(/^(20|0)+/, "");
+    if (digits.length < 8) continue;
+    const list = byPhone.get(digits) ?? [];
+    list.push(r);
+    byPhone.set(digits, list);
+  }
+  const duplicateGroups = [...byPhone.entries()]
+    .filter(([, list]) => list.length > 1)
+    .slice(0, 30)
+    .map(([digits, list]) => ({
+      phone: list[0].phone ?? digits,
+      // الأكتر أوردرات الأول — عشان يبقى هو الافتراضي اللي نسيبه
+      members: [...list].sort((a, b) => b.ordersCount - a.ordersCount),
+    }));
 
   const sortHref = (key: string) => {
     const params = new URLSearchParams();
@@ -189,6 +209,67 @@ export default async function CustomersPage({
         <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
           تم مسح العميل
         </div>
+      )}
+
+      {/* عملاء مشتبه إنهم مكررين — نفس التليفون بأسماء/بيانات مختلفة */}
+      {canEdit && duplicateGroups.length > 0 && (
+        <details className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <summary className="cursor-pointer text-sm font-bold text-amber-800">
+            عملاء مكررين ({duplicateGroups.length} مجموعة) — دوس للدمج
+          </summary>
+          <p className="mt-2 text-xs text-amber-700">
+            دول عملاء بنفس رقم التليفون. اختار اللي تسيبه، والباقي هيتدمج فيه
+            (أوردراتهم هتتنقل له).
+          </p>
+          <div className="mt-3 space-y-3">
+            {duplicateGroups.map((g) => (
+              <form
+                key={g.phone}
+                action={mergeCustomers}
+                className="rounded-lg bg-white p-3"
+              >
+                <div className="mb-2 text-xs text-gray-500" dir="ltr">
+                  {g.phone}
+                </div>
+                <div className="space-y-1.5">
+                  {g.members.map((m, i) => (
+                    <label
+                      key={m.id}
+                      className="flex items-center gap-2 text-sm text-gray-800"
+                    >
+                      <input
+                        type="radio"
+                        name="keep_id"
+                        value={m.id}
+                        defaultChecked={i === 0}
+                        className="h-4 w-4"
+                      />
+                      <span className="min-w-0 flex-1 truncate">{m.name}</span>
+                      <span className="shrink-0 text-xs text-gray-500">
+                        {m.ordersCount} أوردر
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {/* بنبعت كل أعضاء المجموعة، والسيرفر بيستثني اللي اخترته */}
+                {g.members.map((m) => (
+                  <input
+                    key={`d-${m.id}`}
+                    type="hidden"
+                    name="all_ids"
+                    value={m.id}
+                  />
+                ))}
+                <button
+                  type="submit"
+                  className="mt-2 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  ادمج المجموعة
+                </button>
+              </form>
+            ))}
+          </div>
+        </details>
       )}
 
       {rows.length === 0 ? (
