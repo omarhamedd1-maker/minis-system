@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "نظام إدارة تشغيل Minis",
     start_url: "/",
     display: "standalone",
-    background_color: "#efeeec",
-    theme_color: "#efeeec",
+    background_color: "#f9fafb",
+    theme_color: "#f9fafb",
     lang: "ar",
     dir: "rtl",
     icons: [

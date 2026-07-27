@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
+import { EXCLUDED_STATUSES, formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CustomerEdit } from "@/components/CustomerEdit";
 import { BackLink } from "@/components/BackLink";
@@ -24,7 +24,7 @@ type CustomerDetail = {
   }[];
 };
 
-const EXCLUDED = ["cancelled", "returned"];
+const EXCLUDED = EXCLUDED_STATUSES;
 
 export default async function CustomerPage({
   params,

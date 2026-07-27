@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#efeeec",
+  themeColor: "#f9fafb",
   // عشان الشريط السفلي في التليفون يفضل فوق شريط الهوم مش ملزوق تحت خالص
   viewportFit: "cover",
   // نثبّت الوضع الفاتح — عشان تليفون بالوضع الداكن مايفتحش بشاشة سودا
@@ -44,7 +44,7 @@ export default function RootLayout({
       dir="rtl"
       className={`${cairo.variable} ${lexend.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#efeeec]">{children}</body>
+      <body className="min-h-full flex flex-col bg-gray-50">{children}</body>
     </html>
   );
 }

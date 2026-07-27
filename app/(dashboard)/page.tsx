@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney, orderStatusBadge } from "@/lib/format";
+import { EXCLUDED_STATUSES, formatMoney, orderStatusBadge } from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { DayPicker } from "@/components/DayPicker";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
@@ -51,7 +51,7 @@ const cairoWeekdayFormat = new Intl.DateTimeFormat("ar-EG", {
   timeZone: "Africa/Cairo",
 });
 
-const EXCLUDED = ["cancelled", "returned"];
+const EXCLUDED = EXCLUDED_STATUSES;
 
 const PERIODS: Record<string, { label: string }> = {
   today: { label: "النهارده" },

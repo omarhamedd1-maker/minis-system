@@ -14,7 +14,7 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#efeeec",
+          background: "#f9fafb",
           color: "#171717",
           fontSize: 108,
           fontWeight: 100,

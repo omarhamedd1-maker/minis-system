@@ -396,11 +396,11 @@ export default async function OrdersPage({
                       <span>{formatDate(order.order_date)}</span>
                       <span>{pieces} قطعة</span>
                       <span className="flex items-center gap-1">
-                        التحصيل:
+                        فلوسك:
                         {order.bosta_state ? (
                           order.bosta_collected ? (
                             <span className="font-medium text-green-700">
-                              اتحصّل
+                              وصلت
                             </span>
                           ) : (
                             <span className="text-gray-500">لسه</span>
@@ -503,7 +503,7 @@ export default async function OrdersPage({
                   الإجمالي
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
-                  التحصيل
+                  فلوسك
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
                   عدد القطع
@@ -562,7 +562,7 @@ export default async function OrdersPage({
                       {order.bosta_state ? (
                         order.bosta_collected ? (
                           <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                            اتحصّل
+                            وصلت
                           </span>
                         ) : (
                           <span className="inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">

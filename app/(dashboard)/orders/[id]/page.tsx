@@ -352,15 +352,15 @@ export default async function OrderDetailsPage({
                 </div>
               )}
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-gray-500">حالة التحصيل</dt>
+                <dt className="text-gray-500">فلوسك</dt>
                 <dd>
                   {order.bosta_collected ? (
                     <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                      اتحصّل من العميل
+                      وصلت
                     </span>
                   ) : (
                     <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                      لسه ما اتحصّلش
+                      لسه
                     </span>
                   )}
                 </dd>

@@ -37,7 +37,16 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     },
     delivered: { label: "تم التسليم", className: "bg-green-50 text-green-700" },
     cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
-    returned: { label: "مرتجع", className: "bg-orange-50 text-orange-700" },
+    // الشحنة روّحت للعميل ومااتسلمتش (مردّش/رفض) فرجعت لنا
+    returned: {
+      label: "رجعت من الشحن",
+      className: "bg-orange-50 text-orange-700",
+    },
+    // اتسلّمت فعلاً وبعدين العميل رجّعها (كلها أو جزء) — بشحنة عكسية
+    returned_after_delivery: {
+      label: "مرتجع بعد التسليم",
+      className: "bg-rose-50 text-rose-700",
+    },
   };
 
 export const ORDER_STATUS_OPTIONS = Object.entries(ORDER_STATUS_LABELS).map(
@@ -53,11 +62,20 @@ export const SHIPMENT_STATUSES = [
   "returned",
 ];
 // من ساعة ما المندوب يستلم فما فوق (بتتحسب عليها تكلفة بوسطة)
+// المرتجع بعد التسليم متسلّم فعلاً — فبوسطة خدت رسومها كاملة عليه
 export const AT_CARRIER_STATUSES = [
   "shipped",
   "out_for_delivery",
   "delivered",
   "returned",
+  "returned_after_delivery",
+];
+
+// الحالات اللي معناها الأوردر مش بيتحسب في المبيعات/الأرباح
+export const EXCLUDED_STATUSES = [
+  "cancelled",
+  "returned",
+  "returned_after_delivery",
 ];
 
 export const COST_COMPONENTS = [

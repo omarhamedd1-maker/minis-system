@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney } from "@/lib/format";
+import { EXCLUDED_STATUSES, formatMoney } from "@/lib/format";
 import { CustomerRow } from "@/components/CustomerRow";
 import { requirePagePermission } from "@/lib/permissions";
 
@@ -19,7 +19,7 @@ type CustomerData = {
   }[];
 };
 
-const EXCLUDED = ["cancelled", "returned"];
+const EXCLUDED = EXCLUDED_STATUSES;
 
 const SORTS: Record<string, string> = {
   total: "الأكبر مبلغاً",

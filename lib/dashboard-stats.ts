@@ -1,8 +1,8 @@
 // حسابات كروت الداشبورد — مشتركة بين السيرفر (أول تحميل) والعميل (التحديث اللايف)
-import { AT_CARRIER_STATUSES } from "./format";
+import { AT_CARRIER_STATUSES, EXCLUDED_STATUSES } from "./format";
 
 export const SHIPPING_CHARGE = 90; // اللي العميل بيدفعه شحن لكل أوردر
-const EXCLUDED = ["cancelled", "returned"];
+const EXCLUDED = EXCLUDED_STATUSES;
 
 const cairoDateFormat = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Africa/Cairo",
