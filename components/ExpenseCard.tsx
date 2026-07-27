@@ -34,15 +34,15 @@ export function ExpenseCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="text-sm font-bold text-gray-900">
-              {expense.category}
+              {expense.description || expense.category}
             </span>
             <span className="text-[11px] text-gray-400">
               {formatDate(expense.expense_date)}
             </span>
           </div>
           {expense.description && (
-            <div className="mt-0.5 text-xs text-gray-600">
-              {expense.description}
+            <div className="mt-0.5 text-xs text-gray-500">
+              {expense.category}
             </div>
           )}
         </div>
