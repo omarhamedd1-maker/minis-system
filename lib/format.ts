@@ -94,14 +94,22 @@ export const EXCLUDED_STATUSES = [
   "returned_after_delivery",
 ];
 
-// ===== باقة بوسطة =====
+// ===== باقات بوسطة =====
 // الباقة بتتدفع شهرياً وبتغطي الشحن الأساسي لعدد شحنات معيّن.
 // نصيب الأوردر الواحد = سعر الباقة ÷ عدد شحناتها.
-// عدّل الرقمين دول لو الباقة اتغيّرت.
-export const BOSTA_BUNDLE_PRICE = 4500;
-export const BOSTA_BUNDLE_SHIPMENTS = 20;
-export const BOSTA_BUNDLE_PER_ORDER =
-  Math.round((BOSTA_BUNDLE_PRICE / BOSTA_BUNDLE_SHIPMENTS) * 100) / 100;
+export const BOSTA_BUNDLES = [
+  { key: "basic", label: "أساسية", price: 2000, shipments: 20 },
+  { key: "plus", label: "بلس", price: 3950, shipments: 40 },
+  { key: "pro", label: "احترافية", price: 4500, shipments: 50 },
+] as const;
+
+export function bundlePerOrder(price: number, shipments: number) {
+  if (!shipments) return 0;
+  return Math.round((price / shipments) * 100) / 100;
+}
+
+// الباقة الحالية — بتتقرأ من إعدادات السيستم، ودي القيمة الافتراضية لو مفيش إعداد
+export const DEFAULT_BUNDLE = BOSTA_BUNDLES[0];
 
 export const COST_COMPONENTS = [
   "ستانليس",

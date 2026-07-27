@@ -24,6 +24,7 @@ export function SelectableOrderCard({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longFired = useRef(false);
   const firstRun = useRef(true);
+  const [pressed, setPressed] = useState(false);
 
   // بنبلّغ الشريط بعد ما الـ DOM يتحدّث فعلاً — عشان الشريط يظهر من أول تحديد
   useEffect(() => {
@@ -59,6 +60,7 @@ export function SelectableOrderCard({
 
   function start(e: React.PointerEvent) {
     if (isInteractive(e.target)) return;
+    setPressed(true);
     longFired.current = false;
     timer.current = setTimeout(() => {
       longFired.current = true;
@@ -69,6 +71,7 @@ export function SelectableOrderCard({
   }
 
   function cancel() {
+    setPressed(false);
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
   }
@@ -100,9 +103,9 @@ export function SelectableOrderCard({
       onPointerCancel={cancel}
       onClick={onClick}
       onContextMenu={(e) => e.preventDefault()}
-      className={`relative cursor-pointer select-none rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-100 ${
-        selected ? "ring-2 ring-gray-900" : ""
-      }`}
+      className={`relative cursor-pointer select-none rounded-xl p-3 shadow-sm transition-colors duration-75 ${
+        pressed ? "bg-gray-200" : "bg-white"
+      } ${selected ? "ring-2 ring-gray-900" : ""}`}
     >
       {/* الشيك بوكس المخفي — الشريط بيقرأ منه المحدد */}
       <input

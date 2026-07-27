@@ -2,9 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  BOSTA_BUNDLE_PER_ORDER,
-  BOSTA_BUNDLE_PRICE,
-  BOSTA_BUNDLE_SHIPMENTS,
+  DEFAULT_BUNDLE,
+  bundlePerOrder,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
   formatDate,
@@ -420,7 +419,10 @@ export default async function OrderDetailsPage({
               {/* تقسيمة الشحن — سطر واحد لكل بند */}
               {order.bosta_shipping_cost > 0 &&
                 (() => {
-                  const bundleShare = BOSTA_BUNDLE_PER_ORDER;
+                  const bundleShare = bundlePerOrder(
+                    DEFAULT_BUNDLE.price,
+                    DEFAULT_BUNDLE.shipments
+                  );
                   const net =
                     order.shipping_price -
                     bundleShare -
@@ -437,8 +439,9 @@ export default async function OrderDetailsPage({
                         <span className="text-gray-600">
                           نصيبه من الباقة
                           <span className="block text-[10px] text-gray-400">
-                            {formatMoney(BOSTA_BUNDLE_PRICE)} ÷{" "}
-                            {BOSTA_BUNDLE_SHIPMENTS} شحنة
+                            باقة {DEFAULT_BUNDLE.label}:{" "}
+                            {formatMoney(DEFAULT_BUNDLE.price)} ÷{" "}
+                            {DEFAULT_BUNDLE.shipments} شحنة
                           </span>
                         </span>
                         <span className="font-medium text-red-700">
@@ -699,17 +702,17 @@ export default async function OrderDetailsPage({
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+      <div className="rounded-xl bg-white shadow-sm">
         <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
           بنود الأوردر
         </h2>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-right text-gray-500">
-              <th className="px-4 py-3 font-medium">المنتج</th>
-              <th className="px-4 py-3 font-medium">الشكل</th>
-              <th className="px-4 py-3 font-medium">الكمية</th>
-              <th className="px-4 py-3 font-medium">سعر البيع</th>
+              <th className="px-2 py-3 font-medium sm:px-4">المنتج</th>
+              <th className="hidden px-4 py-3 font-medium sm:table-cell">الشكل</th>
+              <th className="px-2 py-3 font-medium sm:px-4">الكمية</th>
+              <th className="px-2 py-3 font-medium sm:px-4">السعر</th>
               <th className="px-4 py-3 font-medium">الإجمالي</th>
             </tr>
           </thead>

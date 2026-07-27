@@ -28,12 +28,12 @@ export function OrderItemRow({
 
   return (
     <tr className={`border-b border-gray-100 last:border-0 ${editing ? "bg-yellow-50" : ""}`}>
-      <td className="px-4 py-3 text-gray-900">{productName}</td>
-      <td className="px-4 py-3 text-gray-700">{variantName}</td>
+      <td className="px-2 py-3 text-gray-900 sm:px-4">{productName}</td>
+      <td className="hidden px-4 py-3 text-gray-700 sm:table-cell">{variantName}</td>
 
       {editing ? (
         <>
-          <td className="px-4 py-3">
+          <td className="px-2 py-3 sm:px-4">
             <form id={formId} action={updateAction}>
               <input type="hidden" name="order_id" value={orderId} />
               <input type="hidden" name="item_id" value={itemId} />
@@ -49,7 +49,7 @@ export function OrderItemRow({
               className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
             />
           </td>
-          <td className="px-4 py-3">
+          <td className="px-2 py-3 sm:px-4">
             <input
               type="number"
               name="sale_price"
@@ -61,7 +61,7 @@ export function OrderItemRow({
               className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
             />
           </td>
-          <td className="px-4 py-3">
+          <td className="px-2 py-3 sm:px-4">
             <div className="flex items-center gap-2">
               <button
                 type="submit"
@@ -82,9 +82,9 @@ export function OrderItemRow({
         </>
       ) : (
         <>
-          <td className="px-4 py-3 text-gray-700">{quantity}</td>
-          <td className="px-4 py-3 text-gray-700">{formatMoney(salePrice)}</td>
-          <td className="px-4 py-3">
+          <td className="px-2 py-3 text-gray-700 sm:px-4">{quantity}</td>
+          <td className="px-2 py-3 text-gray-700 sm:px-4">{formatMoney(salePrice)}</td>
+          <td className="px-2 py-3 sm:px-4">
             <div className="flex items-center gap-2">
               <span className="text-gray-700">
                 {formatMoney(quantity * salePrice)}

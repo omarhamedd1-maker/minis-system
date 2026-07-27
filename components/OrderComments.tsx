@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { ConfirmButton } from "./ConfirmButton";
 
 type Comment = {
@@ -28,6 +29,7 @@ export function OrderComments({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+
 
   return (
     <>
@@ -59,9 +61,9 @@ export function OrderComments({
         )}
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
           onClick={() => setOpen(false)}
         >
           <div
@@ -152,7 +154,8 @@ export function OrderComments({
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

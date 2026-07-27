@@ -390,7 +390,9 @@ export default async function OrdersPage({
         <>
           <BulkStatusBar
             returnTo={returnTo}
-            options={ORDER_STATUS_OPTIONS}
+            options={ORDER_STATUS_OPTIONS.filter(
+              (o) => !LIST_STATUS_OPTIONS_EXCLUDED.includes(o.value)
+            )}
             updateAction={bulkUpdateStatus}
             canStatus={canStatus}
             canPrint={canPrint}
