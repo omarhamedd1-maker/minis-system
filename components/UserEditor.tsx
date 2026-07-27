@@ -20,7 +20,7 @@ export type EditorUser = {
 };
 
 function whenText(iso: string | null): string {
-  if (!iso) return "لسه مادخلش";
+  if (!iso) return "لسه مافتحش";
   return new Date(iso).toLocaleString("ar-EG", {
     timeZone: "Africa/Cairo",
     day: "numeric",
@@ -104,7 +104,7 @@ export function UserEditor({
             </span>
           )}
           <span className="text-xs text-gray-400">
-            · آخر دخول: {whenText(user.lastSignInAt)}
+            · آخر فتح للسيستم: {whenText(user.lastSignInAt)}
           </span>
         </div>
         <span className="text-xs text-gray-400">
@@ -118,7 +118,7 @@ export function UserEditor({
           <div className="rounded-lg bg-gray-50 p-3 text-sm">
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-600">
               <span>
-                آخر دخول:{" "}
+                آخر فتح للسيستم:{" "}
                 <span className="text-gray-900">{whenText(user.lastSignInAt)}</span>
               </span>
               <span>

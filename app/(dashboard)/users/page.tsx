@@ -21,6 +21,7 @@ type AppUserRow = {
   full_name: string | null;
   permissions: string[] | null;
   active: boolean | null;
+  last_seen_at: string | null;
   roles: { name: string | null } | null;
 };
 
@@ -59,7 +60,7 @@ export default async function UsersPage({
     await Promise.all([
       admin
         .from("app_users")
-        .select("auth_user_id, full_name, permissions, active, roles(name)")
+        .select("auth_user_id, full_name, permissions, active, last_seen_at, roles(name)")
         .overrideTypes<AppUserRow[]>(),
       admin.auth.admin.listUsers({ perPage: 200 }),
       admin
@@ -92,7 +93,7 @@ export default async function UsersPage({
         isAdmin,
         active: u.active ?? true,
         permissions: u.permissions ?? [],
-        lastSignInAt: lastSignInById.get(u.auth_user_id) ?? null,
+        lastSignInAt: u.last_seen_at ?? lastSignInById.get(u.auth_user_id) ?? null,
         createdAt: createdById.get(u.auth_user_id) ?? null,
         recentActivity: activity
           .filter((a) => a.actor_id === u.auth_user_id)

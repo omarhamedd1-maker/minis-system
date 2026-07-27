@@ -195,15 +195,26 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     supabase.rpc("is_admin"),
     supabase
       .from("app_users")
-      .select("full_name, permissions, active")
+      .select("full_name, permissions, active, last_seen_at")
       .eq("auth_user_id", user.id)
       .maybeSingle()
       .overrideTypes<{
         full_name: string | null;
         permissions: string[] | null;
         active: boolean | null;
+        last_seen_at: string | null;
       }>(),
   ]);
+
+  // "آخر مرة فتح السيستم" — بنحدّثها كل 5 دقايق بالكتير عشان مانبطّأش السيستم
+  const seen = appUser?.last_seen_at ? new Date(appUser.last_seen_at).getTime() : 0;
+  if (Date.now() - seen > 5 * 60 * 1000) {
+    void supabase
+      .from("app_users")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("auth_user_id", user.id)
+      .then(() => {});
+  }
 
   return {
     authUserId: user.id,

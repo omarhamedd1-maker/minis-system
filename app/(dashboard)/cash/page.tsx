@@ -92,8 +92,9 @@ export default async function CashPage({
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-gray-900">الخزنة</h1>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+      {/* الرصيد بالعرض فوق، والداخل والخارج تحته اتنين جنب بعض */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
           <p className="text-sm text-gray-500">الرصيد الحالي</p>
           <p
             className={`mt-1 text-2xl font-bold ${
