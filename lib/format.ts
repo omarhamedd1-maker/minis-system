@@ -94,6 +94,15 @@ export const EXCLUDED_STATUSES = [
   "returned_after_delivery",
 ];
 
+// ===== باقة بوسطة =====
+// الباقة بتتدفع شهرياً وبتغطي الشحن الأساسي لعدد شحنات معيّن.
+// نصيب الأوردر الواحد = سعر الباقة ÷ عدد شحناتها.
+// عدّل الرقمين دول لو الباقة اتغيّرت.
+export const BOSTA_BUNDLE_PRICE = 4500;
+export const BOSTA_BUNDLE_SHIPMENTS = 20;
+export const BOSTA_BUNDLE_PER_ORDER =
+  Math.round((BOSTA_BUNDLE_PRICE / BOSTA_BUNDLE_SHIPMENTS) * 100) / 100;
+
 export const COST_COMPONENTS = [
   "ستانليس",
   "خشب",

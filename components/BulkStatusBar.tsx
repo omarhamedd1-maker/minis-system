@@ -150,83 +150,133 @@ export function BulkStatusBar({
 
   if (count === 0) return null;
 
+  function clearAll() {
+    document
+      .querySelectorAll<HTMLInputElement>("input[data-order-checkbox]")
+      .forEach((el) => (el.checked = false));
+    setCount(0);
+    document.dispatchEvent(
+      new CustomEvent("minis-select-mode", { detail: false })
+    );
+  }
+
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-gray-900 px-4 py-3 text-white">
-      <span className="text-sm font-medium">محدّد {count} أوردر</span>
-      {canStatus && (
-        <>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="rounded-lg border-0 bg-white px-2 py-1 text-xs text-gray-900 focus:outline-none"
+    <div className="sticky top-14 z-30 mb-4 rounded-xl bg-gray-900 p-3 text-white shadow-lg md:top-0">
+      {/* سطر فوق: العدد + إلغاء */}
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium">
+          محدّد {count} <span className="text-gray-400">أوردر</span>
+        </span>
+        <button
+          type="button"
+          onClick={clearAll}
+          title="إلغاء التحديد"
+          aria-label="إلغاء التحديد"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-300 hover:bg-white/10 hover:text-white"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            className="h-4 w-4"
           >
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* سطر تحت: الأكشنز */}
+      <div className="mt-2 flex items-center gap-2">
+        {canStatus && (
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              aria-label="الحالة الجديدة"
+              className="min-w-0 flex-1 rounded-lg border-0 bg-white px-2 py-1.5 text-xs text-gray-900 focus:outline-none"
+            >
+              {options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={apply}
+              disabled={pending}
+              title="طبّق الحالة"
+              aria-label="طبّق الحالة"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-gray-900 disabled:opacity-60"
+            >
+              {pending ? (
+                <span className="text-[10px]">…</span>
+              ) : (
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              )}
+            </button>
+          </div>
+        )}
+        {canPrint && (
           <button
             type="button"
-            onClick={apply}
-            disabled={pending}
-            title="طبّق على المحدد"
-            aria-label="طبّق على المحدد"
-            className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-gray-900 hover:bg-gray-100 disabled:opacity-60"
+            onClick={printSelected}
+            title="طباعة البوالص"
+            aria-label="طباعة البوالص"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25"
           >
-            {pending ? (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" />
+            </svg>
+          </button>
+        )}
+        {canSend && sendAction && (
+          <button
+            type="button"
+            onClick={sendSelected}
+            disabled={sending}
+            title="ابعت لبوسطة"
+            aria-label="ابعت لبوسطة"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E30613] text-white hover:bg-[#b7050f] disabled:opacity-60"
+          >
+            {sending ? (
               <span className="text-[10px]">…</span>
             ) : (
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={2.5}
+                strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="h-4 w-4"
               >
-                <path d="M20 6 9 17l-5-5" />
+                <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
               </svg>
             )}
           </button>
-        </>
-      )}
-      {canPrint && (
-        <button
-          type="button"
-          onClick={printSelected}
-          className="rounded-lg bg-white px-3 py-1 text-xs font-medium text-gray-900 hover:bg-gray-100"
-        >
-          طباعة البوالص المحددة
-        </button>
-      )}
-      {canSend && sendAction && (
-        <button
-          type="button"
-          onClick={sendSelected}
-          disabled={sending}
-          className="rounded-lg bg-[#E30613] px-3 py-1 text-xs font-medium text-white hover:bg-[#b7050f] disabled:opacity-60"
-        >
-          {sending ? "بيبعت..." : "ابعت المحدد لبوسطة"}
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={() => {
-          document
-            .querySelectorAll<HTMLInputElement>('input[data-order-checkbox]')
-            .forEach((el) => (el.checked = false));
-          setCount(0);
-          // نخرج من وضع التحديد على الموبايل كمان
-          document.dispatchEvent(
-            new CustomEvent("minis-select-mode", { detail: false })
-          );
-        }}
-        className="text-xs text-gray-300 hover:text-white"
-      >
-        إلغاء التحديد
-      </button>
+        )}
+      </div>
     </div>
   );
 }

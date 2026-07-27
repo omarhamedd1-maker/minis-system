@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
+  BOSTA_BUNDLE_PER_ORDER,
+  BOSTA_BUNDLE_PRICE,
+  BOSTA_BUNDLE_SHIPMENTS,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
   formatDate,
@@ -414,41 +417,60 @@ export default async function OrderDetailsPage({
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
               </div>
               {/* تقسيمة الشحن — سطر واحد لكل بند */}
-              {order.bosta_shipping_cost > 0 && (
-                <div className="mt-1 space-y-1 rounded-lg bg-gray-50 p-2.5 text-xs">
-                  <div className="flex justify-between gap-3">
-                    <span className="text-gray-600">دفعه العميل</span>
-                    <span className="font-medium text-green-700">
-                      {formatMoney(order.shipping_price)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-gray-600">
-                      الباقة غطّت الشحن الأساسي
-                    </span>
-                    <span className="text-gray-400">مدفوع شهرياً</span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span className="text-gray-600">رسوم بوسطة</span>
-                    <span className="font-medium text-red-700">
-                      − {formatMoney(order.bosta_shipping_cost)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-3 border-t border-gray-200 pt-1">
-                    <span className="font-medium text-gray-700">صافي الشحن</span>
-                    {(() => {
-                      const net = order.shipping_price - order.bosta_shipping_cost;
-                      return (
-                        <span
-                          className={`font-bold ${net >= 0 ? "text-green-700" : "text-red-700"}`}
-                        >
-                          {net >= 0 ? "+" : "−"} {formatMoney(Math.abs(net))}
+              {order.bosta_shipping_cost > 0 &&
+                (() => {
+                  const bundleShare = BOSTA_BUNDLE_PER_ORDER;
+                  const net =
+                    order.shipping_price -
+                    bundleShare -
+                    order.bosta_shipping_cost;
+                  return (
+                    <div className="mt-1 space-y-1 rounded-lg bg-gray-50 p-2.5 text-xs">
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-600">دفعه العميل</span>
+                        <span className="font-medium text-green-700">
+                          {formatMoney(order.shipping_price)}
                         </span>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-600">
+                          نصيبه من الباقة
+                          <span className="block text-[10px] text-gray-400">
+                            {formatMoney(BOSTA_BUNDLE_PRICE)} ÷{" "}
+                            {BOSTA_BUNDLE_SHIPMENTS} شحنة
+                          </span>
+                        </span>
+                        <span className="font-medium text-red-700">
+                          − {formatMoney(bundleShare)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-600">رسوم بوسطة</span>
+                        <span className="font-medium text-red-700">
+                          − {formatMoney(order.bosta_shipping_cost)}
+                        </span>
+                      </div>
+                      <div
+                        className={`mt-1 flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 ${
+                          net >= 0 ? "bg-green-50" : "bg-red-50"
+                        }`}
+                      >
+                        <span
+                          className={`font-medium ${net >= 0 ? "text-green-800" : "text-red-800"}`}
+                        >
+                          {net >= 0
+                            ? "كسبت من الشحن"
+                            : "دفعت من جيبك على الشحن"}
+                        </span>
+                        <span
+                          className={`text-sm font-bold ${net >= 0 ? "text-green-700" : "text-red-700"}`}
+                        >
+                          {formatMoney(Math.abs(net))}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">فلوسك</dt>
                 <dd>
