@@ -981,6 +981,80 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   return { ok: true, sent, skipped, failed, details };
 }
 
+// حفظ المرتجع: بنختار المنتجات اللي رجعت وكمياتها من بنود الأوردر نفسه
+// وبنرجّع مخزونها تلقائياً (الفرق بين الكمية الراجعة القديمة والجديدة)
+export async function saveReturnedItems(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  const tracking = String(formData.get("return_tracking") ?? "").trim();
+  if (!orderId) redirect("/orders");
+
+  const supabase = createAdminClient();
+
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("id, quantity, returned_quantity, variant_id")
+    .eq("order_id", orderId)
+    .overrideTypes<
+      {
+        id: string;
+        quantity: number;
+        returned_quantity: number | null;
+        variant_id: string | null;
+      }[]
+    >();
+
+  let totalReturned = 0;
+  for (const item of items ?? []) {
+    const raw = formData.get(`ret_${item.id}`);
+    let qty = raw != null && String(raw).trim() !== "" ? Number(raw) : 0;
+    if (!Number.isInteger(qty) || qty < 0) qty = 0;
+    if (qty > item.quantity) qty = item.quantity;
+
+    const was = Number(item.returned_quantity ?? 0);
+    if (qty === was) {
+      totalReturned += qty;
+      continue;
+    }
+
+    await supabase
+      .from("order_items")
+      .update({ returned_quantity: qty })
+      .eq("id", item.id);
+
+    // الفرق يرجع للمخزون (أو يتخصم لو قلّلنا الكمية الراجعة)
+    await adjustStock(
+      supabase,
+      item.variant_id,
+      qty - was,
+      orderId,
+      "مرتجع بعد التسليم"
+    );
+    totalReturned += qty;
+  }
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ return_note: tracking || null })
+    .eq("id", orderId);
+
+  if (error) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ المرتجع: " + error.message)
+    );
+  }
+
+  await logActivity(
+    me,
+    "order.return",
+    `سجّل مرتجع ${totalReturned} قطعة لأوردر ${await orderNo(supabase, orderId)}`
+  );
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/products");
+  redirect(`/orders/${orderId}?saved=1`);
+}
+
 // حفظ تفاصيل المرتجع (إيه اللي رجع + رقم شحنة المرتجع)
 export async function saveReturnNote(formData: FormData) {
   const me = await requirePermission("orders.status");

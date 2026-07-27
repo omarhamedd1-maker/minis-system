@@ -23,7 +23,7 @@ import {
   linkBostaShipment,
   sendOrderToBosta,
   toggleOrderArchive,
-  saveReturnNote,
+  saveReturnedItems,
   updatePayment,
   updateDiscount,
   updateOrderItem,
@@ -58,6 +58,7 @@ type OrderDetails = {
     quantity: number;
     sale_price_at_order: number;
     cost_price_at_order: number;
+    returned_quantity: number | null;
     product_variants: {
       variant_name: string | null;
       products: { name: string | null } | null;
@@ -94,7 +95,7 @@ export default async function OrderDetailsPage({
        bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        return_note, payment_method, amount_paid,
        customers(id, full_name, phone, address),
-       order_items(id, quantity, sale_price_at_order, cost_price_at_order,
+       order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
          product_variants(variant_name, products(name)))`
     )
     .eq("id", id)
@@ -567,21 +568,50 @@ export default async function OrderDetailsPage({
                 بوسطة يدوي، وسجّل الفلوس اللي رجّعتها للعميل في الخزنة.
               </p>
             )}
-            <form action={saveReturnNote} className="space-y-2">
+            {/* بنختار من منتجات الأوردر نفسه إيه اللي رجع وكميته */}
+            <form action={saveReturnedItems} className="space-y-2">
               <input type="hidden" name="order_id" value={order.id} />
+              <div className="space-y-1.5">
+                {order.order_items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5"
+                  >
+                    <span className="min-w-0 truncate text-xs text-gray-700">
+                      {item.product_variants?.products?.name ?? "—"}
+                      <span className="text-gray-400"> (من {item.quantity})</span>
+                    </span>
+                    <input
+                      key={`ret-${item.id}-${item.returned_quantity ?? 0}`}
+                      type="number"
+                      name={`ret_${item.id}`}
+                      defaultValue={item.returned_quantity ?? 0}
+                      min={0}
+                      max={item.quantity}
+                      step={1}
+                      aria-label="الكمية الراجعة"
+                      className="w-16 shrink-0 rounded-lg border border-gray-300 px-2 py-1 text-center text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
               <input
-                key={`rn-${order.return_note ?? ""}`}
-                name="return_note"
+                key={`rt-${order.return_note ?? ""}`}
+                name="return_tracking"
                 defaultValue={order.return_note ?? ""}
-                placeholder="إيه اللي رجع؟ (كله أو جزء) + رقم شحنة المرتجع"
+                placeholder="رقم شحنة المرتجع في بوسطة (اختياري)"
+                dir="ltr"
                 className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
               />
               <button
                 type="submit"
                 className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
               >
-                حفظ
+                حفظ المرتجع
               </button>
+              <p className="text-[10px] text-gray-400">
+                الكميات اللي بتحددها بترجع للمخزون تلقائياً
+              </p>
             </form>
           </div>
         )}
