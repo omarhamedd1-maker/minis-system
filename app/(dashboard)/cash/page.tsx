@@ -205,7 +205,101 @@ export default async function CashPage({
           لسه مفيش حركة فلوس في الخزنة.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+        <>
+        {/* ===== موبايل: كروت (مفيش سحب جانبي) ===== */}
+        <div className="space-y-2 md:hidden">
+          {transactions.map((row) => {
+            const isIn = row.direction === "in";
+            const editable = isAdmin && row.source_type === "manual";
+            return (
+              <div key={row.id} className="rounded-xl bg-white p-3 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-gray-900">
+                      {sourceLabel(row)}
+                    </div>
+                    <div className="mt-0.5 text-xs text-gray-500">
+                      {formatDate(row.transaction_date)}
+                    </div>
+                  </div>
+                  <div
+                    className={`shrink-0 text-base font-bold ${
+                      isIn ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    {isIn ? "+" : "−"} {formatMoney(row.amount)}
+                  </div>
+                </div>
+                {editable && (
+                  <details className="mt-2 border-t border-gray-100 pt-2">
+                    <summary className="cursor-pointer text-xs font-medium text-gray-500">
+                      تعديل
+                    </summary>
+                    <form
+                      action={updateCashTransaction}
+                      className="mt-2 space-y-2"
+                    >
+                      <input type="hidden" name="transaction_id" value={row.id} />
+                      <div className="flex gap-2">
+                        <select
+                          name="direction"
+                          defaultValue={row.direction}
+                          className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                          aria-label="الاتجاه"
+                        >
+                          <option value="in">داخل</option>
+                          <option value="out">خارج</option>
+                        </select>
+                        <input
+                          type="number"
+                          name="amount"
+                          defaultValue={row.amount}
+                          min={0}
+                          step="0.01"
+                          className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                          aria-label="المبلغ"
+                        />
+                      </div>
+                      <input
+                        name="description"
+                        defaultValue={row.description ?? ""}
+                        placeholder="الوصف"
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                      />
+                      <input
+                        type="date"
+                        name="transaction_date"
+                        defaultValue={row.transaction_date ?? ""}
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                        aria-label="التاريخ"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white active:scale-95"
+                        >
+                          حفظ
+                        </button>
+                      </div>
+                    </form>
+                    <form action={deleteCashTransaction} className="mt-2">
+                      <input type="hidden" name="transaction_id" value={row.id} />
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 active:scale-95"
+                      >
+                        مسح
+                      </button>
+                    </form>
+                  </details>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ===== كمبيوتر: جدول ===== */}
+        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-right text-gray-500">
@@ -269,6 +363,7 @@ export default async function CashPage({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
