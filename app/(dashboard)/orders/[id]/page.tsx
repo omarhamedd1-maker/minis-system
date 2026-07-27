@@ -41,6 +41,7 @@ type OrderDetails = {
   bosta_tracking: string | null;
   bosta_shipping_cost: number;
   customers: {
+    id: string;
     full_name: string | null;
     phone: string | null;
     address: string | null;
@@ -75,6 +76,8 @@ export default async function OrderDetailsPage({
   const canSend = can(user, "ship.send");
   const canPrint = can(user, "ship.print");
   const isAdmin = user.isAdmin;
+  // بعد التسليم أو المرتجع مفيش لزمة نطبع بوليصة
+  const PRINT_DONE_STATUSES = ["delivered", "returned"];
   const supabase = await createClient();
 
   const { data: order, error } = await supabase
@@ -82,7 +85,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
-       customers(full_name, phone, address),
+       customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order,
          product_variants(variant_name, products(name)))`
     )
@@ -134,11 +137,14 @@ export default async function OrderDetailsPage({
   }
 
   const badge = orderStatusBadge(order.order_status);
+  const isCancelled = order.order_status === "cancelled";
   const itemsTotal = order.order_items.reduce(
     (sum, item) => sum + item.quantity * item.sale_price_at_order,
     0
   );
-  const grandTotal = itemsTotal - order.discount + order.shipping_price;
+  // الملغي: مفيش شحن يتحسب
+  const grandTotal =
+    itemsTotal - order.discount + (isCancelled ? 0 : order.shipping_price);
 
   // الأوردر السابق (الأحدث) والتالي (الأقدم) بترتيب التاريخ زي القايمة
   const [{ data: prevOrder }, { data: nextOrder }] = order.order_date
@@ -225,7 +231,7 @@ export default async function OrderDetailsPage({
               </svg>
             </span>
           )}
-          <BackLink href="/orders" label="الرجوع للأوردرات" />
+          <BackLink href="/orders" label="الرجوع للأوردرات" variant="exit" />
         </div>
       </div>
 
@@ -240,7 +246,8 @@ export default async function OrderDetailsPage({
         </div>
       )}
 
-      {canStatus && (
+      {/* التغيير اليدوي للحالة من جوّه الأوردر: للأدمن بس */}
+      {isAdmin && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
           <span className="text-sm font-medium text-gray-700">
             تغيير حالة الأوردر
@@ -265,7 +272,17 @@ export default async function OrderDetailsPage({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">بيانات العميل</h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">بيانات العميل</h2>
+            {order.customers?.id && (
+              <Link
+                href={`/customers/${order.customers.id}`}
+                className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 active:scale-95"
+              >
+                صفحة العميل
+              </Link>
+            )}
+          </div>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-gray-500">الاسم</dt>
@@ -348,7 +365,9 @@ export default async function OrderDetailsPage({
                   )}
                 </dd>
               </div>
-              {order.bosta_tracking && canPrint && (
+              {order.bosta_tracking &&
+                canPrint &&
+                !PRINT_DONE_STATUSES.includes(order.order_status ?? "") && (
                 <a
                   href={`/orders/${order.id}/awb`}
                   target="_blank"
@@ -531,38 +550,41 @@ export default async function OrderDetailsPage({
               </td>
               <td className="px-4 py-2">{formatMoney(itemsTotal)}</td>
             </tr>
-            <tr className="text-gray-700">
-              <td className="px-4 py-2" colSpan={4}>
-                <div className="flex items-center gap-3">
-                  <span>الشحن (مدفوع من العميل)</span>
-                  {canItems && (
-                    <form
-                      action={updateShippingPrice}
-                      className="flex items-center gap-2"
-                    >
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <input
-                        key={`ship-${order.shipping_price}`}
-                        type="number"
-                        name="shipping_price"
-                        defaultValue={order.shipping_price}
-                        min={0}
-                        step="0.01"
-                        className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-                        aria-label="سعر الشحن"
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+            {/* الأوردر الملغي مفيهوش شحن خالص */}
+            {!isCancelled && (
+              <tr className="text-gray-700">
+                <td className="px-4 py-2" colSpan={4}>
+                  <div className="flex items-center gap-3">
+                    <span>الشحن (مدفوع من العميل)</span>
+                    {canItems && (
+                      <form
+                        action={updateShippingPrice}
+                        className="flex items-center gap-2"
                       >
-                        حفظ
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </td>
-              <td className="px-4 py-2">{formatMoney(order.shipping_price)}</td>
-            </tr>
+                        <input type="hidden" name="order_id" value={order.id} />
+                        <input
+                          key={`ship-${order.shipping_price}`}
+                          type="number"
+                          name="shipping_price"
+                          defaultValue={order.shipping_price}
+                          min={0}
+                          step="0.01"
+                          className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                          aria-label="سعر الشحن"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        >
+                          حفظ
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </td>
+                <td className="px-4 py-2">{formatMoney(order.shipping_price)}</td>
+              </tr>
+            )}
             <tr className="text-gray-700">
               <td className="px-4 py-2" colSpan={4}>
                 <div className="flex flex-wrap items-center gap-3">

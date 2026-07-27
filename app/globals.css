@@ -12,8 +12,10 @@
 }
 
 /* الخلفية الأساسية رمادي فاتح من أول لحظة — عشان مفيش ومضة شاشة سودا وقت الفتح */
+/* color-scheme: only light عشان تليفونات الوضع الداكن مايعملوش شاشة سودا */
 html {
   background-color: #efeeec;
+  color-scheme: only light;
 }
 
 body {

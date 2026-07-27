@@ -14,10 +14,10 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#171717",
-          color: "#e5e4e1",
+          background: "#efeeec",
+          color: "#171717",
           fontSize: 108,
-          fontWeight: 200,
+          fontWeight: 100,
         }}
       >
         M

@@ -164,7 +164,7 @@ export function AppNav({
 
       {/* ===== قائمة عائمة (تليفون) — على شكل Pill زي شوبيفاي ===== */}
       <nav className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 md:hidden">
-        <div className="flex w-full max-w-md items-center justify-around gap-0.5 rounded-full bg-white p-1 shadow-[0_6px_24px_rgba(0,0,0,0.14)] ring-1 ring-black/5">
+        <div className="flex items-center gap-1 rounded-full bg-white p-1.5 shadow-[0_6px_24px_rgba(0,0,0,0.14)] ring-1 ring-black/5">
           {primary.map((i) => {
             const active = isActive(i.href);
             return (

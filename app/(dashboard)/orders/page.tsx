@@ -362,10 +362,10 @@ export default async function OrdersPage({
                       />
                       <div>
                         <div className="text-base font-bold text-gray-900">
-                          {order.customers?.full_name ?? "بدون اسم"}
+                          {order.order_number ?? "بدون رقم"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          أوردر {order.order_number ?? "—"}
+                          {order.customers?.full_name ?? "—"}
                         </div>
                       </div>
                     </div>

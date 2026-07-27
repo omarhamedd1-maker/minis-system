@@ -2,7 +2,7 @@
 export default function Loading() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#efeeec]">
-      <span className="text-7xl font-light tracking-wide text-gray-800">M</span>
+      <span className="text-7xl font-thin tracking-wide text-gray-900">M</span>
     </div>
   );
 }
