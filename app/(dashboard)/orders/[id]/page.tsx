@@ -185,7 +185,7 @@ export default async function OrderDetailsPage({
 
   return (
     <div className="space-y-6">
-      <AutoRefresh seconds={10} />
+      <AutoRefresh seconds={30} />
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">

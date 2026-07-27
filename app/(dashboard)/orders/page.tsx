@@ -205,7 +205,7 @@ export default async function OrdersPage({
 
   return (
     <div>
-      <AutoRefresh seconds={10} />
+      <AutoRefresh seconds={30} />
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">الأوردرات</h1>
         <div className="flex items-center gap-3">
@@ -418,13 +418,13 @@ export default async function OrdersPage({
               return (
                 <div
                   key={order.id}
-                  className="relative rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
+                  className="relative rounded-xl bg-white p-3 shadow-sm"
                 >
                   {/* الكارت كله بيفتح الأوردر — الأزرار فوقه بتشتغل عادي */}
                   <Link
                     href={`/orders/${order.id}`}
                     aria-label={`فتح أوردر ${order.order_number ?? ""}`}
-                    className="absolute inset-0 z-0 rounded-xl"
+                    className="absolute inset-0 z-0 rounded-xl transition-colors active:bg-gray-900/[0.07]"
                   />
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2">
@@ -485,12 +485,8 @@ export default async function OrdersPage({
                     </span>
                   </div>
 
-                  {/* اسم العميل تحت على الشمال بخط عادي */}
-                  <div className="mt-1 text-left text-xs text-gray-500">
-                    {order.customers?.full_name ?? "—"}
-                  </div>
-
-                  <div className="relative z-10 mt-2 flex w-fit items-center gap-3 border-t border-gray-100 pt-2">
+                  <div className="mt-2 flex items-center gap-3 border-t border-gray-100 pt-2">
+                  <div className="relative z-10 flex w-fit items-center gap-3">
                     {wa && (
                       <a
                         href={wa}
@@ -536,23 +532,26 @@ export default async function OrdersPage({
                         sendAction={bulkSendToBosta}
                       />
                     )}
-                    <div className="ms-auto">
-                      <OrderComments
-                        orderId={order.id}
-                        orderNumber={order.order_number ?? ""}
-                        comments={order.order_comments}
-                        isAdmin={canComments}
-                        hideDot={[
-                          "packed",
-                          "shipped",
-                          "delivered",
-                          "returned",
-                          "cancelled",
-                        ].includes(order.order_status ?? "")}
-                        addAction={addOrderComment}
-                        deleteAction={deleteOrderComment}
-                      />
-                    </div>
+                    <OrderComments
+                      orderId={order.id}
+                      orderNumber={order.order_number ?? ""}
+                      comments={order.order_comments}
+                      isAdmin={canComments}
+                      hideDot={[
+                        "packed",
+                        "shipped",
+                        "delivered",
+                        "returned",
+                        "cancelled",
+                      ].includes(order.order_status ?? "")}
+                      addAction={addOrderComment}
+                      deleteAction={deleteOrderComment}
+                    />
+                  </div>
+                  {/* اسم العميل في نفس سطر الأيقونات على الشمال */}
+                  <span className="ms-auto truncate text-xs text-gray-500">
+                    {order.customers?.full_name ?? "—"}
+                  </span>
                   </div>
                 </div>
               );

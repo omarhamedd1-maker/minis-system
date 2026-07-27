@@ -31,6 +31,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   // نثبّت الوضع الفاتح — عشان تليفون بالوضع الداكن مايفتحش بشاشة سودا
   colorScheme: "light",
+  // نقفل الزوم على التليفون — يبقى إحساس تطبيق مش صفحة ويب
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

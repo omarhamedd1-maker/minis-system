@@ -173,10 +173,10 @@ export function AppNav({
                 href={i.href}
                 title={i.label}
                 aria-label={i.label}
-                className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors active:scale-90 ${
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-[0.88] ${
                   active
-                    ? "bg-gray-900 text-white"
-                    : "text-gray-500 hover:bg-gray-100"
+                    ? "bg-gray-900 text-white active:bg-black"
+                    : "text-gray-500 active:bg-gray-200"
                 }`}
               >
                 <Icon href={i.href} className="h-5 w-5" />
@@ -189,7 +189,7 @@ export function AppNav({
               onClick={() => setMoreOpen(true)}
               title="المزيد"
               aria-label="المزيد"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 active:scale-90"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-transform active:scale-[0.88] active:bg-gray-200"
             >
               <svg
                 viewBox="0 0 24 24"

@@ -80,7 +80,7 @@ export function LiveMoneyCards({
     }
 
     load();
-    const id = setInterval(load, 10000); // تحديث كل 10 ثواني
+    const id = setInterval(load, 20000); // تحديث كل 20 ثانية
     return () => {
       active = false;
       clearInterval(id);
