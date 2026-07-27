@@ -65,7 +65,6 @@ export async function updateExpense(formData: FormData) {
 
   await logActivity(me, "expense.edit", `عدّل مصروف ${category} (${amount})`);
   revalidatePath("/expenses");
-  redirect("/expenses?saved=1");
 }
 
 export async function deleteExpense(formData: FormData) {
@@ -104,7 +103,6 @@ export async function deleteExpense(formData: FormData) {
 
   await logActivity(me, "expense.delete", "مسح مصروف");
   revalidatePath("/expenses");
-  redirect("/expenses?deleted=1");
 }
 
 export async function addExpense(formData: FormData) {
@@ -162,5 +160,4 @@ export async function addExpense(formData: FormData) {
 
   await logActivity(me, "expense.add", `سجّل مصروف ${category} بمبلغ ${amount}`);
   revalidatePath("/expenses");
-  redirect("/expenses?saved=1");
 }

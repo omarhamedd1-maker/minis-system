@@ -39,7 +39,7 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
     // الشحنة روّحت للعميل ومااتسلمتش (مردّش/رفض) فرجعت لنا
     returned: {
-      label: "رجعت من الشحن",
+      label: "رجعت ومتسلمتش",
       className: "bg-orange-50 text-orange-700",
     },
     // اتسلّم فعلاً وبعدين العميل رجّعه (كله أو جزء) — بشحنة عكسية

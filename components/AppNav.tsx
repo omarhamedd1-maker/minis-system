@@ -73,7 +73,7 @@ export function AppNav({
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   // التليفون: 4 ثابتة (داشبورد، أوردرات، منتجات، خزنة)، والباقي في "المزيد"
-  const PRIMARY_HREFS = ["/", "/orders", "/products", "/cash"];
+  const PRIMARY_HREFS = ["/", "/orders", "/expenses", "/cash"];
   const primary = PRIMARY_HREFS.map((h) =>
     allowed.find((i) => i.href === h)
   ).filter((i): i is Item => Boolean(i));
@@ -173,7 +173,7 @@ export function AppNav({
                 href={i.href}
                 title={i.label}
                 aria-label={i.label}
-                className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+                className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors active:scale-90 ${
                   active
                     ? "bg-gray-900 text-white"
                     : "text-gray-500 hover:bg-gray-100"
@@ -189,7 +189,7 @@ export function AppNav({
               onClick={() => setMoreOpen(true)}
               title="المزيد"
               aria-label="المزيد"
-              className="flex h-12 w-12 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 active:scale-90"
             >
               <svg
                 viewBox="0 0 24 24"

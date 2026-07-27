@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { CashManualRow } from "@/components/CashManualRow";
-import { ConfirmButton } from "@/components/ConfirmButton";
+import { CashCard } from "@/components/CashCard";
 import { can, requirePagePermission } from "@/lib/permissions";
 import {
   addCashTransaction,
@@ -46,9 +46,9 @@ function sourceLabel(row: CashRow) {
 export default async function CashPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string; deleted?: string; edit?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
 }) {
-  const { error: actionError, saved, deleted, edit: editId } = await searchParams;
+  const { error: actionError, saved, deleted } = await searchParams;
   const user = await requirePagePermission("cash.view");
   const isAdmin = can(user, "cash.edit");
   const supabase = await createClient();
@@ -208,107 +208,22 @@ export default async function CashPage({
         </div>
       ) : (
         <>
-        {/* ===== موبايل: كروت والأزرار ظاهرة ===== */}
+        {/* ===== موبايل: كروت ===== */}
         <div className="space-y-2 md:hidden">
-          {transactions.map((row) => {
-            const isIn = row.direction === "in";
-            const editable = isAdmin && row.source_type === "manual";
-            return (
-              <div key={row.id} className="rounded-xl bg-white p-3 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-900">
-                      {sourceLabel(row)}
-                    </div>
-                    <div className="mt-0.5 text-xs text-gray-400">
-                      {formatDate(row.transaction_date)}
-                    </div>
-                  </div>
-                  <div
-                    className={`shrink-0 text-base font-bold ${
-                      isIn ? "text-green-700" : "text-red-700"
-                    }`}
-                  >
-                    {isIn ? "+" : "−"} {formatMoney(row.amount)}
-                  </div>
-                </div>
-                {editable && (
-                  <div className="mt-2 flex items-center gap-2 border-t border-gray-100 pt-2">
-                    <Link
-                      href={`/cash?edit=${row.id}`}
-                      className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white"
-                    >
-                      تعديل
-                    </Link>
-                    <form action={deleteCashTransaction}>
-                      <input type="hidden" name="transaction_id" value={row.id} />
-                      <ConfirmButton
-                        message="متأكد إنك عايز تمسح الحركة دي من الخزنة؟"
-                        className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700"
-                      >
-                        مسح
-                      </ConfirmButton>
-                    </form>
-                  </div>
-                )}
-                {editable && editId === row.id && (
-                  <form
-                    action={updateCashTransaction}
-                    className="minis-in mt-2 space-y-2 border-t border-gray-100 pt-2"
-                  >
-                    <input type="hidden" name="transaction_id" value={row.id} />
-                    <div className="flex gap-2">
-                      <select
-                        name="direction"
-                        defaultValue={row.direction}
-                        className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                        aria-label="الاتجاه"
-                      >
-                        <option value="in">إيداع</option>
-                        <option value="out">سحب</option>
-                      </select>
-                      <input
-                        type="number"
-                        name="amount"
-                        defaultValue={row.amount}
-                        min="0.01"
-                        step="0.01"
-                        className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                        aria-label="المبلغ"
-                      />
-                    </div>
-                    <input
-                      name="description"
-                      defaultValue={row.description ?? ""}
-                      placeholder="الوصف"
-                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                    />
-                    <input
-                      type="date"
-                      name="transaction_date"
-                      defaultValue={(row.transaction_date ?? "").slice(0, 10)}
-                      className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                      aria-label="التاريخ"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
-                      >
-                        حفظ
-                      </button>
-                      <Link
-                        href="/cash"
-                        className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
-                      >
-                        إلغاء
-                      </Link>
-                    </div>
-                  </form>
-                )}
-              </div>
-            );
-          })}
+          {transactions.map((row) => (
+            <CashCard
+              key={row.id}
+              id={row.id}
+              direction={row.direction}
+              amount={row.amount}
+              description={row.description}
+              transactionDate={row.transaction_date}
+              label={sourceLabel(row)}
+              canEdit={isAdmin && row.source_type === "manual"}
+              updateAction={updateCashTransaction}
+              deleteAction={deleteCashTransaction}
+            />
+          ))}
         </div>
 
         {/* ===== كمبيوتر: جدول ===== */}

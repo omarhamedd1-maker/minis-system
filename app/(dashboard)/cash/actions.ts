@@ -53,7 +53,6 @@ export async function updateCashTransaction(formData: FormData) {
 
   await logActivity(me, "cash.edit", `عدّل حركة خزنة (${direction === "in" ? "إيداع" : "سحب"} ${amount})`);
   revalidatePath("/cash");
-  redirect("/cash?saved=1");
 }
 
 export async function deleteCashTransaction(formData: FormData) {
@@ -80,7 +79,6 @@ export async function deleteCashTransaction(formData: FormData) {
 
   await logActivity(me, "cash.delete", "مسح حركة خزنة");
   revalidatePath("/cash");
-  redirect("/cash?deleted=1");
 }
 
 export async function addCashTransaction(formData: FormData) {
@@ -123,5 +121,4 @@ export async function addCashTransaction(formData: FormData) {
 
   await logActivity(me, "cash.add", `${direction === "in" ? "إيداع" : "سحب"} خزنة بمبلغ ${amount}`);
   revalidatePath("/cash");
-  redirect("/cash?saved=1");
 }

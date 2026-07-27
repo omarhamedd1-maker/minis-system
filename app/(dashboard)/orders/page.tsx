@@ -118,6 +118,7 @@ export default async function OrdersPage({
   if (period !== "all") returnParams.set("period", period);
   const returnTo = `/orders${returnParams.toString() ? `?${returnParams}` : ""}`;
   // بيبني لينك للأوردرات مع الحفاظ على فلتر الوقت
+  const nowMs = Date.now();
   const periodQS = (extra: string) => {
     const parts = [extra, period !== "all" ? `period=${period}` : ""].filter(
       Boolean
@@ -411,13 +412,13 @@ export default async function OrdersPage({
               const cancelLocked =
                 st === "cancelled" &&
                 (!order.cancelled_at ||
-                  Date.now() - new Date(order.cancelled_at).getTime() >
+                  nowMs - new Date(order.cancelled_at).getTime() >
                     CANCEL_LOCK_MS);
               const wa = waLink(order.customers?.phone ?? null);
               return (
                 <div
                   key={order.id}
-                  className="relative rounded-xl bg-white p-3 shadow-sm"
+                  className="relative rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
                 >
                   {/* الكارت كله بيفتح الأوردر — الأزرار فوقه بتشتغل عادي */}
                   <Link
@@ -435,13 +436,8 @@ export default async function OrdersPage({
                         aria-label="تحديد الأوردر"
                         className="relative z-10 mt-1 h-5 w-5 shrink-0 rounded border-gray-300"
                       />
-                      <div>
-                        <div className="text-base font-bold text-gray-900">
-                          {order.order_number ?? "بدون رقم"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {order.customers?.full_name ?? "—"}
-                        </div>
+                      <div className="text-base font-bold text-gray-900">
+                        {order.order_number ?? "بدون رقم"}
                       </div>
                     </div>
                     {!canStatus || AT_SHIPPING.includes(st) || cancelLocked ? (
@@ -487,6 +483,11 @@ export default async function OrdersPage({
                         <span className="text-gray-400">—</span>
                       )}
                     </span>
+                  </div>
+
+                  {/* اسم العميل تحت على الشمال بخط عادي */}
+                  <div className="mt-1 text-left text-xs text-gray-500">
+                    {order.customers?.full_name ?? "—"}
                   </div>
 
                   <div className="relative z-10 mt-2 flex w-fit items-center gap-3 border-t border-gray-100 pt-2">
@@ -657,7 +658,7 @@ export default async function OrdersPage({
                         const cancelLocked =
                           st === "cancelled" &&
                           (!order.cancelled_at ||
-                            Date.now() - new Date(order.cancelled_at).getTime() >
+                            nowMs - new Date(order.cancelled_at).getTime() >
                               CANCEL_LOCK_MS);
                         if (
                           !canStatus ||

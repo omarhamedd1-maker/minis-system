@@ -178,7 +178,7 @@ export default async function ProductsPage({
               <Link
                 key={product.id}
                 href={`/products/${product.id}`}
-                className="block rounded-xl bg-white p-3 shadow-sm"
+                className="block rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
