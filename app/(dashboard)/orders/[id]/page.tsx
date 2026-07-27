@@ -44,6 +44,7 @@ type OrderDetails = {
   shipping_price: number;
   discount: number;
   bosta_state: string | null;
+  bosta_exception: string | null;
   bosta_cod: number;
   bosta_collected: boolean;
   bosta_tracking: string | null;
@@ -97,7 +98,7 @@ export default async function OrderDetailsPage({
     .from("orders")
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
-       bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
+       bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        delivered_at, return_note, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
@@ -310,6 +311,62 @@ export default async function OrderDetailsPage({
           <BackLink href="/orders" label="الرجوع للأوردرات" variant="exit" />
         </div>
       </div>
+
+      {/* بوسطة واقفة ومحتاجة تصرّف — بنوضّح السبب ونخلي الأكشن من هنا */}
+      {(order.order_status === "awaiting_action" || order.bosta_exception) && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 text-lg leading-none">⚠️</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold text-amber-900">
+                بوسطة محتاجة تصرّف منك
+              </div>
+              {order.bosta_exception && (
+                <div className="mt-0.5 text-sm text-amber-800" dir="auto">
+                  السبب: {order.bosta_exception}
+                </div>
+              )}
+              {isAdmin && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  {whatsappLink && (
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white"
+                    >
+                      كلّم العميل واتساب
+                    </a>
+                  )}
+                  {order.customers?.id && (
+                    <Link
+                      href={`/customers/${order.customers.id}`}
+                      className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm"
+                    >
+                      عدّل العنوان
+                    </Link>
+                  )}
+                  <form action={updateOrderStatus}>
+                    <input type="hidden" name="order_id" value={order.id} />
+                    <input type="hidden" name="status" value="cancelled" />
+                    <input
+                      type="hidden"
+                      name="return_to"
+                      value={`/orders/${order.id}`}
+                    />
+                    <ConfirmButton
+                      message="تلغي الأوردر ده؟ (بلّغ بوسطة كمان إنك عايز ترجّع الشحنة)"
+                      className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700"
+                    >
+                      ألغِ الأوردر
+                    </ConfirmButton>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {actionError && (
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">

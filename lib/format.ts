@@ -29,18 +29,31 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     new: { label: "جديد", className: "bg-blue-50 text-blue-700" },
     confirmed: { label: "مؤكد", className: "bg-sky-50 text-sky-700" },
     packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
-    ready: { label: "جاهزة للشحن", className: "bg-cyan-50 text-cyan-700" },
+    // الشحنة اتعملت عند بوسطة ومستنية المندوب
+    ready: { label: "جاهز للشحن", className: "bg-cyan-50 text-cyan-700" },
+    // المندوب استلمها من عندنا
     shipped: { label: "مع المندوب", className: "bg-indigo-50 text-indigo-700" },
+    // خرجت من الفرع وماشية للعميل
     out_for_delivery: {
-      label: "خرجت للتسليم",
+      label: "في الطريق للعميل",
       className: "bg-violet-50 text-violet-700",
     },
     delivered: { label: "تم التسليم", className: "bg-green-50 text-green-700" },
+    // بوسطة واقفة ومحتاجة تصرّف مننا (عنوان مش واضح / العميل مش بيرد...)
+    awaiting_action: {
+      label: "محتاج تصرّف",
+      className: "bg-amber-100 text-amber-800",
+    },
+    // ماتسلمتش وراجعة لنا (لسه في الطريق)
+    returning: {
+      label: "في الطريق ليك",
+      className: "bg-orange-50 text-orange-600",
+    },
     cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
-    // الشحنة روّحت للعميل ومااتسلمتش (مردّش/رفض) فرجعت لنا
+    // رجعت لنا فعلاً ومااتسلمتش
     returned: {
       label: "رجعت ومتسلمتش",
-      className: "bg-orange-50 text-orange-700",
+      className: "bg-orange-100 text-orange-800",
     },
     // اتسلّم فعلاً وبعدين العميل رجّعه (كله أو جزء) — بشحنة عكسية
     // محميّة في الداتابيز بـ trigger عشان مزامنة بوسطة ماترجّعهاش "تم التسليم"
@@ -75,6 +88,8 @@ export const SHIPMENT_STATUSES = [
   "shipped",
   "out_for_delivery",
   "delivered",
+  "awaiting_action",
+  "returning",
   "returned",
 ];
 // من ساعة ما المندوب يستلم فما فوق (بتتحسب عليها تكلفة بوسطة)
@@ -83,6 +98,8 @@ export const AT_CARRIER_STATUSES = [
   "shipped",
   "out_for_delivery",
   "delivered",
+  "awaiting_action",
+  "returning",
   "returned",
   "returned_after_delivery",
 ];

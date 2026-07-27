@@ -23,13 +23,65 @@ const OPEN_FEE = 7, INSURANCE_RATE = 0.01, INSURANCE_MIN = 10, VAT = 1.14;
 // الحالات اللي المزامنة مامنفعش تغيّرها (بنحددها إحنا يدوي)
 const LOCKED_STATUSES = ["cancelled", "returned_after_delivery"];
 
+// خريطة حالات بوسطة لحالات السيستم — الترتيب مهم (الأخص الأول)
 function mapState(s: string | null): string | null {
   const x = (s ?? "").toLowerCase();
-  if (x.includes("return")) return "returned";
-  if (x.includes("out for delivery")) return "out_for_delivery";
-  if (x.includes("deliver")) return "delivered";
-  if (x.includes("picked") || x.includes("transit") || x.includes("in-transit") || x.includes("received") || x.includes("processing")) return "shipped";
-  if (x.includes("created") || x.includes("waiting for pickup") || x.includes("route")) return "ready";
+
+  // ملغي من بوسطة
+  if (x.includes("cancel")) return "cancelled";
+
+  // رجعت لنا فعلاً (وصلت المخزن/الأصل)
+  if (
+    x.includes("returned to origin") ||
+    x.includes("returned to business") ||
+    x === "returned" ||
+    x.includes("exchanged & returned")
+  ) {
+    return "returned";
+  }
+  // راجعة لنا لكن لسه في الطريق
+  if (x.includes("return")) return "returning";
+
+  // بوسطة واقفة ومحتاجة تصرّف مننا (عنوان غلط / العميل مش بيرد / رفض...)
+  if (
+    x.includes("awaiting action") ||
+    x.includes("action required") ||
+    x.includes("exception") ||
+    x.includes("on hold")
+  ) {
+    return "awaiting_action";
+  }
+
+  if (x.includes("deliver") && !x.includes("out for delivery")) return "delivered";
+
+  // خرجت من الفرع وماشية للعميل
+  if (x.includes("out for delivery") || x.includes("with courier")) {
+    return "out_for_delivery";
+  }
+
+  // المندوب استلمها / جوّه شبكة بوسطة
+  if (
+    x.includes("picked") ||
+    x.includes("transit") ||
+    x.includes("in-transit") ||
+    x.includes("received") ||
+    x.includes("processing") ||
+    x.includes("at warehouse") ||
+    x.includes("hub")
+  ) {
+    return "shipped";
+  }
+
+  // الشحنة اتعملت ومستنية المندوب
+  if (
+    x.includes("created") ||
+    x.includes("requested") ||
+    x.includes("waiting for pickup") ||
+    x.includes("pickup") ||
+    x.includes("route")
+  ) {
+    return "ready";
+  }
   return null;
 }
 function bostaCost(cod: number, productValue: number, allowOpen: boolean, returned: boolean) {
@@ -71,7 +123,7 @@ Deno.serve(async (req) => {
 
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, order_number, order_status, delivered_at, bosta_state, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost, order_items(quantity, sale_price_at_order), customers(full_name)");
+    .select("id, order_number, order_status, delivered_at, bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost, order_items(quantity, sale_price_at_order), customers(full_name)");
   const byNum = new Map<string, any>();
   const byTrack = new Map<string, any>();
   for (const o of orders ?? []) {
@@ -106,8 +158,16 @@ Deno.serve(async (req) => {
     const feesAsReturned = mapped === "returned" && o.order_status !== "returned_after_delivery";
     const c = bostaCost(cod, productValue, !!d?.allowToOpenPackage, feesAsReturned);
 
+    // سبب التوقف من بوسطة (عنوان مش واضح / العميل مش بيرد...)
+    const exception =
+      d?.latestExceptionReason ??
+      d?.state?.delayReason ??
+      d?.exceptionReason ??
+      null;
+
     const upd: Record<string, unknown> = {};
     if (o.bosta_state !== state) upd.bosta_state = state;
+    if ((o.bosta_exception ?? null) !== (exception ?? null)) upd.bosta_exception = exception;
     if (Number(o.bosta_cod) !== cod) upd.bosta_cod = cod;
     if (o.bosta_collected !== collected) upd.bosta_collected = collected;
     if (o.bosta_tracking !== trk) upd.bosta_tracking = trk;
