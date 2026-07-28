@@ -68,7 +68,6 @@ export const PAYMENT_METHODS: { value: string; label: string }[] = [
   { value: "cod", label: "كاش عند الاستلام" },
   { value: "instapay", label: "إنستا باي" },
   { value: "visa", label: "فيزا / أونلاين" },
-  { value: "deposit", label: "ديبوزيت (جزء مقدم)" },
 ];
 
 export function paymentMethodLabel(value: string | null) {
@@ -110,6 +109,9 @@ export const EXCLUDED_STATUSES = [
   "returned",
   "returned_after_delivery",
 ];
+
+// الشحن الأساسي اللي الباقة بتغطيه في كل شحنة — ثابت 88 في بوسطة
+export const BUNDLE_COVERS = 88;
 
 // ===== باقات بوسطة =====
 // الباقة بتتدفع شهرياً وبتغطي الشحن الأساسي لعدد شحنات معيّن.

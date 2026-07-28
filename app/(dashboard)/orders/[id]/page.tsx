@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  DEFAULT_BUNDLE,
-  bundlePerOrder,
+  BUNDLE_COVERS,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
   formatDate,
@@ -13,11 +12,14 @@ import {
 } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { OrderStatusSelect } from "@/components/OrderStatusSelect";
+import { StatusBox } from "@/components/StatusBox";
 import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
 import { BackLink } from "@/components/BackLink";
 import { OrderItemRow } from "@/components/OrderItemRow";
+import { OrderItemCard } from "@/components/OrderItemCard";
+import { ReturnPanel } from "@/components/ReturnPanel";
+import { BostaMark } from "@/components/BostaMark";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -387,20 +389,14 @@ export default async function OrderDetailsPage({
           <span className="text-sm font-medium text-gray-700">
             تغيير حالة الأوردر
           </span>
-          <OrderStatusSelect
+          <StatusBox
             orderId={order.id}
             currentStatus={order.order_status ?? "new"}
+            badgeLabel={badge.label}
+            badgeClass={badge.className}
             returnTo={`/orders/${order.id}`}
             options={ORDER_STATUS_OPTIONS}
             updateAction={updateOrderStatus}
-            confirmMessage={
-              order.bosta_state &&
-              ["shipped", "delivered", "returned"].includes(
-                order.order_status ?? ""
-              )
-                ? "الأوردر ده مع شركة الشحن وحالته بتتحدث من بوسطة تلقائياً. متأكد إنك عايز تغيّرها يدوياً؟"
-                : undefined
-            }
           />
         </div>
       )}
@@ -475,60 +471,52 @@ export default async function OrderDetailsPage({
                 <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
               </div>
-              {/* تقسيمة الشحن — سطر واحد لكل بند */}
+              {/* تقسيمة الشحن: الإجمالي − الباقة − العميل = الباقي */}
               {order.bosta_shipping_cost > 0 &&
                 (() => {
-                  const bundleShare = bundlePerOrder(
-                    DEFAULT_BUNDLE.price,
-                    DEFAULT_BUNDLE.shipments
-                  );
-                  const net =
-                    order.shipping_price -
-                    bundleShare -
-                    order.bosta_shipping_cost;
+                  // إجمالي اللي بوسطة بتاخده: الشحن الأساسي + رسومها
+                  const totalCost = BUNDLE_COVERS + order.bosta_shipping_cost;
+                  const rest = totalCost - BUNDLE_COVERS - order.shipping_price;
+                  const backToMe = rest < 0;
                   return (
                     <div className="mt-1 space-y-1 rounded-lg bg-gray-50 p-2.5 text-xs">
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-600">دفعه العميل</span>
-                        <span className="font-medium text-green-700">
-                          {formatMoney(order.shipping_price)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-3">
                         <span className="text-gray-600">
-                          نصيبه من الباقة
+                          إجمالي مصاريف الشحن
                           <span className="block text-[10px] text-gray-400">
-                            باقة {DEFAULT_BUNDLE.label}:{" "}
-                            {formatMoney(DEFAULT_BUNDLE.price)} ÷{" "}
-                            {DEFAULT_BUNDLE.shipments} شحنة
+                            {BUNDLE_COVERS} شحن + {formatMoney(order.bosta_shipping_cost)} رسوم
                           </span>
                         </span>
-                        <span className="font-medium text-red-700">
-                          − {formatMoney(bundleShare)}
+                        <span className="font-medium text-gray-900">
+                          {formatMoney(totalCost)}
                         </span>
                       </div>
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-600">رسوم بوسطة</span>
-                        <span className="font-medium text-red-700">
-                          − {formatMoney(order.bosta_shipping_cost)}
+                        <span className="text-gray-600">دفعته الباقة</span>
+                        <span className="font-medium text-gray-700">
+                          − {formatMoney(BUNDLE_COVERS)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span className="text-gray-600">دفعه العميل</span>
+                        <span className="font-medium text-gray-700">
+                          − {formatMoney(order.shipping_price)}
                         </span>
                       </div>
                       <div
                         className={`mt-1 flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 ${
-                          net >= 0 ? "bg-green-50" : "bg-red-50"
+                          backToMe ? "bg-green-50" : "bg-red-50"
                         }`}
                       >
                         <span
-                          className={`font-medium ${net >= 0 ? "text-green-800" : "text-red-800"}`}
+                          className={`font-medium ${backToMe ? "text-green-800" : "text-red-800"}`}
                         >
-                          {net >= 0
-                            ? "كسبت من الشحن"
-                            : "دفعت من جيبك على الشحن"}
+                          {backToMe ? "بترجع لك" : "عليك"}
                         </span>
                         <span
-                          className={`text-sm font-bold ${net >= 0 ? "text-green-700" : "text-red-700"}`}
+                          className={`text-sm font-bold ${backToMe ? "text-green-700" : "text-red-700"}`}
                         >
-                          {formatMoney(Math.abs(net))}
+                          {formatMoney(Math.abs(rest))}
                         </span>
                       </div>
                     </div>
@@ -584,9 +572,10 @@ export default async function OrderDetailsPage({
               <input type="hidden" name="order_id" value={order.id} />
               <ConfirmButton
                 message={`متأكد إنك عايز تبعت أوردر ${order.order_number ?? ""} لبوسطة كشحنة؟`}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E30613] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#b7050f]"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"
               >
-                📦 ابعت لبوسطة كشحنة
+                <BostaMark className="h-4 w-4" />
+                ابعت لبوسطة كشحنة
               </ConfirmButton>
               <p className="mt-1 text-xs text-gray-400">
                 هنعمل الشحنة في بوسطة تلقائياً ونجيب رقم التتبع. لو معرفناش نحدد
@@ -688,112 +677,79 @@ export default async function OrderDetailsPage({
               >
                 حفظ
               </button>
-              <p className="w-full text-xs text-gray-400">
-                المطلوب تحصيله من بوسطة = الإجمالي ناقص المدفوع مقدماً
-              </p>
             </form>
           )}
         </div>
 
-        {/* تفاصيل المرتجع بعد التسليم — الحالة نفسها بتتغيّر من فوق */}
-        {isAdmin && (
-          <div className="rounded-xl bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-bold text-gray-900">
-              تفاصيل المرتجع
-            </h2>
-            {order.order_status === "returned_after_delivery" ? (
-              <p className="mb-2 text-sm text-gray-700">
-                الأوردر ده مرتجع بعد التسليم ومش محسوب في المبيعات.
-              </p>
-            ) : (
-              <p className="mb-2 text-xs text-gray-400">
-                لو العميل استلم وبعدين رجّع، غيّر الحالة لـ &quot;مرتجع بعد
-                التسليم&quot; من فوق، واكتب هنا إيه اللي رجع. اعمل شحنة المرتجع في
-                بوسطة يدوي، وسجّل الفلوس اللي رجّعتها للعميل في الخزنة.
-              </p>
-            )}
-            {/* بنختار من منتجات الأوردر نفسه إيه اللي رجع وكميته */}
-            <form action={saveReturnedItems} className="space-y-2">
-              <input type="hidden" name="order_id" value={order.id} />
-              <div className="space-y-1.5">
-                {order.order_items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-2.5 py-1.5"
-                  >
-                    <span className="min-w-0 truncate text-xs text-gray-700">
-                      {item.product_variants?.products?.name ?? "—"}
-                      <span className="text-gray-400"> (من {item.quantity})</span>
-                    </span>
-                    <input
-                      key={`ret-${item.id}-${item.returned_quantity ?? 0}`}
-                      type="number"
-                      name={`ret_${item.id}`}
-                      defaultValue={item.returned_quantity ?? 0}
-                      min={0}
-                      max={item.quantity}
-                      step={1}
-                      aria-label="الكمية الراجعة"
-                      className="w-16 shrink-0 rounded-lg border border-gray-300 px-2 py-1 text-center text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-                    />
-                  </div>
-                ))}
-              </div>
-              <input
-                key={`rt-${order.return_note ?? ""}`}
-                name="return_tracking"
-                defaultValue={order.return_note ?? ""}
-                placeholder="رقم شحنة المرتجع في بوسطة (اختياري)"
-                dir="ltr"
-                className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
-              >
-                حفظ المرتجع
-              </button>
-              <p className="text-[10px] text-gray-400">
-                الكميات اللي بتحددها بترجع للمخزون تلقائياً
-              </p>
-            </form>
-
-            {/* شحنة المرتجع: بوسطة تسحب من العميل وتوصّلها لك */}
-            {canSend && (
-              <div className="mt-3 border-t border-gray-100 pt-3">
-                {order.return_tracking ? (
-                  <p className="text-xs text-gray-700">
-                    شحنة المرتجع اتعملت — رقم التتبع{" "}
-                    <span className="font-medium" dir="ltr">
-                      {order.return_tracking}
-                    </span>
-                  </p>
-                ) : (
-                  <form action={createReturnShipment}>
-                    <input type="hidden" name="order_id" value={order.id} />
-                    <ConfirmButton
-                      message="تعمل شحنة مرتجع؟ بوسطة هتروح تسحب المنتجات المحددة من عند العميل وتوصّلها لك."
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E30613] px-3 py-1.5 text-xs font-medium text-white"
-                    >
-                      ↩ اعمل شحنة مرتجع من عند العميل
-                    </ConfirmButton>
-                    <p className="mt-1 text-[10px] text-gray-400">
-                      فلوس المرتجع إنت اللي بترجّعها للعميل — الشحنة بمبلغ تحصيل
-                      صفر. سجّل الفلوس اللي رجّعتها في الخزنة.
-                    </p>
-                  </form>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* المرتجع — بيظهر بس لو الأوردر اتسلّم فعلاً */}
+        {(order.order_status === "delivered" ||
+          order.order_status === "returned_after_delivery") &&
+          isAdmin && (
+            <ReturnPanel
+              orderId={order.id}
+              returnTracking={order.return_tracking}
+              canSend={canSend}
+              saveAction={saveReturnedItems}
+              shipmentAction={createReturnShipment}
+              items={order.order_items.map((i) => ({
+                id: i.id,
+                name: i.product_variants?.products?.name ?? "منتج",
+                quantity: i.quantity,
+                returnedQuantity: i.returned_quantity ?? 0,
+              }))}
+            />
+          )}
       </div>
 
       <div className="rounded-xl bg-white shadow-sm">
         <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
           بنود الأوردر
         </h2>
-        <table className="w-full text-sm">
+
+        {/* ===== موبايل: كروت واضحة ===== */}
+        <div className="space-y-2 p-3 md:hidden">
+          {order.order_items.map((item) => (
+            <OrderItemCard
+              key={item.id}
+              orderId={order.id}
+              itemId={item.id}
+              productName={item.product_variants?.products?.name ?? "—"}
+              variantName={item.product_variants?.variant_name ?? "—"}
+              quantity={item.quantity}
+              salePrice={item.sale_price_at_order}
+              canEdit={canItems}
+              updateAction={updateOrderItem}
+              deleteAction={deleteOrderItem}
+            />
+          ))}
+
+          {/* الملخص */}
+          <div className="space-y-1 rounded-xl bg-white px-1 pt-2 text-sm">
+            <div className="flex justify-between text-gray-600">
+              <span>إجمالي المنتجات</span>
+              <span>{formatMoney(itemsTotal)}</span>
+            </div>
+            {!isCancelled && (
+              <div className="flex justify-between text-gray-600">
+                <span>الشحن</span>
+                <span>{formatMoney(order.shipping_price)}</span>
+              </div>
+            )}
+            {order.discount > 0 && (
+              <div className="flex justify-between text-red-600">
+                <span>الخصم</span>
+                <span>− {formatMoney(order.discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-gray-100 pt-1 font-bold text-gray-900">
+              <span>الإجمالي</span>
+              <span>{formatMoney(grandTotal)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== كمبيوتر: جدول ===== */}
+        <table className="hidden w-full text-sm md:table">
           <thead>
             <tr className="border-b border-gray-200 text-right text-gray-500">
               <th className="px-2 py-3 font-medium sm:px-4">المنتج</th>

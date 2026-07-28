@@ -27,6 +27,77 @@ export function joinAddress(a: AddressFields): string {
   return parts.length > 0 ? parts.join(" — ") : (a.address ?? "");
 }
 
+// محافظات ومدن مصر — بنستخدمها نطلع المدينة من نص العنوان الحر
+const EG_CITIES = [
+  "القاهرة",
+  "الجيزة",
+  "الاسكندرية",
+  "الإسكندرية",
+  "القليوبية",
+  "الشرقية",
+  "الغربية",
+  "المنوفية",
+  "الدقهلية",
+  "البحيرة",
+  "كفر الشيخ",
+  "دمياط",
+  "بورسعيد",
+  "الإسماعيلية",
+  "الاسماعيلية",
+  "السويس",
+  "شمال سيناء",
+  "جنوب سيناء",
+  "بني سويف",
+  "الفيوم",
+  "المنيا",
+  "أسيوط",
+  "اسيوط",
+  "سوهاج",
+  "قنا",
+  "الأقصر",
+  "الاقصر",
+  "أسوان",
+  "اسوان",
+  "البحر الأحمر",
+  "الوادي الجديد",
+  "مطروح",
+];
+
+// بنقسّم العنوان الحر (اللي جاي من شوبيفاي) لمدينة ومنطقة وباقي التفاصيل
+export function splitAddress(raw: string | null): {
+  city: string;
+  zone: string;
+  street: string;
+} {
+  const text = (raw ?? "").trim();
+  if (!text) return { city: "", zone: "", street: "" };
+
+  // بنقسّم على الفواصل الشائعة
+  const parts = text
+    .split(/[,،\-|/\n]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  let city = "";
+  let cityIdx = -1;
+  // بندوّر على اسم محافظة جوّه أي جزء
+  for (let i = 0; i < parts.length; i++) {
+    const hit = EG_CITIES.find((c) => parts[i].includes(c));
+    if (hit) {
+      city = hit;
+      cityIdx = i;
+      break;
+    }
+  }
+
+  const rest = parts.filter((_, i) => i !== cityIdx);
+  // آخر جزء متبقي عادةً بيكون المنطقة، والباقي تفاصيل الشارع
+  const zone = rest.length > 1 ? rest[rest.length - 1] : "";
+  const street = (zone ? rest.slice(0, -1) : rest).join(" — ");
+
+  return { city, zone, street };
+}
+
 // خانة عنوان واحدة — برة الرندر عشان مايتعملش كومبوننت جديد كل مرة
 function Box({
   name,
@@ -67,6 +138,16 @@ export function CustomerAddress({
   const [editing, setEditing] = useState(false);
   const joined = joinAddress(fields);
   const isSplit = Boolean(fields.city || fields.zone || fields.street);
+  // لو لسه مش مقسّم، بنقسّم النص الحر تلقائياً ونحطه كقيم مبدئية
+  const auto = splitAddress(fields.address);
+  const f = isSplit
+    ? fields
+    : {
+        ...fields,
+        city: auto.city || null,
+        zone: auto.zone || null,
+        street: auto.street || null,
+      };
 
   return (
     <div className="rounded-xl bg-white p-4 shadow-sm">
@@ -88,8 +169,8 @@ export function CustomerAddress({
           <p className="text-sm text-gray-800">{joined || "مفيش عنوان"}</p>
           {!isSplit && joined && (
             <p className="mt-1 text-xs text-amber-700">
-              العنوان ده نص واحد جاي من شوبيفاي — قسّمه عشان الشحنة تبقى واضحة في
-              بوسطة.
+              العنوان ده نص واحد جاي من شوبيفاي — دوس تعديل، هنقسّمه لك تلقائياً
+              وتراجعه وتحفظ.
             </p>
           )}
         </>
@@ -103,13 +184,13 @@ export function CustomerAddress({
         >
           <input type="hidden" name="customer_id" value={customerId} />
           <div className="grid gap-2 sm:grid-cols-2">
-            <Box name="city" label="المدينة / المحافظة" value={fields.city} placeholder="القاهرة" />
-            <Box name="zone" label="المنطقة" value={fields.zone} placeholder="مدينة نصر" />
+            <Box name="city" label="المدينة / المحافظة" value={f.city} placeholder="القاهرة" />
+            <Box name="zone" label="المنطقة" value={f.zone} placeholder="مدينة نصر" />
           </div>
           <Box
             name="street"
             label="الشارع"
-            value={fields.street}
+            value={f.street}
             placeholder="شارع عباس العقاد"
           />
           <div className="grid grid-cols-3 gap-2">
