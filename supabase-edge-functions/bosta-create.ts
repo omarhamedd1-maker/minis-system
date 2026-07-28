@@ -35,7 +35,14 @@ function normalizeAr(s: string): string {
     .toLowerCase();
 }
 
-type City = { _id: string; name?: string; nameAr?: string };
+type Zone = { _id: string; name?: string; nameAr?: string };
+type City = {
+  _id: string;
+  name?: string;
+  nameAr?: string;
+  zones?: Zone[];
+  districts?: Zone[];
+};
 
 // بنطابق أطول اسم مدينة موجود جوّه نص العنوان
 function matchCity(cities: City[], address: string): City | null {
@@ -47,6 +54,25 @@ function matchCity(cities: City[], address: string): City | null {
       const n = normalizeAr(name || "");
       if (n.length >= 3 && norm.includes(n) && n.length > bestLen) {
         best = c;
+        bestLen = n.length;
+      }
+    }
+  }
+  return best;
+}
+
+// بنطابق المنطقة جوّه المدينة (بوسطة أحياناً بتطلب zoneId)
+function matchZone(zones: Zone[] | undefined, text: string): Zone | null {
+  if (!zones?.length) return null;
+  const norm = normalizeAr(text);
+  if (!norm) return null;
+  let best: Zone | null = null;
+  let bestLen = 0;
+  for (const z of zones) {
+    for (const name of [z.nameAr, z.name]) {
+      const n = normalizeAr(name || "");
+      if (n.length >= 3 && norm.includes(n) && n.length > bestLen) {
+        best = z;
         bestLen = n.length;
       }
     }
@@ -157,6 +183,19 @@ Deno.serve(async (req) => {
     (customer.city ? matchCity(cities, customer.city) : null) ??
     matchCity(cities, `${customer.city ?? ""} ${customer.zone ?? ""} ${customer.address ?? ""}`);
 
+  // وضع الفحص: بيرجّع شكل بيانات المدينة زي ما بوسطة بترجّعها بالظبط
+  if (url.searchParams.get("probe") === "1") {
+    return json({
+      ok: true,
+      probe: true,
+      citiesCount: cities.length,
+      firstCityRaw: cities[0] ?? null,
+      matchedCityRaw: city ?? null,
+      customerCity: customer.city,
+      customerZone: customer.zone,
+    });
+  }
+
   // القرار الآمن: لو معرفناش نحدد المدينة منبعتش
   if (!city) {
     return json(
@@ -193,7 +232,12 @@ Deno.serve(async (req) => {
 
   const pickupId = Deno.env.get("BOSTA_PICKUP_ADDRESS_ID") || undefined;
 
-  const payload: Record<string, unknown> = {
+  // المنطقة (لو بوسطة راجعة المدينة بمناطقها)
+  const zone =
+    matchZone(city.zones, `${customer.zone ?? ""} ${customer.address ?? ""}`) ??
+    matchZone(city.districts, `${customer.zone ?? ""} ${customer.address ?? ""}`);
+
+  const base = {
     type: DELIVERY_TYPE_SEND,
     specs: {
       packageType: "Parcel",
@@ -201,23 +245,44 @@ Deno.serve(async (req) => {
     },
     notes: `أوردر ${order.order_number ?? ""}`.trim(),
     cod,
-    dropOffAddress: {
-      cityId: city._id,
-      firstLine: addressLine,
-      ...(customer.zone ? { zoneName: customer.zone } : {}),
-      ...(customer.building ? { buildingNumber: customer.building } : {}),
-      ...(customer.floor ? { floor: customer.floor } : {}),
-      ...(customer.apartment ? { apartment: customer.apartment } : {}),
-    },
-    receiver: {
-      firstName,
-      lastName,
-      phone,
-    },
+    receiver: { firstName, lastName, phone },
     businessReference: String(order.order_number ?? ""),
     allowToOpenPackage: true,
     ...(pickupId ? { pickupAddressId: pickupId } : {}),
   };
+
+  const addressExtras = {
+    firstLine: addressLine,
+    ...(customer.building ? { buildingNumber: String(customer.building) } : {}),
+    ...(customer.floor ? { floor: String(customer.floor) } : {}),
+    ...(customer.apartment ? { apartment: String(customer.apartment) } : {}),
+  };
+
+  // بوسطة بترفض `cityId` وبتقول "city, zoneId, or districtId is required".
+  // الشكل الصح هو `city` وجوّاه رقم المدينة — وبنجرّب البدائل بالترتيب لو رفضت،
+  // عشان لو غيّروا الحقل تاني السيستم يفضل شغال.
+  const variants: { name: string; dropOffAddress: Record<string, unknown> }[] = [
+    {
+      name: "city+zoneId",
+      dropOffAddress: {
+        city: city._id,
+        ...(zone ? { zoneId: zone._id } : {}),
+        ...addressExtras,
+      },
+    },
+    {
+      name: "city-only",
+      dropOffAddress: { city: city._id, ...addressExtras },
+    },
+    {
+      name: "cityId+city",
+      dropOffAddress: {
+        cityId: city._id,
+        city: city.nameAr || city.name,
+        ...addressExtras,
+      },
+    },
+  ];
 
   // وضع التجربة: نرجّع اللي هنبعته من غير ما نبعت فعلاً
   if (dry) {
@@ -225,25 +290,50 @@ Deno.serve(async (req) => {
       ok: true,
       dry: true,
       matchedCity: { id: city._id, name: city.nameAr || city.name },
+      matchedZone: zone ? { id: zone._id, name: zone.nameAr || zone.name } : null,
+      zonesAvailable: (city.zones ?? city.districts ?? []).length,
       cod,
       itemsCount,
-      payload,
+      payload: { ...base, ...variants[0] },
+      variantsToTry: variants.map((v) => v.name),
     });
   }
 
-  // 4) نبعت الشحنة لبوسطة
-  const createRes = await bostaFetch("/deliveries", API_KEY, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-  const createJson = await createRes.json().catch(() => null);
+  // 4) نبعت الشحنة لبوسطة — بنجرّب الأشكال بالترتيب لحد ما واحد ينجح
+  let createRes: Response | null = null;
+  let createJson: any = null;
+  let usedVariant = "";
+  const attempts: { variant: string; status: number; message: string }[] = [];
 
-  if (!createRes.ok) {
-    const msg =
-      createJson?.message ||
-      createJson?.error ||
-      `بوسطة رفضت الشحنة (${createRes.status})`;
-    return json({ ok: false, error: String(msg) }, 502);
+  for (const v of variants) {
+    const payload = { ...base, dropOffAddress: v.dropOffAddress };
+    createRes = await bostaFetch("/deliveries", API_KEY, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    createJson = await createRes.json().catch(() => null);
+    if (createRes.ok) {
+      usedVariant = v.name;
+      break;
+    }
+    attempts.push({
+      variant: v.name,
+      status: createRes.status,
+      message: String(createJson?.message ?? createJson?.error ?? ""),
+    });
+  }
+
+  if (!createRes || !createRes.ok) {
+    return json(
+      {
+        ok: false,
+        error:
+          attempts[0]?.message || `بوسطة رفضت الشحنة (${createRes?.status ?? 0})`,
+        attempts,
+        matchedCity: { id: city._id, name: city.nameAr || city.name },
+      },
+      502
+    );
   }
 
   const data = createJson?.data || createJson;
@@ -270,5 +360,11 @@ Deno.serve(async (req) => {
     });
   }
 
-  return json({ ok: true, tracking, matchedCity: city.nameAr || city.name });
+  return json({
+    ok: true,
+    tracking,
+    matchedCity: city.nameAr || city.name,
+    matchedZone: zone ? zone.nameAr || zone.name : null,
+    usedVariant,
+  });
 });

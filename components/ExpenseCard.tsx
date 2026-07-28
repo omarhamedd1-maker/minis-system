@@ -15,12 +15,14 @@ type Expense = {
 export function ExpenseCard({
   expense,
   categories,
+  supplier,
   canEdit,
   updateAction,
   deleteAction,
 }: {
   expense: Expense;
   categories: string[];
+  supplier?: string | null;
   canEdit: boolean;
   updateAction: (fd: FormData) => Promise<void>;
   deleteAction: (fd: FormData) => Promise<void>;
@@ -40,11 +42,14 @@ export function ExpenseCard({
               {formatDate(expense.expense_date)}
             </span>
           </div>
-          {expense.description && (
-            <div className="mt-0.5 text-xs text-gray-500">
-              {expense.category}
-            </div>
-          )}
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+            {expense.description && <span>{expense.category}</span>}
+            {supplier && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">
+                مورد: {supplier}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* المبلغ */}

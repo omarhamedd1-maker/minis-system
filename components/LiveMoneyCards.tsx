@@ -13,7 +13,7 @@ import {
 import { CountUp } from "./CountUp";
 
 const ORDER_SELECT =
-  "order_status, order_date, delivered_at, discount, bosta_shipping_cost, bosta_cod, bosta_collected, order_items(quantity, sale_price_at_order, cost_price_at_order)";
+  "order_status, order_date, delivered_at, discount, shipping_price, bosta_shipping_cost, bosta_cod, bosta_collected, order_items(quantity, sale_price_at_order, cost_price_at_order)";
 
 export function LiveMoneyCards({
   initial,
@@ -96,7 +96,12 @@ export function LiveMoneyCards({
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {/* على الشاشة الكبيرة: المبيعات وصافي الربح كروت كبيرة، والباقي بيتقسّم 4 في الصف */}
-      <Card label="المبيعات" className="col-span-2" hero>
+      <Card
+        label="المبيعات"
+        hint="شاملة الشحن اللي العميل دفعه — نفس رقم شوبيفاي"
+        className="col-span-2"
+        hero
+      >
         <span className="text-gray-900">
           <CountUp key={key} baseline={base} value={s.sales} format={money} />
         </span>

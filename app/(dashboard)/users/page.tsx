@@ -230,19 +230,32 @@ export default async function UsersPage({
         ))}
       </div>
 
-      {/* سجل النشاط العام — آخر اللي اتعمل في السيستم */}
-      <div className="rounded-xl bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 className="text-sm font-bold text-gray-900">
-            سجل النشاط (آخر {activity.length})
+      {/* سجل النشاط العام — مقفول، بيفتح لما تدوس عليه */}
+      <details className="group rounded-xl bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+            سجل النشاط ({activity.length})
           </h2>
           <Link
             href="/users/activity"
+            onClick={(e) => e.stopPropagation()}
             className="text-xs font-medium text-gray-500 hover:text-gray-900"
           >
-            شوف السجل كامل مع الفلترة ←
+            السجل كامل ←
           </Link>
-        </div>
+        </summary>
+        <div className="border-t border-gray-200">
         {activity.length === 0 ? (
           <p className="px-5 py-6 text-sm text-gray-500">
             لسه مفيش نشاط مسجّل. أول ما حد يعمل حاجة مهمة (تغيير حالة، حذف، إرسال
@@ -266,7 +279,8 @@ export default async function UsersPage({
             ))}
           </ul>
         )}
-      </div>
+        </div>
+      </details>
 
       <p className="text-xs text-gray-400">
         ملاحظة: الأدمن عنده كل الصلاحيات تلقائياً. المستخدمون الجدد بيتعملوا كأعضاء

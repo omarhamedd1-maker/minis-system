@@ -228,14 +228,22 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       }>(),
   ]);
 
-  // "آخر مرة فتح السيستم" — بنحدّثها كل 5 دقايق بالكتير عشان مانبطّأش السيستم
+  // "آخر مرة فتح السيستم" — بنحدّثها كل دقيقة بالكتير عشان مانبطّأش السيستم.
+  // لازم تتكتب بمفتاح الأدمن: المستخدم العادي مالوش صلاحية UPDATE على app_users
+  // في الـRLS، فالكتابة بمفتاحه كانت بتفشل في صمت والخانة تفضل فاضية
+  // (وعشان كده الصفحة كانت بتقع على آخر تسجيل دخول).
   const seen = appUser?.last_seen_at ? new Date(appUser.last_seen_at).getTime() : 0;
-  if (Date.now() - seen > 5 * 60 * 1000) {
-    void supabase
-      .from("app_users")
-      .update({ last_seen_at: new Date().toISOString() })
-      .eq("auth_user_id", user.id)
-      .then(() => {});
+  if (Date.now() - seen > 60 * 1000) {
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      void createAdminClient()
+        .from("app_users")
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq("auth_user_id", user.id)
+        .then(() => {});
+    } catch {
+      // لو مفتاح الأدمن ناقص مانوقفش تحميل الصفحة
+    }
   }
 
   return {

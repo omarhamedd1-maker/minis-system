@@ -59,6 +59,16 @@ alter table supplier_invoice_items enable row level security;
 create index if not exists supplier_invoice_items_txn_idx
   on supplier_invoice_items (transaction_id);
 
+-- ===== الإضافة التالتة: ربط المصاريف بالموردين في الاتجاهين =====
+-- مصروف على مورد = فاتورة في حسابه. لو ضفته من صفحة المصاريف بيبان عند المورد،
+-- ولو ضفته من صفحة المورد بيبان في المصاريف.
+alter table expenses
+  add column if not exists supplier_id uuid references suppliers(id) on delete set null;
+
+create index if not exists expenses_supplier_idx on expenses (supplier_id);
+create index if not exists supplier_transactions_expense_idx
+  on supplier_transactions (related_expense_id);
+
 -- الشركاء (Owner) عشان يشوفوا الموردين — من غير ما يعدّلوا
 update app_users
 set permissions = array(select distinct unnest(permissions || array['suppliers.view']))

@@ -63,8 +63,19 @@ export async function updateExpense(formData: FormData) {
     );
   }
 
+  // لو المصروف مربوط بمورد، حسابه لازم يتحدّث بنفس المبلغ والتاريخ
+  await supabase
+    .from("supplier_transactions")
+    .update({
+      amount,
+      txn_date: expenseDate,
+      description: description || category,
+    })
+    .eq("related_expense_id", id);
+
   await logActivity(me, "expense.edit", `عدّل مصروف ${category} (${amount})`);
   revalidatePath("/expenses");
+  revalidatePath("/suppliers");
 }
 
 export async function deleteExpense(formData: FormData) {
@@ -75,6 +86,12 @@ export async function deleteExpense(formData: FormData) {
   }
 
   const supabase = createAdminClient();
+
+  // لو المصروف كان فاتورة مورد، بنشيلها من حسابه كمان
+  await supabase
+    .from("supplier_transactions")
+    .delete()
+    .eq("related_expense_id", id);
 
   // نمسح حركة الخزنة المرتبطة الأول عشان مفيش حركة تفضل من غير مصروف
   const { error: cashError } = await supabase
@@ -103,6 +120,7 @@ export async function deleteExpense(formData: FormData) {
 
   await logActivity(me, "expense.delete", "مسح مصروف");
   revalidatePath("/expenses");
+  revalidatePath("/suppliers");
 }
 
 export async function addExpense(formData: FormData) {
@@ -111,6 +129,7 @@ export async function addExpense(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const amount = Number(formData.get("amount"));
   const expenseDate = String(formData.get("expense_date") ?? "");
+  const supplierId = String(formData.get("supplier_id") ?? "").trim() || null;
 
   if (!category || !Number.isFinite(amount) || amount <= 0 || !expenseDate) {
     redirect(
@@ -128,6 +147,7 @@ export async function addExpense(formData: FormData) {
       description: description || null,
       amount,
       expense_date: expenseDate,
+      supplier_id: supplierId,
     })
     .select("id")
     .single();
@@ -141,23 +161,48 @@ export async function addExpense(formData: FormData) {
     );
   }
 
-  const { error: cashError } = await supabase.from("cash_transactions").insert({
-    direction: "out",
-    amount,
-    source_type: "expense",
-    related_expense_id: expense.id,
-    transaction_date: expenseDate,
-  });
+  // مصروف على مورد = فاتورة في حسابه، والفلوس بتطلع من الخزنة وقت الدفعة مش دلوقتي
+  if (supplierId) {
+    const { error: txnError } = await supabase
+      .from("supplier_transactions")
+      .insert({
+        supplier_id: supplierId,
+        kind: "purchase",
+        amount,
+        description: description || category,
+        txn_date: expenseDate,
+        related_expense_id: expense.id,
+      });
 
-  if (cashError) {
-    redirect(
-      "/expenses?error=" +
-        encodeURIComponent(
-          "المصروف اتسجل لكن معرفناش نسجله في الخزنة: " + cashError.message
-        )
-    );
+    if (txnError) {
+      await supabase.from("expenses").delete().eq("id", expense.id);
+      redirect(
+        "/expenses?error=" +
+          encodeURIComponent(
+            "معرفناش نضيف الفاتورة لحساب المورد: " + txnError.message
+          )
+      );
+    }
+  } else {
+    const { error: cashError } = await supabase.from("cash_transactions").insert({
+      direction: "out",
+      amount,
+      source_type: "expense",
+      related_expense_id: expense.id,
+      transaction_date: expenseDate,
+    });
+
+    if (cashError) {
+      redirect(
+        "/expenses?error=" +
+          encodeURIComponent(
+            "المصروف اتسجل لكن معرفناش نسجله في الخزنة: " + cashError.message
+          )
+      );
+    }
   }
 
   await logActivity(me, "expense.add", `سجّل مصروف ${category} بمبلغ ${amount}`);
   revalidatePath("/expenses");
+  revalidatePath("/suppliers");
 }

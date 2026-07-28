@@ -15,11 +15,13 @@ type Expense = {
 export function ExpenseRow({
   expense,
   categories,
+  supplier,
   updateAction,
   deleteAction,
 }: {
   expense: Expense;
   categories: string[];
+  supplier?: string | null;
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -40,6 +42,11 @@ export function ExpenseRow({
         </td>
         <td className="px-4 py-3 text-gray-700">
           {expense.description ?? "—"}
+          {supplier && (
+            <span className="ms-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+              مورد: {supplier}
+            </span>
+          )}
         </td>
         <td className="whitespace-nowrap px-4 py-3 text-gray-700">
           {formatMoney(expense.amount)}

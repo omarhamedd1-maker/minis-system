@@ -56,6 +56,7 @@ export type StatOrder = {
   order_date: string | null;
   delivered_at: string | null;
   discount: number;
+  shipping_price?: number | null;
   bosta_shipping_cost: number | null;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
@@ -100,7 +101,11 @@ export function computeHeadline(
       !EXCLUDED.includes(o.order_status ?? "")
   );
 
-  const sales = validOrders.reduce((s, o) => s + itemsTotal(o) - o.discount, 0);
+  // المبيعات شاملة الشحن اللي العميل دفعه — عشان الرقم يقارن بشوبيفاي على طول
+  const sales = validOrders.reduce(
+    (s, o) => s + itemsTotal(o) - o.discount + Number(o.shipping_price ?? 0),
+    0
+  );
   const profit = validOrders.reduce(
     (s, o) => s + itemsProfit(o) - o.discount,
     0

@@ -210,6 +210,7 @@ export async function addSupplierTransaction(formData: FormData) {
         description: supplierLabel,
         amount: finalAmount,
         expense_date: txnDate,
+        supplier_id: supplierId,
       })
       .select("id")
       .single();

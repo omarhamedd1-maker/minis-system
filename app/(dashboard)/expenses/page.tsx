@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   EXPENSE_CATEGORIES,
   cairoToday,
@@ -17,6 +18,7 @@ type ExpenseRow = {
   description: string | null;
   amount: number;
   expense_date: string;
+  supplier_id: string | null;
 };
 
 const CATEGORY_SUGGESTIONS = EXPENSE_CATEGORIES;
@@ -65,13 +67,22 @@ export default async function ExpensesPage({
 
   let query = supabase
     .from("expenses")
-    .select("id, category, description, amount, expense_date")
+    .select("id, category, description, amount, expense_date, supplier_id")
     .order("expense_date", { ascending: false })
     .limit(2000);
   if (periodStart) query = query.gte("expense_date", periodStart);
   if (cat) query = query.eq("category", cat);
 
   const { data: expenses, error } = await query.overrideTypes<ExpenseRow[]>();
+
+  // أسماء الموردين بتتقري بمفتاح الأدمن (جدول الموردين مقفول في الـRLS)
+  const { data: supplierRows } = await createAdminClient()
+    .from("suppliers")
+    .select("id, name")
+    .order("name")
+    .overrideTypes<{ id: string; name: string }[]>();
+  const suppliers = supplierRows ?? [];
+  const supplierName = new Map(suppliers.map((s) => [s.id, s.name]));
 
   if (error) {
     return (
@@ -222,12 +233,36 @@ export default async function ExpensesPage({
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
             />
           </div>
+          {suppliers.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <label htmlFor="supplier_id" className="text-xs text-gray-500">
+                المورد (اختياري)
+              </label>
+              <select
+                id="supplier_id"
+                name="supplier_id"
+                defaultValue=""
+                className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              >
+                <option value="">مش على مورد</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             type="submit"
             className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
           >
             تسجيل المصروف
           </button>
+          <p className="w-full text-xs text-gray-400">
+            لو اخترت مورد، المصروف بيتسجّل فاتورة في حسابه وبيزوّد اللي عليك له،
+            والفلوس مابتطلعش من الخزنة غير لما تسجّل الدفعة من صفحة المورد.
+          </p>
         </form>
       )}
 
@@ -246,6 +281,11 @@ export default async function ExpensesPage({
               key={expense.id}
               expense={expense}
               categories={CATEGORY_SUGGESTIONS}
+              supplier={
+                expense.supplier_id
+                  ? supplierName.get(expense.supplier_id) ?? null
+                  : null
+              }
               canEdit={isAdmin}
               updateAction={updateExpense}
               deleteAction={deleteExpense}
@@ -272,6 +312,11 @@ export default async function ExpensesPage({
                     key={expense.id}
                     expense={expense}
                     categories={CATEGORY_SUGGESTIONS}
+                    supplier={
+                      expense.supplier_id
+                        ? supplierName.get(expense.supplier_id) ?? null
+                        : null
+                    }
                     updateAction={updateExpense}
                     deleteAction={deleteExpense}
                   />

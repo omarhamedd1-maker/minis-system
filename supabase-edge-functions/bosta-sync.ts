@@ -121,6 +121,25 @@ Deno.serve(async (req) => {
     page++;
   }
 
+  // وضع الفحص: بيرجّع بيانات شحنة واحدة زي ما بوسطة بترجّعها بالظبط
+  // (بنستخدمه عشان نعرف بوسطة بتحسب التأمين على أنهي قيمة)
+  const sample = url.searchParams.get("sample");
+  if (sample) {
+    const one = deliveries.find(
+      (d) =>
+        String(d?.trackingNumber ?? "") === sample ||
+        String(d?.shopifyInfo?.orderNumber ?? "").replace("#", "") === sample ||
+        String(d?.businessReference ?? "").split(":").pop()?.trim() === sample,
+    );
+    return new Response(
+      JSON.stringify({ found: !!one, delivery: one ?? null }, null, 2),
+      { headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // قايمة الشحنات اللي مالهاش أوردر عندنا (للمطابقة)
+  const unmatchedOnly = url.searchParams.get("unmatched") === "1";
+
   const { data: orders } = await supabase
     .from("orders")
     .select("id, order_number, order_status, delivered_at, bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost, order_items(quantity, sale_price_at_order), customers(full_name)");
@@ -132,6 +151,7 @@ Deno.serve(async (req) => {
   }
 
   let matched = 0, changed = 0, skippedTampered = 0, statusLocked = 0;
+  const unmatched: any[] = [];
   for (const d of deliveries) {
     const tracking = d?.trackingNumber ? String(d.trackingNumber) : "";
     const rawNum = d?.shopifyInfo?.orderNumber ?? String(d?.businessReference ?? "").split(":").pop() ?? "";
@@ -140,7 +160,19 @@ Deno.serve(async (req) => {
     let o: any = null, byTracking = false;
     if (tracking && byTrack.has(tracking)) { o = byTrack.get(tracking); byTracking = true; }
     else o = byNum.get(orderNumber);
-    if (!o) continue;
+    if (!o) {
+      unmatched.push({
+        tracking,
+        orderNumber,
+        state: d?.state?.value ?? null,
+        cod: Number(d?.cod ?? 0),
+        receiver: d?.receiver?.fullName ?? null,
+        phone: d?.receiver?.phone ?? null,
+        createdAt: d?.createdAt ?? null,
+        businessReference: d?.businessReference ?? null,
+      });
+      continue;
+    }
 
     if (!byTracking && !namesShare(o.customers?.full_name ?? "", d?.receiver?.fullName ?? "")) {
       skippedTampered++;
@@ -184,9 +216,16 @@ Deno.serve(async (req) => {
     }
 
     if (Object.keys(upd).length === 0) continue;
-    if (!dry) await supabase.from("orders").update(upd).eq("id", o.id);
+    if (!dry && !unmatchedOnly) await supabase.from("orders").update(upd).eq("id", o.id);
     changed++;
   }
 
-  return new Response(JSON.stringify({ mode: dry ? "DRY RUN" : "تم التنفيذ", fetched: deliveries.length, matched, changed, skippedTampered, statusLocked }, null, 2), { headers: { "Content-Type": "application/json" } });
+  if (unmatchedOnly) {
+    return new Response(
+      JSON.stringify({ count: unmatched.length, unmatched }, null, 2),
+      { headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  return new Response(JSON.stringify({ mode: dry ? "DRY RUN" : "تم التنفيذ", fetched: deliveries.length, matched, changed, skippedTampered, statusLocked, unmatchedCount: unmatched.length }, null, 2), { headers: { "Content-Type": "application/json" } });
 });

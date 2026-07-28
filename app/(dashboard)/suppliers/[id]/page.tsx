@@ -74,13 +74,14 @@ export default async function SupplierPage({
       .overrideTypes<Txn[]>(),
     admin
       .from("product_variants")
-      .select("id, variant_name, cost_price, products(name_ar, name)")
+      .select("id, variant_name, sku, cost_price, products(name_ar, name)")
       .order("id")
       .limit(2000)
       .overrideTypes<
         {
           id: string;
           variant_name: string | null;
+          sku: string | null;
           cost_price: number;
           products: { name_ar: string | null; name: string | null } | null;
         }[]
@@ -91,14 +92,21 @@ export default async function SupplierPage({
   const supplier = supplierResult.data;
   const txns = txnsResult.data ?? [];
 
+  // الاسم العربي الأول وبعده الكود — عشان يبقى واضح وهو بيدوّر
   const variants: VariantOption[] = (variantsResult.data ?? [])
-    .map((v) => ({
-      id: v.id,
-      label: [v.products?.name_ar || v.products?.name || "منتج", v.variant_name]
+    .map((v) => {
+      const name = [
+        v.products?.name_ar || v.products?.name || "منتج",
+        v.variant_name,
+      ]
         .filter(Boolean)
-        .join(" / "),
-      cost: Number(v.cost_price ?? 0),
-    }))
+        .join(" / ");
+      return {
+        id: v.id,
+        label: v.sku ? `${v.sku} — ${name}` : name,
+        cost: Number(v.cost_price ?? 0),
+      };
+    })
     .sort((a, b) => a.label.localeCompare(b.label, "ar"));
 
   const purchases = txns
