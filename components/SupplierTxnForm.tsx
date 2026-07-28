@@ -100,8 +100,8 @@ export function SupplierTxnForm({
 
       <p className="mt-2 text-xs text-gray-500">
         {isPayment
-          ? "فلوس طلعت منك للمورد — بتقلّل اللي عليك وبتتخصم من الخزنة."
-          : "بضاعة استلمتها — بتتسجل مصروف وبتزوّد اللي عليك. الفلوس بتطلع من الخزنة وقت الدفعة."}
+          ? "فلوس طلعت منك للمورد — بتتسجل مصروف وبتتخصم من الخزنة وبتقلّل اللي عليك."
+          : "بضاعة أخدتها بالأجل — بتزوّد اللي عليك بس. مش مصروف ومش هتلمس الخزنة لحد ما تحاسبه."}
       </p>
 
       {/* ===== بنود الفاتورة: البضاعة اللي جِت بالظبط ===== */}
@@ -283,33 +283,36 @@ export function SupplierTxnForm({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         {isPayment ? (
-          <label className="flex items-center gap-2 text-xs text-gray-600">
-            <input
-              type="checkbox"
-              name="hit_cash"
-              defaultChecked
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            اخصمها من الخزنة
-          </label>
-        ) : (
-          <div className="flex flex-col gap-1">
-            <label htmlFor="category" className="text-xs text-gray-500">
-              نوع المصروف
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="category" className="text-xs text-gray-500">
+                نوع المصروف
+              </label>
+              <select
+                id="category"
+                name="category"
+                defaultValue="بضاعة"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm"
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="flex items-center gap-2 pb-2 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                name="hit_cash"
+                defaultChecked
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              اخصمها من الخزنة
             </label>
-            <select
-              id="category"
-              name="category"
-              defaultValue="بضاعة"
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm"
-            >
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
           </div>
+        ) : (
+          <span />
         )}
         <button
           type="submit"

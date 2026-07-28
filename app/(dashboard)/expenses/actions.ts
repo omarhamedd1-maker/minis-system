@@ -161,13 +161,14 @@ export async function addExpense(formData: FormData) {
     );
   }
 
-  // مصروف على مورد = فاتورة في حسابه، والفلوس بتطلع من الخزنة وقت الدفعة مش دلوقتي
+  // مصروف على مورد = فلوس دفعتها له، فبتتسجل دفعة في حسابه وبتقلّل اللي عليك.
+  // (فواتير البضاعة بالأجل بتتسجل من صفحة المورد نفسه ومابتتحسبش مصروف)
   if (supplierId) {
     const { error: txnError } = await supabase
       .from("supplier_transactions")
       .insert({
         supplier_id: supplierId,
-        kind: "purchase",
+        kind: "payment",
         amount,
         description: description || category,
         txn_date: expenseDate,
@@ -179,27 +180,27 @@ export async function addExpense(formData: FormData) {
       redirect(
         "/expenses?error=" +
           encodeURIComponent(
-            "معرفناش نضيف الفاتورة لحساب المورد: " + txnError.message
+            "معرفناش نسجل الدفعة في حساب المورد: " + txnError.message
           )
       );
     }
-  } else {
-    const { error: cashError } = await supabase.from("cash_transactions").insert({
-      direction: "out",
-      amount,
-      source_type: "expense",
-      related_expense_id: expense.id,
-      transaction_date: expenseDate,
-    });
+  }
 
-    if (cashError) {
-      redirect(
-        "/expenses?error=" +
-          encodeURIComponent(
-            "المصروف اتسجل لكن معرفناش نسجله في الخزنة: " + cashError.message
-          )
-      );
-    }
+  const { error: cashError } = await supabase.from("cash_transactions").insert({
+    direction: "out",
+    amount,
+    source_type: "expense",
+    related_expense_id: expense.id,
+    transaction_date: expenseDate,
+  });
+
+  if (cashError) {
+    redirect(
+      "/expenses?error=" +
+        encodeURIComponent(
+          "المصروف اتسجل لكن معرفناش نسجله في الخزنة: " + cashError.message
+        )
+    );
   }
 
   await logActivity(me, "expense.add", `سجّل مصروف ${category} بمبلغ ${amount}`);

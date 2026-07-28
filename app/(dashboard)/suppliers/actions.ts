@@ -7,12 +7,12 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { EXPENSE_CATEGORIES } from "@/lib/format";
 
-// الحسبة زي ما عمر حددها:
-//   الفاتورة (purchase)  = بضاعة استلمتها → بتتسجل مصروف في صفحة المصاريف،
-//                          وبتزوّد اللي عليك للمورد. الخزنة مابتتأثرش دلوقتي
-//                          لأن الفلوس لسه ماطلعتش.
-//   الدفعة (payment)     = فلوس طلعت فعلاً → بتخصم من الخزنة وبتقلّل اللي عليك.
-//   تكلفة المنتج (cost_price) رقم إرشادي بيبيّن ربح الأوردر — مالوش حركة فلوس.
+// الحسبة زي ما عمر حددها (شغل بالأجل — بياخد البضاعة ويحاسب بعدين):
+//   الفاتورة (purchase)  = بضاعة استلمتها ولسه ما دفعتهاش → بتزوّد اللي عليك
+//                          للمورد بس. مش مصروف ومش حركة خزنة، لأن الفلوس
+//                          ماطلعتش ولا حاجة اتحاسبت لسه.
+//   الدفعة (payment)     = فلوس طلعت فعلاً → دي اللي بتتسجل مصروف وبتتخصم
+//                          من الخزنة، وبتقلّل اللي عليك.
 
 function fail(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
@@ -200,9 +200,12 @@ export async function addSupplierTransaction(formData: FormData) {
 
   if (finalAmount <= 0) fail(back, "الإجمالي لازم يكون أكبر من صفر");
 
-  // الفاتورة بتتسجل مصروف (من غير حركة خزنة — الفلوس بتطلع وقت الدفعة)
+  // الفاتورة: بضاعة بالأجل — بتزوّد اللي عليك بس، من غير مصروف ولا خزنة.
+  // الدفعة: دي اللي بتتسجل مصروف + بتطلع من الخزنة.
   let expenseId: string | null = null;
-  if (kind === "purchase") {
+  let cashId: string | null = null;
+
+  if (kind === "payment") {
     const { data: expense, error: expenseError } = await admin
       .from("expenses")
       .insert({
@@ -216,32 +219,29 @@ export async function addSupplierTransaction(formData: FormData) {
       .single();
 
     if (expenseError || !expense) {
-      fail(back, "معرفناش نسجل الفاتورة في المصاريف: " + (expenseError?.message ?? ""));
+      fail(back, "معرفناش نسجل الدفعة في المصاريف: " + (expenseError?.message ?? ""));
     }
     expenseId = expense.id;
-  }
 
-  // الدفعة بتطلع من الخزنة (لو اختار كده)
-  let cashId: string | null = null;
-  if (kind === "payment" && hitCash) {
-    const { data: cash, error: cashError } = await admin
-      .from("cash_transactions")
-      .insert({
-        direction: "out",
-        amount: finalAmount,
-        source_type: "manual",
-        description: `دفعة للمورد ${supplier?.name ?? ""}${
-          description ? ` — ${description}` : ""
-        }`.trim(),
-        transaction_date: txnDate,
-      })
-      .select("id")
-      .single();
+    if (hitCash) {
+      const { data: cash, error: cashError } = await admin
+        .from("cash_transactions")
+        .insert({
+          direction: "out",
+          amount: finalAmount,
+          source_type: "expense",
+          related_expense_id: expense.id,
+          transaction_date: txnDate,
+        })
+        .select("id")
+        .single();
 
-    if (cashError || !cash) {
-      fail(back, "معرفناش نخصم الدفعة من الخزنة: " + (cashError?.message ?? ""));
+      if (cashError || !cash) {
+        await admin.from("expenses").delete().eq("id", expense.id);
+        fail(back, "معرفناش نخصم الدفعة من الخزنة: " + (cashError?.message ?? ""));
+      }
+      cashId = cash.id;
     }
-    cashId = cash.id;
   }
 
   const stockApplied = kind === "purchase" && updateStock && items.length > 0;
