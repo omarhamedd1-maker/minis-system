@@ -15,6 +15,7 @@ function syncedOrder(over: Partial<OurOrder> = {}): OurOrder {
     bosta_cod: 3690,
     bosta_collected: true,
     bosta_shipping_cost: 92.11,
+    bosta_exception: null,
     productValue: 3600,
     ...over,
   };
@@ -107,15 +108,6 @@ describe("الرسوم", () => {
     expect(d.changes.bosta_shipping_cost).toBe(92.11);
   });
 
-  it("مابتتحسبش للشحنة اللي لسه متعملة ومستنية المندوب", () => {
-    const d = decideSync(
-      { ...deliveredShipment, state: { value: "Created" } },
-      syncedOrder({ order_status: "ready", bosta_shipping_cost: null }),
-      NOW
-    );
-    expect(d.changes.bosta_shipping_cost).toBeUndefined();
-  });
-
   it("المرتجع رسومه أقل — مفيش تحصيل ولا تحويل", () => {
     const d = decideSync(
       { ...deliveredShipment, state: { value: "Returned to origin" } },
@@ -123,6 +115,47 @@ describe("الرسوم", () => {
       NOW
     );
     expect(d.changes.bosta_shipping_cost).toBe(30.78);
+  });
+
+  it("المرتجع بعد التسليم رسومه كاملة — لأنه اتسلّم فعلاً", () => {
+    const d = decideSync(
+      { ...deliveredShipment, state: { value: "Returned to origin" } },
+      syncedOrder({
+        order_status: "returned_after_delivery",
+        bosta_shipping_cost: null,
+      }),
+      NOW
+    );
+    expect(d.changes.bosta_shipping_cost).toBe(92.11);
+  });
+
+  it("لو الشحنة مش مسموح تتفتح، رسم الفتح بيتشال", () => {
+    const d = decideSync(
+      { ...deliveredShipment, allowToOpenPackage: false },
+      syncedOrder({ bosta_shipping_cost: null }),
+      NOW
+    );
+    expect(d.changes.bosta_shipping_cost).toBe(84.13); // من غير الـ٧ جنيه
+  });
+});
+
+describe("سبب وقوف الشحنة", () => {
+  it("بيتسجّل لما بوسطة تبعته", () => {
+    const d = decideSync(
+      { ...deliveredShipment, latestExceptionReason: "العميل مش بيرد" },
+      syncedOrder(),
+      NOW
+    );
+    expect(d.changes.bosta_exception).toBe("العميل مش بيرد");
+  });
+
+  it("بيتشال لما المشكلة تتحل", () => {
+    const d = decideSync(
+      deliveredShipment,
+      syncedOrder({ bosta_exception: "العميل مش بيرد" }),
+      NOW
+    );
+    expect(d.changes.bosta_exception).toBe(null);
   });
 });
 

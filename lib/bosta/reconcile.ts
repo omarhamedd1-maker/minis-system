@@ -10,12 +10,21 @@ import { canSyncChangeStatus, mapBostaState } from "./order-status";
 
 export type BostaDelivery = {
   trackingNumber?: string | null;
-  state?: { value?: string | null } | null;
+  state?: { value?: string | null; delayReason?: string | null } | null;
   cod?: number | null;
   allowToOpenPackage?: boolean | null;
   shopifyInfo?: { orderNumber?: string | null } | null;
   businessReference?: string | null;
+  latestExceptionReason?: string | null;
+  exceptionReason?: string | null;
 };
+
+/** سبب وقوف الشحنة عند بوسطة (عنوان مش واضح، العميل مش بيرد…) */
+export function deliveryException(d: BostaDelivery): string | null {
+  return (
+    d.latestExceptionReason ?? d.state?.delayReason ?? d.exceptionReason ?? null
+  );
+}
 
 export type OurOrder = {
   id: string;
@@ -27,6 +36,7 @@ export type OurOrder = {
   bosta_cod: number | null;
   bosta_collected: boolean | null;
   bosta_shipping_cost: number | null;
+  bosta_exception: string | null;
   /** إجمالي بنود الأوردر — التأمين بيتحسب عليه */
   productValue: number;
 };
@@ -78,24 +88,30 @@ export function decideSync(
     reasons.push(`مبلغ التحصيل بقى ${cod}`);
   }
 
-  // رسوم بوسطة بتتحسب من الحسبة المتختبرة، مش هنا
-  const atCarrier =
-    mapped !== null && mapped !== "ready" && mapped !== "cancelled";
-  if (atCarrier) {
-    const fee = shippingCost(
-      {
-        cod,
-        productValue: o.productValue,
-        allowToOpenPackage: d.allowToOpenPackage !== false,
-        returned: mapped === "returned" || mapped === "returning",
-      },
-      rules
-    ).total;
+  const exception = deliveryException(d);
+  if ((o.bosta_exception ?? null) !== exception) {
+    changes.bosta_exception = exception;
+    if (exception) reasons.push(`بوسطة واقفة: ${exception}`);
+  }
 
-    if (Math.abs(fee - Number(o.bosta_shipping_cost ?? 0)) > 0.009) {
-      changes.bosta_shipping_cost = fee;
-      reasons.push(`رسوم بوسطة بقت ${fee.toFixed(2)}`);
-    }
+  // "مرتجع بعد التسليم" اتسلّم فعلاً، فرسومه كاملة زي المتسلّم —
+  // رسوم المرتجع المخففة بتبقى للي رجع من غير ما يتسلّم أصلاً
+  const feesAsReturned =
+    mapped === "returned" && o.order_status !== "returned_after_delivery";
+
+  const fee = shippingCost(
+    {
+      cod,
+      productValue: o.productValue,
+      allowToOpenPackage: Boolean(d.allowToOpenPackage),
+      returned: feesAsReturned,
+    },
+    rules
+  ).total;
+
+  if (Math.abs(fee - Number(o.bosta_shipping_cost ?? 0)) > 0.009) {
+    changes.bosta_shipping_cost = fee;
+    reasons.push(`رسوم بوسطة بقت ${fee.toFixed(2)}`);
   }
 
   const collected = mapped === "delivered";
