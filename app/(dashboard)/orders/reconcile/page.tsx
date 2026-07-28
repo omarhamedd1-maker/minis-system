@@ -214,6 +214,21 @@ export default async function ReconcilePage() {
         severity: "high",
       });
     }
+
+    // 9) إحنا ملغينه بس بوسطة لسه شغالة عليه (المزامنة مش بتلمس الملغي)
+    if (
+      sysStatus === "cancelled" &&
+      bostaMapped &&
+      bostaMapped !== "cancelled" &&
+      !o.bosta_collected
+    ) {
+      issues.push({
+        order: o,
+        kind: "ملغي عندنا وبوسطة لسه شغالة عليه",
+        detail: `بوسطة بتقول "${o.bosta_state}" — يا إما تلغي الشحنة في بوسطة يا إما ترجّع حالة الأوردر`,
+        severity: "high",
+      });
+    }
   }
 
   const bySeverity = { high: 0, mid: 0, low: 0 };
