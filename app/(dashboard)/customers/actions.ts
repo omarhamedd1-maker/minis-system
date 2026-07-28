@@ -6,6 +6,43 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 
+// حفظ عنوان العميل بتقسيمة بوسطة (مدينة/منطقة/شارع/عمارة/دور/شقة/علامة)
+export async function updateCustomerAddress(formData: FormData) {
+  const me = await requirePermission("customers.edit");
+  const id = String(formData.get("customer_id") ?? "");
+  if (!id) redirect("/customers");
+
+  const get = (k: string) => {
+    const v = String(formData.get(k) ?? "").trim();
+    return v || null;
+  };
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("customers")
+    .update({
+      city: get("city"),
+      zone: get("zone"),
+      street: get("street"),
+      building: get("building"),
+      floor: get("floor"),
+      apartment: get("apartment"),
+      landmark: get("landmark"),
+    })
+    .eq("id", id);
+
+  if (error) {
+    redirect(
+      `/customers/${id}?error=` +
+        encodeURIComponent("معرفناش نحفظ العنوان: " + error.message)
+    );
+  }
+
+  await logActivity(me, "customer.address", "عدّل عنوان عميل");
+  revalidatePath(`/customers/${id}`);
+  revalidatePath("/orders");
+}
+
 // دمج عميلين مكررين: بننقل أوردرات العميل المكرر للأساسي وبنمسح المكرر
 export async function mergeCustomers(formData: FormData) {
   const me = await requirePermission("customers.edit");

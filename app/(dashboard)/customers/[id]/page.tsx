@@ -4,15 +4,27 @@ import { createClient } from "@/lib/supabase/server";
 import { EXCLUDED_STATUSES, formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CustomerEdit } from "@/components/CustomerEdit";
+import { CustomerAddress } from "@/components/CustomerAddress";
 import { BackLink } from "@/components/BackLink";
 import { can, requirePagePermission } from "@/lib/permissions";
-import { deleteCustomer, updateCustomer } from "../actions";
+import {
+  deleteCustomer,
+  updateCustomer,
+  updateCustomerAddress,
+} from "../actions";
 
 type CustomerDetail = {
   id: string;
   full_name: string | null;
   phone: string | null;
   address: string | null;
+  city: string | null;
+  zone: string | null;
+  street: string | null;
+  building: string | null;
+  floor: string | null;
+  apartment: string | null;
+  landmark: string | null;
   orders: {
     id: string;
     order_number: string | null;
@@ -42,7 +54,7 @@ export default async function CustomerPage({
   const { data: customer, error } = await supabase
     .from("customers")
     .select(
-      `id, full_name, phone, address,
+      `id, full_name, phone, address, city, zone, street, building, floor, apartment, landmark,
        orders(id, order_number, order_status, order_date, shipping_price, discount,
          order_items(quantity, sale_price_at_order))`
     )
@@ -125,6 +137,23 @@ export default async function CustomerPage({
           </dl>
         </div>
       )}
+
+      {/* العنوان بتقسيمة بوسطة — عشان الشحنة تبقى واضحة */}
+      <CustomerAddress
+        customerId={customer.id}
+        canEdit={isAdmin}
+        fields={{
+          city: customer.city,
+          zone: customer.zone,
+          street: customer.street,
+          building: customer.building,
+          floor: customer.floor,
+          apartment: customer.apartment,
+          landmark: customer.landmark,
+          address: customer.address,
+        }}
+        updateAction={updateCustomerAddress}
+      />
 
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="rounded-xl bg-white p-5 shadow-sm">

@@ -981,6 +981,46 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   return { ok: true, sent, skipped, failed, details };
 }
 
+// عمل شحنة مرتجع (عكسية) من عند العميل ليك — بننادي دالة bosta-return
+export async function createReturnShipment(formData: FormData) {
+  const me = await requirePermission("ship.send");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) redirect("/orders");
+
+  const key = process.env.SYNC_KEY;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!key || !base) {
+    redirect(
+      `/orders/${orderId}?error=` + encodeURIComponent("إعدادات الإرسال ناقصة")
+    );
+  }
+
+  let ok = false;
+  let message = "معرفناش نعمل شحنة المرتجع";
+  try {
+    const res = await fetch(
+      `${base}/functions/v1/bosta-return?key=${key}&order=${orderId}`,
+      { signal: AbortSignal.timeout(30000) }
+    );
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.ok) ok = true;
+    else if (data?.error) message = String(data.error);
+  } catch {
+    message = "الاتصال ببوسطة فشل — جرّب تاني";
+  }
+
+  if (ok) {
+    await logActivity(me, "bosta.return", "عمل شحنة مرتجع من عند العميل");
+  }
+  revalidatePath(`/orders/${orderId}`);
+  redirect(
+    ok
+      ? `/orders/${orderId}?saved=` +
+          encodeURIComponent("اتعملت شحنة المرتجع — بوسطة هتسحبها من العميل")
+      : `/orders/${orderId}?error=` + encodeURIComponent(message)
+  );
+}
+
 // حفظ المرتجع: بنختار المنتجات اللي رجعت وكمياتها من بنود الأوردر نفسه
 // وبنرجّع مخزونها تلقائياً (الفرق بين الكمية الراجعة القديمة والجديدة)
 export async function saveReturnedItems(formData: FormData) {

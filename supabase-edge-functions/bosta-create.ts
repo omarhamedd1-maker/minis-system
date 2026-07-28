@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     .from("orders")
     .select(
       `id, order_number, discount, shipping_price, bosta_tracking,
-       customers(full_name, phone, address),
+       customers(full_name, phone, address, city, zone, street, building, floor, apartment, landmark),
        order_items(quantity, sale_price_at_order, product_variants(products(name, name_ar)))`
     )
     .eq("id", orderId)
@@ -116,9 +116,28 @@ Deno.serve(async (req) => {
     full_name: string | null;
     phone: string | null;
     address: string | null;
+    city: string | null;
+    zone: string | null;
+    street: string | null;
+    building: string | null;
+    floor: string | null;
+    apartment: string | null;
+    landmark: string | null;
   } | null;
 
-  if (!customer?.address) {
+  // العنوان المقسّم أدق بكتير من النص الحر — بنستخدمه لو موجود
+  const addressLine =
+    [
+      customer?.street,
+      customer?.building ? `عمارة ${customer.building}` : null,
+      customer?.floor ? `الدور ${customer.floor}` : null,
+      customer?.apartment ? `شقة ${customer.apartment}` : null,
+      customer?.landmark ? `علامة: ${customer.landmark}` : null,
+    ]
+      .filter((x) => x && String(x).trim())
+      .join(" — ") || (customer?.address ?? "");
+
+  if (!addressLine.trim()) {
     return json({ ok: false, error: "العميل ملوش عنوان — أضف العنوان الأول" }, 400);
   }
   const phone = (customer.phone || "").replace(/\D/g, "");
@@ -133,7 +152,10 @@ Deno.serve(async (req) => {
   }
   const citiesJson = await citiesRes.json();
   const cities: City[] = citiesJson?.data?.list || citiesJson?.data || citiesJson?.list || [];
-  const city = matchCity(cities, customer.address);
+  // بنطابق من خانة المدينة المقسّمة الأول (أدق)، وإلا من نص العنوان كله
+  const city =
+    (customer.city ? matchCity(cities, customer.city) : null) ??
+    matchCity(cities, `${customer.city ?? ""} ${customer.zone ?? ""} ${customer.address ?? ""}`);
 
   // القرار الآمن: لو معرفناش نحدد المدينة منبعتش
   if (!city) {
@@ -181,7 +203,11 @@ Deno.serve(async (req) => {
     cod,
     dropOffAddress: {
       cityId: city._id,
-      firstLine: customer.address,
+      firstLine: addressLine,
+      ...(customer.zone ? { zoneName: customer.zone } : {}),
+      ...(customer.building ? { buildingNumber: customer.building } : {}),
+      ...(customer.floor ? { floor: customer.floor } : {}),
+      ...(customer.apartment ? { apartment: customer.apartment } : {}),
     },
     receiver: {
       firstName,

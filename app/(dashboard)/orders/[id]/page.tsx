@@ -28,6 +28,7 @@ import {
   sendOrderToBosta,
   toggleOrderArchive,
   saveReturnedItems,
+  createReturnShipment,
   updatePayment,
   updateDiscount,
   updateOrderItem,
@@ -51,6 +52,7 @@ type OrderDetails = {
   bosta_shipping_cost: number;
   delivered_at: string | null;
   return_note: string | null;
+  return_tracking: string | null;
   payment_method: string | null;
   amount_paid: number | null;
   customers: {
@@ -99,7 +101,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
-       delivered_at, return_note, payment_method, amount_paid,
+       delivered_at, return_note, return_tracking, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
          product_variants(variant_name, products(name)))`
@@ -755,6 +757,34 @@ export default async function OrderDetailsPage({
                 الكميات اللي بتحددها بترجع للمخزون تلقائياً
               </p>
             </form>
+
+            {/* شحنة المرتجع: بوسطة تسحب من العميل وتوصّلها لك */}
+            {canSend && (
+              <div className="mt-3 border-t border-gray-100 pt-3">
+                {order.return_tracking ? (
+                  <p className="text-xs text-gray-700">
+                    شحنة المرتجع اتعملت — رقم التتبع{" "}
+                    <span className="font-medium" dir="ltr">
+                      {order.return_tracking}
+                    </span>
+                  </p>
+                ) : (
+                  <form action={createReturnShipment}>
+                    <input type="hidden" name="order_id" value={order.id} />
+                    <ConfirmButton
+                      message="تعمل شحنة مرتجع؟ بوسطة هتروح تسحب المنتجات المحددة من عند العميل وتوصّلها لك."
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#E30613] px-3 py-1.5 text-xs font-medium text-white"
+                    >
+                      ↩ اعمل شحنة مرتجع من عند العميل
+                    </ConfirmButton>
+                    <p className="mt-1 text-[10px] text-gray-400">
+                      فلوس المرتجع إنت اللي بترجّعها للعميل — الشحنة بمبلغ تحصيل
+                      صفر. سجّل الفلوس اللي رجّعتها في الخزنة.
+                    </p>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
