@@ -40,9 +40,39 @@ type City = {
   _id: string;
   name?: string;
   nameAr?: string;
+  alias?: string;
   zones?: Zone[];
   districts?: Zone[];
 };
+
+// مناطق مشهورة مالهاش اسم المحافظة جوّه العنوان (زي "التجمع الخامس")
+// الشمال = المنطقة زي ما بتتكتب، اليمين = المحافظة عند بوسطة
+const AREA_TO_CITY: [string, string][] = [
+  // القاهرة
+  ["التجمع", "القاهره"], ["القاهره الجديده", "القاهره"], ["new cairo", "القاهره"],
+  ["fifth settlement", "القاهره"], ["الرحاب", "القاهره"], ["rehab", "القاهره"],
+  ["مدينتي", "القاهره"], ["madinaty", "القاهره"], ["مصر الجديده", "القاهره"],
+  ["heliopolis", "القاهره"], ["مدينه نصر", "القاهره"], ["nasr city", "القاهره"],
+  ["المعادي", "القاهره"], ["maadi", "القاهره"], ["المقطم", "القاهره"],
+  ["mokattam", "القاهره"], ["الزمالك", "القاهره"], ["zamalek", "القاهره"],
+  ["العبور", "القاهره"], ["obour", "القاهره"], ["الشروق", "القاهره"],
+  ["shorouk", "القاهره"], ["مدينه بدر", "القاهره"], ["النزهه", "القاهره"],
+  ["عين شمس", "القاهره"], ["المرج", "القاهره"], ["حلوان", "القاهره"],
+  ["شبرا", "القاهره"], ["وسط البلد", "القاهره"], ["العاصمه الاداريه", "القاهره"],
+  // الجيزة
+  ["الشيخ زايد", "الجيزه"], ["sheikh zayed", "الجيزه"], ["زايد", "الجيزه"],
+  ["6 اكتوبر", "الجيزه"], ["السادس من اكتوبر", "الجيزه"], ["october", "الجيزه"],
+  ["اكتوبر", "الجيزه"], ["الدقي", "الجيزه"], ["dokki", "الجيزه"],
+  ["المهندسين", "الجيزه"], ["mohandessin", "الجيزه"], ["mohandiseen", "الجيزه"],
+  ["العجوزه", "الجيزه"], ["agouza", "الجيزه"], ["الهرم", "الجيزه"],
+  ["haram", "الجيزه"], ["فيصل", "الجيزه"], ["حدايق الاهرام", "الجيزه"],
+  ["beverly hills", "الجيزه"], ["دريم لاند", "الجيزه"], ["dreamland", "الجيزه"],
+  // الإسكندرية
+  ["سموحه", "الاسكندريه"], ["smouha", "الاسكندريه"], ["سيدي جابر", "الاسكندريه"],
+  ["ميامي", "الاسكندريه"], ["العجمي", "الاسكندريه"], ["المنتزه", "الاسكندريه"],
+  ["لوران", "الاسكندريه"], ["رشدي", "الاسكندريه"], ["سان ستيفانو", "الاسكندريه"],
+  ["بحري", "الاسكندريه"], ["المعموره", "الاسكندريه"], ["كليوباترا", "الاسكندريه"],
+];
 
 // بنطابق أطول اسم مدينة موجود جوّه نص العنوان
 function matchCity(cities: City[], address: string): City | null {
@@ -50,7 +80,8 @@ function matchCity(cities: City[], address: string): City | null {
   let best: City | null = null;
   let bestLen = 0;
   for (const c of cities) {
-    for (const name of [c.nameAr, c.name]) {
+    // بوسطة بترجّع alias كمان (مثلاً "القاهرة" جنب "القاهره")
+    for (const name of [c.nameAr, c.name, (c as { alias?: string }).alias]) {
       const n = normalizeAr(name || "");
       if (n.length >= 3 && norm.includes(n) && n.length > bestLen) {
         best = c;
@@ -58,7 +89,26 @@ function matchCity(cities: City[], address: string): City | null {
       }
     }
   }
-  return best;
+  if (best) return best;
+
+  // مفيش اسم محافظة في العنوان — نجرّب المناطق المشهورة
+  let areaBest: string | null = null;
+  let areaLen = 0;
+  for (const [area, cityName] of AREA_TO_CITY) {
+    const a = normalizeAr(area);
+    if (a.length >= 3 && norm.includes(a) && a.length > areaLen) {
+      areaBest = normalizeAr(cityName);
+      areaLen = a.length;
+    }
+  }
+  if (!areaBest) return null;
+  return (
+    cities.find((c) =>
+      [c.nameAr, c.name, (c as { alias?: string }).alias].some(
+        (n) => normalizeAr(n || "") === areaBest
+      )
+    ) ?? null
+  );
 }
 
 // بنطابق المنطقة جوّه المدينة (بوسطة أحياناً بتطلب zoneId)

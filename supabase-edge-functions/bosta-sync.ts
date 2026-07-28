@@ -19,6 +19,10 @@ const supabase = createClient(
 
 const TRANSFER_RATE = 0.01, TRANSFER_MIN = 13, COD_FEE_RATE = 0.01, COD_FEE_THRESHOLD = 2000;
 const OPEN_FEE = 7, INSURANCE_RATE = 0.01, INSURANCE_MIN = 10, VAT = 1.14;
+// بوسطة بتحطّ سقف للتأمين. مقارنة على أوردرين حقيقيين:
+//   COD 1860 (قيمة 1770) → تأمين 17.70 = 1% عادي
+//   COD 3690 (قيمة 3600) → تأمين 20.00 مش 36.00 → يعني السقف 20
+const INSURANCE_MAX = 20;
 
 // الحالات اللي المزامنة مامنفعش تغيّرها (بنحددها إحنا يدوي)
 const LOCKED_STATUSES = ["cancelled", "returned_after_delivery"];
@@ -86,7 +90,10 @@ function mapState(s: string | null): string | null {
 }
 function bostaCost(cod: number, productValue: number, allowOpen: boolean, returned: boolean) {
   const openFee = allowOpen ? OPEN_FEE : 0;
-  const insurance = Math.max(INSURANCE_RATE * productValue, INSURANCE_MIN);
+  const insurance = Math.min(
+    Math.max(INSURANCE_RATE * productValue, INSURANCE_MIN),
+    INSURANCE_MAX,
+  );
   const codFee = returned ? 0 : COD_FEE_RATE * Math.max(0, cod - COD_FEE_THRESHOLD);
   const transferFee = returned ? 0 : Math.max(TRANSFER_RATE * cod, TRANSFER_MIN);
   return { cost: Math.round((openFee + codFee + transferFee + insurance) * VAT * 100) / 100 };
