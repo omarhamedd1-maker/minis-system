@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAllDeliveries, type BostaRawDelivery } from "./client";
 import { buildIndex, matchDelivery } from "./match";
+import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
@@ -80,6 +81,13 @@ export async function runBostaSync(opts: {
     }))
   );
 
+  // بنجمّع شحنات كل أوردر الأول، وبعدين نقرر مرة واحدة —
+  // عشان الأوردر اللي ليه أكتر من شحنة تتحسب رسومه وتحصيله صح
+  const byOrder = new Map<
+    string,
+    { row: OrderRow; deliveries: BostaRawDelivery[] }
+  >();
+
   for (const d of deliveries as BostaRawDelivery[]) {
     const m = matchDelivery(d, index);
 
@@ -94,7 +102,12 @@ export async function runBostaSync(opts: {
 
     summary.matched++;
     const row = m.order.row;
+    const bucket = byOrder.get(row.id);
+    if (bucket) bucket.deliveries.push(d);
+    else byOrder.set(row.id, { row, deliveries: [d] });
+  }
 
+  for (const { row, deliveries: shipments } of byOrder.values()) {
     const our: OurOrder = {
       id: row.id,
       order_number: row.order_number,
@@ -112,14 +125,33 @@ export async function runBostaSync(opts: {
       ),
     };
 
-    const decision = decideSync(d, our, now);
+    const merged = mergeShipments(
+      shipments,
+      our.productValue,
+      our.order_status
+    )!;
+
+    // شحنة واحدة؟ نمشي بالحسبة العادية. أكتر من واحدة؟ نبعت المجاميع
+    const decision = decideSync(
+      merged.latest,
+      our,
+      now,
+      undefined,
+      merged.count > 1
+        ? { cod: merged.totalCod, fee: merged.totalFee }
+        : undefined
+    );
+
     if (decision.statusLocked) summary.statusLocked++;
     if (Object.keys(decision.changes).length === 0) continue;
 
     summary.changed++;
     summary.details.push({
       order: String(row.order_number),
-      reasons: decision.reasons,
+      reasons:
+        merged.count > 1
+          ? [...decision.reasons, `(${merged.count} شحنات لنفس الأوردر)`]
+          : decision.reasons,
     });
 
     if (!dry) {

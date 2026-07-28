@@ -63,14 +63,19 @@ export function decideSync(
   d: BostaDelivery,
   o: OurOrder,
   now: Date,
-  rules?: CarrierFeeRules
+  rules?: CarrierFeeRules,
+  /**
+   * لو الأوردر ليه أكتر من شحنة، بنبعت هنا مجموع التحصيل ومجموع الرسوم.
+   * `d` ساعتها بتبقى أحدث شحنة (منها الحالة ورقم التتبع).
+   */
+  totals?: { cod: number; fee: number }
 ): SyncDecision {
   const changes: Record<string, unknown> = {};
   const reasons: string[] = [];
 
   const tracking = d.trackingNumber ? String(d.trackingNumber) : "";
   const state = d.state?.value ?? null;
-  const cod = Number(d.cod ?? 0);
+  const cod = totals ? totals.cod : Number(d.cod ?? 0);
   const mapped = mapBostaState(state);
 
   if (tracking && o.bosta_tracking !== tracking) {
@@ -99,15 +104,17 @@ export function decideSync(
   const feesAsReturned =
     mapped === "returned" && o.order_status !== "returned_after_delivery";
 
-  const fee = shippingCost(
-    {
-      cod,
-      productValue: o.productValue,
-      allowToOpenPackage: Boolean(d.allowToOpenPackage),
-      returned: feesAsReturned,
-    },
-    rules
-  ).total;
+  const fee = totals
+    ? totals.fee
+    : shippingCost(
+        {
+          cod,
+          productValue: o.productValue,
+          allowToOpenPackage: Boolean(d.allowToOpenPackage),
+          returned: feesAsReturned,
+        },
+        rules
+      ).total;
 
   if (Math.abs(fee - Number(o.bosta_shipping_cost ?? 0)) > 0.009) {
     changes.bosta_shipping_cost = fee;
