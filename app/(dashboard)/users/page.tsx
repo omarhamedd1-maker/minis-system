@@ -247,15 +247,19 @@ export default async function UsersPage({
             </svg>
             سجل النشاط ({activity.length})
           </h2>
-          <Link
-            href="/users/activity"
-            onClick={(e) => e.stopPropagation()}
-            className="text-xs font-medium text-gray-500 hover:text-gray-900"
-          >
-            السجل كامل ←
-          </Link>
+          <span className="text-xs font-medium text-gray-400">
+            {activity.length > 0 ? "اضغط للعرض" : ""}
+          </span>
         </summary>
         <div className="border-t border-gray-200">
+          <div className="px-5 py-2">
+            <Link
+              href="/users/activity"
+              className="text-xs font-medium text-gray-500 hover:text-gray-900"
+            >
+              السجل كامل مع الفلترة ←
+            </Link>
+          </div>
         {activity.length === 0 ? (
           <p className="px-5 py-6 text-sm text-gray-500">
             لسه مفيش نشاط مسجّل. أول ما حد يعمل حاجة مهمة (تغيير حالة، حذف، إرسال

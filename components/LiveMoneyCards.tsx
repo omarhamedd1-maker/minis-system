@@ -96,12 +96,7 @@ export function LiveMoneyCards({
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {/* على الشاشة الكبيرة: المبيعات وصافي الربح كروت كبيرة، والباقي بيتقسّم 4 في الصف */}
-      <Card
-        label="المبيعات"
-        hint="شاملة الشحن اللي العميل دفعه — نفس رقم شوبيفاي"
-        className="col-span-2"
-        hero
-      >
+      <Card label="المبيعات" className="col-span-2" hero>
         <span className="text-gray-900">
           <CountUp key={key} baseline={base} value={s.sales} format={money} />
         </span>
