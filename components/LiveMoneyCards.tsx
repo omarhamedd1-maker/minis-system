@@ -95,7 +95,8 @@ export function LiveMoneyCards({
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <Card label="المبيعات" className="col-span-2 lg:col-span-1">
+      {/* على الشاشة الكبيرة: المبيعات وصافي الربح كروت كبيرة، والباقي بيتقسّم 4 في الصف */}
+      <Card label="المبيعات" className="col-span-2" hero>
         <span className="text-gray-900">
           <CountUp key={key} baseline={base} value={s.sales} format={money} />
         </span>
@@ -125,7 +126,7 @@ export function LiveMoneyCards({
           <CountUp key={key} baseline={base} value={s.profit} format={money} />
         </span>
       </Card>
-      <Card label="صافي الربح">
+      <Card label="صافي الربح" className="lg:col-span-2" hero>
         <span className={s.netProfit >= 0 ? "text-green-600" : "text-red-600"}>
           <CountUp
             key={key}
@@ -161,6 +162,7 @@ export function LiveMoneyCards({
       <Card
         label="شحن دفعته فوق الـ90"
         hint="رسوم بوسطة ناقص الـ90 المحصّل — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
+        className="lg:col-span-2"
       >
         <span className="text-red-600">
           <CountUp
@@ -179,11 +181,13 @@ function Card({
   label,
   hint,
   children,
+  hero = false,
   className = "",
 }: {
   label: string;
   hint?: string;
   children: React.ReactNode;
+  hero?: boolean;
   className?: string;
 }) {
   return (
@@ -191,7 +195,13 @@ function Card({
       className={`rounded-xl bg-white p-4 shadow-sm sm:p-5 ${className}`}
     >
       <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
-      <p className="mt-1 text-xl font-bold sm:text-2xl">{children}</p>
+      <p
+        className={`mt-1 text-xl font-bold sm:text-2xl ${
+          hero ? "lg:text-4xl" : ""
+        }`}
+      >
+        {children}
+      </p>
       {hint && <p className="text-[11px] text-gray-400 sm:text-xs">{hint}</p>}
     </div>
   );

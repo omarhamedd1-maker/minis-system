@@ -570,7 +570,8 @@ export default async function StatsPage({
           from={rangeFrom}
           to={rangeTo}
         />
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {/* 5 كروت نِسَب — صف واحد كامل على الكمبيوتر */}
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
           <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
             <p className="text-sm text-gray-500">نسبة التسليم</p>
             <p className="mt-1 text-xl font-bold sm:text-2xl text-emerald-600">
