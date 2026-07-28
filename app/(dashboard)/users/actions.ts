@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity";
 import {
   ALL_PERMISSION_KEYS,
+  PRESETS,
   requirePermission,
   type PermissionKey,
 } from "@/lib/permissions";
@@ -39,7 +40,12 @@ export async function createUser(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
-  const permissions = readPermissions(formData);
+  // الصلاحيات بتيجي من قالب جاهز (أو من الشيك بوكسات لو اتبعتت)
+  const presetKey = String(formData.get("preset") ?? "");
+  const preset = PRESETS.find((p) => p.key === presetKey);
+  const permissions = preset
+    ? [...preset.permissions]
+    : readPermissions(formData);
 
   if (!email || !email.includes("@")) back("اكتب إيميل صحيح", false);
   if (password.length < 6) back("الباسورد لازم 6 حروف على الأقل", false);

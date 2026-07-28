@@ -79,36 +79,65 @@ export function UserEditor({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-right"
+        className="flex w-full items-center gap-3 p-4 text-right"
       >
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          <span className="font-medium text-gray-900">
-            {user.fullName ?? "بدون اسم"}
-          </span>
-          <span className="text-sm text-gray-500" dir="ltr">
+        {/* أفاتار بأول حرف من الاسم */}
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+            !user.active
+              ? "bg-red-100 text-red-700"
+              : user.isAdmin
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {(user.fullName ?? user.email ?? "?").trim().charAt(0).toUpperCase()}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="truncate font-medium text-gray-900">
+              {user.fullName ?? "بدون اسم"}
+            </span>
+            {user.isAdmin && (
+              <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-medium text-white">
+                أدمن
+              </span>
+            )}
+            {isSelf && (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                إنت
+              </span>
+            )}
+            {!user.active && (
+              <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                موقوف
+              </span>
+            )}
+          </div>
+          <div className="truncate text-xs text-gray-500" dir="ltr">
             {user.email ?? "—"}
-          </span>
-          {user.isAdmin && (
-            <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-xs font-medium text-white">
-              أدمن
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-gray-400">
+            <span>
+              {user.isAdmin ? "كل الصلاحيات" : `${permCount} صلاحية`}
             </span>
-          )}
-          {isSelf && (
-            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-              إنت
-            </span>
-          )}
-          {!user.active && (
-            <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
-              موقوف
-            </span>
-          )}
-          <span className="text-xs text-gray-400">
-            · آخر فتح للسيستم: {whenText(user.lastSignInAt)}
-          </span>
+            <span>آخر فتح: {whenText(user.lastSignInAt)}</span>
+          </div>
         </div>
-        <span className="text-xs text-gray-400">
-          {user.isAdmin ? "كل الصلاحيات" : `${permCount} صلاحية`} {open ? "▲" : "▼"}
+
+        <span className="shrink-0 text-gray-400">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </span>
       </button>
 

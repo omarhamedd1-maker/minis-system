@@ -109,9 +109,16 @@ export default async function UsersPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">المستخدمون والصلاحيات</h1>
-        <span className="text-sm text-gray-500">{users.length} مستخدم</span>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-gray-900">المستخدمون</h1>
+        <div className="flex items-center gap-3 text-sm text-gray-500">
+          <span>{users.filter((u) => u.active).length} نشط</span>
+          {users.some((u) => !u.active) && (
+            <span className="text-red-600">
+              {users.filter((u) => !u.active).length} موقوف
+            </span>
+          )}
+        </div>
       </div>
 
       {saved && (
@@ -164,40 +171,33 @@ export default async function UsersPage({
             </div>
           </div>
 
+          {/* اختار قالب جاهز — وتقدر تفصّل الصلاحيات بعد الإنشاء */}
           <div>
             <div className="mb-2 text-xs font-medium text-gray-500">
-              الصلاحيات (تقدر تعدّلها بعد الإنشاء كمان):
+              نوع المستخدم (بيحدّد صلاحياته — تقدر تعدّلها بعد الإنشاء):
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {PERMISSIONS.map((g) => (
-                <div key={g.group} className="rounded-lg border border-gray-200 p-3">
-                  <div className="mb-2 text-sm font-bold text-gray-900">
-                    {g.group}
-                  </div>
-                  <div className="space-y-1.5">
-                    {g.items.map((item) => (
-                      <label
-                        key={item.key}
-                        className="flex items-start gap-2 text-sm text-gray-700"
-                      >
-                        <input
-                          type="checkbox"
-                          name="permissions"
-                          value={item.key}
-                          className="mt-0.5 h-4 w-4 rounded border-gray-300"
-                        />
-                        <span>
-                          {item.label}
-                          {item.hint && (
-                            <span className="block text-xs text-gray-400">
-                              {item.hint}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {PRESETS.map((p, i) => (
+                <label
+                  key={p.key}
+                  className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 has-checked:border-gray-900 has-checked:bg-gray-50"
+                >
+                  <input
+                    type="radio"
+                    name="preset"
+                    value={p.key}
+                    defaultChecked={i === PRESETS.length - 1}
+                    className="mt-0.5 h-4 w-4"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">
+                      {p.label}
+                    </span>
+                    <span className="block text-[11px] text-gray-500">
+                      {p.permissions.length} صلاحية
+                    </span>
+                  </span>
+                </label>
               ))}
             </div>
           </div>
