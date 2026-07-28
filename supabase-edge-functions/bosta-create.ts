@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
       zonesAvailable: (city.zones ?? city.districts ?? []).length,
       cod,
       itemsCount,
-      payload: { ...base, ...variants[0] },
+      payload: { ...base, dropOffAddress: variants[0].dropOffAddress },
       variantsToTry: variants.map((v) => v.name),
     });
   }
