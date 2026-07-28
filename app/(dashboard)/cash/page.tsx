@@ -3,12 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { CashManualRow } from "@/components/CashManualRow";
 import { CashCard } from "@/components/CashCard";
-import { BostaCashoutImport } from "@/components/BostaCashoutImport";
 import { can, requirePagePermission } from "@/lib/permissions";
 import {
   addCashTransaction,
   deleteCashTransaction,
-  importBostaCashouts,
   updateCashTransaction,
 } from "./actions";
 
@@ -204,8 +202,6 @@ export default async function CashPage({
           </button>
         </form>
       )}
-
-      {isAdmin && <BostaCashoutImport importAction={importBostaCashouts} />}
 
       {transactions.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
