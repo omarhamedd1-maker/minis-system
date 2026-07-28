@@ -130,6 +130,19 @@ export function bundlePerOrder(price: number, shipments: number) {
 // الباقة الحالية — بتتقرأ من إعدادات السيستم، ودي القيمة الافتراضية لو مفيش إعداد
 export const DEFAULT_BUNDLE = BOSTA_BUNDLES[0];
 
+// أنواع المصاريف — بتتستخدم في صفحة المصاريف وفي فواتير الموردين
+export const EXPENSE_CATEGORIES = [
+  "بضاعة",
+  "إعلانات",
+  "شحن",
+  "تغليف",
+  "تصنيع وخامات",
+  "مواصلات",
+  "اشتراكات",
+  "مرتجعات",
+  "أخرى",
+];
+
 export const COST_COMPONENTS = [
   "ستانليس",
   "خشب",

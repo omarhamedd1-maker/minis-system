@@ -1,9 +1,17 @@
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { cairoToday, formatDate, formatMoney } from "@/lib/format";
+import {
+  EXPENSE_CATEGORIES,
+  cairoToday,
+  formatDate,
+  formatMoney,
+} from "@/lib/format";
 import { BackLink } from "@/components/BackLink";
 import { SupplierInfo } from "@/components/SupplierInfo";
-import { SupplierTxnForm } from "@/components/SupplierTxnForm";
+import {
+  SupplierTxnForm,
+  type VariantOption,
+} from "@/components/SupplierTxnForm";
 import { can, requirePagePermission } from "@/lib/permissions";
 import {
   addSupplierTransaction,
@@ -19,6 +27,13 @@ type Txn = {
   description: string | null;
   txn_date: string;
   related_cash_id: string | null;
+  related_expense_id: string | null;
+  supplier_invoice_items: {
+    id: string;
+    item_name: string;
+    quantity: number;
+    unit_cost: number;
+  }[];
 };
 
 export default async function SupplierPage({
@@ -34,7 +49,7 @@ export default async function SupplierPage({
   const canEdit = can(user, "suppliers.edit");
   const admin = createAdminClient();
 
-  const [supplierResult, txnsResult] = await Promise.all([
+  const [supplierResult, txnsResult, variantsResult] = await Promise.all([
     admin
       .from("suppliers")
       .select("id, name, phone, notes")
@@ -48,17 +63,43 @@ export default async function SupplierPage({
       }>(),
     admin
       .from("supplier_transactions")
-      .select("id, kind, amount, description, txn_date, related_cash_id")
+      .select(
+        `id, kind, amount, description, txn_date, related_cash_id, related_expense_id,
+         supplier_invoice_items(id, item_name, quantity, unit_cost)`
+      )
       .eq("supplier_id", id)
       .order("txn_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(500)
       .overrideTypes<Txn[]>(),
+    admin
+      .from("product_variants")
+      .select("id, variant_name, cost_price, products(name_ar, name)")
+      .order("id")
+      .limit(2000)
+      .overrideTypes<
+        {
+          id: string;
+          variant_name: string | null;
+          cost_price: number;
+          products: { name_ar: string | null; name: string | null } | null;
+        }[]
+      >(),
   ]);
 
   if (supplierResult.error || !supplierResult.data) notFound();
   const supplier = supplierResult.data;
   const txns = txnsResult.data ?? [];
+
+  const variants: VariantOption[] = (variantsResult.data ?? [])
+    .map((v) => ({
+      id: v.id,
+      label: [v.products?.name_ar || v.products?.name || "منتج", v.variant_name]
+        .filter(Boolean)
+        .join(" / "),
+      cost: Number(v.cost_price ?? 0),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, "ar"));
 
   const purchases = txns
     .filter((t) => t.kind === "purchase")
@@ -139,6 +180,8 @@ export default async function SupplierPage({
         <SupplierTxnForm
           supplierId={supplier.id}
           today={cairoToday()}
+          categories={EXPENSE_CATEGORIES}
+          variants={variants}
           action={addSupplierTransaction}
         />
       )}
@@ -164,6 +207,11 @@ export default async function SupplierPage({
                             (من الخزنة)
                           </span>
                         )}
+                        {t.related_expense_id && (
+                          <span className="ms-1 text-[11px] text-gray-400">
+                            (مصروف)
+                          </span>
+                        )}
                       </div>
                       {t.description && (
                         <div className="mt-0.5 truncate text-xs text-gray-600">
@@ -174,6 +222,21 @@ export default async function SupplierPage({
                         {formatDate(t.txn_date)} · الرصيد بعدها{" "}
                         {formatMoney(running.get(t.id) ?? 0)}
                       </div>
+                      {t.supplier_invoice_items?.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5 border-t border-gray-100 pt-1.5">
+                          {t.supplier_invoice_items.map((it) => (
+                            <li
+                              key={it.id}
+                              className="flex justify-between gap-2 text-[11px] text-gray-600"
+                            >
+                              <span className="truncate">{it.item_name}</span>
+                              <span className="shrink-0 text-gray-400">
+                                {it.quantity} × {formatMoney(Number(it.unit_cost))}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                     <div
                       className={`shrink-0 text-base font-bold ${
@@ -230,9 +293,24 @@ export default async function SupplierPage({
                             (من الخزنة)
                           </span>
                         )}
+                        {t.related_expense_id && (
+                          <span className="ms-1 text-xs text-gray-400">
+                            (مصروف)
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         {t.description ?? "—"}
+                        {t.supplier_invoice_items?.length > 0 && (
+                          <ul className="mt-1 space-y-0.5">
+                            {t.supplier_invoice_items.map((it) => (
+                              <li key={it.id} className="text-xs text-gray-500">
+                                {it.item_name} — {it.quantity} ×{" "}
+                                {formatMoney(Number(it.unit_cost))}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </td>
                       <td
                         className={`px-4 py-3 font-medium ${

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { cairoToday, formatDate, formatMoney } from "@/lib/format";
+import {
+  EXPENSE_CATEGORIES,
+  cairoToday,
+  formatDate,
+  formatMoney,
+} from "@/lib/format";
 import { ExpenseRow } from "@/components/ExpenseRow";
 import { ExpenseCard } from "@/components/ExpenseCard";
 import { can, requirePagePermission } from "@/lib/permissions";
@@ -14,16 +19,7 @@ type ExpenseRow = {
   expense_date: string;
 };
 
-const CATEGORY_SUGGESTIONS = [
-  "إعلانات",
-  "شحن",
-  "تغليف",
-  "تصنيع وخامات",
-  "مواصلات",
-  "اشتراكات",
-  "مرتجعات",
-  "أخرى",
-];
+const CATEGORY_SUGGESTIONS = EXPENSE_CATEGORIES;
 
 const PERIODS: Record<string, string> = {
   month: "الشهر ده",

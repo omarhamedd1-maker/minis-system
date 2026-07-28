@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatMoney } from "@/lib/format";
+import { AddSupplier } from "@/components/AddSupplier";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { addSupplier } from "./actions";
 
@@ -66,7 +67,9 @@ export default async function SuppliersPage({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-gray-900">الموردين</h1>
-        <span className="text-sm text-gray-500">{suppliers.length} مورد</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{suppliers.length} مورد</span>
+        </div>
       </div>
 
       {actionError && (
@@ -100,51 +103,7 @@ export default async function SuppliersPage({
         </div>
       </div>
 
-      {canEdit && (
-        <form
-          action={addSupplier}
-          className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
-        >
-          <div className="flex min-w-40 flex-1 flex-col gap-1">
-            <label htmlFor="name" className="text-xs text-gray-500">
-              اسم المورد
-            </label>
-            <input
-              id="name"
-              name="name"
-              required
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="phone" className="text-xs text-gray-500">
-              التليفون (اختياري)
-            </label>
-            <input
-              id="phone"
-              name="phone"
-              inputMode="tel"
-              className="w-36 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-          <div className="flex min-w-40 flex-1 flex-col gap-1">
-            <label htmlFor="notes" className="text-xs text-gray-500">
-              ملاحظات (اختياري)
-            </label>
-            <input
-              id="notes"
-              name="notes"
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-          <button
-            type="submit"
-            className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
-          >
-            إضافة مورد
-          </button>
-        </form>
-      )}
+      {canEdit && <AddSupplier action={addSupplier} />}
 
       {suppliers.length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
@@ -232,9 +191,9 @@ export default async function SuppliersPage({
       )}
 
       <p className="text-xs text-gray-400">
-        الفاتورة = بضاعة استلمتها من المورد ولسه ما دفعتهاش — بتزوّد اللي عليه بس
-        ومابتلمسش الخزنة. الدفعة بتخصم من الخزنة على طول. تكلفة البضاعة نفسها
-        بتتحسب في ربح الأوردر من تكلفة المنتج، عشان كده مابنسجلهاش مصروف تاني.
+        الفاتورة = بضاعة استلمتها من المورد — بتتسجل مصروف في صفحة المصاريف
+        وبتزوّد اللي عليك له، والخزنة مابتتأثرش لأن الفلوس لسه ماطلعتش. الدفعة =
+        فلوس طلعت فعلاً، فبتتخصم من الخزنة وبتقلّل اللي عليك.
       </p>
     </div>
   );
