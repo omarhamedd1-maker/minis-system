@@ -214,6 +214,15 @@ export default async function OrdersPage({
         <h1 className="text-xl font-bold text-gray-900">الأوردرات</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">{orders.length} أوردر</span>
+          {user.isAdmin && (
+            <Link
+              href="/orders/reconcile"
+              title="مطابقة الأوردرات"
+              className="rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700"
+            >
+              مطابقة
+            </Link>
+          )}
           {canCreate && (
             <Link
               href="/orders/new"
