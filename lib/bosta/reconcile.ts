@@ -1,0 +1,123 @@
+// ==========================================================================
+// عقل المزامنة: بياخد شحنة من بوسطة وأوردر من عندنا، وبيقرر يتغيّر إيه.
+// --------------------------------------------------------------------------
+// الدالة دي **مابتلمسش قاعدة البيانات ولا الشبكة** — بتاخد أرقام وترجّع قرار.
+// وده اللي بيخليها تتختبر، ودي كانت أكبر مشكلة في الدالة القديمة.
+// ==========================================================================
+
+import { shippingCost, type CarrierFeeRules } from "../shipping-cost";
+import { canSyncChangeStatus, mapBostaState } from "./order-status";
+
+export type BostaDelivery = {
+  trackingNumber?: string | null;
+  state?: { value?: string | null } | null;
+  cod?: number | null;
+  allowToOpenPackage?: boolean | null;
+  shopifyInfo?: { orderNumber?: string | null } | null;
+  businessReference?: string | null;
+};
+
+export type OurOrder = {
+  id: string;
+  order_number: string | number | null;
+  order_status: string | null;
+  delivered_at: string | null;
+  bosta_tracking: string | null;
+  bosta_state: string | null;
+  bosta_cod: number | null;
+  bosta_collected: boolean | null;
+  bosta_shipping_cost: number | null;
+  /** إجمالي بنود الأوردر — التأمين بيتحسب عليه */
+  productValue: number;
+};
+
+export type SyncDecision = {
+  /** التعديلات اللي هتتكتب — لو فاضية يبقى مفيش حاجة اتغيرت */
+  changes: Record<string, unknown>;
+  /** ليه اتغيرت، بالعربي، عشان نعرضها في المراجعة */
+  reasons: string[];
+  /** الحالة اتقفلت عشان إحنا حددناها بإيدنا */
+  statusLocked: boolean;
+};
+
+/** رقم الأوردر اللي بوسطة شايلاه في الشحنة */
+export function deliveryOrderNumber(d: BostaDelivery): string {
+  const raw =
+    d?.shopifyInfo?.orderNumber ??
+    String(d?.businessReference ?? "").split(":").pop() ??
+    "";
+  return String(raw).replace("#", "").trim();
+}
+
+export function decideSync(
+  d: BostaDelivery,
+  o: OurOrder,
+  now: Date,
+  rules?: CarrierFeeRules
+): SyncDecision {
+  const changes: Record<string, unknown> = {};
+  const reasons: string[] = [];
+
+  const tracking = d.trackingNumber ? String(d.trackingNumber) : "";
+  const state = d.state?.value ?? null;
+  const cod = Number(d.cod ?? 0);
+  const mapped = mapBostaState(state);
+
+  if (tracking && o.bosta_tracking !== tracking) {
+    changes.bosta_tracking = tracking;
+    reasons.push(`ربط رقم التتبع ${tracking}`);
+  }
+
+  if (state && o.bosta_state !== state) {
+    changes.bosta_state = state;
+    reasons.push(`حالة بوسطة بقت ${state}`);
+  }
+
+  if (cod !== Number(o.bosta_cod ?? 0)) {
+    changes.bosta_cod = cod;
+    reasons.push(`مبلغ التحصيل بقى ${cod}`);
+  }
+
+  // رسوم بوسطة بتتحسب من الحسبة المتختبرة، مش هنا
+  const atCarrier =
+    mapped !== null && mapped !== "ready" && mapped !== "cancelled";
+  if (atCarrier) {
+    const fee = shippingCost(
+      {
+        cod,
+        productValue: o.productValue,
+        allowToOpenPackage: d.allowToOpenPackage !== false,
+        returned: mapped === "returned" || mapped === "returning",
+      },
+      rules
+    ).total;
+
+    if (Math.abs(fee - Number(o.bosta_shipping_cost ?? 0)) > 0.009) {
+      changes.bosta_shipping_cost = fee;
+      reasons.push(`رسوم بوسطة بقت ${fee.toFixed(2)}`);
+    }
+  }
+
+  const collected = mapped === "delivered";
+  if (collected !== Boolean(o.bosta_collected)) {
+    changes.bosta_collected = collected;
+    reasons.push(collected ? "اتحصّلت" : "اتشالت من المحصّل");
+  }
+
+  // الحالات اللي إحنا حددناها بإيدنا المزامنة مامتغيرهاش
+  let statusLocked = false;
+  if (mapped && mapped !== o.order_status) {
+    if (canSyncChangeStatus(o.order_status)) {
+      changes.order_status = mapped;
+      reasons.push(`حالة الأوردر بقت ${mapped}`);
+      // أول ما يبقى متسلّم ومفيش تاريخ، بنسجّل التاريخ
+      if (mapped === "delivered" && !o.delivered_at) {
+        changes.delivered_at = now.toISOString();
+      }
+    } else {
+      statusLocked = true;
+    }
+  }
+
+  return { changes, reasons, statusLocked };
+}

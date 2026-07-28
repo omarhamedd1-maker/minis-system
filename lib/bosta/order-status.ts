@@ -1,0 +1,96 @@
+// ==========================================================================
+// ترجمة حالة الشحنة عند بوسطة لحالة الأوردر عندنا — المصدر الوحيد للترجمة دي
+// --------------------------------------------------------------------------
+// الترتيب هنا مهم جدًا: الأخص الأول. الغلطتين اللي حصلوا قبل كده كان سببهم
+// الترتيب (مثلاً "Out For Delivery" فيها كلمة deliver، فلو اتفحصت بعد
+// "delivered" الأوردر بيبان متسلّم وهو لسه في الطريق).
+// ==========================================================================
+
+/** حالات إحنا اللي بنحددها بإيدنا — المزامنة مامنفعش تغيّرها */
+export const LOCKED_STATUSES = ["cancelled", "returned_after_delivery"];
+
+export type OrderStatus =
+  | "cancelled"
+  | "returned"
+  | "returning"
+  | "awaiting_action"
+  | "delivered"
+  | "out_for_delivery"
+  | "shipped"
+  | "ready";
+
+// كل قاعدة بتتفحص بالترتيب، وأول واحدة تنطبق بتكسب
+const RULES: { status: OrderStatus; match: (s: string) => boolean }[] = [
+  // ملغي من بوسطة
+  { status: "cancelled", match: (s) => s.includes("cancel") },
+
+  // رجعت لنا فعلاً ووصلت المخزن
+  {
+    status: "returned",
+    match: (s) =>
+      s.includes("returned to origin") ||
+      s.includes("returned to business") ||
+      s === "returned" ||
+      s.includes("exchanged & returned"),
+  },
+
+  // راجعة لنا بس لسه في الطريق
+  { status: "returning", match: (s) => s.includes("return") },
+
+  // بوسطة واقفة ومحتاجة تصرّف مننا
+  {
+    status: "awaiting_action",
+    match: (s) =>
+      s.includes("awaiting action") ||
+      s.includes("action required") ||
+      s.includes("exception") ||
+      s.includes("on hold"),
+  },
+
+  // خرجت من الفرع وماشية للعميل — لازم تتفحص قبل "delivered"
+  {
+    status: "out_for_delivery",
+    match: (s) => s.includes("out for delivery") || s.includes("with courier"),
+  },
+
+  // اتسلّمت فعلاً
+  { status: "delivered", match: (s) => s.includes("deliver") },
+
+  // المندوب استلمها منّا أو هي جوّه شبكة بوسطة
+  {
+    status: "shipped",
+    match: (s) =>
+      s.includes("picked") ||
+      s.includes("transit") ||
+      s.includes("received") ||
+      s.includes("processing") ||
+      s.includes("at warehouse") ||
+      s.includes("hub"),
+  },
+
+  // الشحنة اتعملت ومستنية المندوب
+  {
+    status: "ready",
+    match: (s) =>
+      s.includes("created") ||
+      s.includes("requested") ||
+      s.includes("waiting for pickup") ||
+      s.includes("pickup") ||
+      s.includes("route"),
+  },
+];
+
+/** بيرجّع حالة الأوردر المقابلة، أو null لو الحالة مش معروفة (ساعتها منغيرش حاجة) */
+export function mapBostaState(state: string | null | undefined): OrderStatus | null {
+  const s = String(state ?? "").toLowerCase().trim();
+  if (!s) return null;
+  for (const rule of RULES) {
+    if (rule.match(s)) return rule.status;
+  }
+  return null;
+}
+
+/** هل ينفع المزامنة تغيّر حالة الأوردر ده؟ */
+export function canSyncChangeStatus(current: string | null | undefined): boolean {
+  return !LOCKED_STATUSES.includes(String(current ?? ""));
+}
