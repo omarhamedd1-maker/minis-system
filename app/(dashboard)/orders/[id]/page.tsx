@@ -87,7 +87,6 @@ export default async function OrderDetailsPage({
   const { error: actionError, saved } = await searchParams;
   const user = await requirePagePermission("orders.view");
   const canItems = can(user, "orders.items");
-  const canStatus = can(user, "orders.status");
   const canArchive = can(user, "orders.archive");
   const canDelete = can(user, "orders.delete");
   const canLink = can(user, "ship.link");

@@ -1,0 +1,37 @@
+# فحص أوتوماتيك بيشتغل على كل تعديل قبل ما يوصل للموقع الحقيقي.
+# لو أي خطوة وقعت، جيت هَب بيعلّم التعديل بعلامة حمرا وبيوصلك إيميل.
+name: فحص
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: تنزيل الحزم
+        run: npm ci
+
+      - name: فحص الأنواع
+        run: npx tsc --noEmit
+
+      - name: فحص الكود
+        run: npx eslint
+
+      - name: اختبارات حسبة الفلوس
+        run: npx vitest run
+
+      - name: بناء الموقع
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-only-placeholder

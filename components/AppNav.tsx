@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { logout } from "@/app/login/actions";
+import {
+  notifyStoredFlagChanged,
+  useStoredFlag,
+} from "@/lib/use-stored-flag";
 
 type Item = { href: string; label: string; perm: string };
 
@@ -57,18 +61,12 @@ export function AppNav({
   permissions: string[];
 }) {
   const pathname = usePathname();
-  const [expanded, setExpanded] = useState(false);
+  const expanded = useStoredFlag("navExpanded");
   const [moreOpen, setMoreOpen] = useState(false);
 
-  useEffect(() => {
-    if (localStorage.getItem("navExpanded") === "1") setExpanded(true);
-  }, []);
-
   function toggle() {
-    setExpanded((e) => {
-      localStorage.setItem("navExpanded", e ? "0" : "1");
-      return !e;
-    });
+    localStorage.setItem("navExpanded", expanded ? "0" : "1");
+    notifyStoredFlagChanged();
   }
 
   const allowed = ITEMS.filter((i) => isAdmin || permissions.includes(i.perm));

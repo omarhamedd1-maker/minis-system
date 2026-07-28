@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { CashManualRow } from "@/components/CashManualRow";

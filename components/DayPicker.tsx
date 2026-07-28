@@ -91,7 +91,7 @@ export function DayPicker({
               />
             </label>
             <p className="text-[11px] text-gray-400">
-              سيب "إلى" فاضية عشان يوم واحد بس
+              سيب &quot;إلى&quot; فاضية عشان يوم واحد بس
             </p>
           </div>
         </>

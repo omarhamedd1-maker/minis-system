@@ -48,7 +48,6 @@ export default async function ExpensesPage({
     deleted,
     cat: rawCat,
     period: rawPeriod,
-    edit: editId,
   } = await searchParams;
   const cat = CATEGORY_SUGGESTIONS.includes(rawCat ?? "") ? rawCat : undefined;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";

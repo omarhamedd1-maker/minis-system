@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday } from "@/lib/format";
 import { ProductPicker } from "@/components/ProductPicker";

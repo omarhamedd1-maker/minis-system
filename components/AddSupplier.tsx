@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 
 // زرار + جنب العنوان — بيفتح نافذة صغيرة فيها خانات المورد
@@ -9,10 +9,9 @@ export function AddSupplier({
 }: {
   action: (fd: FormData) => Promise<void>;
 }) {
+  // مفيش داعي لحالة "اتحمّل" — النافذة مابتتفتحش غير بضغطة من المتصفح،
+  // يعني وقت العرض من السيرفر بتبقى مقفولة ومفيش وصول للصفحة أصلاً
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   return (
     <>
@@ -35,8 +34,7 @@ export function AddSupplier({
         </svg>
       </button>
 
-      {mounted &&
-        open &&
+      {open &&
         createPortal(
           <div
             className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"

@@ -27,22 +27,26 @@ export function LiveMoneyCards({
   to?: string;
 }) {
   const [s, setS] = useState<Headline>(initial);
-  // أنيميشن البداية من صفر — بس أول فتحة للسيستم في الجلسة
-  const [intro, setIntro] = useState(false);
 
-  useEffect(() => {
+  // لما السيرفر يبعت أرقام جديدة (تغيير الفترة مثلاً) نبدأ منها.
+  // ده الأسلوب اللي رياكت بيوصّي بيه بدل ما نعمل effect بيغيّر الحالة.
+  const [lastInitial, setLastInitial] = useState(initial);
+  if (initial !== lastInitial) {
+    setLastInitial(initial);
     setS(initial);
-  }, [initial]);
+  }
 
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      !sessionStorage.getItem("minisDashIntro")
-    ) {
+  // أنيميشن البداية من صفر — بس أول فتحة للسيستم في الجلسة
+  const [intro] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      if (sessionStorage.getItem("minisDashIntro")) return false;
       sessionStorage.setItem("minisDashIntro", "1");
-      setIntro(true);
+      return true;
+    } catch {
+      return false;
     }
-  }, []);
+  });
 
   useEffect(() => {
     const supabase = createClient();

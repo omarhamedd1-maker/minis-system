@@ -4,7 +4,7 @@ import { EXCLUDED_STATUSES, formatMoney, orderStatusBadge } from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { DayPicker } from "@/components/DayPicker";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
-import { computeHeadline, resolvePeriod } from "@/lib/dashboard-stats";
+import { computeHeadline } from "@/lib/dashboard-stats";
 import { can, requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
