@@ -50,28 +50,81 @@ Deno.serve(async (req) => {
     "Content-Type": "application/json",
   };
 
+  // أول حاجة: بنحاول نعرف رقم الحساب (business id) — بعض المسارات محتاجاه
+  let businessId = "";
+  for (const p of [
+    "https://app.bosta.co/api/v2/businesses/me",
+    "https://app.bosta.co/api/v2/users/me",
+    "https://app.bosta.co/api/v1/businesses/me",
+  ]) {
+    try {
+      const r = await fetch(p, { headers });
+      if (r.status !== 200) continue;
+      const j = await r.json();
+      businessId = String(
+        j?.data?._id ?? j?.data?.businessId ?? j?.data?.business?._id ?? "",
+      );
+      if (businessId) break;
+    } catch {
+      // نكمّل
+    }
+  }
+
   // بنجيب معاملات المحفظة (بنجرب أكتر من مسار لأن بوسطة بتغيّرهم)
   const paths = [
     "https://app.bosta.co/api/v2/wallet/transactions?limit=200",
     "https://app.bosta.co/api/v2/businesses/wallet/transactions?limit=200",
-    "https://app.bosta.co/api/v2/wallet/statement?limit=200",
+    "https://app.bosta.co/api/v2/wallet/transactions?pageNumber=0&pageSize=200",
+    "https://app.bosta.co/api/v2/wallet?limit=200",
+    "https://app.bosta.co/api/v1/wallet/transactions?limit=200",
+    ...(businessId
+      ? [
+          `https://app.bosta.co/api/v2/businesses/${businessId}/wallet/transactions?limit=200`,
+          `https://app.bosta.co/api/v2/businesses/${businessId}/wallet?limit=200`,
+          `https://app.bosta.co/api/v2/businesses/${businessId}/transactions?limit=200`,
+        ]
+      : []),
   ];
+
+  // لو المستخدم عدّى مسار بنفسه: &path=<url>
+  const custom = url.searchParams.get("path");
+  if (custom) paths.unshift(custom);
+
   let rows: Record<string, unknown>[] = [];
   let usedPath = "";
+  const attempts: { path: string; status: number | string; preview: string }[] = [];
+
   for (const p of paths) {
     try {
       const res = await fetch(p, { headers });
+      const text = await res.text();
+      attempts.push({
+        path: p,
+        status: res.status,
+        preview: text.slice(0, 300),
+      });
       if (res.status !== 200) continue;
-      const j = await res.json();
+      let j: unknown;
+      try {
+        j = JSON.parse(text);
+      } catch {
+        continue;
+      }
+      const o = j as Record<string, any>;
       const arr =
-        j?.data?.transactions ?? j?.data?.list ?? j?.transactions ?? j?.data ?? [];
+        o?.data?.transactions ??
+        o?.data?.list ??
+        o?.data?.items ??
+        o?.transactions ??
+        o?.list ??
+        (Array.isArray(o?.data) ? o.data : []);
       if (Array.isArray(arr) && arr.length > 0) {
         rows = arr;
         usedPath = p;
         break;
       }
-    } catch {
-      // نجرب المسار اللي بعده
+    } catch (e) {
+      attempts.push({ path: p, status: "ERR", preview: String(e).slice(0, 200) });
     }
   }
 
@@ -80,8 +133,9 @@ Deno.serve(async (req) => {
       {
         ok: false,
         error:
-          "معرفناش نجيب معاملات المحفظة من بوسطة — الـ API مش راجع بيانات. سجّل التحويلات يدوي في الخزنة، أو ابعتلي شكل الرد من بوسطة.",
-        tried: paths,
+          "معرفناش نجيب معاملات المحفظة من بوسطة. بص على attempts تحت وابعتهالي.",
+        businessId: businessId || "(معرفناهوش)",
+        attempts,
       },
       502,
     );
