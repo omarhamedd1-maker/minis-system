@@ -115,27 +115,6 @@ Deno.serve(async (req) => {
   if (!GUARD_KEY || url.searchParams.get("key") !== GUARD_KEY) return new Response("Unauthorized", { status: 401 });
   const dry = url.searchParams.get("dry") === "1";
 
-  // فحص مؤقت: بصمة المفتاح المخزّن هنا، عشان نقارنها باللي في فيرسل.
-  // مابيكشفش المفتاح ولا أي جزء منه. هيتشال بعد ما نتأكد.
-  if (url.searchParams.get("check") === "1") {
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(BOSTA_API_KEY),
-    );
-    const fingerprint = Array.from(new Uint8Array(digest))
-      .slice(0, 6)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return new Response(
-      JSON.stringify({
-        length: BOSTA_API_KEY.length,
-        trimmedLength: BOSTA_API_KEY.trim().length,
-        fingerprint,
-      }),
-      { headers: { "Content-Type": "application/json" } },
-    );
-  }
-
   const headers = { "Authorization": BOSTA_API_KEY, "X-Requested-By": "minis", "Content-Type": "application/json" };
   const deliveries: any[] = [];
   const seen = new Set<string>();
