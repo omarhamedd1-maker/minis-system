@@ -6,6 +6,115 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 
+// ===== استيراد تحويلات بوسطة من ملف المحفظة =====
+// بوسطة مش بتسمح بالوصول للمحفظة من الـ API، فبنرفع الملف اللي بننزّله منها.
+// بناخد بس حركات "Cash Out" (الفلوس اللي وصلتك) ونسجّلها إيداع في الخزنة،
+// وبنمنع التكرار عن طريق جدول bosta_cashouts.
+export async function importBostaCashouts(
+  formData: FormData
+): Promise<{ ok: boolean; added?: number; skipped?: number; error?: string }> {
+  const me = await requirePermission("cash.edit");
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "اختار الملف الأول" };
+  }
+
+  let rows: Record<string, unknown>[] = [];
+  try {
+    const XLSX = await import("xlsx");
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+      defval: "",
+    });
+  } catch {
+    return { ok: false, error: "معرفناش نقرأ الملف — اتأكد إنه ملف بوسطة الأصلي" };
+  }
+
+  // تاريخ إكسل الرقمي لتاريخ عادي
+  const toDate = (v: unknown): string | null => {
+    if (typeof v === "number" && v > 20000) {
+      return new Date(Math.round((v - 25569) * 86400 * 1000))
+        .toISOString()
+        .slice(0, 10);
+    }
+    const s = String(v ?? "").trim();
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+  };
+
+  const pick = (r: Record<string, unknown>, keys: string[]) => {
+    for (const k of keys) {
+      if (r[k] !== undefined && String(r[k]).trim() !== "") return r[k];
+    }
+    return "";
+  };
+
+  const supabase = createAdminClient();
+  let added = 0;
+  let skipped = 0;
+
+  for (const r of rows) {
+    const category = String(pick(r, ["Category", "category", "النوع"])).toLowerCase();
+    if (!category.includes("cash out") && !category.includes("cashout")) continue;
+
+    // رقم التحويل: بنفضّل Cashout ID وإلا رقم الحركة
+    const cashoutId = String(
+      pick(r, ["Cashout ID", "cashoutId", "Transactions ID", "id"])
+    ).trim();
+    if (!cashoutId) continue;
+
+    const amount = Math.abs(
+      Number(pick(r, ["Cashout Amount", "Amount", "amount"])) || 0
+    );
+    if (!amount) continue;
+
+    const date =
+      toDate(pick(r, ["Cashout Date", "Date", "date"])) ??
+      new Date().toISOString().slice(0, 10);
+
+    // اتسجّل قبل كده؟
+    const { data: exists } = await supabase
+      .from("bosta_cashouts")
+      .select("id")
+      .eq("cashout_id", cashoutId)
+      .maybeSingle();
+    if (exists) {
+      skipped++;
+      continue;
+    }
+
+    const { error: cashErr } = await supabase.from("cash_transactions").insert({
+      direction: "in",
+      amount,
+      source_type: "manual",
+      description: `تحويل من بوسطة (${cashoutId})`,
+      transaction_date: date,
+    });
+    if (cashErr) continue;
+
+    await supabase.from("bosta_cashouts").insert({
+      cashout_id: cashoutId,
+      amount,
+      cashout_date: date,
+    });
+    added++;
+  }
+
+  if (added > 0) {
+    await logActivity(
+      me,
+      "cash.import",
+      `استورد ${added} تحويل من بوسطة للخزنة`
+    );
+  }
+  revalidatePath("/cash");
+  return { ok: true, added, skipped };
+}
+
 export async function updateCashTransaction(formData: FormData) {
   const me = await requirePermission("cash.edit");
   const id = String(formData.get("transaction_id") ?? "");
