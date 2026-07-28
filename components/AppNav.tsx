@@ -12,6 +12,7 @@ const ITEMS: Item[] = [
   { href: "/orders", label: "الأوردرات", perm: "orders.view" },
   { href: "/customers", label: "العملاء", perm: "customers.view" },
   { href: "/products", label: "المنتجات", perm: "products.view" },
+  { href: "/suppliers", label: "الموردين", perm: "suppliers.view" },
   { href: "/expenses", label: "المصاريف", perm: "expenses.view" },
   { href: "/cash", label: "الخزنة", perm: "cash.view" },
   { href: "/users", label: "المستخدمون", perm: "admin.users" },
@@ -25,6 +26,8 @@ function Icon({ href, className }: { href: string; className?: string }) {
     "/customers": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
     "/products":
       "M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3zM6 6h.008v.008H6V6z",
+    "/suppliers":
+      "M3 9h13v8H3V9zM16 12h3.5L21 15v2h-5v-5zM7 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM18 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z",
     "/expenses": "M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6",
     "/cash":
       "M20 8H5a2 2 0 0 1 0-4h13v4zM3 6v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1M16.5 13h.01",

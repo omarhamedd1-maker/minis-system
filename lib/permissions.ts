@@ -21,6 +21,8 @@ export type PermissionKey =
   | "products.cost"
   | "products.stock"
   | "products.edit"
+  | "suppliers.view"
+  | "suppliers.edit"
   | "finance.dashboard"
   | "expenses.view"
   | "expenses.edit"
@@ -73,6 +75,21 @@ export const PERMISSIONS: PermissionGroup[] = [
       { key: "products.cost", label: "تعديل التكلفة" },
       { key: "products.stock", label: "تعديل المخزون/الكميات" },
       { key: "products.edit", label: "تعديل بيانات المنتج والأشكال" },
+    ],
+  },
+  {
+    group: "الموردين",
+    items: [
+      {
+        key: "suppliers.view",
+        label: "عرض الموردين وحساباتهم",
+        hint: "اللي عليك لكل مورد",
+      },
+      {
+        key: "suppliers.edit",
+        label: "تسجيل فواتير ودفعات الموردين",
+        hint: "بيأثر على الخزنة",
+      },
     ],
   },
   {
@@ -131,6 +148,8 @@ export const PRESETS: Preset[] = [
       "products.cost",
       "products.stock",
       "products.edit",
+      "suppliers.view",
+      "suppliers.edit",
     ],
   },
   {
@@ -156,6 +175,8 @@ export const PRESETS: Preset[] = [
       "cash.view",
       "cash.edit",
       "finance.export",
+      "suppliers.view",
+      "suppliers.edit",
     ],
   },
   {
@@ -168,6 +189,7 @@ export const PRESETS: Preset[] = [
       "finance.dashboard",
       "expenses.view",
       "cash.view",
+      "suppliers.view",
     ],
   },
 ];
@@ -268,6 +290,7 @@ export function landingPathFor(user: SessionUser | null): string {
     { perm: "finance.dashboard", path: "/" },
     { perm: "customers.view", path: "/customers" },
     { perm: "products.view", path: "/products" },
+    { perm: "suppliers.view", path: "/suppliers" },
     { perm: "expenses.view", path: "/expenses" },
     { perm: "cash.view", path: "/cash" },
     { perm: "admin.users", path: "/users" },
