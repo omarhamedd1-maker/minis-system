@@ -29,6 +29,24 @@ export async function GET(request: Request) {
     );
   }
 
+  // فحص مؤقت: بيقارن المفتاح المتسجّل باللي المفروض يكون من غير ما يكشفه.
+  // بيرجّع الطول وبصمة مختصرة بس — لا المفتاح ولا أي جزء منه.
+  if (url.searchParams.get("check") === "1") {
+    const digest = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(apiKey)
+    );
+    const fingerprint = Array.from(new Uint8Array(digest))
+      .slice(0, 6)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return NextResponse.json({
+      length: apiKey.length,
+      trimmedLength: apiKey.trim().length,
+      fingerprint,
+    });
+  }
+
   try {
     const summary = await runBostaSync({
       db: createAdminClient(),
