@@ -11,6 +11,7 @@ import {
   runBostaCreate,
   runBostaReturn,
 } from "@/lib/bosta/create";
+import { runBostaUpdateCod } from "@/lib/bosta/awb";
 import { ORDER_STATUS_OPTIONS, orderStatusBadge } from "@/lib/format";
 
 type Supa = ReturnType<typeof createAdminClient>;
@@ -33,10 +34,7 @@ function pushOrderToShopify(orderId: string) {
     }
     // بوسطة: تحديث مبلغ التحصيل (طول ما الشحنة لسه ماتاخدتش)
     try {
-      await fetch(
-        `${base}/functions/v1/bosta-update?key=${key}&order=${orderId}`,
-        { method: "GET", signal: AbortSignal.timeout(20000) }
-      );
+      await runBostaUpdateCod({ db: createAdminClient(), orderId });
     } catch {
       // فشل تحديث بوسطة ما يوقفش التعديل المحلي
     }

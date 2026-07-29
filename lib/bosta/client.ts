@@ -155,6 +155,97 @@ export async function createDelivery(
   };
 }
 
+export type DeliveryLookup = {
+  id: string;
+  trackingNumber: string;
+  /** حالة الشحنة عند بوسطة زي "Delivered" و"Picked up" */
+  state: string;
+  cod: number | null;
+};
+
+/**
+ * بيلاقي الشحنة برقم تتبعها بالظبط.
+ * ⚠️ **متستخدمش `searchInput` هنا** — جرّبناه وطلع بيرجّع شحنة تانية خالص،
+ * يعني ممكن تطبع بوليصة عميل على أوردر عميل تاني. المسار ده بيطابق بالظبط.
+ */
+export async function fetchDeliveryByTracking(
+  rawKey: string,
+  tracking: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<DeliveryLookup | null> {
+  const apiKey = assertUsableKey(rawKey);
+  const res = await fetchImpl(
+    `${BOSTA_BASE}/deliveries/business/${encodeURIComponent(tracking)}`,
+    { headers: headers(apiKey), signal: AbortSignal.timeout(TIMEOUT_MS) }
+  );
+  if (res.status === 401 || res.status === 403) {
+    throw new BostaError("مفتاح بوسطة مرفوض", res.status);
+  }
+  if (!res.ok) return null;
+
+  const json = await res.json().catch(() => null);
+  const d = json?.data ?? json;
+  if (!d?._id) return null;
+
+  return {
+    id: String(d._id),
+    trackingNumber: String(d.trackingNumber ?? tracking),
+    state: String(d.state?.value ?? d.state ?? ""),
+    cod: typeof d.cod === "number" ? d.cod : null,
+  };
+}
+
+/**
+ * بوليصة الشحن.
+ * بوسطة بترجّعها **نص مشفّر جوّه JSON على `/api/v0`** مش ملف PDF مباشرة —
+ * ومسار `v2` مش موجود أصلاً (بيرجّع صفحة خطأ). ده اتحدد بالتجربة.
+ */
+export async function fetchAwbPdf(
+  rawKey: string,
+  deliveryId: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<Uint8Array | null> {
+  const apiKey = assertUsableKey(rawKey);
+  const res = await fetchImpl(
+    `https://app.bosta.co/api/v0/deliveries/awb/${encodeURIComponent(deliveryId)}`,
+    { headers: headers(apiKey), signal: AbortSignal.timeout(TIMEOUT_MS) }
+  );
+  if (!res.ok) return null;
+
+  const json = await res.json().catch(() => null);
+  // شكلين: v0 بيرجّع data نص، وv1 بيرجّع data.data
+  const b64 = typeof json?.data === "string" ? json.data : json?.data?.data;
+  if (typeof b64 !== "string" || !b64) return null;
+
+  return Uint8Array.from(Buffer.from(b64, "base64"));
+}
+
+/** بيغيّر مبلغ التحصيل وعدد القطع لشحنة لسه ماتاخدتش */
+export async function updateDeliveryCod(
+  rawKey: string,
+  deliveryId: string,
+  cod: number,
+  itemsCount: number,
+  fetchImpl: typeof fetch = fetch
+): Promise<{ ok: boolean; status: number; message: string }> {
+  const apiKey = assertUsableKey(rawKey);
+  const res = await fetchImpl(`${BOSTA_BASE}/deliveries/${deliveryId}`, {
+    method: "PUT",
+    headers: headers(apiKey),
+    body: JSON.stringify({
+      cod,
+      specs: { packageDetails: { itemsCount } },
+    }),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  const json = await res.json().catch(() => null);
+  return {
+    ok: res.ok,
+    status: res.status,
+    message: String(json?.message ?? json?.error ?? ""),
+  };
+}
+
 /** بيتأكد إن المفتاح شغال — بنستخدمه في زرار "جرّب الاتصال" وقت التركيب */
 export async function testConnection(
   rawKey: string,

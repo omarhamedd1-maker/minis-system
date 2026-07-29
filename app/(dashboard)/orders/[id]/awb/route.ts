@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser } from "@/lib/permissions";
+import { runBostaAwb } from "@/lib/bosta/awb";
 
 // بوليصة الشحن (AWB): بنجيبها من دالة بوسطة بالمفتاح السري (سيرفر) ونرجّعها PDF
 export async function GET(
@@ -19,20 +21,12 @@ export async function GET(
     return new Response("مالكش صلاحية طباعة البوالص", { status: 403 });
   }
 
-  const key = process.env.SYNC_KEY;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!key || !base) {
-    return new Response("إعدادات ناقصة", { status: 500 });
+  const res = await runBostaAwb({ db: createAdminClient(), orderId: id });
+  if (!res.ok) {
+    return new Response(res.error, { status: res.status });
   }
 
-  const res = await fetch(
-    `${base}/functions/v1/bosta-awb?key=${key}&order=${id}`
-  );
-  if (!res.ok) {
-    return new Response(await res.text(), { status: res.status });
-  }
-  const buf = await res.arrayBuffer();
-  return new Response(buf, {
+  return new Response(res.pdf as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": "inline; filename=awb.pdf",

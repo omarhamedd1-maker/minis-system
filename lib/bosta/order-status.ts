@@ -94,3 +94,27 @@ export function mapBostaState(state: string | null | undefined): OrderStatus | n
 export function canSyncChangeStatus(current: string | null | undefined): boolean {
   return !LOCKED_STATUSES.includes(String(current ?? ""));
 }
+
+/**
+ * هل نجرّب نعدّل تحصيل الشحنة عند بوسطة؟
+ *
+ * **القايمة دي مقصود إنها قصيرة.** لو منعنا التعديل ونحن مش متأكدين، المندوب
+ * بيحصّل مبلغ غلط من العميل — ودي خسارة فلوس حقيقية. أما لو جرّبنا وبوسطة
+ * رفضت، مافيش ضرر وبنعرض سببها. فبنمنع الحالات **النهائية** بس، واللي بينهم
+ * بوسطة هي اللي تقرر فيه.
+ */
+export function canEditDelivery(state: string | null | undefined): boolean {
+  const s = String(state ?? "").toLowerCase().trim();
+  if (!s) return false;
+
+  const finished = [
+    "deliver", // اتسلّمت، أو المندوب ماشي بيها للعميل
+    "return",
+    "cancel",
+    "archived",
+    "lost",
+    "damaged",
+    "exchanged",
+  ];
+  return !finished.some((w) => s.includes(w));
+}

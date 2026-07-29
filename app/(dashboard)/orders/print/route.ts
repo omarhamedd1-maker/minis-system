@@ -1,6 +1,8 @@
 import { PDFDocument } from "pdf-lib";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser } from "@/lib/permissions";
+import { runBostaAwb } from "@/lib/bosta/awb";
 
 // طباعة أكتر من بوليصة مع بعض: بنجيب بوليصة كل أوردر من دالة بوسطة وندمجهم في PDF واحد.
 export async function GET(req: Request) {
@@ -26,27 +28,18 @@ export async function GET(req: Request) {
     return new Response("محددتش أي أوردر", { status: 400 });
   }
 
-  const key = process.env.SYNC_KEY;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!key || !base) {
-    return new Response("إعدادات ناقصة", { status: 500 });
-  }
-
+  const db = createAdminClient();
   const merged = await PDFDocument.create();
   const failed: string[] = [];
 
   for (const id of ids) {
     try {
-      const res = await fetch(
-        `${base}/functions/v1/bosta-awb?key=${key}&order=${id}`,
-        { signal: AbortSignal.timeout(20000) }
-      );
+      const res = await runBostaAwb({ db, orderId: id });
       if (!res.ok) {
         failed.push(id);
         continue;
       }
-      const bytes = await res.arrayBuffer();
-      const src = await PDFDocument.load(bytes);
+      const src = await PDFDocument.load(res.pdf);
       const pages = await merged.copyPages(src, src.getPageIndices());
       pages.forEach((p) => merged.addPage(p));
     } catch {
