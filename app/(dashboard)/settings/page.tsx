@@ -1,53 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePagePermission } from "@/lib/permissions";
-import { loadTenantSettings } from "@/lib/tenant-settings";
-import { formatMoney } from "@/lib/format";
-import {
-  checkBostaConnection,
-  saveBostaKey,
-  saveBusinessSettings,
-  saveCarrierFees,
-} from "./actions";
+import { checkBostaConnection, saveBostaKey } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 const input =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none";
 const label = "text-xs text-gray-500";
-const card = "rounded-xl bg-white p-5 shadow-sm";
-const submit =
-  "rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700";
-
-function Field({
-  name,
-  title,
-  value,
-  hint,
-  step,
-}: {
-  name: string;
-  title: string;
-  value: string | number;
-  hint?: string;
-  step?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label htmlFor={name} className={label}>
-        {title}
-      </label>
-      <input
-        id={name}
-        name={name}
-        type="number"
-        step={step ?? "0.01"}
-        defaultValue={String(value)}
-        className={input}
-      />
-      {hint && <span className="text-[11px] text-gray-400">{hint}</span>}
-    </div>
-  );
-}
 
 export default async function SettingsPage({
   searchParams,
@@ -58,26 +17,23 @@ export default async function SettingsPage({
   const me = await requirePagePermission("admin.settings");
 
   const db = createAdminClient();
-  const settings = await loadTenantSettings(db, me.tenantId);
-
   const [{ data: tenant }, { data: creds }] = await Promise.all([
     db.from("tenants").select("name").eq("id", me.tenantId).maybeSingle(),
     db
       .from("tenant_credentials")
-      .select("bosta_api_key, bosta_pickup_address_id, shopify_shop")
+      .select("bosta_api_key, bosta_pickup_address_id")
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
 
   const hasBosta = Boolean(creds?.bosta_api_key);
-  const f = settings.fees;
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-2xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-gray-900">إعدادات البيزنس</h1>
+        <h1 className="text-lg font-bold text-gray-900">الإعدادات</h1>
         <p className="mt-1 text-xs text-gray-400">
-          الأرقام دي بتاعتك إنت بس — أي بيزنس تاني على السيستم ليه أرقامه هو.
+          {tenant?.name ?? "بيزنسك"}
         </p>
       </div>
 
@@ -92,82 +48,7 @@ export default async function SettingsPage({
         </p>
       )}
 
-      {/* ===== الأساسيات ===== */}
-      <form action={saveBusinessSettings} className={card}>
-        <h2 className="text-sm font-bold text-gray-900">الأساسيات</h2>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="business_name" className={label}>
-              اسم البيزنس
-            </label>
-            <input
-              id="business_name"
-              name="business_name"
-              defaultValue={tenant?.name ?? ""}
-              className={input}
-            />
-          </div>
-
-          <Field
-            name="shipping_charge"
-            title="الشحن اللي العميل بيدفعه"
-            value={settings.shippingCharge}
-            hint="بيتحط تلقائي على كل أوردر جديد"
-          />
-        </div>
-
-        <h3 className="mt-6 text-xs font-bold text-gray-700">
-          باقة شركة الشحن
-        </h3>
-        <p className="mt-1 text-[11px] text-gray-400">
-          نصيب الأوردر الواحد من الباقة ={" "}
-          {formatMoney(
-            settings.bundleShipments
-              ? settings.bundlePrice / settings.bundleShipments
-              : 0
-          )}
-        </p>
-
-        <div className="mt-3 grid gap-4 sm:grid-cols-3">
-          <Field
-            name="bundle_price"
-            title="سعر الباقة الشهري"
-            value={settings.bundlePrice}
-          />
-          <Field
-            name="bundle_shipments"
-            title="عدد الشحنات في الباقة"
-            value={settings.bundleShipments}
-            step="1"
-          />
-          <Field
-            name="bundle_covers"
-            title="الشحن الأساسي اللي بتغطيه"
-            value={settings.bundleCovers}
-          />
-        </div>
-
-        <div className="mt-6 flex flex-col gap-1">
-          <label htmlFor="expense_categories" className={label}>
-            أنواع المصاريف — نوع في كل سطر
-          </label>
-          <textarea
-            id="expense_categories"
-            name="expense_categories"
-            rows={5}
-            defaultValue={settings.expenseCategories.join("\n")}
-            className={input}
-          />
-        </div>
-
-        <button type="submit" className={`${submit} mt-4`}>
-          حفظ
-        </button>
-      </form>
-
-      {/* ===== ربط بوسطة ===== */}
-      <div className={card}>
+      <div className="rounded-xl bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-bold text-gray-900">ربط بوسطة</h2>
           <span
@@ -182,15 +63,14 @@ export default async function SettingsPage({
         </div>
 
         <p className="mt-2 text-xs text-gray-500">
-          المفتاح بتاعك بيتخزّن مقفول، ومحدش يقدر يقراه من المتصفح. هتلاقيه في
-          بوسطة تحت <span className="font-medium">ربط التطبيقات</span> — ولو
-          عملت واحد جديد، انسخه فورًا لأنه مابيظهرش تاني.
+          من غير الربط ده، السيستم مش هيقدر يبعت شحنات ولا يجيب حالاتها ولا
+          يحسب رسومها.
         </p>
 
         <form action={saveBostaKey} className="mt-4 space-y-3">
           <div className="flex flex-col gap-1">
             <label htmlFor="bosta_api_key" className={label}>
-              مفتاح بوسطة {hasBosta && "(اكتب واحد جديد عشان تغيّره)"}
+              مفتاح بوسطة {hasBosta && "— اكتب واحد جديد عشان تغيّره"}
             </label>
             <input
               id="bosta_api_key"
@@ -200,6 +80,10 @@ export default async function SettingsPage({
               placeholder={hasBosta ? "••••••••••••" : "الزق المفتاح هنا"}
               className={input}
             />
+            <span className="text-[11px] text-gray-400">
+              هتلاقيه في بوسطة تحت <b>ربط التطبيقات</b>. لو عملت مفتاح جديد،
+              انسخه فورًا — بوسطة مابتعرضهوش تاني.
+            </span>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -216,7 +100,10 @@ export default async function SettingsPage({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button type="submit" className={submit}>
+            <button
+              type="submit"
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            >
               احفظ واتأكد إنه شغال
             </button>
             {hasBosta && (
@@ -235,68 +122,11 @@ export default async function SettingsPage({
         </form>
       </div>
 
-      {/* ===== رسوم بوسطة ===== */}
-      <form action={saveCarrierFees} className={card}>
-        <h2 className="text-sm font-bold text-gray-900">رسوم بوسطة</h2>
-        <p className="mt-1 text-xs text-gray-500">
-          دي اللي بنحسب بيها تكلفة كل شحنة. لو بوسطة غيّرت أسعارها، عدّلها من
-          هنا — هتتطبق على أول مزامنة جاية.
-        </p>
-
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <Field name="fee_open" title="رسم فتح الشحنة" value={f.openFee} />
-          <Field
-            name="fee_transfer_rate"
-            title="نسبة رسم التحويل"
-            value={f.transferRate}
-            step="0.001"
-            hint="0.01 يعني ١٪"
-          />
-          <Field
-            name="fee_transfer_min"
-            title="أقل رسم تحويل"
-            value={f.transferMin}
-          />
-          <Field
-            name="fee_cod_rate"
-            title="نسبة عمولة التحصيل"
-            value={f.codFeeRate}
-            step="0.001"
-          />
-          <Field
-            name="fee_cod_threshold"
-            title="التحصيل فوق كام تتحسب عمولة"
-            value={f.codFeeThreshold}
-          />
-          <Field
-            name="fee_vat"
-            title="معامل الضريبة"
-            value={f.vat}
-            step="0.01"
-            hint="1.14 يعني ١٤٪"
-          />
-          <Field
-            name="fee_insurance_rate"
-            title="نسبة التأمين"
-            value={f.insuranceRate}
-            step="0.001"
-          />
-          <Field
-            name="fee_insurance_min"
-            title="أقل تأمين"
-            value={f.insuranceMin}
-          />
-          <Field
-            name="fee_insurance_max"
-            title="أقصى تأمين"
-            value={f.insuranceMax}
-          />
-        </div>
-
-        <button type="submit" className={`${submit} mt-4`}>
-          حفظ الرسوم
-        </button>
-      </form>
+      <p className="px-1 text-[11px] leading-5 text-gray-400">
+        الشحن اللي العميل بيدفعه بيتقرا من كل أوردر لوحده زي ما نزل من
+        شوبيفاي — مفيش رقم ثابت تظبطه. ورسوم بوسطة واحدة للكل فبتتحدّث معانا.
+        وأنواع المصاريف بتكتبها وقت ما تسجّل المصروف.
+      </p>
     </div>
   );
 }

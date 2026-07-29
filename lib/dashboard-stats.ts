@@ -1,7 +1,8 @@
 // حسابات كروت الداشبورد — مشتركة بين السيرفر (أول تحميل) والعميل (التحديث اللايف)
 import { AT_CARRIER_STATUSES, EXCLUDED_STATUSES } from "./format";
 
-export const SHIPPING_CHARGE = 90; // اللي العميل بيدفعه شحن لكل أوردر
+// ملحوظة: الشحن اللي العميل بيدفعه مابقاش رقم ثابت — بيتقرا من كل أوردر
+// زي ما نزل من شوبيفاي، فلو اختلف من أوردر للتاني الحسبة تفضل صح.
 const EXCLUDED = EXCLUDED_STATUSES;
 
 const cairoDateFormat = new Intl.DateTimeFormat("en-CA", {
@@ -121,11 +122,17 @@ export function computeHeadline(
     (s, o) => s + Number(o.bosta_shipping_cost ?? 0),
     0
   );
-  // الـ90 بيتحصّل بس من اللي اتشحن/اتسلّم — المرتجع العميل مدفعش حاجة
-  const shippedCount = bostaChargedOrders.filter(
+  // الشحن اللي العميل دفعه — بنجمعه من الأوردرات نفسها زي ما نزل من شوبيفاي،
+  // مش رقم ثابت. كده لو الشحن اختلف من أوردر للتاني الحسبة تفضل صح.
+  // المرتجع مابيتحسبش — العميل مدفعش حاجة.
+  const shippedOrders = bostaChargedOrders.filter(
     (o) => o.order_status !== "returned"
-  ).length;
-  const shippingRevenue = shippedCount * SHIPPING_CHARGE;
+  );
+  const shippedCount = shippedOrders.length;
+  const shippingRevenue = shippedOrders.reduce(
+    (s, o) => s + Number(o.shipping_price ?? 0),
+    0
+  );
   // اللي دفعته من جيبك فوق الـ90 المحصّل — ده اللي بيتخصم من الربح
   const netShipping = bostaShippingTotal - shippingRevenue;
   // الشحن المحصّل مش بيتضاف للربح (محسوب ضمن توتال الأوردر) — بنخصم الزيادة بس

@@ -152,7 +152,7 @@ export function LiveMoneyCards({
       </Card>
       <Card
         label="شحن محصّل من العملاء"
-        hint={`90 لكل أوردر × ${s.shippedCount} أوردر اتشحن`}
+        hint={`اللي العميل دفعه في ${s.shippedCount} أوردر اتشحن`}
       >
         <span className="text-green-600">
           <CountUp
@@ -164,8 +164,8 @@ export function LiveMoneyCards({
         </span>
       </Card>
       <Card
-        label="شحن دفعته فوق الـ90"
-        hint="رسوم بوسطة ناقص الـ90 المحصّل — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
+        label="شحن دفعته من جيبك"
+        hint="رسوم بوسطة ناقص اللي العميل دفعه — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
         className="lg:col-span-2"
       >
         <span className="text-red-600">

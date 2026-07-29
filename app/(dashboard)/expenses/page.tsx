@@ -21,7 +21,9 @@ type ExpenseRow = {
   supplier_id: string | null;
 };
 
-const CATEGORY_SUGGESTIONS = EXPENSE_CATEGORIES;
+// الأنواع الجاهزة بتظهر لأول مرة بس. بعد كده القايمة بتتكوّن من اللي
+// استخدمته فعلاً — أي نوع جديد تكتبه بيتضاف لوحده.
+const STARTER_CATEGORIES = EXPENSE_CATEGORIES;
 
 const PERIODS: Record<string, string> = {
   month: "الشهر ده",
@@ -49,7 +51,7 @@ export default async function ExpensesPage({
     cat: rawCat,
     period: rawPeriod,
   } = await searchParams;
-  const cat = CATEGORY_SUGGESTIONS.includes(rawCat ?? "") ? rawCat : undefined;
+  const cat = (rawCat ?? "").trim() || undefined;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
   const user = await requirePagePermission("expenses.view");
   const isAdmin = can(user, "expenses.edit");
@@ -73,6 +75,19 @@ export default async function ExpensesPage({
   if (cat) query = query.eq("category", cat);
 
   const { data: expenses, error } = await query.overrideTypes<ExpenseRow[]>();
+
+  // الأنواع اللي استخدمتها فعلاً + الجاهزة، من غير تكرار
+  const { data: usedCats } = await supabase
+    .from("expenses")
+    .select("category")
+    .limit(5000)
+    .overrideTypes<{ category: string }[]>();
+  const CATEGORY_SUGGESTIONS = Array.from(
+    new Set([
+      ...(usedCats ?? []).map((r) => r.category).filter(Boolean),
+      ...STARTER_CATEGORIES,
+    ])
+  );
 
   // أسماء الموردين بتتقري بمفتاح الأدمن (جدول الموردين مقفول في الـRLS)
   const { data: supplierRows } = await createAdminClient()
@@ -178,22 +193,20 @@ export default async function ExpensesPage({
             <label htmlFor="category" className="text-xs text-gray-500">
               النوع
             </label>
-            <select
+            <input
               id="category"
               name="category"
+              list="expense-categories"
               required
-              defaultValue=""
-              className="w-36 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            >
-              <option value="" disabled>
-                اختار النوع
-              </option>
+              autoComplete="off"
+              placeholder="اختار أو اكتب نوع جديد"
+              className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            />
+            <datalist id="expense-categories">
               {CATEGORY_SUGGESTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
+                <option key={c} value={c} />
               ))}
-            </select>
+            </datalist>
           </div>
           <div className="flex min-w-48 flex-1 flex-col gap-1">
             <label htmlFor="description" className="text-xs text-gray-500">

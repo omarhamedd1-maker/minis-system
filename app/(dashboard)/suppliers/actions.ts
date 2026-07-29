@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
-import { EXPENSE_CATEGORIES } from "@/lib/format";
 
 // الحسبة زي ما عمر حددها (شغل بالأجل — بياخد البضاعة ويحاسب بعدين):
 //   الفاتورة (purchase)  = بضاعة استلمتها ولسه ما دفعتهاش → بتزوّد اللي عليك
@@ -163,9 +162,8 @@ export async function addSupplierTransaction(formData: FormData) {
   const txnDate = String(formData.get("txn_date") ?? "");
   const hitCash = formData.get("hit_cash") === "on";
   const rawCategory = String(formData.get("category") ?? "").trim();
-  const category = EXPENSE_CATEGORIES.includes(rawCategory)
-    ? rawCategory
-    : "بضاعة";
+  // أي نوع بيعدّي — الأنواع مابقتش قايمة مقفولة، بتتكوّن من الاستخدام
+  const category = rawCategory || "بضاعة";
   const back = `/suppliers/${supplierId}`;
 
   if (

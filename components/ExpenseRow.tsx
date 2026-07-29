@@ -91,19 +91,20 @@ export function ExpenseRow({
         />
       </td>
       <td className="px-4 py-3">
-        <select
+        <input
           name="category"
           form={formId}
+          list={`cats-${expense.id}`}
           defaultValue={expense.category}
           required
+          autoComplete="off"
           className="w-32 rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-        >
+        />
+        <datalist id={`cats-${expense.id}`}>
           {catOptions.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <option key={c} value={c} />
           ))}
-        </select>
+        </datalist>
       </td>
       <td className="px-4 py-3">
         <input

@@ -10,10 +10,8 @@ import { fetchAllDeliveries, type BostaRawDelivery } from "./client";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
-import {
-  loadTenantCredentials,
-  loadTenantSettings,
-} from "../tenant-settings";
+import { loadTenantCredentials } from "../tenant-settings";
+import { BOSTA_FEES } from "../shipping-cost";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
@@ -58,16 +56,14 @@ export async function runBostaSync(opts: {
 }): Promise<SyncSummary> {
   const { db, tenantId, dry = false, now = new Date(), fetchImpl } = opts;
 
-  const [creds, settings] = await Promise.all([
-    loadTenantCredentials(db, tenantId),
-    loadTenantSettings(db, tenantId),
-  ]);
+  const creds = await loadTenantCredentials(db, tenantId);
 
   if (!creds.bostaApiKey) {
     throw new Error("البيزنس ده لسه مربطش حساب بوسطة");
   }
   const apiKey = creds.bostaApiKey;
-  const rules = settings.fees;
+  // رسوم بوسطة واحدة لكل العملاء، فبتفضل في الكود ومتغطية باختبارات
+  const rules = BOSTA_FEES;
 
   const summary: SyncSummary = {
     dry,
