@@ -119,14 +119,8 @@ try {
     credErr ? credErr.message.slice(0, 40) : `رجّع ${creds?.length ?? 0} صف`
   );
 
-  // ومحاولة يقرا إعدادات بيزنس تاني
-  const { data: sets } = await attacker.from("tenant_settings").select("*");
-  const foreignSets = (sets ?? []).filter((r) => r.tenant_id !== tenantId);
-  check(
-    "قراءة إعدادات بيزنس تاني",
-    foreignSets.length > 0,
-    `${sets?.length ?? 0} صف — منهم ${foreignSets.length} تبع بيزنس تاني`
-  );
+  // كان فيه هنا محاولة على جدول الإعدادات — الجدول اتشال، والمحاولة اتشالت
+  // معاه لأنها كانت بتقول "اتمنع" على جدول مش موجود أصلًا.
 
   console.table(results);
   const leaks = results.filter((r) => r.النتيجة.includes("تسريب"));

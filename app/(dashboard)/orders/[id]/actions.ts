@@ -584,6 +584,9 @@ async function performOrderDeletion(
     .eq("related_order_id", orderId);
   if (cashError) return fail("الخزنة", cashError.message);
 
+  // جدول `shipments` متجمّد — آخر مرة اتكتب فيه ١٩ يوليو ٢٠٢٦، والمزامنة
+  // الجديدة بتكتب في `orders` بس. الصفوف القديمة سايبينها كتاريخ، والمسح
+  // هنا باقي عشان الأوردر المتمسوح مايسيبش وراه صفوف معلّقة.
   const { error: shipmentsError } = await supabase
     .from("shipments")
     .delete()
