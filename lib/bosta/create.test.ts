@@ -74,8 +74,14 @@ function fakeDb(o: DbOpts = {}): SupabaseClient {
   } as unknown as SupabaseClient;
 }
 
-/** أول نداء = المدن، واللي بعده = إنشاء الشحنة */
-function fakeFetch(deliveryReplies: { ok: boolean; body: unknown }[]) {
+/**
+ * بيرد على: البحث عن شحنة قديمة، جلب المدن، وإنشاء الشحنة.
+ * `existing` = الشحنة القديمة اللي بوسطة بترجّعها (undefined = مفيش سؤال عنها)
+ */
+function fakeFetch(
+  deliveryReplies: { ok: boolean; body: unknown }[],
+  existing?: Record<string, unknown> | null
+) {
   const calls: { url: string; body: unknown; key: string }[] = [];
   let i = 0;
   const f = vi.fn(async (url: string, init?: RequestInit) => {
@@ -84,6 +90,17 @@ function fakeFetch(deliveryReplies: { ok: boolean; body: unknown }[]) {
       body: init?.body ? JSON.parse(String(init.body)) : null,
       key: (init?.headers as Record<string, string>)?.Authorization ?? "",
     });
+    if (String(url).includes("/deliveries/business/")) {
+      const d =
+        existing === undefined
+          ? { _id: "old1", trackingNumber: "5555", state: { value: "Created", code: 10 } }
+          : existing;
+      return {
+        ok: Boolean(d),
+        status: d ? 200 : 404,
+        json: async () => ({ data: d }),
+      } as Response;
+    }
     if (String(url).endsWith("/cities")) {
       return { ok: true, status: 200, json: async () => CITIES } as Response;
     }
@@ -171,15 +188,50 @@ describe("إرسال شحنة", () => {
 });
 
 describe("الحالات اللي بتوقف الإرسال", () => {
-  it("أوردر عليه شحنة أصلاً مابيتبعتش تاني", async () => {
-    const { f } = fakeFetch([created("1")]);
+  it("أوردر عليه شحنة لسه نافعة مابيتبعتش تاني", async () => {
+    const { f, calls } = fakeFetch([created("1")]);
     const res = await runBostaCreate({
       db: fakeDb({ order: { ...ORDER, bosta_tracking: "5555" } }),
       orderId: "o1",
       fetchImpl: f,
     });
     expect(res).toEqual({ ok: true, already: true, tracking: "5555" });
-    expect(f).not.toHaveBeenCalled(); // ولا نداء واحد لبوسطة
+    // سأل بوسطة عن الشحنة القديمة بس، ومابعتش جديدة
+    expect(calls.every((c) => c.url.includes("/deliveries/business/"))).toBe(true);
+  });
+
+  it("شحنة ماتت (أرشيف) = بيعمل شحنة جديدة بدالها", async () => {
+    // ده حصل فعلًا: أوردر ١٣٣٦ قعد أسبوعين من غير بيك اب فبوسطة أرشفت
+    // الشحنة، والسيستم كان بيرفض يبعت تاني فالأوردر يقعد مقفول
+    const patches: Record<string, unknown>[] = [];
+    const { f } = fakeFetch([created("8888")], {
+      _id: "old1",
+      trackingNumber: "5555",
+      state: { value: "Archived", code: 104 },
+    });
+
+    const res = await runBostaCreate({
+      db: fakeDb({
+        order: { ...ORDER, bosta_tracking: "5555" },
+        onUpdate: (p) => patches.push(p),
+      }),
+      orderId: "o1",
+      fetchImpl: f,
+    });
+
+    expect(res).toMatchObject({ ok: true, tracking: "8888" });
+    expect(patches[0]).toMatchObject({ bosta_tracking: "8888" });
+  });
+
+  it("معرفناش نتأكد من الشحنة القديمة = مانبعتش تاني", async () => {
+    // الأأمن: أحسن ما نبعت شحنتين لنفس العميل
+    const { f } = fakeFetch([created("1")], null);
+    const res = await runBostaCreate({
+      db: fakeDb({ order: { ...ORDER, bosta_tracking: "5555" } }),
+      orderId: "o1",
+      fetchImpl: f,
+    });
+    expect(res).toEqual({ ok: true, already: true, tracking: "5555" });
   });
 
   it("بيزنس مش مربوط ببوسطة", async () => {

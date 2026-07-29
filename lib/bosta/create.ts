@@ -19,8 +19,9 @@ import {
   buildShipment,
   type ShipmentCustomer,
 } from "./build-shipment";
-import { createDelivery, fetchCities } from "./client";
+import { createDelivery, fetchCities, fetchDeliveryByTracking } from "./client";
 import { matchCity, matchZone, type BostaCity } from "./cities";
+import { isDeadShipment } from "./order-status";
 import { loadTenantCredentials } from "../tenant-settings";
 
 const ORDER_FIELDS = `id, order_number, discount, shipping_price, bosta_tracking, tenant_id,
@@ -114,14 +115,33 @@ export async function runBostaCreate(opts: {
 
   const order = data as unknown as OrderRow;
 
-  if (order.bosta_tracking) {
-    return { ok: true, already: true, tracking: order.bosta_tracking };
-  }
-
   // مفتاح البيزنس صاحب الأوردر — مش مفتاح واحد للكل
   const creds = await loadTenantCredentials(db, order.tenant_id);
   if (!creds.bostaApiKey) {
     return { ok: false, error: "البيزنس ده لسه مربطش حساب بوسطة" };
+  }
+
+  // الأوردر عليه شحنة؟ نشوف الشحنة دي لسه نافعة ولا ماتت.
+  // ده حصل فعلًا: شحنة مقعدتش أسبوعين من غير بيك اب فبوسطة أرشفتها، والسيستم
+  // كان بيقول "الأوردر ده عليه شحنة" ويرفض — فالأوردر يقعد مقفول عليه.
+  if (order.bosta_tracking) {
+    let dead = false;
+    try {
+      const existing = await fetchDeliveryByTracking(
+        creds.bostaApiKey,
+        String(order.bosta_tracking),
+        fetchImpl
+      );
+      // **لازم نتأكد إيجابًا إنها ميتة.** لو بوسطة مارجّعتهاش (٥٠٠ مؤقت مثلاً)
+      // مانخاطرش — شحنتين لنفس العميل معناها رسوم مرتين وعميل متلخبط.
+      dead = Boolean(existing) && isDeadShipment(existing!.state, existing!.code);
+    } catch {
+      dead = false;
+    }
+
+    if (!dead) {
+      return { ok: true, already: true, tracking: order.bosta_tracking };
+    }
   }
 
   const customer = order.customers;

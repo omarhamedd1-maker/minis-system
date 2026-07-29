@@ -140,6 +140,25 @@ export function mapBostaState(state: string | null | undefined): OrderStatus | n
   return null;
 }
 
+/**
+ * شحنة ماتت — مش هتوصل ولا هترجع، ومحتاجة شحنة جديدة بدالها.
+ * بوسطة بتأرشف الشحنة لو قعدت من غير بيك اب (حصل مع أوردر ١٣٣٦ و١١٥٢).
+ */
+export function isDeadShipment(
+  state: string | null | undefined,
+  code?: number | null
+): boolean {
+  if (code === 104 || code === 48) return true; // Archived · Terminated
+  const s = String(state ?? "").toLowerCase();
+  return (
+    s.includes("archiv") ||
+    s.includes("terminat") ||
+    s.includes("cancel") ||
+    s.includes("lost") ||
+    s.includes("damaged")
+  );
+}
+
 /** هل ينفع المزامنة تغيّر حالة الأوردر ده؟ */
 export function canSyncChangeStatus(current: string | null | undefined): boolean {
   return !LOCKED_STATUSES.includes(String(current ?? ""));
