@@ -23,7 +23,9 @@ function syncedOrder(over: Partial<OurOrder> = {}): OurOrder {
 
 const deliveredShipment = {
   trackingNumber: "8550116799",
-  state: { value: "Delivered" },
+  // الكود ٤٥ = اتسلّمت فعلاً. الرقم مهم جدًا هنا: الكود ٤٦ (رجعت لنا)
+  // بيرجّع **نفس النص** "Delivered"، فمن غير الكود مافيش فرق بينهم
+  state: { value: "Delivered", code: 45 },
   cod: 3690,
   allowToOpenPackage: true,
 };
@@ -110,7 +112,7 @@ describe("الرسوم", () => {
 
   it("المرتجع رسومه أقل — مفيش تحصيل ولا تحويل", () => {
     const d = decideSync(
-      { ...deliveredShipment, state: { value: "Returned to origin" } },
+      { ...deliveredShipment, state: { value: "Returned to origin", code: 46 } },
       syncedOrder({ order_status: "shipped", bosta_shipping_cost: null }),
       NOW
     );
@@ -119,7 +121,7 @@ describe("الرسوم", () => {
 
   it("المرتجع بعد التسليم رسومه كاملة — لأنه اتسلّم فعلاً", () => {
     const d = decideSync(
-      { ...deliveredShipment, state: { value: "Returned to origin" } },
+      { ...deliveredShipment, state: { value: "Returned to origin", code: 46 } },
       syncedOrder({
         order_status: "returned_after_delivery",
         bosta_shipping_cost: null,

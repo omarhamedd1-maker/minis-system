@@ -163,11 +163,16 @@ export async function runBostaUpdateCod(opts: {
 
   if (!delivery) return { ok: false, error: "بوسطة مالقتش الشحنة" };
 
-  if (!canEditDelivery(delivery.state)) {
+  // بوسطة نفسها بتقولنا مقفول ولا لأ — ده أدق من التخمين من اسم الحالة،
+  // فبناخد كلامها الأول ونرجع للحالة بس لو مابعتتهاش
+  const blocked =
+    delivery.codUpdateBlocked ?? !canEditDelivery(delivery.state);
+
+  if (blocked) {
     return {
       ok: true,
       changed: false,
-      reason: `الشحنة اتاخدت خلاص (${delivery.state}) — بوسطة مش بتسمح بالتعديل`,
+      reason: `بوسطة قافلة تعديل التحصيل للشحنة دي (${delivery.state})`,
     };
   }
 

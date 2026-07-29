@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canSyncChangeStatus,
+  mapBostaDelivery,
   mapBostaState,
 } from "./order-status";
 
@@ -68,5 +69,42 @@ describe("الحالات المقفولة", () => {
     expect(canSyncChangeStatus("delivered")).toBe(true);
     expect(canSyncChangeStatus("shipped")).toBe(true);
     expect(canSyncChangeStatus(null)).toBe(true);
+  });
+});
+
+// ==========================================================================
+// الأكواد — الدرس اللي كلّفنا ٤٣ أوردر محسوبين غلط
+// ==========================================================================
+describe("الحالة بالكود مش بالنص", () => {
+  it("كود ٤٦ = رجعت لنا، حتى لو النص قايل Delivered", () => {
+    // دي بالظبط الحالة اللي خلت ٧٩ شحنة راجعة تتحسب متسلّمة
+    expect(mapBostaDelivery({ value: "Delivered", code: 46 })).toBe("returned");
+  });
+
+  it("كود ٤٥ = اتسلّمت فعلاً", () => {
+    expect(mapBostaDelivery({ value: "Delivered", code: 45 })).toBe("delivered");
+  });
+
+  it("الأكواد اللي شفناها في الداتا الحقيقية", () => {
+    expect(mapBostaDelivery({ value: "Created", code: 10 })).toBe("ready");
+    expect(mapBostaDelivery({ value: "Processing", code: 24 })).toBe("shipped");
+    expect(mapBostaDelivery({ value: "Processing", code: 30 })).toBe("shipped");
+    expect(mapBostaDelivery({ value: "Terminated", code: 48 })).toBe("awaiting_action");
+    expect(mapBostaDelivery({ value: "", code: 104 })).toBe("awaiting_action");
+  });
+
+  it("كود مش معروف + Delivered = مانغيّرش حاجة", () => {
+    // ممكن تكون راجعة زي ٤٦ — مانخاطرش بفلوس على تخمين
+    expect(mapBostaDelivery({ value: "Delivered", code: 999 })).toBeNull();
+  });
+
+  it("كود مش معروف + نص واضح = بنمشي بالنص", () => {
+    expect(mapBostaDelivery({ value: "Out for delivery", code: 999 })).toBe("out_for_delivery");
+    expect(mapBostaDelivery({ value: "Cancelled", code: 999 })).toBe("cancelled");
+  });
+
+  it("مفيش حالة خالص = مانغيّرش", () => {
+    expect(mapBostaDelivery(null)).toBeNull();
+    expect(mapBostaDelivery({})).toBeNull();
   });
 });

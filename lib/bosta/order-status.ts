@@ -80,6 +80,43 @@ const RULES: { status: OrderStatus; match: (s: string) => boolean }[] = [
   },
 ];
 
+// ==========================================================================
+// أكواد بوسطة — دي المصدر الأدق، والنص الخشن بيكدب
+// --------------------------------------------------------------------------
+// مسار المزامنة بيرجّع `state.value` **مجمّعة**: "Delivered" بتشمل الشحنة
+// اللي اتسلّمت **والشحنة اللي رجعت لنا** مع بعض. لقينا ٧٩ شحنة راجعة مكتوب
+// عليها Delivered، منهم ٤٣ مربوطين بأوردرات عندنا كانوا محسوبين مبيعات.
+//
+// الأرقام دي اتستنتجت من شحنات حقيقية: جبنا كل شحنة لوحدها (اللي بترجّع
+// الحالة التفصيلية) وقارنّاها بالكود اللي في المزامنة.
+// ==========================================================================
+const STATE_CODES: Record<number, OrderStatus> = {
+  10: "ready", // Pickup requested — الشحنة اتعملت ومستنية المندوب
+  24: "shipped", // Received at warehouse
+  30: "shipped", // In transit between Hubs
+  45: "delivered", // Delivered
+  46: "returned", // Returned to business — **مش delivered**
+  48: "awaiting_action", // Terminated — بوسطة وقفتها ومحتاجة قرار مننا
+  104: "awaiting_action", // Archived — الشحنة اتقفلت، لازم نشوف حصل إيه
+};
+
+/**
+ * حالة الأوردر من كائن الحالة كامل (بالكود لو موجود).
+ * **الكود بيكسب دايمًا**، والنص احتياطي — ماعدا "Delivered" لأنها هي
+ * بالظبط الكلمة اللي بتلبّس الراجع على المتسلّم.
+ */
+export function mapBostaDelivery(
+  state: { value?: string | null; code?: number | null } | null | undefined
+): OrderStatus | null {
+  const code = state?.code;
+  if (typeof code === "number" && STATE_CODES[code]) return STATE_CODES[code];
+
+  const byText = mapBostaState(state?.value);
+  // كود مش معروف + مكتوب Delivered = ممكن تكون راجعة. مانخاطرش بفلوس.
+  if (byText === "delivered") return null;
+  return byText;
+}
+
 /** بيرجّع حالة الأوردر المقابلة، أو null لو الحالة مش معروفة (ساعتها منغيرش حاجة) */
 export function mapBostaState(state: string | null | undefined): OrderStatus | null {
   const s = String(state ?? "").toLowerCase().trim();

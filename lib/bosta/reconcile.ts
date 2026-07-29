@@ -6,11 +6,16 @@
 // ==========================================================================
 
 import { shippingCost, type CarrierFeeRules } from "../shipping-cost";
-import { canSyncChangeStatus, mapBostaState } from "./order-status";
+import { canSyncChangeStatus, mapBostaDelivery } from "./order-status";
 
 export type BostaDelivery = {
   trackingNumber?: string | null;
-  state?: { value?: string | null; delayReason?: string | null } | null;
+  /** `code` هو الحالة الدقيقة، و`value` مجمّعة وبتخلط المتسلّم بالراجع */
+  state?: {
+    value?: string | null;
+    code?: number | null;
+    delayReason?: string | null;
+  } | null;
   cod?: number | null;
   allowToOpenPackage?: boolean | null;
   shopifyInfo?: { orderNumber?: string | null } | null;
@@ -76,7 +81,8 @@ export function decideSync(
   const tracking = d.trackingNumber ? String(d.trackingNumber) : "";
   const state = d.state?.value ?? null;
   const cod = totals ? totals.cod : Number(d.cod ?? 0);
-  const mapped = mapBostaState(state);
+  // بالكود مش بالنص — النص بيلبّس الشحنة الراجعة على المتسلّمة
+  const mapped = mapBostaDelivery(d.state);
 
   if (tracking && o.bosta_tracking !== tracking) {
     changes.bosta_tracking = tracking;

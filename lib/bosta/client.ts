@@ -163,6 +163,8 @@ export type DeliveryLookup = {
   /** حالة الشحنة عند بوسطة زي "Delivered" و"Picked up" */
   state: string;
   cod: number | null;
+  /** بوسطة نفسها بتقول التعديل مقفول ولا لأ — أدق من التخمين من اسم الحالة */
+  codUpdateBlocked: boolean | null;
 };
 
 /**
@@ -189,11 +191,24 @@ export async function fetchDeliveryByTracking(
   const d = json?.data ?? json;
   if (!d?._id) return null;
 
+  // ⚠️ بوسطة بتحط المبلغ في `cod` أو في `originalCod` حسب إذا كان اتعدّل
+  // قبل كده ولا لأ. لو قريت واحدة بس هتفتكر إن التحصيل فاضي وهو مش فاضي.
+  const cod =
+    typeof d.cod === "number"
+      ? d.cod
+      : typeof d.originalCod === "number"
+        ? d.originalCod
+        : null;
+
   return {
     id: String(d._id),
     trackingNumber: String(d.trackingNumber ?? tracking),
     state: String(d.state?.value ?? d.state ?? ""),
-    cod: typeof d.cod === "number" ? d.cod : null,
+    cod,
+    codUpdateBlocked:
+      typeof d.isCodUpdateBlockedForBusiness === "boolean"
+        ? d.isCodUpdateBlockedForBusiness
+        : null,
   };
 }
 
