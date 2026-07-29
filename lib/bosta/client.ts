@@ -9,6 +9,8 @@ import type { BostaCity } from "./cities";
 import type { BostaDelivery } from "./reconcile";
 
 const BOSTA_BASE = "https://app.bosta.co/api/v2";
+/** بعض المسارات موجودة على v0 بس — البوليصة وتعديل الشحنة. اتحددوا بالتجربة */
+const BOSTA_V0 = "https://app.bosta.co/api/v0";
 const PAGE_SIZE = 100;
 const MAX_PAGES = 60;
 /** طلب واقف مايستهلكش وقت الصفحة كلها — خصوصًا لما نبعت دفعة أوردرات */
@@ -207,7 +209,7 @@ export async function fetchAwbPdf(
 ): Promise<Uint8Array | null> {
   const apiKey = assertUsableKey(rawKey);
   const res = await fetchImpl(
-    `https://app.bosta.co/api/v0/deliveries/awb/${encodeURIComponent(deliveryId)}`,
+    `${BOSTA_V0}/deliveries/awb/${encodeURIComponent(deliveryId)}`,
     { headers: headers(apiKey), signal: AbortSignal.timeout(TIMEOUT_MS) }
   );
   if (!res.ok) return null;
@@ -220,7 +222,11 @@ export async function fetchAwbPdf(
   return Uint8Array.from(Buffer.from(b64, "base64"));
 }
 
-/** بيغيّر مبلغ التحصيل وعدد القطع لشحنة لسه ماتاخدتش */
+/**
+ * بيغيّر مبلغ التحصيل وعدد القطع لشحنة لسه ماتاخدتش.
+ * ⚠️ زي البوليصة بالظبط: المسار على **`v0`** — و`v2` بيرجّع ٤٠٤.
+ * (اكتشفناها لما أوردر ١٣٧٤ اتعدّل والتحصيل فضل قديم عند بوسطة.)
+ */
 export async function updateDeliveryCod(
   rawKey: string,
   deliveryId: string,
@@ -229,7 +235,7 @@ export async function updateDeliveryCod(
   fetchImpl: typeof fetch = fetch
 ): Promise<{ ok: boolean; status: number; message: string }> {
   const apiKey = assertUsableKey(rawKey);
-  const res = await fetchImpl(`${BOSTA_BASE}/deliveries/${deliveryId}`, {
+  const res = await fetchImpl(`${BOSTA_V0}/deliveries/${deliveryId}`, {
     method: "PUT",
     headers: headers(apiKey),
     body: JSON.stringify({

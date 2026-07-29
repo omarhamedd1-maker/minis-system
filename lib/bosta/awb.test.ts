@@ -148,6 +148,8 @@ describe("تحديث التحصيل", () => {
       cod: 1090,
       specs: { packageDetails: { itemsCount: 2 } },
     });
+    // المسار على v0 — v2 بيرجّع ٤٠٤
+    expect(put?.url).toContain("/api/v0/deliveries/bid1");
   });
 
   it("مابيلمسش شحنة اتسلّمت خلاص", async () => {
