@@ -1,6 +1,9 @@
 // ==========================================================================
-// إرسال أوردر لبوسطة كشحنة — الملف اللي بيوصّل القرار بقاعدة البيانات
+// عمل شحنات عند بوسطة — الملف اللي بيوصّل القرار بقاعدة البيانات
 // --------------------------------------------------------------------------
+// فيه عمليتين: `runBostaCreate` بتبعت الأوردر للعميل، و`runBostaReturn`
+// بتخلي بوسطة تسحب المرتجع من عنده.
+//
 // القرار في build-shipment.ts والمطابقة في cities.ts — هنا بنقرا الأوردر،
 // نجيب مفتاح بيزنسه هو، نبعت، ونحفظ رقم التتبع. وضع التجربة بيعمل كل حاجة
 // من غير ما يبعت ولا يكتب.
@@ -11,7 +14,11 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildShipment, type ShipmentCustomer } from "./build-shipment";
+import {
+  buildReturnShipment,
+  buildShipment,
+  type ShipmentCustomer,
+} from "./build-shipment";
 import { createDelivery, fetchCities } from "./client";
 import { matchCity, matchZone, type BostaCity } from "./cities";
 import { loadTenantCredentials } from "../tenant-settings";
@@ -223,6 +230,175 @@ export async function runBostaCreate(opts: {
     tracking,
     city: s.city.name,
     zone: s.zone?.name ?? null,
+    usedVariant,
+    ...(updateError
+      ? {
+          warning:
+            "الشحنة اتعملت بس معرفناش نحفظ رقم التتبع: " + updateError.message,
+        }
+      : {}),
+  };
+}
+
+// ==========================================================================
+// شحنة المرتجع — بوسطة تسحب من العميل وتوصّلها لك
+// ==========================================================================
+
+const RETURN_FIELDS = `id, order_number, bosta_tracking, return_tracking, tenant_id,
+  customers(full_name, phone, address, city, zone, street, building, floor, apartment, landmark),
+  order_items(quantity, returned_quantity, product_variants(products(name, name_ar)))`;
+
+type ReturnRow = {
+  id: string;
+  order_number: string | number | null;
+  bosta_tracking: string | null;
+  return_tracking: string | null;
+  tenant_id: string;
+  customers: ShipmentCustomer | null;
+  order_items:
+    | {
+        quantity: number;
+        returned_quantity: number | null;
+        product_variants: {
+          products: { name: string | null; name_ar: string | null } | null;
+        } | null;
+      }[]
+    | null;
+};
+
+export type ReturnResult =
+  | { ok: true; already: true; tracking: string }
+  | {
+      ok: true;
+      dry: true;
+      itemsCount: number;
+      description: string;
+      city: string;
+      payload: Record<string, unknown>;
+    }
+  | {
+      ok: true;
+      tracking: string;
+      city: string;
+      usedVariant: string;
+      warning?: string;
+    }
+  | { ok: false; error: string; attempts?: CreateAttempt[] };
+
+export async function runBostaReturn(opts: {
+  db: SupabaseClient;
+  orderId: string;
+  dry?: boolean;
+  fetchImpl?: typeof fetch;
+  cities?: BostaCity[] | null;
+}): Promise<ReturnResult> {
+  const { db, orderId, dry = false, fetchImpl } = opts;
+
+  const { data, error } = await db
+    .from("orders")
+    .select(RETURN_FIELDS)
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (error) return { ok: false, error: "معرفناش نقرا الأوردر: " + error.message };
+  if (!data) return { ok: false, error: "الأوردر مش موجود" };
+
+  const order = data as unknown as ReturnRow;
+
+  if (order.return_tracking) {
+    return { ok: true, already: true, tracking: order.return_tracking };
+  }
+
+  const creds = await loadTenantCredentials(db, order.tenant_id);
+  if (!creds.bostaApiKey) {
+    return { ok: false, error: "البيزنس ده لسه مربطش حساب بوسطة" };
+  }
+
+  const customer = order.customers;
+  const returning = (order.order_items ?? []).map((i) => ({
+    returnedQuantity: Number(i.returned_quantity ?? 0),
+    productName:
+      i.product_variants?.products?.name_ar ||
+      i.product_variants?.products?.name ||
+      null,
+  }));
+
+  let cities = opts.cities ?? null;
+  if (!cities) {
+    try {
+      cities = await fetchCities(creds.bostaApiKey, fetchImpl);
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "معرفناش نجيب المدن من بوسطة",
+      };
+    }
+  }
+
+  const city =
+    (customer?.city ? matchCity(cities, customer.city) : null) ??
+    matchCity(
+      cities,
+      `${customer?.city ?? ""} ${customer?.zone ?? ""} ${customer?.address ?? ""}`
+    );
+
+  const result = buildReturnShipment({
+    orderNumber: order.order_number,
+    originalTracking: order.bosta_tracking,
+    returning,
+    customer,
+    city,
+  });
+
+  if (!result.ok) return { ok: false, error: result.error };
+  const s = result.shipment;
+
+  if (dry) {
+    return {
+      ok: true,
+      dry: true,
+      itemsCount: s.itemsCount,
+      description: s.description,
+      city: s.city.name,
+      payload: { ...s.base, ...s.variants[0].addresses },
+    };
+  }
+
+  const attempts: CreateAttempt[] = [];
+  let tracking: string | null = null;
+  let usedVariant = "";
+
+  for (const v of s.variants) {
+    const res = await createDelivery(
+      creds.bostaApiKey,
+      { ...s.base, ...v.addresses },
+      fetchImpl
+    );
+    if (res.ok && res.trackingNumber) {
+      tracking = res.trackingNumber;
+      usedVariant = v.name;
+      break;
+    }
+    attempts.push({ variant: v.name, status: res.status, message: res.message });
+  }
+
+  if (!tracking) {
+    return {
+      ok: false,
+      error: attempts[0]?.message || "بوسطة رفضت شحنة المرتجع",
+      attempts,
+    };
+  }
+
+  const { error: updateError } = await db
+    .from("orders")
+    .update({ return_tracking: tracking })
+    .eq("id", orderId);
+
+  return {
+    ok: true,
+    tracking,
+    city: s.city.name,
     usedVariant,
     ...(updateError
       ? {

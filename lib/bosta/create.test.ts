@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { runBostaCreate } from "./create";
+import { runBostaCreate, runBostaReturn } from "./create";
 
 const CITIES = {
   data: {
@@ -242,5 +242,132 @@ describe("وضع التجربة", () => {
     });
     expect(calls).toHaveLength(1); // المدن بس
     expect(patches).toHaveLength(0); // مافيش كتابة
+  });
+});
+
+// ==========================================================================
+// شحنة المرتجع
+// ==========================================================================
+
+const RETURN_ORDER = {
+  id: "o2",
+  order_number: "1300",
+  bosta_tracking: "8550116799",
+  return_tracking: null as string | null,
+  tenant_id: "t1",
+  customers: ORDER.customers,
+  order_items: [
+    {
+      quantity: 3,
+      returned_quantity: 2,
+      product_variants: { products: { name: "Mirror", name_ar: "مرايه" } },
+    },
+    {
+      quantity: 1,
+      returned_quantity: 0,
+      product_variants: { products: { name: "Lamp", name_ar: "أباجورة" } },
+    },
+  ],
+};
+
+describe("شحنة المرتجع", () => {
+  it("بتاخد الكميات الراجعة بس، وبتحفظ رقم تتبع المرتجع", async () => {
+    const patches: Record<string, unknown>[] = [];
+    const { f, calls } = fakeFetch([created("7777777777")]);
+
+    const res = await runBostaReturn({
+      db: fakeDb({ order: RETURN_ORDER, onUpdate: (p) => patches.push(p) }),
+      orderId: "o2",
+      fetchImpl: f,
+    });
+
+    expect(res).toMatchObject({ ok: true, tracking: "7777777777", usedVariant: "city" });
+    expect(patches[0]).toEqual({ return_tracking: "7777777777" });
+
+    const body = calls[1].body as {
+      cod: number;
+      type: number;
+      specs: { packageDetails: { itemsCount: number; description: string } };
+      originalTrackingNumber: string;
+      businessReference: string;
+    };
+    expect(body.type).toBe(15); // سحب مرتجع من العميل
+    expect(body.cod).toBe(0); // الفلوس بترجع للعميل منّنا مش من بوسطة
+    expect(body.specs.packageDetails.itemsCount).toBe(2); // الراجع بس مش الأربعة
+    expect(body.specs.packageDetails.description).toBe("مرايه × 2");
+    expect(body.originalTrackingNumber).toBe("8550116799");
+    expect(body.businessReference).toBe("RET-1300");
+  });
+
+  it("بتبعت العنوان في pickupAddress بشكل city مش cityId", async () => {
+    const { f, calls } = fakeFetch([created("1")]);
+    await runBostaReturn({
+      db: fakeDb({ order: RETURN_ORDER }),
+      orderId: "o2",
+      fetchImpl: f,
+    });
+    const body = calls[1].body as {
+      pickupAddress: Record<string, unknown>;
+      dropOffAddress: Record<string, unknown>;
+    };
+    expect(body.pickupAddress.city).toBe("cairo1");
+    expect(body.pickupAddress.cityId).toBeUndefined();
+    expect(body.dropOffAddress.city).toBe("cairo1");
+  });
+
+  it("مافيش حاجة متعلّم إنها راجعة = مانعملش شحنة", async () => {
+    const { f, calls } = fakeFetch([created("1")]);
+    const res = await runBostaReturn({
+      db: fakeDb({
+        order: {
+          ...RETURN_ORDER,
+          order_items: RETURN_ORDER.order_items.map((i) => ({
+            ...i,
+            returned_quantity: 0,
+          })),
+        },
+      }),
+      orderId: "o2",
+      fetchImpl: f,
+    });
+    if (res.ok) throw new Error("المفروض يرفض");
+    expect(res.error).toContain("حدّد الأول المنتجات الراجعة");
+    expect(calls).toHaveLength(1); // جاب المدن بس
+  });
+
+  it("أوردر عليه مرتجع أصلاً مابيتعملش تاني", async () => {
+    const { f } = fakeFetch([created("1")]);
+    const res = await runBostaReturn({
+      db: fakeDb({ order: { ...RETURN_ORDER, return_tracking: "999" } }),
+      orderId: "o2",
+      fetchImpl: f,
+    });
+    expect(res).toEqual({ ok: true, already: true, tracking: "999" });
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("بيجرّب cityId لو بوسطة رفضت city", async () => {
+    const { f, calls } = fakeFetch([rejected("bad address"), created("555")]);
+    const res = await runBostaReturn({
+      db: fakeDb({ order: RETURN_ORDER }),
+      orderId: "o2",
+      fetchImpl: f,
+    });
+    expect(res).toMatchObject({ ok: true, usedVariant: "cityId" });
+    expect(calls).toHaveLength(3);
+  });
+
+  it("وضع التجربة مابيبعتش ومابيكتبش", async () => {
+    const patches: Record<string, unknown>[] = [];
+    const { f, calls } = fakeFetch([created("1")]);
+    const res = await runBostaReturn({
+      db: fakeDb({ order: RETURN_ORDER, onUpdate: (p) => patches.push(p) }),
+      orderId: "o2",
+      dry: true,
+      fetchImpl: f,
+    });
+    expect(res).toMatchObject({ ok: true, dry: true, itemsCount: 2, city: "القاهرة" });
+    expect(calls).toHaveLength(1);
+    expect(patches).toHaveLength(0);
   });
 });

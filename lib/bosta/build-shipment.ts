@@ -10,8 +10,9 @@
 
 import type { BostaCity, BostaZone } from "./cities";
 
-/** نوع الشحنة عند بوسطة: ١٠ = توصيل للعميل */
+/** أنواع الشحنات عند بوسطة: ١٠ = توصيل للعميل · ١٥ = سحب مرتجع من العميل */
 const DELIVERY_TYPE_SEND = 10;
+const DELIVERY_TYPE_CUSTOMER_RETURN = 15;
 
 export type ShipmentCustomer = {
   full_name: string | null;
@@ -94,8 +95,22 @@ export function computeCod(input: {
   );
 }
 
-export function buildShipment(input: ShipmentInput): BuildResult {
-  const c = input.customer;
+type ReadyCustomer = {
+  addressLine: string;
+  phone: string;
+  firstName: string;
+  lastName: string;
+};
+
+/**
+ * الفحوصات المشتركة بين الإرسال والمرتجع.
+ * `manualHint` بيتغيّر حسب العملية عشان الرسالة تقول للمستخدم يعمل إيه بالظبط.
+ */
+function prepareCustomer(
+  c: ShipmentCustomer | null,
+  city: BostaCity | null,
+  manualHint: string
+): { ok: false; error: string } | { ok: true; ready: ReadyCustomer } {
   if (!c) return { ok: false, error: "الأوردر ده مالوش عميل" };
 
   const addressLine = buildAddressLine(c);
@@ -108,18 +123,50 @@ export function buildShipment(input: ShipmentInput): BuildResult {
     return { ok: false, error: "رقم تليفون العميل مش صحيح" };
   }
 
-  if (!input.items.length) {
+  // القرار الآمن: مدينة مش واضحة = مانكملش، أحسن ما تروح لمحافظة غلط
+  if (!city) {
+    return {
+      ok: false,
+      error: `معرفناش نحدد المدينة من العنوان — راجع عنوان العميل واكتب اسم المدينة بوضوح، أو ${manualHint}`,
+    };
+  }
+
+  const nameParts = String(c.full_name ?? "عميل").trim().split(/\s+/);
+  return {
+    ok: true,
+    ready: {
+      addressLine,
+      phone,
+      firstName: nameParts[0] || "عميل",
+      lastName: nameParts.slice(1).join(" ") || nameParts[0] || "عميل",
+    },
+  };
+}
+
+/** الحقول الزيادة اللي بتتبعت جوّه العنوان لو العميل مقسّم عنوانه */
+function addressExtras(c: ShipmentCustomer) {
+  return {
+    ...(c.building ? { buildingNumber: String(c.building) } : {}),
+    ...(c.floor ? { floor: String(c.floor) } : {}),
+    ...(c.apartment ? { apartment: String(c.apartment) } : {}),
+  };
+}
+
+export function buildShipment(input: ShipmentInput): BuildResult {
+  const c = input.customer;
+
+  if (c && !input.items.length) {
     return { ok: false, error: "الأوردر ملوش منتجات" };
   }
 
-  // القرار الآمن: مدينة مش واضحة = مانبعتش، أحسن ما تروح لمحافظة غلط
-  if (!input.city) {
-    return {
-      ok: false,
-      error:
-        "معرفناش نحدد المدينة من العنوان — راجع عنوان العميل واكتب اسم المدينة بوضوح، أو ابعت الشحنة يدوي من بوسطة واربطها.",
-    };
-  }
+  const prep = prepareCustomer(
+    c,
+    input.city,
+    "ابعت الشحنة يدوي من بوسطة واربطها."
+  );
+  if (!prep.ok) return prep;
+  const { addressLine, phone, firstName, lastName } = prep.ready;
+  const cust = c as ShipmentCustomer;
 
   const cod = computeCod(input);
   const itemsCount = input.items.reduce((s, i) => s + Number(i.quantity), 0);
@@ -129,10 +176,6 @@ export function buildShipment(input: ShipmentInput): BuildResult {
       .map((i) => `${i.productName?.trim() || "منتج"} × ${i.quantity}`)
       .join(" + ")
       .slice(0, 250) || "شحنة";
-
-  const nameParts = String(c.full_name ?? "عميل").trim().split(/\s+/);
-  const firstName = nameParts[0] || "عميل";
-  const lastName = nameParts.slice(1).join(" ") || firstName;
 
   const base: Record<string, unknown> = {
     type: DELIVERY_TYPE_SEND,
@@ -148,18 +191,13 @@ export function buildShipment(input: ShipmentInput): BuildResult {
     ...(input.pickupAddressId ? { pickupAddressId: input.pickupAddressId } : {}),
   };
 
-  const extras = {
-    firstLine: addressLine,
-    ...(c.building ? { buildingNumber: String(c.building) } : {}),
-    ...(c.floor ? { floor: String(c.floor) } : {}),
-    ...(c.apartment ? { apartment: String(c.apartment) } : {}),
-  };
+  const extras = { firstLine: addressLine, ...addressExtras(cust) };
 
   // بوسطة بترفض `cityId` وبتقول "city, zoneId, or districtId is required" —
   // الشكل الشغال هو `city` وجوّاه رقم المدينة. بنسيب البدايل ورا بعض عشان
   // لو غيّروا الحقل تاني السيستم يفضل شغال من غير نشر جديد.
-  const cityId = input.city._id;
-  const cityName = input.city.nameAr || input.city.name || "";
+  const cityId = input.city!._id;
+  const cityName = input.city!.nameAr || input.city!.name || "";
   const variants: PayloadVariant[] = [
     {
       name: "city+zoneId",
@@ -187,6 +225,128 @@ export function buildShipment(input: ShipmentInput): BuildResult {
       zone: input.zone
         ? { id: input.zone._id, name: input.zone.nameAr || input.zone.name || "" }
         : null,
+      base,
+      variants,
+    },
+  };
+}
+
+// ==========================================================================
+// شحنة المرتجع — بوسطة بتسحب من العميل وتوصّلها لك
+// --------------------------------------------------------------------------
+// فرقها عن الإرسال: نوعها ١٥، والتحصيل **صفر** لأن الفلوس إنت اللي بترجّعها
+// للعميل بنفسك (إنستا باي/أونلاين) — بوسطة مابتدفعش للعميل.
+// ==========================================================================
+
+export type ReturnInput = {
+  orderNumber: string | number | null;
+  /** رقم تتبع الشحنة الأصلية — بوسطة بتستخدمه تملّي بيانات العميل */
+  originalTracking: string | null;
+  /** المنتجات اللي اتعلّم عليها راجعة وكمياتها */
+  returning: { returnedQuantity: number; productName: string | null }[];
+  customer: ShipmentCustomer | null;
+  city: BostaCity | null;
+};
+
+export type BuiltReturn = {
+  itemsCount: number;
+  description: string;
+  addressLine: string;
+  city: { id: string; name: string };
+  base: Record<string, unknown>;
+  /** أشكال العنوان — نفس درس `city` بدل `cityId` اللي اتعلمناه في الإرسال */
+  variants: { name: string; addresses: Record<string, unknown> }[];
+};
+
+export type BuildReturnResult =
+  | { ok: false; error: string }
+  | { ok: true; shipment: BuiltReturn };
+
+export function buildReturnShipment(input: ReturnInput): BuildReturnResult {
+  const returning = input.returning.filter((i) => Number(i.returnedQuantity) > 0);
+  if (returning.length === 0) {
+    return {
+      ok: false,
+      error:
+        "حدّد الأول المنتجات الراجعة وكمياتها من جوّه الأوردر، وبعدين اعمل شحنة المرتجع.",
+    };
+  }
+
+  const prep = prepareCustomer(
+    input.customer,
+    input.city,
+    "اعمل شحنة المرتجع يدوي من بوسطة."
+  );
+  if (!prep.ok) return prep;
+  const { addressLine, phone, firstName, lastName } = prep.ready;
+  const cust = input.customer as ShipmentCustomer;
+
+  const itemsCount = returning.reduce(
+    (s, i) => s + Number(i.returnedQuantity),
+    0
+  );
+  const description =
+    returning
+      .map((i) => `${i.productName?.trim() || "منتج"} × ${i.returnedQuantity}`)
+      .join(" + ")
+      .slice(0, 250) || "مرتجع";
+
+  const cityId = input.city!._id;
+  const cityName = input.city!.nameAr || input.city!.name || "";
+
+  const base: Record<string, unknown> = {
+    type: DELIVERY_TYPE_CUSTOMER_RETURN,
+    specs: {
+      packageType: "Parcel",
+      packageDetails: { itemsCount, description },
+    },
+    receiver: { firstName, lastName, phone },
+    // الفلوس إحنا اللي نرجّعها للعميل — الشحنة بصفر تحصيل
+    cod: 0,
+    businessReference: `RET-${input.orderNumber ?? ""}`,
+    notes: `مرتجع أوردر ${input.orderNumber ?? ""}${
+      input.originalTracking ? ` (شحنة أصلية ${input.originalTracking})` : ""
+    }`.trim(),
+    ...(input.originalTracking
+      ? { originalTrackingNumber: String(input.originalTracking) }
+      : {}),
+  };
+
+  const line = { firstLine: addressLine, ...addressExtras(cust) };
+  // العنوان بيتبعت في الاتنين: `pickupAddress` هو مكان السحب من العميل،
+  // و`dropOffAddress` بنبعته برضه لأن بعض إصدارات بوسطة بتطلبه
+  const variants = [
+    {
+      name: "city",
+      addresses: {
+        pickupAddress: {
+          city: cityId,
+          ...line,
+          ...(cust.zone ? { zoneName: cust.zone } : {}),
+        },
+        dropOffAddress: { city: cityId, ...line },
+      },
+    },
+    {
+      name: "cityId",
+      addresses: {
+        pickupAddress: {
+          cityId,
+          ...line,
+          ...(cust.zone ? { zoneName: cust.zone } : {}),
+        },
+        dropOffAddress: { cityId, ...line },
+      },
+    },
+  ];
+
+  return {
+    ok: true,
+    shipment: {
+      itemsCount,
+      description,
+      addressLine,
+      city: { id: cityId, name: cityName },
       base,
       variants,
     },

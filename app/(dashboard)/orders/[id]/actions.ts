@@ -6,7 +6,11 @@ import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser, requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
-import { loadBostaCities, runBostaCreate } from "@/lib/bosta/create";
+import {
+  loadBostaCities,
+  runBostaCreate,
+  runBostaReturn,
+} from "@/lib/bosta/create";
 import { ORDER_STATUS_OPTIONS, orderStatusBadge } from "@/lib/format";
 
 type Supa = ReturnType<typeof createAdminClient>;
@@ -973,26 +977,15 @@ export async function createReturnShipment(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) redirect("/orders");
 
-  const key = process.env.SYNC_KEY;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!key || !base) {
-    redirect(
-      `/orders/${orderId}?error=` + encodeURIComponent("إعدادات الإرسال ناقصة")
-    );
-  }
-
   let ok = false;
   let message = "معرفناش نعمل شحنة المرتجع";
   try {
-    const res = await fetch(
-      `${base}/functions/v1/bosta-return?key=${key}&order=${orderId}`,
-      { signal: AbortSignal.timeout(30000) }
-    );
-    const data = await res.json().catch(() => null);
-    if (res.ok && data?.ok) ok = true;
-    else if (data?.error) message = String(data.error);
-  } catch {
-    message = "الاتصال ببوسطة فشل — جرّب تاني";
+    const res = await runBostaReturn({ db: createAdminClient(), orderId });
+    if (res.ok) ok = true;
+    else message = res.error;
+  } catch (e) {
+    message =
+      e instanceof Error ? e.message : "الاتصال ببوسطة فشل — جرّب تاني";
   }
 
   if (ok) {
