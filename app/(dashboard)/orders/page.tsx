@@ -4,6 +4,7 @@ import {
   ORDER_STATUS_OPTIONS,
   SHIPMENT_STATUSES,
   cairoToday,
+  collectionState,
   formatDate,
   formatMoney,
   orderStatusBadge,
@@ -473,15 +474,9 @@ export default async function OrdersPage({
                     <span>القطع: {pieces}</span>
                     <span className="flex items-center gap-1">
                       فلوسك:
-                      {order.bosta_state ? (
-                        order.bosta_collected ? (
-                          <span className="text-green-700">وصلت</span>
-                        ) : (
-                          <span className="text-gray-500">لسه</span>
-                        )
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
+                      <span className={collectionState(order).className}>
+                        {collectionState(order).label}
+                      </span>
                     </span>
                   </div>
 
@@ -633,19 +628,11 @@ export default async function OrdersPage({
                       {formatMoney(total)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      {order.bosta_state ? (
-                        order.bosta_collected ? (
-                          <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                            وصلت
-                          </span>
-                        ) : (
-                          <span className="inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                            لسه
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
+                      <span
+                        className={`text-xs font-medium ${collectionState(order).className}`}
+                      >
+                        {collectionState(order).label}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-gray-700">
                       {pieces} قطعة

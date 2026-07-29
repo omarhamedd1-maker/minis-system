@@ -5,6 +5,7 @@ import {
   BUNDLE_COVERS,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
+  collectionState,
   formatDate,
   formatMoney,
   orderStatusBadge,
@@ -524,15 +525,11 @@ export default async function OrderDetailsPage({
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">فلوسك</dt>
                 <dd>
-                  {order.bosta_collected ? (
-                    <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                      وصلت
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                      لسه
-                    </span>
-                  )}
+                  <span
+                    className={`rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium ${collectionState(order).className}`}
+                  >
+                    {collectionState(order).label}
+                  </span>
                 </dd>
               </div>
               {order.bosta_tracking &&

@@ -158,6 +158,35 @@ export const COST_COMPONENTS = [
   "أخرى",
 ] as const;
 
+/**
+ * حالة فلوس الأوردر — "وصلت" ولا "لسه" ولا "مش جاية".
+ *
+ * "لسه" معناها الفلوس في السكة. فالأوردر اللي رجع أو اتلغى **مايتقالش عليه
+ * "لسه"** — الفلوس دي مش جاية خلاص، وده كان بيوهم إن فيه تحصيل مستنّي.
+ */
+export function collectionState(order: {
+  order_status: string | null;
+  bosta_state: string | null;
+  bosta_collected: boolean | null;
+}): { label: string; className: string } {
+  if (order.bosta_collected) {
+    return { label: "وصلت", className: "text-green-700" };
+  }
+  if (order.order_status === "returned_after_delivery") {
+    return { label: "رجّعتها للعميل", className: "text-rose-700" };
+  }
+  if (order.order_status === "returned") {
+    return { label: "مش جاية", className: "text-orange-700" };
+  }
+  if (order.order_status === "cancelled") {
+    return { label: "ملغي", className: "text-red-700" };
+  }
+  if (!order.bosta_state) {
+    return { label: "—", className: "text-gray-400" };
+  }
+  return { label: "لسه", className: "text-gray-500" };
+}
+
 export function orderStatusBadge(status: string | null) {
   if (!status) {
     return { label: "غير محدد", className: "bg-gray-100 text-gray-600" };
