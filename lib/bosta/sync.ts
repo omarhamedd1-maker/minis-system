@@ -10,6 +10,10 @@ import { fetchAllDeliveries, type BostaRawDelivery } from "./client";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
+import {
+  loadTenantCredentials,
+  loadTenantSettings,
+} from "../tenant-settings";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
@@ -46,12 +50,24 @@ export type SyncSummary = {
 
 export async function runBostaSync(opts: {
   db: SupabaseClient;
-  apiKey: string;
+  /** البيزنس اللي بنزامنه — مفتاحه وأرقامه بتتقرا منه */
+  tenantId: string;
   dry?: boolean;
   now?: Date;
   fetchImpl?: typeof fetch;
 }): Promise<SyncSummary> {
-  const { db, apiKey, dry = false, now = new Date(), fetchImpl } = opts;
+  const { db, tenantId, dry = false, now = new Date(), fetchImpl } = opts;
+
+  const [creds, settings] = await Promise.all([
+    loadTenantCredentials(db, tenantId),
+    loadTenantSettings(db, tenantId),
+  ]);
+
+  if (!creds.bostaApiKey) {
+    throw new Error("البيزنس ده لسه مربطش حساب بوسطة");
+  }
+  const apiKey = creds.bostaApiKey;
+  const rules = settings.fees;
 
   const summary: SyncSummary = {
     dry,
@@ -68,7 +84,10 @@ export async function runBostaSync(opts: {
   const deliveries = await fetchAllDeliveries(apiKey, fetchImpl);
   summary.fetched = deliveries.length;
 
-  const { data: orders, error } = await db.from("orders").select(ORDER_FIELDS);
+  const { data: orders, error } = await db
+    .from("orders")
+    .select(ORDER_FIELDS)
+    .eq("tenant_id", tenantId);
   if (error) throw new Error("معرفناش نقرا الأوردرات: " + error.message);
 
   const index = buildIndex(
@@ -128,7 +147,8 @@ export async function runBostaSync(opts: {
     const merged = mergeShipments(
       shipments,
       our.productValue,
-      our.order_status
+      our.order_status,
+      rules
     )!;
 
     // شحنة واحدة؟ نمشي بالحسبة العادية. أكتر من واحدة؟ نبعت المجاميع
@@ -136,7 +156,7 @@ export async function runBostaSync(opts: {
       merged.latest,
       our,
       now,
-      undefined,
+      rules,
       merged.count > 1
         ? { cod: merged.totalCod, fee: merged.totalFee }
         : undefined
