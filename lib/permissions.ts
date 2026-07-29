@@ -29,7 +29,8 @@ export type PermissionKey =
   | "cash.view"
   | "cash.edit"
   | "finance.export"
-  | "admin.users";
+  | "admin.users"
+  | "admin.settings";
 
 export type PermissionGroup = {
   group: string;
@@ -110,6 +111,11 @@ export const PERMISSIONS: PermissionGroup[] = [
         key: "admin.users",
         label: "إدارة المستخدمين والصلاحيات",
         hint: "الصفحة دي نفسها",
+      },
+      {
+        key: "admin.settings",
+        label: "إعدادات البيزنس",
+        hint: "الشحن والباقة ورسوم بوسطة ومفاتيح الربط",
       },
     ],
   },
@@ -202,7 +208,12 @@ export type SessionUser = {
   isAdmin: boolean;
   permissions: PermissionKey[];
   active: boolean;
+  /** البيزنس اللي المستخدم ده تبعه — كل حاجة بتتفلتر بيه */
+  tenantId: string;
 };
+
+/** بيزنس مينيس — بيتستخدم كقيمة احتياطية لو الخانة فاضية لأي سبب */
+const FALLBACK_TENANT = "00000000-0000-0000-0000-000000000001";
 
 // بيقرأ المستخدم الحالي مرة واحدة: بياناته من app_users + هل هو أدمن.
 // بيرجّع null لو مفيش جلسة.
@@ -217,7 +228,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     supabase.rpc("is_admin"),
     supabase
       .from("app_users")
-      .select("full_name, permissions, active, last_seen_at")
+      .select("full_name, permissions, active, last_seen_at, tenant_id")
       .eq("auth_user_id", user.id)
       .maybeSingle()
       .overrideTypes<{
@@ -225,6 +236,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         permissions: string[] | null;
         active: boolean | null;
         last_seen_at: string | null;
+        tenant_id: string | null;
       }>(),
   ]);
 
@@ -253,6 +265,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     isAdmin: Boolean(isAdmin),
     permissions: (appUser?.permissions ?? []) as PermissionKey[],
     active: appUser?.active ?? true,
+    tenantId: appUser?.tenant_id ?? FALLBACK_TENANT,
   };
 }
 
