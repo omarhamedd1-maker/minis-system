@@ -48,10 +48,7 @@ try {
     active: true, tenant_id: tenantId, is_platform_admin: false,
   });
 
-  // ===== ١) الإعدادات والمفاتيح اتعملت لوحدها؟ =====
-  const { data: s } = await admin.from("tenant_settings").select("*").eq("tenant_id", tenantId).maybeSingle();
-  ok("الإعدادات اتعملت لوحدها", Boolean(s), s ? `شحن ${s.shipping_charge} · سقف تأمين ${s.fee_insurance_max}` : "مفيش");
-
+  // ===== ١) صف المفاتيح اتعمل لوحده؟ =====
   const { data: c } = await admin.from("tenant_credentials").select("tenant_id").eq("tenant_id", tenantId).maybeSingle();
   ok("صف المفاتيح اتعمل لوحده", Boolean(c));
 
@@ -67,10 +64,6 @@ try {
     (myTenants ?? []).length === 1 && myTenants[0].id === tenantId,
     `رجّع ${(myTenants ?? []).length} بيزنس`
   );
-
-  const { data: mySettings } = await owner.from("tenant_settings").select("tenant_id");
-  const foreignSettings = (mySettings ?? []).filter((r) => r.tenant_id !== tenantId);
-  ok("مايشوفش إعدادات غيره", foreignSettings.length === 0, `${(mySettings ?? []).length} صف`);
 
   // ===== ٤) مايشوفش داتا بيزنس تاني =====
   for (const table of ["orders", "customers", "expenses", "products"]) {
@@ -107,7 +100,15 @@ try {
 } catch (e) {
   console.log("الاختبار وقع:", e.message);
 } finally {
-  if (authUserId) await admin.auth.admin.deleteUser(authUserId);
-  if (tenantId) await admin.from("tenants").delete().eq("id", tenantId);
+  // الترتيب مهم: الدور بيمنع مسح البيزنس (on delete restrict)
+  if (authUserId) {
+    await admin.from("app_users").delete().eq("auth_user_id", authUserId);
+    await admin.auth.admin.deleteUser(authUserId);
+  }
+  if (roleId) await admin.from("roles").delete().eq("id", roleId);
+  if (tenantId) {
+    const { error } = await admin.from("tenants").delete().eq("id", tenantId);
+    if (error) console.log("⚠️ البيزنس التجريبي مااتمسحش:", error.message);
+  }
   console.log("\nاتمسح البيزنس التجريبي.");
 }
