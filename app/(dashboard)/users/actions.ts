@@ -23,15 +23,32 @@ function back(msg: string, ok: boolean): never {
 }
 
 // نجيب رقم دور "Owner" عشان اليوزر الجديد يبقى عضو (يقدر يقرأ عبر RLS) من غير ما يبقى أدمن
-async function ownerRoleId(admin: ReturnType<typeof createAdminClient>) {
+// الأدوار بقت لكل بيزنس، فلازم ندوّر جوّه بيزنس المستخدم بس —
+// من غير كده مستخدم بيزنس تاني كان هياخد دور من بيزنس مختلف.
+async function ownerRoleId(
+  admin: ReturnType<typeof createAdminClient>,
+  tenantId: string
+) {
   const { data: roles } = await admin
     .from("roles")
     .select("id, name")
+    .eq("tenant_id", tenantId)
     .overrideTypes<{ id: string; name: string | null }[]>();
+
   const owner =
     (roles ?? []).find((r) => (r.name ?? "").toLowerCase() === "owner") ??
-    (roles ?? []).find((r) => (r.name ?? "").toLowerCase() !== "admin");
-  return owner?.id ?? null;
+    (roles ?? []).find((r) => (r.name ?? "").toLowerCase() !== "admin") ??
+    (roles ?? [])[0];
+
+  if (owner) return owner.id;
+
+  // بيزنس لسه مالوش أدوار — نعمله دور أساسي
+  const { data: created } = await admin
+    .from("roles")
+    .insert({ name: "Owner", tenant_id: tenantId })
+    .select("id")
+    .single();
+  return created?.id ?? null;
 }
 
 export async function createUser(formData: FormData) {
@@ -62,7 +79,7 @@ export async function createUser(formData: FormData) {
     back("معرفناش نعمل اليوزر: " + (authError?.message ?? "خطأ غير معروف"), false);
   }
 
-  const roleId = await ownerRoleId(admin);
+  const roleId = await ownerRoleId(admin, me.tenantId);
 
   const { error: rowError } = await admin.from("app_users").insert({
     auth_user_id: created!.user.id,
@@ -70,6 +87,8 @@ export async function createUser(formData: FormData) {
     role_id: roleId,
     permissions,
     active: true,
+    // لازم صراحةً: القيمة الافتراضية في الجدول ده ثابتة على مينيس
+    tenant_id: me.tenantId,
   });
   if (rowError) {
     // نظّف اليوزر اللي اتعمل عشان مايفضلش يوزر بلا صف صلاحيات

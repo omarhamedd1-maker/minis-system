@@ -45,7 +45,7 @@ export default async function DashboardLayout({
       </header>
 
       <div className="flex">
-        <AppNav isAdmin={user.isAdmin} permissions={user.permissions} />
+        <AppNav isAdmin={user.isAdmin} permissions={user.permissions} isPlatformAdmin={user.isPlatformAdmin} />
         <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 pb-28 md:pb-8">
           {/* ترحيب على الكمبيوتر (على التليفون بيظهر في الهيدر فوق) */}
           <div className="mb-4 hidden text-sm text-gray-500 md:block">

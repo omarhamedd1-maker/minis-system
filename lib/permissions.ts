@@ -210,6 +210,11 @@ export type SessionUser = {
   active: boolean;
   /** البيزنس اللي المستخدم ده تبعه — كل حاجة بتتفلتر بيه */
   tenantId: string;
+  /**
+   * صاحب المنصة: يعمل بيزنسات جديدة ويدير اشتراكاتها.
+   * ده مش صلاحية بيزنس — أدمن أي عميل مايقدرش يوصلها مهما كانت صلاحياته.
+   */
+  isPlatformAdmin: boolean;
 };
 
 /** بيزنس مينيس — بيتستخدم كقيمة احتياطية لو الخانة فاضية لأي سبب */
@@ -228,7 +233,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     supabase.rpc("is_admin"),
     supabase
       .from("app_users")
-      .select("full_name, permissions, active, last_seen_at, tenant_id")
+      .select("full_name, permissions, active, last_seen_at, tenant_id, is_platform_admin")
       .eq("auth_user_id", user.id)
       .maybeSingle()
       .overrideTypes<{
@@ -237,6 +242,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         active: boolean | null;
         last_seen_at: string | null;
         tenant_id: string | null;
+        is_platform_admin: boolean | null;
       }>(),
   ]);
 
@@ -266,6 +272,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     permissions: (appUser?.permissions ?? []) as PermissionKey[],
     active: appUser?.active ?? true,
     tenantId: appUser?.tenant_id ?? FALLBACK_TENANT,
+    isPlatformAdmin: Boolean(appUser?.is_platform_admin),
   };
 }
 

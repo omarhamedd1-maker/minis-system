@@ -21,6 +21,7 @@ const ITEMS: Item[] = [
   { href: "/cash", label: "الخزنة", perm: "cash.view" },
   { href: "/users", label: "المستخدمون", perm: "admin.users" },
   { href: "/settings", label: "الإعدادات", perm: "admin.settings" },
+  { href: "/platform", label: "البيزنسات", perm: "platform" },
 ];
 
 // أيقونة كل صفحة (خط بسيط)
@@ -37,6 +38,8 @@ function Icon({ href, className }: { href: string; className?: string }) {
     "/cash":
       "M20 8H5a2 2 0 0 1 0-4h13v4zM3 6v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1M16.5 13h.01",
     "/users": "M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-3zM9 12l2 2 4-4",
+    "/platform":
+      "M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5M9 11h.01M15 11h.01",
     "/settings":
       "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
   };
@@ -59,9 +62,11 @@ function Icon({ href, className }: { href: string; className?: string }) {
 export function AppNav({
   isAdmin,
   permissions,
+  isPlatformAdmin,
 }: {
   isAdmin: boolean;
   permissions: string[];
+  isPlatformAdmin: boolean;
 }) {
   const pathname = usePathname();
   const expanded = useStoredFlag("navExpanded");
@@ -72,7 +77,11 @@ export function AppNav({
     notifyStoredFlagChanged();
   }
 
-  const allowed = ITEMS.filter((i) => isAdmin || permissions.includes(i.perm));
+  const allowed = ITEMS.filter((i) =>
+    i.perm === "platform"
+      ? isPlatformAdmin
+      : isAdmin || permissions.includes(i.perm)
+  );
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
