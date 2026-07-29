@@ -51,6 +51,36 @@ describe("جلب الشحنات صفحة صفحة", () => {
   });
 });
 
+describe("مفتاح مش صالح", () => {
+  it("مفتاح فيه حروف عربية بيدي رسالة مفهومة مش خطأ تقني", async () => {
+    const f = vi.fn();
+    await expect(
+      fetchAllDeliveries("مفتاح-غلط", f as unknown as typeof fetch)
+    ).rejects.toThrow(/حروف مش مظبوطة/);
+    expect(f).not.toHaveBeenCalled(); // مابعتناش أصلاً
+  });
+
+  it("مفتاح فاضي بيدي رسالة مفهومة", async () => {
+    const f = vi.fn();
+    await expect(
+      fetchAllDeliveries("   ", f as unknown as typeof fetch)
+    ).rejects.toThrow(/فاضي/);
+  });
+
+  it("المسافات الزايدة حوالين المفتاح بتتشال", async () => {
+    const f = vi.fn().mockReturnValue(reply(200, page([])));
+    await fetchAllDeliveries("  key  ", f as unknown as typeof fetch);
+    const sent = f.mock.calls[0][1].headers.Authorization;
+    expect(sent).toBe("key");
+  });
+
+  it("تجربة الاتصال كمان بتمسك المفتاح الغلط", async () => {
+    const r = await testConnection("مفتاح-غلط", vi.fn() as unknown as typeof fetch);
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/حروف مش مظبوطة/);
+  });
+});
+
 describe("تجربة الاتصال", () => {
   it("بتنجح لو بوسطة ردّت تمام", async () => {
     const f = vi.fn().mockReturnValue(reply(200, {}));

@@ -111,6 +111,23 @@ try {
   const { data: allT } = await attacker.from("tenants").select("*");
   check("قراءة كل البيزنسات", (allT?.length ?? 0) > 1, `رجّع ${allT?.length ?? 0} بيزنس`);
 
+  // ===== أخطر محاولة: مفاتيح البيزنسات التانية =====
+  const { data: creds, error: credErr } = await attacker.from("tenant_credentials").select("*");
+  check(
+    "قراءة مفاتيح بوسطة وشوبيفاي",
+    (creds?.length ?? 0) > 0,
+    credErr ? credErr.message.slice(0, 40) : `رجّع ${creds?.length ?? 0} صف`
+  );
+
+  // ومحاولة يقرا إعدادات بيزنس تاني
+  const { data: sets } = await attacker.from("tenant_settings").select("*");
+  const foreignSets = (sets ?? []).filter((r) => r.tenant_id !== tenantId);
+  check(
+    "قراءة إعدادات بيزنس تاني",
+    foreignSets.length > 0,
+    `${sets?.length ?? 0} صف — منهم ${foreignSets.length} تبع بيزنس تاني`
+  );
+
   console.table(results);
   const leaks = results.filter((r) => r.النتيجة.includes("تسريب"));
   console.log(leaks.length === 0

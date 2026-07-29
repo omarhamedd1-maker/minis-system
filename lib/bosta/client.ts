@@ -25,6 +25,23 @@ function headers(apiKey: string) {
   };
 }
 
+/**
+ * بيتأكد إن المفتاح صالح يتبعت أصلاً.
+ * لو فيه مسافات أو حروف عربية (لزق غلط)، المتصفح بيرمي خطأ تقني مش مفهوم —
+ * فبنمسكه هنا ونقول للعميل المشكلة بالعربي.
+ */
+function assertUsableKey(apiKey: string): string {
+  const key = String(apiKey ?? "").trim();
+  if (!key) throw new BostaError("مفتاح بوسطة فاضي", 400);
+  if (/[^\x20-\x7E]/.test(key)) {
+    throw new BostaError(
+      "مفتاح بوسطة فيه حروف مش مظبوطة — اتأكد إنك نسخته كامل من بوسطة",
+      400
+    );
+  }
+  return key;
+}
+
 export class BostaError extends Error {
   constructor(
     message: string,
@@ -41,9 +58,10 @@ export class BostaError extends Error {
  * بتفضل ترجّع آخر صفحة للأبد بدل ما تقول خلاص).
  */
 export async function fetchAllDeliveries(
-  apiKey: string,
+  rawKey: string,
   fetchImpl: typeof fetch = fetch
 ): Promise<BostaRawDelivery[]> {
+  const apiKey = assertUsableKey(rawKey);
   const out: BostaRawDelivery[] = [];
   const seen = new Set<string>();
 
@@ -81,12 +99,23 @@ export async function fetchAllDeliveries(
 
 /** بيتأكد إن المفتاح شغال — بنستخدمه في زرار "جرّب الاتصال" وقت التركيب */
 export async function testConnection(
-  apiKey: string,
+  rawKey: string,
   fetchImpl: typeof fetch = fetch
 ): Promise<{ ok: boolean; error?: string }> {
+  let apiKey: string;
   try {
-    const res = await fetchImpl(`${BOSTA_BASE}/cities`, {
+    apiKey = assertUsableKey(rawKey);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "مفتاح مش صالح" };
+  }
+
+  try {
+    // ملحوظة: مسار المدن مابيتحققش من المفتاح، فبنستخدم مسار الشحنات
+    // عشان نتأكد فعلاً إن المفتاح شغال
+    const res = await fetchImpl(`${BOSTA_BASE}/deliveries/search`, {
+      method: "POST",
       headers: headers(apiKey),
+      body: JSON.stringify({ limit: 1, page: 1 }),
     });
     if (res.status === 200) return { ok: true };
     if (res.status === 401 || res.status === 403)
