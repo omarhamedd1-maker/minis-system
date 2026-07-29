@@ -16,28 +16,59 @@ import { ORDER_STATUS_OPTIONS, orderStatusBadge } from "@/lib/format";
 
 type Supa = ReturnType<typeof createAdminClient>;
 
-// بعد أي تعديل بنود: نبعت التعديل لشوبيفاي في الخلفية (بعد ما الرد يوصل المستخدم)
-// عشان المنتج يظهر فوراً من غير ما يستنى المزامنة
+// بعد أي تعديل بنود: نبلّغ شوبيفاي وبوسطة في الخلفية (بعد ما الرد يوصل المستخدم)
+//
+// الاتنين **مستقلين عن بعض بقصد**. قبل كده كانوا ورا بعض، فلو شوبيفاي
+// اتأخرت (وقتها الأقصى ٢٠ ثانية) كان ممكن الوقت يخلص قبل ما بوسطة تتحدّث
+// أصلاً — والنتيجة إن المندوب يحصّل مبلغ قديم ومحدش ياخد باله.
 function pushOrderToShopify(orderId: string) {
-  const key = process.env.SYNC_KEY;
-  if (!key) return;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
   after(async () => {
-    // شوبيفاي: تحديث البنود/السعر
-    try {
-      await fetch(
-        `${base}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
-        { method: "GET", signal: AbortSignal.timeout(20000) }
-      );
-    } catch {
-      // فشل الدفع لشوبيفاي ما يوقفش التعديل المحلي (مثلاً أوردر متشحن)
-    }
-    // بوسطة: تحديث مبلغ التحصيل (طول ما الشحنة لسه ماتاخدتش)
-    try {
-      await runBostaUpdateCod({ db: createAdminClient(), orderId });
-    } catch {
-      // فشل تحديث بوسطة ما يوقفش التعديل المحلي
-    }
+    const db = createAdminClient();
+
+    const toShopify = (async () => {
+      const key = process.env.SYNC_KEY;
+      const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!key || !base) return;
+      try {
+        await fetch(
+          `${base}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
+          { method: "GET", signal: AbortSignal.timeout(20000) }
+        );
+      } catch {
+        // فشل الدفع لشوبيفاي ما يوقفش التعديل المحلي (مثلاً أوردر متشحن)
+      }
+    })();
+
+    // بوسطة: تحديث مبلغ التحصيل (طول ما الشحنة لسه ماتاخدتش).
+    // بنسجّل النتيجة في سجل النشاط — ده بيلمس فلوس، فمينفعش يفشل في الخفا.
+    const toBosta = (async () => {
+      try {
+        const res = await runBostaUpdateCod({ db, orderId });
+        if (!res.ok) {
+          await logActivity(
+            null,
+            "bosta.cod",
+            `⚠️ معرفناش نحدّث تحصيل أوردر ${await orderNo(db, orderId)} عند بوسطة: ${res.error}`
+          );
+        } else if (res.changed) {
+          await logActivity(
+            null,
+            "bosta.cod",
+            `تحصيل أوردر ${await orderNo(db, orderId)} عند بوسطة اتغيّر من ${res.was ?? "؟"} لـ ${res.cod}`
+          );
+        }
+      } catch (e) {
+        await logActivity(
+          null,
+          "bosta.cod",
+          `⚠️ تحديث تحصيل أوردر ${await orderNo(db, orderId)} وقع: ${
+            e instanceof Error ? e.message : "سبب مش معروف"
+          }`
+        );
+      }
+    })();
+
+    await Promise.allSettled([toShopify, toBosta]);
   });
 }
 
