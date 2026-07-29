@@ -100,7 +100,13 @@ export function OrderComments({
       {open && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setOpen(false)}
+          // **لازم stopPropagation.** البورتال بيتحقن في body بس الحدث لسه
+          // بيطلع في شجرة React، فالدوسة على الخلفية كانت بتقفل المودال
+          // **وتفتح الأوردر** — يعني مفيش طريقة تخرج من غير ما تدخل.
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen(false);
+          }}
         >
           <div
             className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
@@ -112,7 +118,10 @@ export function OrderComments({
               </h3>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpen(false);
+                }}
                 className="rounded-lg px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
                 aria-label="إغلاق"
               >
