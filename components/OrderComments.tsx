@@ -1,8 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { createPortal } from "react-dom";
 import { ConfirmButton } from "./ConfirmButton";
+
+/**
+ * زرار الإضافة — بيتقفل وهو بيبعت.
+ * قبل كده كان بيفضل مفتوح والشاشة بتتقفل من غير علامة نجاح، فالمستخدم
+ * كان بيدوس تاني وتالت والتعليق يتسجّل ٦ مرات.
+ */
+function AddButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+    >
+      {pending ? "بيتسجّل..." : "إضافة"}
+    </button>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className="h-3.5 w-3.5"
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        d="M8.75 1h2.5a1 1 0 0 1 1 1v1H16a1 1 0 1 1 0 2h-.55l-.7 10.1A2 2 0 0 1 12.76 18H7.24a2 2 0 0 1-2-1.9L4.55 5H4a1 1 0 1 1 0-2h3.75V2a1 1 0 0 1 1-1Zm-.3 5.5a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75Zm3.6 0a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5a.75.75 0 0 1 .75-.75Z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
 
 type Comment = {
   id: string;
@@ -29,7 +65,7 @@ export function OrderComments({
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
-
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <>
@@ -121,9 +157,11 @@ export function OrderComments({
                             />
                             <ConfirmButton
                               message="متأكد إنك عايز تمسح التعليق ده؟"
-                              className="text-xs text-red-500 hover:text-red-700"
+                              className="rounded p-1 text-red-500 hover:bg-red-50 hover:text-red-700"
+                              aria-label="مسح التعليق"
+                              title="مسح التعليق"
                             >
-                              مسح
+                              <TrashIcon />
                             </ConfirmButton>
                           </form>
                         )}
@@ -137,7 +175,14 @@ export function OrderComments({
               )}
             </div>
 
-            <form action={addAction} className="flex items-end gap-2">
+            <form
+              ref={formRef}
+              action={async (fd) => {
+                await addAction(fd);
+                formRef.current?.reset();
+              }}
+              className="flex items-end gap-2"
+            >
               <input type="hidden" name="order_id" value={orderId} />
               <textarea
                 name="body"
@@ -146,12 +191,7 @@ export function OrderComments({
                 placeholder="اكتب تعليقك..."
                 className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
               ></textarea>
-              <button
-                type="submit"
-                className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
-              >
-                إضافة
-              </button>
+              <AddButton />
             </form>
           </div>
         </div>,

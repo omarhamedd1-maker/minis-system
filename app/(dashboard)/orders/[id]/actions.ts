@@ -448,22 +448,37 @@ export async function addOrderComment(formData: FormData) {
   // اسم كاتب التعليق من بيانات المستخدم الحالي
   const authorName = me.fullName || me.email || "غير معروف";
 
-  const { error } = await supabase.from("order_comments").insert({
-    order_id: orderId,
-    author_name: authorName,
-    body,
-  });
+  // حماية من الدوس المتكرر: نفس التعليق على نفس الأوردر في نص دقيقة = واحد.
+  // ده حصل فعلًا — ٦ نسخ من نفس التعليق في ٨ ثواني، لأن الشاشة كانت بتتقفل
+  // من غير ما تبيّن إن التعليق اتسجّل فالمستخدم يدوس تاني وتالت.
+  const since = new Date(Date.now() - 30_000).toISOString();
+  const { data: recent } = await supabase
+    .from("order_comments")
+    .select("id")
+    .eq("order_id", orderId)
+    .eq("body", body)
+    .gte("created_at", since)
+    .limit(1);
 
-  if (error) {
-    redirect(
-      "/orders?error=" +
-        encodeURIComponent("معرفناش نسجل التعليق: " + error.message)
-    );
+  if (!recent?.length) {
+    const { error } = await supabase.from("order_comments").insert({
+      order_id: orderId,
+      author_name: authorName,
+      body,
+    });
+
+    if (error) {
+      redirect(
+        "/orders?error=" +
+          encodeURIComponent("معرفناش نسجل التعليق: " + error.message)
+      );
+    }
   }
 
+  // **من غير redirect بقصد** — الشاشة تفضل مفتوحة والتعليق يظهر في مكانه.
+  // الـ redirect القديم كان بيقفل المودال فيبان إن الحفظ فشل.
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
-  redirect("/orders");
 }
 
 export async function deleteOrderComment(formData: FormData) {
@@ -487,8 +502,8 @@ export async function deleteOrderComment(formData: FormData) {
     );
   }
 
+  // من غير redirect — الشاشة تفضل مفتوحة زي الإضافة
   revalidatePath("/orders");
-  redirect("/orders");
 }
 
 export async function updateShippingPrice(formData: FormData) {

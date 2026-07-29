@@ -31,8 +31,13 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
     // الشحنة اتعملت عند بوسطة ومستنية المندوب
     ready: { label: "جاهز للبيك اب", className: "bg-cyan-50 text-cyan-700" },
-    // المندوب استلمها من عندنا
-    shipped: { label: "مع المندوب", className: "bg-indigo-50 text-indigo-700" },
+    // بوسطة شايلاها: المندوب استلمها منّنا، أو هي في مخزنهم، أو بين الفروع.
+    // الاسم القديم كان "مع المندوب" وده كان بيكدب — شحنة قاعدة في مخزن بوسطة
+    // ماحدش ماشي بيها.
+    shipped: {
+      label: "استلمتها بوسطة",
+      className: "bg-indigo-50 text-indigo-700",
+    },
     // خرجت من الفرع وماشية للعميل
     out_for_delivery: {
       label: "في الطريق للعميل",

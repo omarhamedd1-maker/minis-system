@@ -18,7 +18,7 @@ describe("ترجمة حالات بوسطة", () => {
     expect(mapBostaState("out for delivery")).toBe("out_for_delivery");
   });
 
-  it("Picked Up و Processing و In Transit ← مع المندوب", () => {
+  it("Picked Up و Processing و In Transit ← استلمتها بوسطة", () => {
     expect(mapBostaState("Picked Up")).toBe("shipped");
     expect(mapBostaState("Processing")).toBe("shipped");
     expect(mapBostaState("In Transit")).toBe("shipped");
