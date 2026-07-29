@@ -160,8 +160,13 @@ export async function createDelivery(
 export type DeliveryLookup = {
   id: string;
   trackingNumber: string;
-  /** حالة الشحنة عند بوسطة زي "Delivered" و"Picked up" */
+  /**
+   * الحالة **التفصيلية** زي "Received at warehouse" و"Out for delivery".
+   * المسار ده بيرجّع الحالة الحقيقية، مش المجمّعة اللي في المزامنة.
+   */
   state: string;
+  /** رقم الحالة — أدق حاجة، ومابيتغيرش بتغيّر النصوص */
+  code: number | null;
   cod: number | null;
   /** بوسطة نفسها بتقول التعديل مقفول ولا لأ — أدق من التخمين من اسم الحالة */
   codUpdateBlocked: boolean | null;
@@ -204,6 +209,7 @@ export async function fetchDeliveryByTracking(
     id: String(d._id),
     trackingNumber: String(d.trackingNumber ?? tracking),
     state: String(d.state?.value ?? d.state ?? ""),
+    code: typeof d.state?.code === "number" ? d.state.code : null,
     cod,
     codUpdateBlocked:
       typeof d.isCodUpdateBlockedForBusiness === "boolean"

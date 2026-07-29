@@ -6,7 +6,11 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { fetchAllDeliveries, type BostaRawDelivery } from "./client";
+import {
+  fetchAllDeliveries,
+  fetchDeliveryByTracking,
+  type BostaRawDelivery,
+} from "./client";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
@@ -45,6 +49,41 @@ export type SyncSummary = {
   /** تفاصيل اللي اتغيّر — بنعرضها في وضع التجربة عشان نراجع قبل التنفيذ */
   details: { order: string; reasons: string[] }[];
 };
+
+/** الشحنة خلصت خلاص: ٤٥ اتسلّمت، ٤٦ رجعت لنا. دي مش محتاجة تفصيل */
+const FINISHED_CODES = [45, 46];
+
+/**
+ * بيجيب الحالة التفصيلية للشحنة من بوسطة لو لسه شغالة.
+ * لو الجلب فشل بنكمّل بالحالة المجمّعة والكود — المزامنة ماتوقفش عشان ده.
+ */
+async function withDetailedState(
+  d: BostaRawDelivery,
+  apiKey: string,
+  fetchImpl?: typeof fetch
+): Promise<BostaRawDelivery> {
+  const code = d.state?.code;
+  if (typeof code === "number" && FINISHED_CODES.includes(code)) return d;
+
+  const tracking = d.trackingNumber ? String(d.trackingNumber) : "";
+  if (!tracking) return d;
+
+  try {
+    const detail = await fetchDeliveryByTracking(apiKey, tracking, fetchImpl);
+    if (!detail?.state) return d;
+    return {
+      ...d,
+      state: {
+        ...(d.state ?? {}),
+        value: detail.state,
+        code: detail.code ?? d.state?.code ?? null,
+      },
+      stateIsDetailed: true,
+    };
+  } catch {
+    return d;
+  }
+}
 
 export async function runBostaSync(opts: {
   db: SupabaseClient;
@@ -147,9 +186,15 @@ export async function runBostaSync(opts: {
       rules
     )!;
 
+    // الحالة اللي بتجي في المزامنة مجمّعة: "Processing" بتشمل الشحنة اللي في
+    // المخزن واللي في الطريق واللي عند المندوب. فللشحنات اللي **لسه ماخلصتش**
+    // بنجيب حالتها التفصيلية من بوسطة — دول عدد صغير فالتكلفة رخيصة، والنتيجة
+    // إن الحالة عندنا تبقى نفس اللي بوسطة بتعرضه بالظبط.
+    const latest = await withDetailedState(merged.latest, apiKey, fetchImpl);
+
     // شحنة واحدة؟ نمشي بالحسبة العادية. أكتر من واحدة؟ نبعت المجاميع
     const decision = decideSync(
-      merged.latest,
+      latest,
       our,
       now,
       rules,

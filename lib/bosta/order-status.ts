@@ -101,19 +101,32 @@ const STATE_CODES: Record<number, OrderStatus> = {
 };
 
 /**
- * حالة الأوردر من كائن الحالة كامل (بالكود لو موجود).
- * **الكود بيكسب دايمًا**، والنص احتياطي — ماعدا "Delivered" لأنها هي
- * بالظبط الكلمة اللي بتلبّس الراجع على المتسلّم.
+ * حالة الأوردر من كائن الحالة كامل.
+ *
+ * فيه مصدرين للنص وفرقهم كبير:
+ *
+ * - **نص مجمّع** (اللي بيجي من مسار المزامنة): بيخلط المتسلّم بالراجع، فمينفعش
+ *   نصدّقه. بنمشي بالكود، ولو الكود مش معروف ومكتوب "Delivered" مانغيّرش حاجة.
+ * - **نص تفصيلي** (من جلب الشحنة لوحدها): ده اللي بوسطة نفسها بتعرضه، وأدق من
+ *   أي جدول أكواد بنبنيه إحنا — فبيكسب على الكود.
  */
 export function mapBostaDelivery(
-  state: { value?: string | null; code?: number | null } | null | undefined
+  state:
+    | { value?: string | null; code?: number | null }
+    | null
+    | undefined,
+  /** النص جاي من جلب الشحنة لوحدها؟ ساعتها هو الأدق */
+  detailed = false
 ): OrderStatus | null {
+  const byText = mapBostaState(state?.value);
+  if (detailed && byText) return byText;
+
   const code = state?.code;
   if (typeof code === "number" && STATE_CODES[code]) return STATE_CODES[code];
 
-  const byText = mapBostaState(state?.value);
-  // كود مش معروف + مكتوب Delivered = ممكن تكون راجعة. مانخاطرش بفلوس.
-  if (byText === "delivered") return null;
+  // كود مش معروف + نص مجمّع مكتوب فيه Delivered = ممكن تكون راجعة.
+  // مانخاطرش بفلوس على تخمين.
+  if (!detailed && byText === "delivered") return null;
   return byText;
 }
 
