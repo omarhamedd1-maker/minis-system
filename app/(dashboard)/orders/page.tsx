@@ -69,6 +69,7 @@ import {
   deleteOrderComment,
   updateOrderStatusInline,
 } from "./[id]/actions";
+import { readSyncHealth, syncHealthMessage } from "@/lib/bosta/sync-runs";
 import { OrderComments } from "@/components/OrderComments";
 import { OrderStatusSelect } from "@/components/OrderStatusSelect";
 import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
@@ -192,6 +193,11 @@ export default async function OrdersPage({
         >()
     ).data ?? [];
 
+  // المزامنة لسه شغالة؟ الجدول مقفول فبنقراه بمفتاح الأدمن
+  const syncWarning = syncHealthMessage(
+    await readSyncHealth(createAdminClient(), user.tenantId)
+  );
+
   // طلبات الحذف المستنية موافقة الأدمن (مبدأ الشخصين)
   const pendingDeletions = user.isAdmin
     ? (
@@ -295,6 +301,17 @@ export default async function OrdersPage({
       {bulk && (
         <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
           تم تغيير حالة {bulk} أوردر
+        </div>
+      )}
+
+      {/* المزامنة واقفة أو بتفشل؟ ده أهم تنبيه في الصفحة — لأن كل الأرقام
+          اللي تحته بتبقى قديمة وإنت فاكرها محدّثة */}
+      {syncWarning && (
+        <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4">
+          <div className="text-sm font-bold text-red-800">
+            ⚠️ المزامنة مع بوسطة فيها مشكلة
+          </div>
+          <p className="mt-1 text-xs text-red-700">{syncWarning}</p>
         </div>
       )}
 

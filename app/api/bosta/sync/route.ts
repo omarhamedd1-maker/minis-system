@@ -10,6 +10,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runBostaSync, type SyncSummary } from "@/lib/bosta/sync";
+import { recordSyncRun } from "@/lib/bosta/sync-runs";
 import { activeTenantIds } from "@/lib/tenant-settings";
 
 export const dynamic = "force-dynamic";
@@ -36,13 +37,34 @@ export async function GET(request: Request) {
     > = {};
 
     for (const tenantId of tenants) {
+      const startedAt = Date.now();
       try {
-        results[tenantId] = await runBostaSync({ db, tenantId, dry });
+        const summary = await runBostaSync({ db, tenantId, dry });
+        results[tenantId] = summary;
+        // بنسجّل كل تشغيل عشان نعرف لو الجدولة وقفت — من غير السجل ده
+        // المزامنة تقدر تقف أسبوع ومحدش ياخد باله
+        await recordSyncRun(db, {
+          tenantId,
+          ok: summary.errors.length === 0,
+          dry,
+          fetched: summary.fetched,
+          matched: summary.matched,
+          changed: summary.changed,
+          unmatched: summary.unmatched,
+          errors: summary.errors,
+          durationMs: Date.now() - startedAt,
+        });
       } catch (e) {
         // بيزنس وقع؟ نسجّل ونكمّل الباقي
-        results[tenantId] = {
-          error: e instanceof Error ? e.message : "المزامنة وقعت",
-        };
+        const message = e instanceof Error ? e.message : "المزامنة وقعت";
+        results[tenantId] = { error: message };
+        await recordSyncRun(db, {
+          tenantId,
+          ok: false,
+          dry,
+          errors: message,
+          durationMs: Date.now() - startedAt,
+        });
       }
     }
 
