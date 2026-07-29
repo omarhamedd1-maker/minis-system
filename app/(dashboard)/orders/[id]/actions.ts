@@ -6,6 +6,7 @@ import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser, requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
+import { loadBostaCities, runBostaCreate } from "@/lib/bosta/create";
 import { ORDER_STATUS_OPTIONS, orderStatusBadge } from "@/lib/format";
 
 type Supa = ReturnType<typeof createAdminClient>;
@@ -873,36 +874,22 @@ export async function updateOrderStatus(formData: FormData) {
   redirect(returnTo + joiner + "saved=1");
 }
 
-// إرسال الأوردر لبوسطة كشحنة (أوتوماتيك) — بننادي دالة bosta-create
+// إرسال الأوردر لبوسطة كشحنة — الكود جوّه المشروع في lib/bosta/create.ts،
+// وبيستخدم مفتاح بوسطة بتاع البيزنس صاحب الأوردر
 export async function sendOrderToBosta(formData: FormData) {
   const me = await requirePermission("ship.send");
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) redirect("/orders");
 
-  const key = process.env.SYNC_KEY;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!key || !base) {
-    redirect(
-      `/orders/${orderId}?error=` + encodeURIComponent("إعدادات الإرسال ناقصة")
-    );
-  }
-
   let ok = false;
   let message = "معرفناش نبعت الشحنة لبوسطة";
   try {
-    const res = await fetch(
-      `${base}/functions/v1/bosta-create?key=${key}&order=${orderId}`,
-      { method: "GET", signal: AbortSignal.timeout(30000) }
-    );
-    const data = await res.json().catch(() => null);
-    if (res.ok && data?.ok) {
-      ok = true;
-    } else if (data?.error) {
-      // رسالة الخطأ اللي رجّعتها الدالة (زي: معرفناش نحدد المدينة)
-      message = String(data.error);
-    }
-  } catch {
-    message = "الاتصال ببوسطة فشل — جرّب تاني";
+    const res = await runBostaCreate({ db: createAdminClient(), orderId });
+    if (res.ok) ok = true;
+    else message = res.error;
+  } catch (e) {
+    message =
+      e instanceof Error ? e.message : "الاتصال ببوسطة فشل — جرّب تاني";
   }
 
   if (ok) {
@@ -927,7 +914,7 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   details?: string;
 }> {
   const me = await getSessionUser();
-  if (!can(me, "ship.send")) {
+  if (!me || !can(me, "ship.send")) {
     return { ok: false, sent: 0, skipped: 0, failed: 0, error: "مالكش صلاحية الإرسال لبوسطة" };
   }
 
@@ -940,11 +927,9 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
     return { ok: false, sent: 0, skipped: 0, failed: 0, error: "محددتش أي أوردر" };
   }
 
-  const key = process.env.SYNC_KEY;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!key || !base) {
-    return { ok: false, sent: 0, skipped: 0, failed: 0, error: "إعدادات الإرسال ناقصة" };
-  }
+  const db = createAdminClient();
+  // المدن مرة واحدة للدفعة كلها بدل مرة لكل أوردر
+  const cities = await loadBostaCities(db, me.tenantId);
 
   let sent = 0;
   let skipped = 0;
@@ -953,20 +938,18 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
 
   async function sendOne(id: string) {
     try {
-      const res = await fetch(
-        `${base}/functions/v1/bosta-create?key=${key}&order=${id}`,
-        { signal: AbortSignal.timeout(30000) }
-      );
-      const data = await res.json().catch(() => null);
-      if (res.ok && data?.ok) {
-        if (data.already) skipped++;
-        else sent++;
-      } else {
+      const res = await runBostaCreate({ db, orderId: id, cities });
+      if (!res.ok) {
         failed++;
-        if (data?.error) failMsgs.push(String(data.error));
+        failMsgs.push(res.error);
+      } else if ("already" in res) {
+        skipped++;
+      } else {
+        sent++;
       }
-    } catch {
+    } catch (e) {
       failed++;
+      if (e instanceof Error) failMsgs.push(e.message);
     }
   }
 

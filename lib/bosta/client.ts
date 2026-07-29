@@ -5,11 +5,14 @@
 // كل واحد يستخدم مفتاحه من غير ما نلمس الملف ده.
 // ==========================================================================
 
+import type { BostaCity } from "./cities";
 import type { BostaDelivery } from "./reconcile";
 
 const BOSTA_BASE = "https://app.bosta.co/api/v2";
 const PAGE_SIZE = 100;
 const MAX_PAGES = 60;
+/** طلب واقف مايستهلكش وقت الصفحة كلها — خصوصًا لما نبعت دفعة أوردرات */
+const TIMEOUT_MS = 20000;
 
 export type BostaRawDelivery = BostaDelivery & {
   _id?: string;
@@ -95,6 +98,61 @@ export async function fetchAllDeliveries(
   }
 
   return out;
+}
+
+/**
+ * قايمة المحافظات عند بوسطة (٢٨ محافظة، من غير مناطق).
+ * ⚠️ المسار ده **مابيتحققش من المفتاح** — بيرد ٢٠٠ لأي حاجة، فمينفعش
+ * يتستخدم كاختبار اتصال. للاختبار استخدم `testConnection`.
+ */
+export async function fetchCities(
+  rawKey: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<BostaCity[]> {
+  const apiKey = assertUsableKey(rawKey);
+  const res = await fetchImpl(`${BOSTA_BASE}/cities`, {
+    method: "GET",
+    headers: headers(apiKey),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new BostaError("معرفناش نجيب قايمة المدن من بوسطة", res.status);
+  }
+  const json = await res.json();
+  return json?.data?.list ?? json?.data ?? json?.list ?? [];
+}
+
+export type CreateDeliveryResult = {
+  ok: boolean;
+  status: number;
+  trackingNumber: string | null;
+  message: string;
+};
+
+/** بيعمل شحنة واحدة. مابيقررش حاجة — بيبعت اللي اتقاله وبيرجّع رد بوسطة زي ما هو */
+export async function createDelivery(
+  rawKey: string,
+  payload: Record<string, unknown>,
+  fetchImpl: typeof fetch = fetch
+): Promise<CreateDeliveryResult> {
+  const apiKey = assertUsableKey(rawKey);
+  const res = await fetchImpl(`${BOSTA_BASE}/deliveries`, {
+    method: "POST",
+    headers: headers(apiKey),
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+
+  const json = await res.json().catch(() => null);
+  const data = json?.data ?? json;
+  const tracking = data?.trackingNumber ?? data?.tracking_number ?? null;
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    trackingNumber: tracking ? String(tracking).replace(/\D/g, "") : null,
+    message: String(json?.message ?? json?.error ?? ""),
+  };
 }
 
 /** بيتأكد إن المفتاح شغال — بنستخدمه في زرار "جرّب الاتصال" وقت التركيب */
