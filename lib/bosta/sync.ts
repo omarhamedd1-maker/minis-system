@@ -11,6 +11,11 @@ import {
   fetchDeliveryByTracking,
   type BostaRawDelivery,
 } from "./client";
+import {
+  isCustomerReturn,
+  matchCustomerReturn,
+  type ReturnCandidate,
+} from "./customer-return";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
@@ -19,8 +24,9 @@ import { BOSTA_FEES } from "../shipping-cost";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
-  bosta_shipping_cost, order_items(quantity, sale_price_at_order),
-  customers(full_name)`;
+  bosta_shipping_cost, return_tracking,
+  order_items(quantity, sale_price_at_order),
+  customers(full_name, phone)`;
 
 type OrderRow = {
   id: string;
@@ -33,8 +39,9 @@ type OrderRow = {
   bosta_collected: boolean | null;
   bosta_tracking: string | null;
   bosta_shipping_cost: number | null;
+  return_tracking: string | null;
   order_items: { quantity: number; sale_price_at_order: number }[] | null;
-  customers: { full_name: string | null } | null;
+  customers: { full_name: string | null; phone: string | null } | null;
 };
 
 export type SyncSummary = {
@@ -48,6 +55,13 @@ export type SyncSummary = {
   errors: string[];
   /** تفاصيل اللي اتغيّر — بنعرضها في وضع التجربة عشان نراجع قبل التنفيذ */
   details: { order: string; reasons: string[] }[];
+  /** شحنات مرتجع بعد التسليم اتربطت بأوردراتها */
+  customerReturns: number;
+  /**
+   * شحنات مرتجع مالقيناش لها أوردر واضح — **محتاجة عين بشرية**.
+   * مانخمّنش فيها عشان المرتجع بيحرّك بضاعة وفلوس.
+   */
+  returnsNeedReview: { tracking: string; customer: string; why: string }[];
 };
 
 /** الشحنة خلصت خلاص: ٤٥ اتسلّمت، ٤٦ رجعت لنا. دي مش محتاجة تفصيل */
@@ -114,6 +128,8 @@ export async function runBostaSync(opts: {
     unmatched: 0,
     errors: [],
     details: [],
+    customerReturns: 0,
+    returnsNeedReview: [],
   };
 
   const deliveries = await fetchAllDeliveries(apiKey, fetchImpl);
@@ -125,8 +141,10 @@ export async function runBostaSync(opts: {
     .eq("tenant_id", tenantId);
   if (error) throw new Error("معرفناش نقرا الأوردرات: " + error.message);
 
+  const rows = (orders ?? []) as unknown as OrderRow[];
+
   const index = buildIndex(
-    ((orders ?? []) as unknown as OrderRow[]).map((o) => ({
+    rows.map((o) => ({
       id: o.id,
       order_number: o.order_number,
       bosta_tracking: o.bosta_tracking,
@@ -135,6 +153,81 @@ export async function runBostaSync(opts: {
     }))
   );
 
+  // ===== شحنات المرتجع بعد التسليم (نوع ٢٥) =====
+  // دي بتتفصل الأول لأنها **مش شحنة توصيل** — مالهاش تحصيل ولا رسوم توصيل،
+  // ومعناها إن العميل استلم وبعدين رجّع. لو سيبناها تمشي في مسار التوصيل
+  // العادي هتلخبط حالة الأوردر ورسومه.
+  const returnCandidates: ReturnCandidate[] = rows.map((o) => ({
+    id: o.id,
+    order_number: o.order_number,
+    order_status: o.order_status,
+    customerPhone: o.customers?.phone ?? null,
+    customerName: o.customers?.full_name ?? null,
+    return_tracking: o.return_tracking,
+  }));
+
+  const deliveryShipments: BostaRawDelivery[] = [];
+
+  for (const d of deliveries as BostaRawDelivery[]) {
+    if (!isCustomerReturn(d)) {
+      deliveryShipments.push(d);
+      continue;
+    }
+
+    const m = matchCustomerReturn(d, returnCandidates);
+    const tracking = d.trackingNumber ? String(d.trackingNumber) : "";
+    const who = d.receiver?.fullName ?? "";
+
+    if (m.kind === "none") {
+      summary.returnsNeedReview.push({
+        tracking,
+        customer: who,
+        why: "مالقيناش أوردر متسلّم للعميل ده",
+      });
+      continue;
+    }
+    if (m.kind === "ambiguous") {
+      summary.returnsNeedReview.push({
+        tracking,
+        customer: who,
+        why: `العميل عنده ${m.orders.length} أوردرات متسلّمة — مانعرفش المرتجع بتاع أنهي واحد`,
+      });
+      continue;
+    }
+
+    // الحالة النهائية بتستنى البضاعة توصلنا فعلًا
+    const wanted = m.arrived ? "returned_after_delivery" : "returning";
+    const changes: Record<string, unknown> = {};
+    if (m.order.return_tracking !== tracking && tracking) {
+      changes.return_tracking = tracking;
+    }
+    if (m.order.order_status !== wanted) changes.order_status = wanted;
+
+    if (Object.keys(changes).length === 0) continue;
+
+    summary.customerReturns++;
+    summary.details.push({
+      order: String(m.order.order_number),
+      reasons: [
+        m.arrived
+          ? `المرتجع وصلك — الحالة بقت مرتجع بعد التسليم (شحنة ${tracking})`
+          : `العميل عمل مرتجع — الحالة بقت في الطريق ليك (شحنة ${tracking})`,
+      ],
+    });
+
+    if (!dry) {
+      const { error: retErr } = await db
+        .from("orders")
+        .update(changes)
+        .eq("id", m.order.id);
+      if (retErr) {
+        summary.errors.push(
+          `مرتجع أوردر ${m.order.order_number}: ${retErr.message}`
+        );
+      }
+    }
+  }
+
   // بنجمّع شحنات كل أوردر الأول، وبعدين نقرر مرة واحدة —
   // عشان الأوردر اللي ليه أكتر من شحنة تتحسب رسومه وتحصيله صح
   const byOrder = new Map<
@@ -142,7 +235,7 @@ export async function runBostaSync(opts: {
     { row: OrderRow; deliveries: BostaRawDelivery[] }
   >();
 
-  for (const d of deliveries as BostaRawDelivery[]) {
+  for (const d of deliveryShipments) {
     const m = matchDelivery(d, index);
 
     if (m.kind === "none") {

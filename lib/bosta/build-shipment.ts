@@ -10,9 +10,11 @@
 
 import type { BostaCity, BostaZone } from "./cities";
 
-/** أنواع الشحنات عند بوسطة: ١٠ = توصيل للعميل · ١٥ = سحب مرتجع من العميل */
+// أنواع الشحنات عند بوسطة — الأرقام دي اتأكدنا منها من شحنات حقيقية:
+//   ١٠ Send · ٢٠ Return to Origin · ٢٥ Customer Return Pickup · ٣٠ Exchange
+// ⚠️ كنا كاتبين ١٥ للمرتجع وده رقم مش موجود عند بوسطة خالص.
 const DELIVERY_TYPE_SEND = 10;
-const DELIVERY_TYPE_CUSTOMER_RETURN = 15;
+const DELIVERY_TYPE_CUSTOMER_RETURN = 25;
 
 export type ShipmentCustomer = {
   full_name: string | null;

@@ -343,7 +343,7 @@ describe("شحنة المرتجع", () => {
       originalTrackingNumber: string;
       businessReference: string;
     };
-    expect(body.type).toBe(15); // سحب مرتجع من العميل
+    expect(body.type).toBe(25); // Customer Return Pickup — اتأكدنا منه من بوسطة
     expect(body.cod).toBe(0); // الفلوس بترجع للعميل منّنا مش من بوسطة
     expect(body.specs.packageDetails.itemsCount).toBe(2); // الراجع بس مش الأربعة
     expect(body.specs.packageDetails.description).toBe("مرايه × 2");
