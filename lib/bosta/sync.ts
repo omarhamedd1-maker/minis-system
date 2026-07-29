@@ -21,6 +21,7 @@ import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
 import { loadTenantCredentials } from "../tenant-settings";
 import { BOSTA_FEES } from "../shipping-cost";
+import { orderStatusBadge } from "../format";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
@@ -66,6 +67,32 @@ export type SyncSummary = {
 
 /** الشحنة خلصت خلاص: ٤٥ اتسلّمت، ٤٦ رجعت لنا. دي مش محتاجة تفصيل */
 const FINISHED_CODES = [45, 46];
+
+/**
+ * بيسجّل تغيير الحالة في سجل الأوردر.
+ * التغييرات اليدوية كانت بتتسجّل، أما اللي جاي من بوسطة فكان بيحصل في الصمت —
+ * فالأوردر يتغيّر ومحدش يعرف مين غيّره ولا امتى.
+ * ورقم الأوردر لازم يبقى في النص لأن السجل بيتفلتر بيه.
+ */
+async function logStatusChange(
+  db: SupabaseClient,
+  orderNumber: string | number | null,
+  from: string | null,
+  to: string
+) {
+  try {
+    await db.from("activity_log").insert({
+      actor_id: null,
+      actor_name: "المزامنة مع بوسطة",
+      action: "order.status",
+      summary: `حالة أوردر ${orderNumber ?? ""} بقت ${orderStatusBadge(to).label}${
+        from ? ` (كانت ${orderStatusBadge(from).label})` : ""
+      }`,
+    });
+  } catch {
+    // الجدول مش موجود أو حصل خطأ؟ المزامنة ماتوقفش عشان سطر سجل
+  }
+}
 
 /**
  * بيجيب الحالة التفصيلية للشحنة من بوسطة لو لسه شغالة.
@@ -224,6 +251,13 @@ export async function runBostaSync(opts: {
         summary.errors.push(
           `مرتجع أوردر ${m.order.order_number}: ${retErr.message}`
         );
+      } else if (typeof changes.order_status === "string") {
+        await logStatusChange(
+          db,
+          m.order.order_number,
+          m.order.order_status,
+          changes.order_status
+        );
       }
     }
   }
@@ -315,6 +349,13 @@ export async function runBostaSync(opts: {
         .eq("id", row.id);
       if (updateError) {
         summary.errors.push(`أوردر ${row.order_number}: ${updateError.message}`);
+      } else if (typeof decision.changes.order_status === "string") {
+        await logStatusChange(
+          db,
+          row.order_number,
+          row.order_status,
+          decision.changes.order_status
+        );
       }
     }
   }

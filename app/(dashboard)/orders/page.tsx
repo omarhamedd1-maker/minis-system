@@ -20,6 +20,25 @@ const LIST_STATUS_OPTIONS_EXCLUDED = [
   ...SHIPMENT_STATUSES,
   ...MANUAL_ONLY_BY_FLOW,
 ];
+// الحالات اللي معناها "قف واعمل حاجة" — بتتعرض كتنبيه فوق القايمة
+const NEEDS_ATTENTION = [
+  {
+    status: "awaiting_action",
+    title: "أوردرات مستنية قرار منك",
+    className: "border-amber-300 bg-amber-50 text-amber-900",
+  },
+  {
+    status: "returned",
+    title: "أوردرات رجعت ومتسلمتش",
+    className: "border-orange-300 bg-orange-50 text-orange-900",
+  },
+  {
+    status: "returning",
+    title: "أوردرات في الطريق ليك",
+    className: "border-orange-200 bg-orange-50/60 text-orange-800",
+  },
+];
+
 // الأوردر الملغي بيتقفل تعديله من برة بعد 30 ثانية
 const CANCEL_LOCK_MS = 30 * 1000;
 
@@ -154,6 +173,25 @@ export default async function OrdersPage({
   const canComments = can(user, "orders.comments");
   const supabase = await createClient();
 
+  // أوردرات محتاجة تصرّف مننا — بنعرضها فوق عشان ماتضيعش في القايمة.
+  // مش أرشيف، ومش محدودة بفلتر الوقت — دي حاجات واقفة لازم تتحرك.
+  const needsAttention =
+    (
+      await supabase
+        .from("orders")
+        .select("id, order_number, order_status")
+        .in(
+          "order_status",
+          NEEDS_ATTENTION.map((g) => g.status)
+        )
+        .eq("archived", false)
+        .order("order_date", { ascending: false })
+        .limit(60)
+        .overrideTypes<
+          { id: string; order_number: string; order_status: string }[]
+        >()
+    ).data ?? [];
+
   // طلبات الحذف المستنية موافقة الأدمن (مبدأ الشخصين)
   const pendingDeletions = user.isAdmin
     ? (
@@ -257,6 +295,36 @@ export default async function OrdersPage({
       {bulk && (
         <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
           تم تغيير حالة {bulk} أوردر
+        </div>
+      )}
+
+      {/* أوردرات واقفة محتاجة تصرّف — دي بتضيع في وسط القايمة لو محدش نبّه عليها */}
+      {needsAttention.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {NEEDS_ATTENTION.map((group) => {
+            const items = needsAttention.filter(
+              (o) => o.order_status === group.status
+            );
+            if (items.length === 0) return null;
+            return (
+              <Link
+                key={group.status}
+                href={periodQS(`status=${group.status}`)}
+                className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${group.className}`}
+              >
+                <span className="text-sm font-bold">
+                  {group.title} ({items.length})
+                </span>
+                <span className="truncate text-xs opacity-80">
+                  {items
+                    .slice(0, 3)
+                    .map((o) => o.order_number)
+                    .join("، ")}
+                  {items.length > 3 ? " وغيرهم" : ""}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
 
