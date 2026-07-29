@@ -12,7 +12,11 @@ import {
   runBostaReturn,
 } from "@/lib/bosta/create";
 import { runBostaUpdateCod } from "@/lib/bosta/awb";
-import { ORDER_STATUS_OPTIONS, orderStatusBadge } from "@/lib/format";
+import {
+  MANUAL_ONLY_BY_FLOW,
+  ORDER_STATUS_OPTIONS,
+  orderStatusBadge,
+} from "@/lib/format";
 
 type Supa = ReturnType<typeof createAdminClient>;
 
@@ -358,7 +362,9 @@ export async function updateOrderStatusInline(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   const status = String(formData.get("status") ?? "");
 
-  const isValidStatus = ORDER_STATUS_OPTIONS.some((o) => o.value === status);
+  const isValidStatus =
+    ORDER_STATUS_OPTIONS.some((o) => o.value === status) &&
+    !MANUAL_ONLY_BY_FLOW.includes(status);
   if (!orderId || !isValidStatus) return;
 
   const me = await getSessionUser();
@@ -391,7 +397,9 @@ export async function bulkUpdateStatus(
   const orderIds = formData.getAll("order_ids").map(String).filter(Boolean);
   const status = String(formData.get("status") ?? "");
 
-  const isValidStatus = ORDER_STATUS_OPTIONS.some((o) => o.value === status);
+  const isValidStatus =
+    ORDER_STATUS_OPTIONS.some((o) => o.value === status) &&
+    !MANUAL_ONLY_BY_FLOW.includes(status);
   if (orderIds.length === 0 || !isValidStatus) {
     return { ok: false, error: "اختار أوردرات وحالة صحيحة" };
   }
@@ -868,9 +876,10 @@ export async function updateOrderStatus(formData: FormData) {
     : `/orders/${orderId}`;
   const joiner = returnTo.includes("?") ? "&" : "?";
 
-  const isValidStatus = ORDER_STATUS_OPTIONS.some(
-    (option) => option.value === status
-  );
+  // "مرتجع بعد التسليم" ماتتحطش من هنا — مسارها زرار المرتجع بس
+  const isValidStatus =
+    ORDER_STATUS_OPTIONS.some((option) => option.value === status) &&
+    !MANUAL_ONLY_BY_FLOW.includes(status);
   if (!orderId || !isValidStatus) {
     redirect(
       returnTo + joiner + "error=" + encodeURIComponent("الحالة المختارة مش صحيحة")
@@ -1023,8 +1032,9 @@ export async function createReturnShipment(formData: FormData) {
 
   let ok = false;
   let message = "معرفناش نعمل شحنة المرتجع";
+  const supabase = createAdminClient();
   try {
-    const res = await runBostaReturn({ db: createAdminClient(), orderId });
+    const res = await runBostaReturn({ db: supabase, orderId });
     if (res.ok) ok = true;
     else message = res.error;
   } catch (e) {
@@ -1033,7 +1043,19 @@ export async function createReturnShipment(formData: FormData) {
   }
 
   if (ok) {
-    await logActivity(me, "bosta.return", "عمل شحنة مرتجع من عند العميل");
+    // الشحنة العكسية اتعملت — الأوردر بقى "في الطريق ليك".
+    // **مش "مرتجع بعد التسليم" من دلوقتي** — دي بتتحط لما البضاعة توصلك
+    // فعلًا، والمزامنة هي اللي بتحطها لما شحنة المرتجع تخلص.
+    await supabase
+      .from("orders")
+      .update({ order_status: "returning" })
+      .eq("id", orderId);
+
+    await logActivity(
+      me,
+      "bosta.return",
+      `عمل شحنة مرتجع لأوردر ${await orderNo(supabase, orderId)} — بوسطة هتسحبها من العميل`
+    );
   }
   revalidatePath(`/orders/${orderId}`);
   redirect(

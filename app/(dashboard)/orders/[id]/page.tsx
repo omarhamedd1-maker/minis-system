@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   BUNDLE_COVERS,
+  MANUAL_ONLY_BY_FLOW,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
   collectionState,
@@ -395,7 +396,10 @@ export default async function OrderDetailsPage({
             badgeLabel={badge.label}
             badgeClass={badge.className}
             returnTo={`/orders/${order.id}`}
-            options={ORDER_STATUS_OPTIONS}
+            // "مرتجع بعد التسليم" مالهاش قايمة — بتتعمل من زرار المرتجع بس
+            options={ORDER_STATUS_OPTIONS.filter(
+              (o) => !MANUAL_ONLY_BY_FLOW.includes(o.value)
+            )}
             updateAction={updateOrderStatus}
           />
         </div>

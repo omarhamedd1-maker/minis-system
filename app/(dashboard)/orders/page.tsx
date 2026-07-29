@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
+  MANUAL_ONLY_BY_FLOW,
   ORDER_STATUS_OPTIONS,
   SHIPMENT_STATUSES,
   cairoToday,
@@ -13,7 +14,12 @@ import {
 // حالات الشحن بتتحدّث من بوسطة — بنقفل تغييرها من القايمة برة
 const AT_SHIPPING = SHIPMENT_STATUSES;
 // ونشيلها من قايمة الاختيار برة (التعديل اليدوي من جوه الأوردر بس)
-const LIST_STATUS_OPTIONS_EXCLUDED = SHIPMENT_STATUSES;
+// حالات الشحن بتيجي من بوسطة، و"مرتجع بعد التسليم" بتتعمل من زرار المرتجع
+// جوّه الأوردر بس — الاتنين مش بيتحطوا بالإيد من القايمة
+const LIST_STATUS_OPTIONS_EXCLUDED = [
+  ...SHIPMENT_STATUSES,
+  ...MANUAL_ONLY_BY_FLOW,
+];
 // الأوردر الملغي بيتقفل تعديله من برة بعد 30 ثانية
 const CANCEL_LOCK_MS = 30 * 1000;
 
@@ -125,11 +131,14 @@ export default async function OrdersPage({
   const returnTo = `/orders${returnParams.toString() ? `?${returnParams}` : ""}`;
   // بيبني لينك للأوردرات مع الحفاظ على فلتر الوقت
   const nowMs = currentMs();
+  // بيبني رابط الفلتر وهو **شايل البحث والفترة معاه**.
+  // قبل كده كان بيشيل كلمة البحث، فأول ما تدوس على أي شريحة حالة بعد ما
+  // تدوّر، البحث يضيع وتبدأ من الأول.
   const periodQS = (extra: string) => {
-    const parts = [extra, period !== "all" ? `period=${period}` : ""].filter(
-      Boolean
-    );
-    return `/orders${parts.length ? `?${parts.join("&")}` : ""}`;
+    const p = new URLSearchParams(extra);
+    if (period !== "all" && !p.has("period")) p.set("period", period);
+    if (searchTerm && !p.has("q")) p.set("q", searchTerm);
+    return `/orders${p.toString() ? `?${p}` : ""}`;
   };
   // عدد المعروض: 50 افتراضي، وبيزيد بزرار "عرض المزيد". في البحث بنجيب أكتر
   const showCount = Math.min(
