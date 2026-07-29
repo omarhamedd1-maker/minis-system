@@ -30,7 +30,7 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     confirmed: { label: "مؤكد", className: "bg-sky-50 text-sky-700" },
     packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
     // الشحنة اتعملت عند بوسطة ومستنية المندوب
-    ready: { label: "جاهز للشحن", className: "bg-cyan-50 text-cyan-700" },
+    ready: { label: "جاهز للبيك اب", className: "bg-cyan-50 text-cyan-700" },
     // المندوب استلمها من عندنا
     shipped: { label: "مع المندوب", className: "bg-indigo-50 text-indigo-700" },
     // خرجت من الفرع وماشية للعميل

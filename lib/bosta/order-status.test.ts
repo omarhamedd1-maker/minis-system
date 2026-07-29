@@ -25,7 +25,7 @@ describe("ترجمة حالات بوسطة", () => {
     expect(mapBostaState("Received at warehouse")).toBe("shipped");
   });
 
-  it("Created و Waiting for pickup ← جاهز للشحن", () => {
+  it("Created و Waiting for pickup ← جاهز للبيك اب", () => {
     expect(mapBostaState("Created")).toBe("ready");
     expect(mapBostaState("Waiting for pickup")).toBe("ready");
     expect(mapBostaState("Pickup requested")).toBe("ready");
