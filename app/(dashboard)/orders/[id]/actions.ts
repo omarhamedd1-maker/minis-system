@@ -12,6 +12,7 @@ import {
   runBostaReturn,
 } from "@/lib/bosta/create";
 import { runBostaUpdateCod } from "@/lib/bosta/awb";
+import { runShopifyOrderPush } from "@/lib/shopify/order-push";
 import {
   MANUAL_ONLY_BY_FLOW,
   ORDER_STATUS_OPTIONS,
@@ -30,46 +31,45 @@ function pushOrderToShopify(orderId: string) {
     const db = createAdminClient();
 
     const toShopify = (async () => {
-      const key = process.env.SYNC_KEY;
-      const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!key) {
-        await logActivity(
-          null,
-          "shopify.push",
-          `⚠️ مفيش SYNC_KEY — تعديل أوردر ${await orderNo(db, orderId)} مااتبعتش لشوبيفاي`,
-          orderId
-        );
-        return;
-      }
       try {
-        const res = await fetch(
-          `${base}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
-          { method: "GET", signal: AbortSignal.timeout(20000) }
-        );
-        // **لازم نبص على الرد.** قبل كده كنا بنبعت وخلاص، فلو شوبيفاي رفضت
-        // مكانش حد يعرف — وأوردر أحمد خالد فضل بقطعة واحدة في شوبيفاي بعد
-        // ما زوّدناها عندنا، ومحدش خد باله.
-        const body = await res.json().catch(() => null);
-        const ok = res.ok && body?.ok !== false;
+        const res = await runShopifyOrderPush({ db, orderId });
 
-        if (!ok) {
-          const why =
-            body?.error ??
-            body?.message ??
-            (res.status === 401
-              ? "المفتاح مرفوض"
-              : `شوبيفاي ردّت بكود ${res.status}`);
+        if (!res.ok) {
+          // **لازم نبص على الرد.** قبل كده كنا بنبعت وخلاص، فلو شوبيفاي رفضت
+          // مكانش حد يعرف — وأوردر أحمد خالد فضل بقطعة واحدة في شوبيفاي بعد
+          // ما زوّدناها عندنا، ومحدش خد باله.
           await logActivity(
             null,
             "shopify.push",
-            `⚠️ تعديل أوردر ${await orderNo(db, orderId)} مااتبعتش لشوبيفاي: ${why}`,
+            `⚠️ تعديل أوردر ${await orderNo(db, orderId)} مااتبعتش لشوبيفاي: ${res.error}`,
             orderId
           );
-        } else if (body?.changed) {
+          return;
+        }
+
+        // الأوردر الملغي بنعدّي عليه من غير كلام — ده وضع طبيعي مش مشكلة
+        if (res.skipped) return;
+
+        if (res.changed > 0) {
           await logActivity(
             null,
             "shopify.push",
             `تعديل أوردر ${await orderNo(db, orderId)} اتبعت لشوبيفاي`,
+            orderId
+          );
+        }
+
+        // **ده إصلاح "مفيش فرق" وفيه فرق.** شوبيفاي مابتخليكش ترفع سعر بند،
+        // فالفرق ده مستحيل ننفّذه — والقديمة كانت بتسكت عليه وترجّع نجاح.
+        // بقى بيتسجّل، لأن معناه إن سعر عندك مش موجود عند شوبيفاي.
+        if (res.plan.cantRaise.length > 0) {
+          const detail = res.plan.cantRaise
+            .map((c) => `${c.system} بدل ${c.base}`)
+            .join(" ، ");
+          await logActivity(
+            null,
+            "shopify.push",
+            `⚠️ سعر أوردر ${await orderNo(db, orderId)} أعلى من سعر الكتالوج فشوبيفاي مابتقبلوش (${detail}) — ظبّطه من لوحة شوبيفاي`,
             orderId
           );
         }
