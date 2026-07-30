@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { failedDeliveryMessage, sendTelegram, syncDownMessage } from "./telegram";
+import {
+  discoverChats,
+  failedDeliveryMessage,
+  sendTelegram,
+  syncDownMessage,
+} from "./telegram";
 
 function fakeDb(creds: Record<string, unknown> | null): SupabaseClient {
   return {
@@ -109,5 +114,55 @@ describe("نص التنبيه", () => {
     const m = syncDownMessage("واقفة من ١٢٠ دقيقة");
     expect(m).toContain("المزامنة مع بوسطة واقفة");
     expect(m).toContain("الأرقام في السيستم قديمة");
+  });
+});
+
+describe("لقط الجروب لوحده", () => {
+  const updates = (result: unknown[]) =>
+    vi.fn(async () => ({ ok: true, json: async () => ({ ok: true, result }) }) as Response);
+
+  it("بيلاقي الجروب من الرسايل", async () => {
+    const f = updates([
+      { message: { chat: { id: -1001, title: "مينيس - تنبيهات" } } },
+      { message: { chat: { id: -1001, title: "مينيس - تنبيهات" } } },
+    ]);
+    const r = await discoverChats("123:ABC", f as unknown as typeof fetch);
+    if (!r.ok) throw new Error(r.error);
+    // المكرر بيتشال
+    expect(r.chats).toEqual([{ id: "-1001", title: "مينيس - تنبيهات" }]);
+  });
+
+  it("بيلاقيه كمان من إضافة البوت للجروب", async () => {
+    const f = updates([
+      { my_chat_member: { chat: { id: -2002, title: "جروب تاني" } } },
+    ]);
+    const r = await discoverChats("123:ABC", f as unknown as typeof fetch);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.chats[0].id).toBe("-2002");
+  });
+
+  it("مفيش رسايل = قايمة فاضية مش خطأ", async () => {
+    const r = await discoverChats("123:ABC", updates([]) as unknown as typeof fetch);
+    expect(r).toEqual({ ok: true, chats: [] });
+  });
+
+  it("توكن غلط = رسالة تليجرام نفسها", async () => {
+    const f = vi.fn(
+      async () =>
+        ({
+          ok: false,
+          status: 401,
+          json: async () => ({ ok: false, description: "Unauthorized" }),
+        }) as Response
+    );
+    const r = await discoverChats("bad", f as unknown as typeof fetch);
+    expect(r).toEqual({ ok: false, error: "Unauthorized" });
+  });
+
+  it("توكن فاضي مابيحاولش", async () => {
+    const f = vi.fn();
+    const r = await discoverChats("  ", f as unknown as typeof fetch);
+    expect(r.ok).toBe(false);
+    expect(f).not.toHaveBeenCalled();
   });
 });

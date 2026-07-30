@@ -160,7 +160,7 @@ export default async function SettingsPage({
           </div>
           <div>
             <label htmlFor="telegram_chat_id" className={label}>
-              رقم الجروب
+              رقم الجروب — سيبه فاضي والسيستم يلاقيه لوحده
             </label>
             <input
               id="telegram_chat_id"
@@ -193,16 +193,15 @@ export default async function SettingsPage({
         </form>
 
         <div className="mt-4 rounded-xl bg-gray-50 p-3 text-[11px] leading-6 text-gray-500">
-          <span className="font-bold text-gray-700">إزاي تجيبهم:</span>
+          <span className="font-bold text-gray-700">٣ خطوات بس:</span>
           <br />
           ١. في تليجرام كلّم <span dir="ltr">@BotFather</span> واكتب{" "}
           <span dir="ltr">/newbot</span> — هيديك التوكن.
           <br />
-          ٢. اعمل جروب وضيف البوت فيه.
+          ٢. اعمل جروب، ضيف البوت فيه، وابعت أي رسالة في الجروب.
           <br />
-          ٣. ابعت أي رسالة في الجروب، وبعدين افتح{" "}
-          <span dir="ltr">api.telegram.org/bot&lt;التوكن&gt;/getUpdates</span>{" "}
-          وخد الرقم اللي في <span dir="ltr">chat.id</span> (بيبدأ بسالب).
+          ٣. الزق التوكن فوق ودوس احفظ — <b>السيستم هيلاقي الجروب لوحده</b>{" "}
+          ويبعتلك رسالة تجربة.
           <br />
           وسيب الخانتين فاضيين لو عايز توقّف التنبيهات.
         </div>

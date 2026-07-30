@@ -72,6 +72,61 @@ export async function sendTelegram(
   }
 }
 
+export type FoundChat = { id: string; title: string };
+
+/**
+ * بيدوّر على الجروبات اللي البوت شايفها.
+ * الخطوة دي هي أوحش خطوة في تظبيط تليجرام (لازم تفتح لينك getUpdates وتقرا
+ * JSON بإيدك) — فبنعملها إحنا. كل اللي على المستخدم إنه يلزق التوكن.
+ */
+export async function discoverChats(
+  rawToken: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<{ ok: true; chats: FoundChat[] } | { ok: false; error: string }> {
+  const token = String(rawToken ?? "").trim();
+  if (!token) return { ok: false, error: "اكتب توكن البوت الأول" };
+
+  try {
+    const res = await fetchImpl(`${TELEGRAM_API}/bot${token}/getUpdates`, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || json?.ok === false) {
+      return {
+        ok: false,
+        error: String(json?.description ?? `تليجرام ردّ بكود ${res.status}`),
+      };
+    }
+
+    // بنلم كل المحادثات من الرسايل، ونشيل المكرر
+    const byId = new Map<string, string>();
+    for (const u of json?.result ?? []) {
+      const chat =
+        u?.message?.chat ??
+        u?.channel_post?.chat ??
+        u?.my_chat_member?.chat ??
+        null;
+      if (!chat?.id) continue;
+      const title =
+        chat.title ??
+        [chat.first_name, chat.last_name].filter(Boolean).join(" ") ??
+        String(chat.id);
+      byId.set(String(chat.id), String(title || chat.id));
+    }
+
+    return {
+      ok: true,
+      chats: [...byId.entries()].map(([id, title]) => ({ id, title })),
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "معرفناش نوصل لتليجرام",
+    };
+  }
+}
+
 /** بيتأكد إن البوت والجروب شغالين — لزرار "جرّب" في الإعدادات */
 export async function testTelegram(
   db: SupabaseClient,

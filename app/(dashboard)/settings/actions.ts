@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { testConnection } from "@/lib/bosta/client";
-import { testTelegram } from "@/lib/telegram";
+import { discoverChats, testTelegram } from "@/lib/telegram";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
 // مابيتنفذش، فمانحتاجش else في كل مكان
@@ -50,7 +50,7 @@ export async function saveBostaKey(formData: FormData) {
 export async function saveTelegram(formData: FormData) {
   const me = await requirePermission("admin.settings");
   const token = String(formData.get("telegram_bot_token") ?? "").trim();
-  const chatId = String(formData.get("telegram_chat_id") ?? "").trim();
+  let chatId = String(formData.get("telegram_chat_id") ?? "").trim();
 
   const db = createAdminClient();
 
@@ -70,7 +70,26 @@ export async function saveTelegram(formData: FormData) {
     back("التنبيهات اتوقفت", true);
   }
 
-  if (!token || !chatId) back("محتاج التوكن ورقم الجروب الاتنين");
+  if (!token) back("اكتب توكن البوت");
+
+  // مافيش رقم جروب؟ نلاقيه إحنا بدل ما المستخدم يقرا JSON بإيده
+  if (!chatId) {
+    const found = await discoverChats(token);
+    if (!found.ok) back("التوكن مارضيش يشتغل: " + found.error);
+
+    if (found.chats.length === 0) {
+      back(
+        "البوت مش شايف أي جروب. ضيفه في الجروب وابعت أي رسالة هناك، وبعدين دوس احفظ تاني."
+      );
+    }
+    if (found.chats.length > 1) {
+      back(
+        "البوت شايف أكتر من محادثة — اكتب رقم اللي عايزه في خانة رقم الجروب: " +
+          found.chats.map((c) => `${c.title} (${c.id})`).join(" · ")
+      );
+    }
+    chatId = found.chats[0].id;
+  }
 
   const { error } = await db
     .from("tenant_credentials")
