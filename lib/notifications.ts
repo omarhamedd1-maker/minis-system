@@ -33,11 +33,8 @@ const ATTENTION_STATUSES = [
     title: "أوردرات رجعت ومتسلمتش",
     level: "warn" as NoticeLevel,
   },
-  {
-    status: "returning",
-    title: "أوردرات في الطريق ليك",
-    level: "info" as NoticeLevel,
-  },
+  // "في الطريق ليك" مالهاش إشعار بقصد — عمر مش محتاج ينبّه على حاجة
+  // ماشية في السكة، هو محتاج ينبّه على اللي واقف ومحتاج قرار.
 ];
 
 const ORDER = { danger: 0, warn: 1, info: 2 };

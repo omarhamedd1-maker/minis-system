@@ -78,17 +78,25 @@ async function logStatusChange(
   db: SupabaseClient,
   orderNumber: string | number | null,
   from: string | null,
-  to: string
+  to: string,
+  orderId?: string
 ) {
+  const row = {
+    actor_id: null,
+    actor_name: "المزامنة مع بوسطة",
+    action: "order.status",
+    summary: `حالة أوردر ${orderNumber ?? ""} بقت ${orderStatusBadge(to).label}${
+      from ? ` (كانت ${orderStatusBadge(from).label})` : ""
+    }`,
+  };
+  const log = db.from("activity_log");
   try {
-    await db.from("activity_log").insert({
-      actor_id: null,
-      actor_name: "المزامنة مع بوسطة",
-      action: "order.status",
-      summary: `حالة أوردر ${orderNumber ?? ""} بقت ${orderStatusBadge(to).label}${
-        from ? ` (كانت ${orderStatusBadge(from).label})` : ""
-      }`,
-    });
+    // بنربطه بالأوردر نفسه — التجميع بالنص كان بيلقّط أوردرات تانية
+    const { error } = await log.insert(
+      (orderId ? { ...row, order_id: orderId } : row) as never
+    );
+    // الخانة لسه مااتعملتش؟ نكتب من غيرها بدل ما السطر يضيع
+    if (error && orderId) await log.insert(row as never);
   } catch {
     // الجدول مش موجود أو حصل خطأ؟ المزامنة ماتوقفش عشان سطر سجل
   }
@@ -256,7 +264,8 @@ export async function runBostaSync(opts: {
           db,
           m.order.order_number,
           m.order.order_status,
-          changes.order_status
+          changes.order_status,
+          m.order.id
         );
       }
     }
@@ -354,7 +363,8 @@ export async function runBostaSync(opts: {
           db,
           row.order_number,
           row.order_status,
-          decision.changes.order_status
+          decision.changes.order_status,
+          row.id
         );
       }
     }

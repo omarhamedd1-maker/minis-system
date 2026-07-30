@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   BUNDLE_COVERS,
-  MANUAL_ONLY_BY_FLOW,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
   collectionState,
@@ -96,7 +95,18 @@ export default async function OrderDetailsPage({
   const canPrint = can(user, "ship.print");
   const isAdmin = user.isAdmin;
   // بعد التسليم أو المرتجع مفيش لزمة نطبع بوليصة
-  const PRINT_DONE_STATUSES = ["delivered", "returned"];
+  // البوليصة بتتلزق على الكرتونة **قبل** ما المندوب ياخدها. أول ما بوسطة
+  // تستلم الشحنة خلاص مالهاش لازمة — والزرار كان بيفضل ظاهر ويلخبط.
+  // (وبوسطة نفسها بترفض تديك بوليصة بعد التسليم.)
+  const PRINT_DONE_STATUSES = [
+    "shipped",
+    "out_for_delivery",
+    "delivered",
+    "returning",
+    "returned",
+    "returned_after_delivery",
+    "cancelled",
+  ];
   const supabase = await createClient();
 
   const { data: order, error } = await supabase
@@ -198,22 +208,41 @@ export default async function OrderDetailsPage({
         })
       : "—";
 
-  const { data: orderLog } = order.order_number
-    ? await createAdminClient()
+  // السجل بيتجمّع بـ `order_id` — التجميع بتشابه النص كان بيلقّط حركات
+  // مالهاش علاقة (أوردر ١١٣٥٩ بيطلع في سجل ١٣٥٩، ومصروف بمبلغ ١٣٥٩ كمان).
+  // الصفوف القديمة مالهاش order_id فبنضمّها بالنص، ولو الخانة لسه مااتعملتش
+  // بنرجع للنص لوحده بدل ما السجل يفضى.
+  type LogRow = {
+    actor_name: string | null;
+    action: string;
+    summary: string | null;
+    created_at: string;
+  };
+  const logDb = createAdminClient();
+  const byText = `summary.like.%${order.order_number}%`;
+  let orderLog: LogRow[] = [];
+  {
+    const both = await logDb
+      .from("activity_log")
+      .select("actor_name, action, summary, created_at")
+      .or(order.order_number ? `order_id.eq.${id},${byText}` : `order_id.eq.${id}`)
+      .order("created_at", { ascending: true })
+      .limit(60)
+      .overrideTypes<LogRow[]>();
+
+    if (both.error && order.order_number) {
+      const textOnly = await logDb
         .from("activity_log")
         .select("actor_name, action, summary, created_at")
         .like("summary", `%${order.order_number}%`)
         .order("created_at", { ascending: true })
         .limit(60)
-        .overrideTypes<
-          {
-            actor_name: string | null;
-            action: string;
-            summary: string | null;
-            created_at: string;
-          }[]
-        >()
-    : { data: [] };
+        .overrideTypes<LogRow[]>();
+      orderLog = textOnly.data ?? [];
+    } else {
+      orderLog = both.data ?? [];
+    }
+  }
 
   type Ev = { at: string; text: string; when: string; who?: string; dot: string };
   const timeline: Ev[] = [];
@@ -396,10 +425,10 @@ export default async function OrderDetailsPage({
             badgeLabel={badge.label}
             badgeClass={badge.className}
             returnTo={`/orders/${order.id}`}
-            // "مرتجع بعد التسليم" مالهاش قايمة — بتتعمل من زرار المرتجع بس
-            options={ORDER_STATUS_OPTIONS.filter(
-              (o) => !MANUAL_ONLY_BY_FLOW.includes(o.value)
-            )}
+            // جوّه الأوردر القايمة كاملة — "مرتجع بعد التسليم" موجودة هنا
+            // لأن ساعات المرتجع بيتعمل في بوسطة بالإيد ولازم تظبّطها بنفسك.
+            // برّه في قايمة الأوردرات مش موجودة.
+            options={ORDER_STATUS_OPTIONS}
             updateAction={updateOrderStatus}
           />
         </div>

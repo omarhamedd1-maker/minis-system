@@ -16,6 +16,9 @@ export type TenantCredentials = {
   shopifyShop: string | null;
   shopifyAccessToken: string | null;
   shopifyWebhookSecret: string | null;
+  /** بوت تليجرام بتاع البيزنس — التنبيهات بتروح على جروبه */
+  telegramBotToken: string | null;
+  telegramChatId: string | null;
 };
 
 /**
@@ -40,6 +43,8 @@ export async function loadTenantCredentials(
     shopifyShop: data?.shopify_shop ?? null,
     shopifyAccessToken: data?.shopify_access_token ?? null,
     shopifyWebhookSecret: data?.shopify_webhook_secret ?? null,
+    telegramBotToken: data?.telegram_bot_token ?? null,
+    telegramChatId: data?.telegram_chat_id ?? null,
   };
 }
 

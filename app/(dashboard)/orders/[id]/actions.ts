@@ -52,13 +52,15 @@ function pushOrderToShopify(orderId: string) {
           await logActivity(
             null,
             "bosta.cod",
-            `⚠️ معرفناش نحدّث تحصيل أوردر ${await orderNo(db, orderId)} عند بوسطة: ${res.error}`
+            `⚠️ معرفناش نحدّث تحصيل أوردر ${await orderNo(db, orderId)} عند بوسطة: ${res.error}`,
+            orderId
           );
         } else if (res.changed) {
           await logActivity(
             null,
             "bosta.cod",
-            `تحصيل أوردر ${await orderNo(db, orderId)} عند بوسطة اتغيّر من ${res.was ?? "؟"} لـ ${res.cod}`
+            `تحصيل أوردر ${await orderNo(db, orderId)} عند بوسطة اتغيّر من ${res.was ?? "؟"} لـ ${res.cod}`,
+            orderId
           );
         }
       } catch (e) {
@@ -67,7 +69,8 @@ function pushOrderToShopify(orderId: string) {
           "bosta.cod",
           `⚠️ تحديث تحصيل أوردر ${await orderNo(db, orderId)} وقع: ${
             e instanceof Error ? e.message : "سبب مش معروف"
-          }`
+          }`,
+          orderId
         );
       }
     })();
@@ -178,7 +181,7 @@ export async function addOrderItem(formData: FormData) {
   await adjustStock(supabase, variantId, -quantity, orderId, "إضافة منتج لأوردر");
 
   await pushOrderToShopify(orderId);
-  await logActivity(me, "order.items", `أضاف منتج لأوردر ${await orderNo(supabase, orderId)}`);
+  await logActivity(me, "order.items", `أضاف منتج لأوردر ${await orderNo(supabase, orderId)}`, orderId);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -230,7 +233,7 @@ export async function deleteOrderItem(formData: FormData) {
   }
 
   await pushOrderToShopify(orderId);
-  await logActivity(me, "order.items", `مسح منتج من أوردر ${await orderNo(supabase, orderId)}`);
+  await logActivity(me, "order.items", `مسح منتج من أوردر ${await orderNo(supabase, orderId)}`, orderId);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -298,7 +301,7 @@ export async function updateOrderItem(formData: FormData) {
   }
 
   await pushOrderToShopify(orderId);
-  await logActivity(me, "order.items", `عدّل كمية بند في أوردر ${await orderNo(supabase, orderId)}`);
+  await logActivity(me, "order.items", `عدّل كمية بند في أوردر ${await orderNo(supabase, orderId)}`, orderId);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -350,7 +353,7 @@ export async function updateDiscount(formData: FormData) {
   }
 
   await pushOrderToShopify(orderId);
-  await logActivity(me, "order.discount", `غيّر خصم أوردر ${await orderNo(supabase, orderId)} لـ ${discount}`);
+  await logActivity(me, "order.discount", `غيّر خصم أوردر ${await orderNo(supabase, orderId)} لـ ${discount}`, orderId);
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -385,7 +388,8 @@ export async function updateOrderStatusInline(formData: FormData) {
   await logActivity(
     me,
     "order.status",
-    `غيّر حالة أوردر ${await orderNo(supabase, orderId)} لـ ${orderStatusBadge(status).label}`
+    `غيّر حالة أوردر ${await orderNo(supabase, orderId)} لـ ${orderStatusBadge(status).label}`,
+    orderId
   );
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
@@ -540,7 +544,7 @@ export async function updateShippingPrice(formData: FormData) {
     );
   }
 
-  await logActivity(me, "order.shipping", `غيّر شحن أوردر ${await orderNo(supabase, orderId)} لـ ${shippingPrice}`);
+  await logActivity(me, "order.shipping", `غيّر شحن أوردر ${await orderNo(supabase, orderId)} لـ ${shippingPrice}`, orderId);
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(`/orders/${orderId}?saved=1`);
@@ -859,7 +863,7 @@ export async function linkBostaShipment(formData: FormData) {
     );
   }
 
-  await logActivity(me, "bosta.link", `ربط شحنة ${tracking} بأوردر ${await orderNo(supabase, orderId)}`);
+  await logActivity(me, "bosta.link", `ربط شحنة ${tracking} بأوردر ${await orderNo(supabase, orderId)}`, orderId);
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
   redirect(`/orders/${orderId}?saved=1`);
@@ -876,10 +880,12 @@ export async function updateOrderStatus(formData: FormData) {
     : `/orders/${orderId}`;
   const joiner = returnTo.includes("?") ? "&" : "?";
 
-  // "مرتجع بعد التسليم" ماتتحطش من هنا — مسارها زرار المرتجع بس
-  const isValidStatus =
-    ORDER_STATUS_OPTIONS.some((option) => option.value === status) &&
-    !MANUAL_ONLY_BY_FLOW.includes(status);
+  // ده الأكشن اللي جوّه الأوردر — هنا "مرتجع بعد التسليم" **مسموحة**، لأن
+  // عمر ساعات بيعمل المرتجع في بوسطة بإيده فمحتاج يظبّط الحالة بنفسه.
+  // اللي ممنوع هو تحطها من قايمة الأوردرات برّه (الأكشنين اللي فوق).
+  const isValidStatus = ORDER_STATUS_OPTIONS.some(
+    (option) => option.value === status
+  );
   if (!orderId || !isValidStatus) {
     redirect(
       returnTo + joiner + "error=" + encodeURIComponent("الحالة المختارة مش صحيحة")
@@ -923,7 +929,8 @@ export async function updateOrderStatus(formData: FormData) {
   await logActivity(
     me,
     "order.status",
-    `غيّر حالة أوردر ${o?.order_number ?? ""} لـ ${orderStatusBadge(status).label}`.trim()
+    `غيّر حالة أوردر ${o?.order_number ?? ""} لـ ${orderStatusBadge(status).label}`.trim(),
+    orderId
   );
 
   revalidatePath(`/orders/${orderId}`);
@@ -950,7 +957,7 @@ export async function sendOrderToBosta(formData: FormData) {
   }
 
   if (ok) {
-    await logActivity(me, "bosta.send", `بعت أوردر لبوسطة كشحنة`);
+    await logActivity(me, "bosta.send", `بعت أوردر لبوسطة كشحنة`, orderId);
   }
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -1054,7 +1061,8 @@ export async function createReturnShipment(formData: FormData) {
     await logActivity(
       me,
       "bosta.return",
-      `عمل شحنة مرتجع لأوردر ${await orderNo(supabase, orderId)} — بوسطة هتسحبها من العميل`
+      `عمل شحنة مرتجع لأوردر ${await orderNo(supabase, orderId)} — بوسطة هتسحبها من العميل`,
+      orderId
     );
   }
   revalidatePath(`/orders/${orderId}`);
@@ -1133,7 +1141,8 @@ export async function saveReturnedItems(formData: FormData) {
   await logActivity(
     me,
     "order.return",
-    `سجّل مرتجع ${totalReturned} قطعة لأوردر ${await orderNo(supabase, orderId)}`
+    `سجّل مرتجع ${totalReturned} قطعة لأوردر ${await orderNo(supabase, orderId)}`,
+    orderId
   );
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/products");
@@ -1163,7 +1172,8 @@ export async function saveReturnNote(formData: FormData) {
   await logActivity(
     me,
     "order.return_note",
-    `سجّل تفاصيل مرتجع لأوردر ${await orderNo(supabase, orderId)}`
+    `سجّل تفاصيل مرتجع لأوردر ${await orderNo(supabase, orderId)}`,
+    orderId
   );
   revalidatePath(`/orders/${orderId}`);
   redirect(`/orders/${orderId}?saved=1`);
@@ -1205,7 +1215,8 @@ export async function updatePayment(formData: FormData) {
   await logActivity(
     me,
     "order.payment",
-    `غيّر طريقة الدفع لأوردر ${await orderNo(supabase, orderId)} (مدفوع ${amountPaid})`
+    `غيّر طريقة الدفع لأوردر ${await orderNo(supabase, orderId)} (مدفوع ${amountPaid})`,
+    orderId
   );
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
