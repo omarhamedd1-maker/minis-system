@@ -27,6 +27,23 @@ export type BostaDelivery = {
   exceptionReason?: string | null;
 };
 
+/**
+ * بيحوّل تاريخ بوسطة لصيغة بوستجرس بيفهمها.
+ *
+ * **ده مش تنظيف زايد.** بوسطة بترجّع التاريخ بشكل
+ * `"Wed Jul 29 2026 16:11:28 GMT+0000 (Coordinated Universal Time)"` —
+ * ودي صيغة `Date.toString()` مش ISO، وبوستجرس بيرفضها. النتيجة كانت إن
+ * التاريخ مايتحفظش، والمزامنة تحاول تكتبه في ٢٢٢ أوردر كل ١٥ دقيقة وتفشل.
+ * (سجل `sync_runs` هو اللي كشفها.)
+ *
+ * وبنرجّع null لو التاريخ مش مفهوم — أحسن من إننا نكتب حاجة غلط.
+ */
+export function isoDate(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const t = new Date(raw);
+  return Number.isNaN(t.getTime()) ? null : t.toISOString();
+}
+
 /** سبب وقوف الشحنة عند بوسطة (عنوان مش واضح، العميل مش بيرد…) */
 export function deliveryException(d: BostaDelivery): string | null {
   return (
@@ -107,8 +124,9 @@ export function decideSync(
   // تاريخ إنشاء الشحنة عند بوسطة — منه بنعرف إنها واقفة من كام يوم.
   // بنكتبه مرة واحدة وبس؛ لو الأوردر عليه شحنة جديدة، رقم التتبع بيتغيّر
   // فوق فبنجدّده معاه.
-  if (d.createdAt && o.bosta_created_at !== d.createdAt) {
-    changes.bosta_created_at = d.createdAt;
+  const created = isoDate(d.createdAt);
+  if (created && o.bosta_created_at !== created) {
+    changes.bosta_created_at = created;
     // شحنة جديدة = صفحة جديدة، فالتنبيه القديم يتشال
     if (changes.bosta_tracking) changes.bosta_stale_alerted_day = null;
   }

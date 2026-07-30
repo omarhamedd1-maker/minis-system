@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideSync, deliveryOrderNumber, type OurOrder } from "./reconcile";
+import { decideSync, isoDate, deliveryOrderNumber, type OurOrder } from "./reconcile";
 
 const NOW = new Date("2026-07-28T12:00:00.000Z");
 
@@ -173,5 +173,51 @@ describe("قراءة رقم الأوردر من الشحنة", () => {
 
   it("بيرجّع فاضي لو مفيش رقم", () => {
     expect(deliveryOrderNumber({})).toBe("");
+  });
+});
+
+// ==========================================================================
+// تاريخ بوسطة — الباج اللي سجل المزامنة كشفه
+// ==========================================================================
+describe("تحويل تاريخ بوسطة", () => {
+  it("بيحوّل الشكل اللي بوسطة بترجّعه فعلًا", () => {
+    // ده النص الحقيقي اللي بوستجرس رفضه
+    expect(isoDate("Wed Jul 29 2026 16:11:28 GMT+0000 (Coordinated Universal Time)"))
+      .toBe("2026-07-29T16:11:28.000Z");
+  });
+
+  it("بيسيب ISO زي ما هو", () => {
+    expect(isoDate("2026-07-29T16:11:28.000Z")).toBe("2026-07-29T16:11:28.000Z");
+  });
+
+  it("تاريخ مش مفهوم = null، مش قيمة غلط", () => {
+    expect(isoDate("مش تاريخ")).toBeNull();
+    expect(isoDate("")).toBeNull();
+    expect(isoDate(null)).toBeNull();
+    expect(isoDate(undefined)).toBeNull();
+  });
+
+  it("المزامنة بتكتب التاريخ بصيغة بوستجرس بيقبلها", () => {
+    const d = decideSync(
+      {
+        ...deliveredShipment,
+        createdAt: "Wed Jul 29 2026 16:11:28 GMT+0000 (Coordinated Universal Time)",
+      },
+      syncedOrder(),
+      NOW
+    );
+    expect(d.changes.bosta_created_at).toBe("2026-07-29T16:11:28.000Z");
+  });
+
+  it("والتاريخ المحفوظ مابيتكتبش تاني — مفيش تغيير من غير سبب", () => {
+    const d = decideSync(
+      {
+        ...deliveredShipment,
+        createdAt: "Wed Jul 29 2026 16:11:28 GMT+0000 (Coordinated Universal Time)",
+      },
+      syncedOrder({ bosta_created_at: "2026-07-29T16:11:28.000Z" }),
+      NOW
+    );
+    expect(d.changes).toEqual({});
   });
 });
