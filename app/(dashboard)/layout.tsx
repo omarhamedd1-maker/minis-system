@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
 import { NotificationsBell } from "@/components/NotificationsBell";
+import { PushPrompt } from "@/components/PushPrompt";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectNotices } from "@/lib/notifications";
 import { getSessionUser } from "@/lib/permissions";
@@ -67,6 +68,9 @@ export default async function DashboardLayout({
             <span>{greeting(user.fullName ?? user.email)}</span>
             <NotificationsBell notices={notices} />
           </div>
+          {/* طلب تشغيل الإشعارات — بيبان لوحده أول ما تفتح، ودوسة واحدة
+              تخلص. مينفعش نطلب الإذن من غير دوسة، آبل بترفض. */}
+          <PushPrompt />
           {children}
         </main>
       </div>
