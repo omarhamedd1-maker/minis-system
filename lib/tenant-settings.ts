@@ -7,7 +7,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** بيزنس مينيس — أول بيزنس في السيستم */
+/** بيزنس مينيز — أول بيزنس في السيستم */
 export const MINIS_TENANT = "00000000-0000-0000-0000-000000000001";
 
 export type TenantCredentials = {

@@ -87,7 +87,7 @@ export async function createUser(formData: FormData) {
     role_id: roleId,
     permissions,
     active: true,
-    // لازم صراحةً: القيمة الافتراضية في الجدول ده ثابتة على مينيس
+    // لازم صراحةً: القيمة الافتراضية في الجدول ده ثابتة على مينيز
     tenant_id: me.tenantId,
   });
   if (rowError) {

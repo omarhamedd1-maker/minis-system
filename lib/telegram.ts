@@ -149,7 +149,7 @@ export async function testTelegram(
   return sendTelegram(
     db,
     tenantId,
-    "✅ <b>مينيس</b>\nالتنبيهات مظبوطة — الرسالة دي تجربة.",
+    "✅ <b>مينيز</b>\nالتنبيهات مظبوطة — الرسالة دي تجربة.",
     fetchImpl
   );
 }

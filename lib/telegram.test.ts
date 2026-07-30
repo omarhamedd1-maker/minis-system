@@ -124,13 +124,13 @@ describe("لقط الجروب لوحده", () => {
 
   it("بيلاقي الجروب من الرسايل", async () => {
     const f = updates([
-      { message: { chat: { id: -1001, title: "مينيس - تنبيهات" } } },
-      { message: { chat: { id: -1001, title: "مينيس - تنبيهات" } } },
+      { message: { chat: { id: -1001, title: "مينيز - تنبيهات" } } },
+      { message: { chat: { id: -1001, title: "مينيز - تنبيهات" } } },
     ]);
     const r = await discoverChats("123:ABC", f as unknown as typeof fetch);
     if (!r.ok) throw new Error(r.error);
     // المكرر بيتشال
-    expect(r.chats).toEqual([{ id: "-1001", title: "مينيس - تنبيهات" }]);
+    expect(r.chats).toEqual([{ id: "-1001", title: "مينيز - تنبيهات" }]);
   });
 
   it("بيلاقيه كمان من إضافة البوت للجروب", async () => {
