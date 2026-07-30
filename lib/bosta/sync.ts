@@ -25,6 +25,7 @@ import { orderStatusBadge } from "../format";
 import { failedDeliveryMessage } from "../telegram";
 import { notifyAll } from "../push/notify";
 import { checkStalePickup, stalePickupMessage } from "./stale-shipment";
+import { checkCod, codMismatchMessage } from "./cod-check";
 import { checkRefundDue, refundDue, refundReminderMessage } from "../refund";
 import {
   GROUP_ABOVE,
@@ -35,7 +36,8 @@ import {
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
-  bosta_shipping_cost, return_tracking, bosta_created_at, bosta_stale_alerted_day,
+  bosta_shipping_cost, return_tracking, bosta_created_at, bosta_stale_alerted_day, cod_alerted_diff, cod_diff_ignored,
+  shipping_price, discount,
   order_items(quantity, sale_price_at_order),
   customers(full_name, phone)`;
 
@@ -53,6 +55,10 @@ type OrderRow = {
   return_tracking: string | null;
   bosta_created_at: string | null;
   bosta_stale_alerted_day: number | null;
+  cod_alerted_diff: number | null;
+  cod_diff_ignored: boolean | null;
+  shipping_price: number | null;
+  discount: number | null;
   order_items: { quantity: number; sale_price_at_order: number }[] | null;
   customers: { full_name: string | null; phone: string | null } | null;
 };
@@ -68,6 +74,8 @@ export type SyncSummary = {
   errors: string[];
   /** تفاصيل اللي اتغيّر — بنعرضها في وضع التجربة عشان نراجع قبل التنفيذ */
   details: { order: string; reasons: string[] }[];
+  /** تنبيهات فرق التحصيل بينّا وبين بوسطة */
+  codMismatches: number;
   /** تنبيهات "أوردر لسه مش مؤكد" */
   unconfirmedReminders: number;
   /** تنبيهات "لسه مارجّعتش فلوس العميل" */
@@ -213,6 +221,7 @@ export async function runBostaSync(opts: {
     stalePickups: 0,
     refundReminders: 0,
     unconfirmedReminders: 0,
+    codMismatches: 0,
     returnsNeedReview: [],
   };
 
@@ -390,6 +399,55 @@ export async function runBostaSync(opts: {
         ? { cod: merged.totalCod, fee: merged.totalFee }
         : undefined
     );
+
+    // ===== فرق التحصيل =====
+    // السيستم بيدفع التحصيل لبوسطة بس لما تعدّل من الشاشة. لو الرقم اختلف
+    // لأي سبب تاني مفيش حاجة بتكتشف — والفحص لقى ١٥ أوردر بفرق ١٨ ألف جنيه.
+    // **بننبّه بس مانصلّحش** — أحيانًا الاتنين صح (شحنة جزئية).
+    if (!dry && !row.cod_diff_ignored) {
+      const ourCod = Math.max(
+        0,
+        (row.order_items ?? []).reduce(
+          (a, i) => a + Number(i.quantity) * Number(i.sale_price_at_order),
+          0
+        ) -
+          Number(row.discount ?? 0) +
+          Number(row.shipping_price ?? 0)
+      );
+      const c = checkCod({
+        orderStatus: row.order_status,
+        ours: ourCod,
+        bosta: merged.latest.cod ?? null,
+        codUpdateBlocked: null,
+        alertedAmount: row.cod_alerted_diff,
+      });
+
+      if (c.alert) {
+        summary.codMismatches++;
+        await notifyAll(
+          db,
+          tenantId,
+          codMismatchMessage({
+            orderNumber: row.order_number,
+            customerName: row.customers?.full_name ?? null,
+            ours: ourCod,
+            bosta: Number(merged.latest.cod ?? 0),
+            fixable: c.fixable,
+            siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
+          }),
+          { fetchImpl, tag: "cod-" + row.id, url: "/orders/" + row.id }
+        );
+        await db
+          .from("orders")
+          .update({ cod_alerted_diff: c.diff })
+          .eq("id", row.id);
+        await logActivityRow(db, {
+          action: "bosta.cod_diff",
+          summary: `فرق تحصيل أوردر ${row.order_number ?? ""}: عندنا ${ourCod} وبوسطة ${merged.latest.cod}`,
+          orderId: row.id,
+        });
+      }
+    }
 
     if (decision.statusLocked) summary.statusLocked++;
     if (Object.keys(decision.changes).length === 0) continue;
