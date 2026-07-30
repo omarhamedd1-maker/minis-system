@@ -9,8 +9,12 @@
 // ==========================================================================
 
 const TIMEOUT_MS = 20000;
-/** إصدار الـAPI — شوبيفاي بتطلب واحد صريح في كل نداء */
-export const SHOPIFY_API_VERSION = "2025-07";
+/**
+ * إصدار الـAPI — شوبيفاي بتطلب واحد صريح في كل نداء.
+ * ده نفس إصدار الدالة القديمة (`shopify-order-push`) بقصد، عشان المقارنة
+ * بينهم تبقى على نفس الأرضية ومايبقاش فيه متغيّر تاني.
+ */
+export const SHOPIFY_API_VERSION = "2026-07";
 
 export class ShopifyError extends Error {
   constructor(
