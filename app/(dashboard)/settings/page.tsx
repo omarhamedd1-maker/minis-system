@@ -9,6 +9,7 @@ import {
   checkShopifyConnection,
 } from "./actions";
 import { looksLikeChatId } from "@/lib/telegram";
+import { EnablePush } from "@/components/EnablePush";
 
 export const dynamic = "force-dynamic";
 
@@ -231,6 +232,18 @@ export default async function SettingsPage({
           <span dir="ltr">Client credentials</span>. والصلاحيات المطلوبة:{" "}
           <span dir="ltr">read_products, read_orders, write_orders, write_order_edits</span>.
         </div>
+      </div>
+
+      {/* ===== إشعارات من السيستم نفسه ===== */}
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-gray-900">
+          إشعارات على الموبايل من السيستم
+        </h2>
+        <p className="mt-1 mb-4 text-xs leading-6 text-gray-500">
+          إشعار بيطلع على شاشة موبايلك من البرنامج نفسه، من غير أي وسيط.
+          نفس التنبيهات اللي بتروح على تليجرام.
+        </p>
+        <EnablePush />
       </div>
 
       {/* ===== تنبيهات تليجرام ===== */}

@@ -22,7 +22,8 @@ import { decideSync, type OurOrder } from "./reconcile";
 import { loadTenantCredentials } from "../tenant-settings";
 import { BOSTA_FEES } from "../shipping-cost";
 import { orderStatusBadge } from "../format";
-import { failedDeliveryMessage, sendTelegram } from "../telegram";
+import { failedDeliveryMessage } from "../telegram";
+import { notifyAll } from "../push/notify";
 import { checkStalePickup, stalePickupMessage } from "./stale-shipment";
 import { checkRefundDue, refundDue, refundReminderMessage } from "../refund";
 import {
@@ -429,7 +430,7 @@ export async function runBostaSync(opts: {
         // **أهم تنبيه في السيستم**: العميل مستلمش. لازم حد يكلّمه دلوقتي
         // قبل ما الشحنة توصل المخزن وتبقى خسارة مؤكدة.
         if (ALERT_ON.includes(to)) {
-          await sendTelegram(
+          await notifyAll(
             db,
             tenantId,
             failedDeliveryMessage({
@@ -441,7 +442,7 @@ export async function runBostaSync(opts: {
               arrived: to === "returned",
               siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
             }),
-            fetchImpl
+            { fetchImpl, tag: `order-`, url: "/orders?status=returning" }
           );
           }
         }
@@ -481,7 +482,7 @@ export async function runBostaSync(opts: {
       if (stale.milestone === null) continue;
 
       summary.stalePickups++;
-      await sendTelegram(
+      await notifyAll(
         db,
         tenantId,
         stalePickupMessage({
@@ -492,7 +493,7 @@ export async function runBostaSync(opts: {
           milestone: stale.milestone,
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
         }),
-        fetchImpl
+        { fetchImpl, tag: "stale-" + w.id, url: "/orders?status=ready" }
       );
 
       // بنعلّم إننا نبّهنا **بعد** الإرسال — لو الإرسال وقع نحاول تاني
@@ -550,7 +551,7 @@ export async function runBostaSync(opts: {
       if (due.milestone === null) continue;
 
       summary.refundReminders++;
-      await sendTelegram(
+      await notifyAll(
         db,
         tenantId,
         refundReminderMessage({
@@ -561,7 +562,7 @@ export async function runBostaSync(opts: {
           days: due.days,
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
         }),
-        fetchImpl
+        { fetchImpl, tag: "refund-" + o.id, url: "/orders?status=returned_after_delivery" }
       );
 
       await db
@@ -611,7 +612,7 @@ export async function runBostaSync(opts: {
       // أكتر من ٥؟ رسالة واحدة بالعدد. ٦ رسايل في نفس اللحظة بتبقى إزعاج
       // ومحدش بيقراها.
       if (dueNow.length > GROUP_ABOVE) {
-        await sendTelegram(
+        await notifyAll(
           db,
           tenantId,
           unconfirmedGroupMessage({
@@ -619,11 +620,11 @@ export async function runBostaSync(opts: {
             oldestDays: Math.max(...dueNow.map((x) => x.days)),
             siteUrl: site,
           }),
-          fetchImpl
+          { fetchImpl, tag: "unconfirmed-group", url: "/orders?status=new" }
         );
       } else {
         for (const x of dueNow) {
-          await sendTelegram(
+          await notifyAll(
             db,
             tenantId,
             unconfirmedMessage({
@@ -637,7 +638,7 @@ export async function runBostaSync(opts: {
               days: x.days,
               siteUrl: site,
             }),
-            fetchImpl
+            { fetchImpl, tag: "new-" + x.order.id, url: "/orders?status=new" }
           );
         }
       }

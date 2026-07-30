@@ -621,31 +621,8 @@ export default async function OrderDetailsPage({
             <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
           )}
 
-          {/* أوردر لسه جديد؟ زرار تأكيد واضح — التنبيه اليومي بيوقف أول ما تدوسه */}
-          {order.order_status === "new" && can(user, "orders.status") && (
-            <form
-              action={updateOrderStatus}
-              className="mt-3 rounded-xl border border-blue-300 bg-blue-50 p-3"
-            >
-              <input type="hidden" name="order_id" value={order.id} />
-              <input type="hidden" name="status" value="confirmed" />
-              <input
-                type="hidden"
-                name="return_to"
-                value={`/orders/${order.id}`}
-              />
-              <p className="text-xs leading-6 text-blue-900">
-                الأوردر ده لسه <b>مش مؤكد</b> — والتنبيه بيجيلك كل يوم لحد ما
-                تأكّده. كلّم العميل وبعدين دوس تأكيد.
-              </p>
-              <button
-                type="submit"
-                className="mt-2 w-full rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white"
-              >
-                ✓ أكّدت الأوردر مع العميل
-              </button>
-            </form>
-          )}
+          {/* مافيش زرار تأكيد مخصوص — تغيير الحالة العادي بيعمل نفس الحاجة،
+              والتنبيه اليومي بيوقف لوحده أول ما الحالة تبقى غير "جديد" */}
 
           {/* الشحنة ماتت عند بوسطة؟ لازم نقولها بصريح العبارة — قبل كده كنت
               بتشوف رقم تتبع وتفتكره شغال، والأوردر يقعد مقفول عليك */}
