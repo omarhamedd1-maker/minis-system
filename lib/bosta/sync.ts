@@ -23,10 +23,11 @@ import { loadTenantCredentials } from "../tenant-settings";
 import { BOSTA_FEES } from "../shipping-cost";
 import { orderStatusBadge } from "../format";
 import { failedDeliveryMessage, sendTelegram } from "../telegram";
+import { checkStalePickup, stalePickupMessage } from "./stale-shipment";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
-  bosta_shipping_cost, return_tracking,
+  bosta_shipping_cost, return_tracking, bosta_created_at, bosta_stale_alerted_day,
   order_items(quantity, sale_price_at_order),
   customers(full_name, phone)`;
 
@@ -42,6 +43,8 @@ type OrderRow = {
   bosta_tracking: string | null;
   bosta_shipping_cost: number | null;
   return_tracking: string | null;
+  bosta_created_at: string | null;
+  bosta_stale_alerted_day: number | null;
   order_items: { quantity: number; sale_price_at_order: number }[] | null;
   customers: { full_name: string | null; phone: string | null } | null;
 };
@@ -57,6 +60,8 @@ export type SyncSummary = {
   errors: string[];
   /** تفاصيل اللي اتغيّر — بنعرضها في وضع التجربة عشان نراجع قبل التنفيذ */
   details: { order: string; reasons: string[] }[];
+  /** شحنات واقفة نبّهنا عليها */
+  stalePickups: number;
   /** شحنات مرتجع بعد التسليم اتربطت بأوردراتها */
   customerReturns: number;
   /**
@@ -106,6 +111,28 @@ async function logStatusChange(
     if (error && orderId) await log.insert(row as never);
   } catch {
     // الجدول مش موجود أو حصل خطأ؟ المزامنة ماتوقفش عشان سطر سجل
+  }
+}
+
+/** سطر سجل من المزامنة — بيفشل بهدوء ويجرّب من غير order_id لو الخانة ناقصة */
+async function logActivityRow(
+  db: SupabaseClient,
+  entry: { action: string; summary: string; orderId?: string }
+) {
+  const row = {
+    actor_id: null,
+    actor_name: "المزامنة مع بوسطة",
+    action: entry.action,
+    summary: entry.summary,
+  };
+  const log = db.from("activity_log");
+  try {
+    const { error } = await log.insert(
+      (entry.orderId ? { ...row, order_id: entry.orderId } : row) as never
+    );
+    if (error && entry.orderId) await log.insert(row as never);
+  } catch {
+    // السجل مش أهم من المزامنة
   }
 }
 
@@ -171,6 +198,7 @@ export async function runBostaSync(opts: {
     errors: [],
     details: [],
     customerReturns: 0,
+    stalePickups: 0,
     returnsNeedReview: [],
   };
 
@@ -316,6 +344,7 @@ export async function runBostaSync(opts: {
       bosta_collected: row.bosta_collected,
       bosta_shipping_cost: row.bosta_shipping_cost,
       bosta_exception: row.bosta_exception,
+      bosta_created_at: row.bosta_created_at,
       productValue: (row.order_items ?? []).reduce(
         (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
         0
@@ -388,6 +417,67 @@ export async function runBostaSync(opts: {
           );
         }
       }
+    }
+  }
+
+  // ===== الشحنات الواقفة: المندوب مجاش ياخدها =====
+  // بنقرا من جديد بعد التحديثات عشان الحالات تبقى أحدث حاجة. ودي مسألة
+  // وقاية: لو الشحنة قعدت أسبوعين بوسطة بتأرشفها وخلاص مفيش رجعة —
+  // فبننبّه بعد ٣ أيام وإنت لسه تقدر تكلّمهم.
+  if (!dry) {
+    const { data: waiting } = await db
+      .from("orders")
+      .select(
+        "id, order_number, order_status, bosta_tracking, bosta_created_at, bosta_stale_alerted_day, customers(full_name)"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("archived", false)
+      .not("bosta_created_at", "is", null);
+
+    for (const w of (waiting ?? []) as unknown as {
+      id: string;
+      order_number: string | number | null;
+      order_status: string | null;
+      bosta_tracking: string | null;
+      bosta_created_at: string | null;
+      bosta_stale_alerted_day: number | null;
+      customers: { full_name: string | null } | null;
+    }[]) {
+      const stale = checkStalePickup({
+        createdAt: w.bosta_created_at,
+        orderStatus: w.order_status,
+        alertedDay: w.bosta_stale_alerted_day,
+        now,
+      });
+      if (stale.milestone === null) continue;
+
+      summary.stalePickups++;
+      await sendTelegram(
+        db,
+        tenantId,
+        stalePickupMessage({
+          orderNumber: w.order_number,
+          customerName: w.customers?.full_name ?? null,
+          tracking: w.bosta_tracking,
+          days: stale.days,
+          milestone: stale.milestone,
+          siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
+        }),
+        fetchImpl
+      );
+
+      // بنعلّم إننا نبّهنا **بعد** الإرسال — لو الإرسال وقع نحاول تاني
+      // المرة الجاية بدل ما التنبيه يضيع خالص
+      await db
+        .from("orders")
+        .update({ bosta_stale_alerted_day: stale.milestone })
+        .eq("id", w.id);
+
+      await logActivityRow(db, {
+        action: "bosta.stale",
+        summary: `شحنة أوردر ${w.order_number ?? ""} قاعدة ${stale.days} يوم من غير بيك اب (مرحلة ${stale.milestone})`,
+        orderId: w.id,
+      });
     }
   }
 

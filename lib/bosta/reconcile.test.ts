@@ -16,6 +16,7 @@ function syncedOrder(over: Partial<OurOrder> = {}): OurOrder {
     bosta_collected: true,
     bosta_shipping_cost: 92.11,
     bosta_exception: null,
+    bosta_created_at: null,
     productValue: 3600,
     ...over,
   };

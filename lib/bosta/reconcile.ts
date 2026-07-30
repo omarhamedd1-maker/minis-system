@@ -22,6 +22,7 @@ export type BostaDelivery = {
   allowToOpenPackage?: boolean | null;
   shopifyInfo?: { orderNumber?: string | null } | null;
   businessReference?: string | null;
+  createdAt?: string | null;
   latestExceptionReason?: string | null;
   exceptionReason?: string | null;
 };
@@ -44,6 +45,7 @@ export type OurOrder = {
   bosta_collected: boolean | null;
   bosta_shipping_cost: number | null;
   bosta_exception: string | null;
+  bosta_created_at: string | null;
   /** إجمالي بنود الأوردر — التأمين بيتحسب عليه */
   productValue: number;
 };
@@ -100,6 +102,15 @@ export function decideSync(
   if (cod !== Number(o.bosta_cod ?? 0)) {
     changes.bosta_cod = cod;
     reasons.push(`مبلغ التحصيل بقى ${cod}`);
+  }
+
+  // تاريخ إنشاء الشحنة عند بوسطة — منه بنعرف إنها واقفة من كام يوم.
+  // بنكتبه مرة واحدة وبس؛ لو الأوردر عليه شحنة جديدة، رقم التتبع بيتغيّر
+  // فوق فبنجدّده معاه.
+  if (d.createdAt && o.bosta_created_at !== d.createdAt) {
+    changes.bosta_created_at = d.createdAt;
+    // شحنة جديدة = صفحة جديدة، فالتنبيه القديم يتشال
+    if (changes.bosta_tracking) changes.bosta_stale_alerted_day = null;
   }
 
   const exception = deliveryException(d);

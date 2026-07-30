@@ -21,6 +21,7 @@ import { OrderItemRow } from "@/components/OrderItemRow";
 import { OrderItemCard } from "@/components/OrderItemCard";
 import { ReturnPanel } from "@/components/ReturnPanel";
 import { BostaMark } from "@/components/BostaMark";
+import { isDeadShipment } from "@/lib/bosta/order-status";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -39,6 +40,11 @@ import {
   updateShippingPrice,
 } from "./actions";
 
+// وقت النداء — بره الرندر عشان الرندر يبقى نقي
+function currentMs() {
+  return Date.now();
+}
+
 type OrderDetails = {
   id: string;
   order_number: string | null;
@@ -52,6 +58,7 @@ type OrderDetails = {
   bosta_cod: number;
   bosta_collected: boolean;
   bosta_tracking: string | null;
+  bosta_created_at: string | null;
   bosta_shipping_cost: number;
   delivered_at: string | null;
   return_note: string | null;
@@ -114,6 +121,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
+       bosta_created_at,
        delivered_at, return_note, return_tracking, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
@@ -167,6 +175,15 @@ export default async function OrderDetailsPage({
   }
 
   const badge = orderStatusBadge(order.order_status);
+
+  // الشحنة ميتة (مؤرشفة/ملغية عند بوسطة)؟ وقاعدة كام يوم؟
+  const shipmentDead =
+    Boolean(order.bosta_tracking) && isDeadShipment(order.bosta_state);
+  const shipmentAge =
+    order.bosta_created_at &&
+    ["ready", "new", "confirmed", "packed"].includes(order.order_status ?? "")
+      ? Math.floor((currentMs() - new Date(order.bosta_created_at).getTime()) / 86400000)
+      : null;
   const isCancelled = order.order_status === "cancelled";
   const itemsTotal = order.order_items.reduce(
     (sum, item) => sum + item.quantity * item.sale_price_at_order,
@@ -592,8 +609,36 @@ export default async function OrderDetailsPage({
             <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
           )}
 
-          {/* إرسال الأوردر لبوسطة كشحنة (لو لسه مفيش شحنة) */}
-          {!order.bosta_tracking && canSend && (
+          {/* الشحنة ماتت عند بوسطة؟ لازم نقولها بصريح العبارة — قبل كده كنت
+              بتشوف رقم تتبع وتفتكره شغال، والأوردر يقعد مقفول عليك */}
+          {shipmentDead && (
+            <div className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3">
+              <p className="text-xs font-bold text-red-800">
+                ⚠️ الشحنة دي ماتت عند بوسطة ({order.bosta_state})
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-red-700">
+                مفيش طريقة ترجّعها — بوسطة مابتديش مسار لإحياء شحنة مؤرشفة.
+                اعمل شحنة جديدة من الزرار تحت، ورقم التتبع القديم يفضل في السجل.
+                والبوليصة القديمة ارميها واطبع الجديدة.
+              </p>
+            </div>
+          )}
+
+          {/* الشحنة قاعدة والمندوب مجاش — تنبيه بدري قبل ما بوسطة تأرشفها */}
+          {shipmentAge !== null && shipmentAge >= 3 && !shipmentDead && (
+            <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
+              <p className="text-xs font-bold text-amber-900">
+                🕗 الشحنة قاعدة {shipmentAge} يوم والمندوب مجاش
+              </p>
+              <p className="mt-1 text-[11px] leading-5 text-amber-800">
+                كلّم بوسطة واطلب المندوب. لو وصلت أسبوعين بوسطة بتأرشف الشحنة
+                وساعتها لازم تعمل واحدة جديدة.
+              </p>
+            </div>
+          )}
+
+          {/* إرسال الأوردر لبوسطة كشحنة (لو مفيش شحنة أو اللي فيها ماتت) */}
+          {(!order.bosta_tracking || shipmentDead) && canSend && (
             <form
               action={sendOrderToBosta}
               className="mt-3 border-t border-gray-100 pt-3"
