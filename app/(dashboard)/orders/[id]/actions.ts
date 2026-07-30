@@ -1222,3 +1222,72 @@ export async function updatePayment(formData: FormData) {
   revalidatePath("/orders");
   redirect(`/orders/${orderId}?saved=1`);
 }
+
+/**
+ * تأكيد إنك حوّلت فلوس المرتجع للعميل.
+ * بوسطة مابتدفعش للعميل — إنت اللي بتحوّله. والتأكيد ده هو اللي بيوقف
+ * التنبيهات وبيخلي فيه أثر إن الفلوس رجعت فعلاً.
+ */
+export async function confirmRefund(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  const rawAmount = String(formData.get("amount") ?? "").trim();
+  if (!orderId) redirect("/orders");
+
+  const amount = Number(rawAmount);
+  if (!Number.isFinite(amount) || amount < 0) {
+    redirect(
+      `/orders/${orderId}?error=` + encodeURIComponent("المبلغ مش صحيح")
+    );
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      refunded_at: new Date().toISOString(),
+      refunded_amount: amount,
+    })
+    .eq("id", orderId);
+
+  if (error) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent(
+          "معرفناش نحفظ: " + error.message + " — شغّل sql/refunds.sql"
+        )
+    );
+  }
+
+  await logActivity(
+    me,
+    "order.refund",
+    `أكّد تحويل ${amount} جنيه للعميل في أوردر ${await orderNo(supabase, orderId)}`,
+    orderId
+  );
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=` + encodeURIComponent("اتسجّل إنك حوّلت الفلوس"));
+}
+
+/** بيلغي التأكيد لو اتحط بالغلط */
+export async function undoRefund(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) redirect("/orders");
+
+  const supabase = createAdminClient();
+  await supabase
+    .from("orders")
+    .update({ refunded_at: null, refunded_amount: null, refund_reminded_day: null })
+    .eq("id", orderId);
+
+  await logActivity(
+    me,
+    "order.refund_undo",
+    `لغى تأكيد تحويل فلوس المرتجع في أوردر ${await orderNo(supabase, orderId)}`,
+    orderId
+  );
+  revalidatePath(`/orders/${orderId}`);
+  redirect(`/orders/${orderId}?saved=` + encodeURIComponent("اتلغى التأكيد"));
+}

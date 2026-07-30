@@ -22,6 +22,7 @@ import { OrderItemCard } from "@/components/OrderItemCard";
 import { ReturnPanel } from "@/components/ReturnPanel";
 import { BostaMark } from "@/components/BostaMark";
 import { isDeadShipment } from "@/lib/bosta/order-status";
+import { refundDue } from "@/lib/refund";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -38,6 +39,8 @@ import {
   updateOrderItem,
   updateOrderStatus,
   updateShippingPrice,
+  confirmRefund,
+  undoRefund,
 } from "./actions";
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
@@ -59,6 +62,8 @@ type OrderDetails = {
   bosta_collected: boolean;
   bosta_tracking: string | null;
   bosta_created_at: string | null;
+  refunded_at: string | null;
+  refunded_amount: number | null;
   bosta_shipping_cost: number;
   delivered_at: string | null;
   return_note: string | null;
@@ -121,7 +126,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
-       bosta_created_at,
+       bosta_created_at, refunded_at, refunded_amount,
        delivered_at, return_note, return_tracking, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
@@ -184,6 +189,13 @@ export default async function OrderDetailsPage({
     ["ready", "new", "confirmed", "packed"].includes(order.order_status ?? "")
       ? Math.floor((currentMs() - new Date(order.bosta_created_at).getTime()) / 86400000)
       : null;
+  // المبلغ اللي المفروض يرجع للعميل — من البنود اللي رجعت فعلًا
+  const refundAmount = refundDue(
+    order.order_items.map((i) => ({
+      returnedQuantity: i.returned_quantity,
+      salePriceAtOrder: i.sale_price_at_order,
+    }))
+  );
   const isCancelled = order.order_status === "cancelled";
   const itemsTotal = order.order_items.reduce(
     (sum, item) => sum + item.quantity * item.sale_price_at_order,
@@ -773,6 +785,79 @@ export default async function OrderDetailsPage({
               }))}
             />
           )}
+
+        {/* ===== فلوس المرتجع =====
+            بوسطة مابتدفعش للعميل — إنت اللي بتحوّله. الكارت ده بيقولك المبلغ
+            وبيسجّل إنك حوّلت، والتنبيهات بتوقف أول ما تأكّد. */}
+        {order.order_status === "returned_after_delivery" && refundAmount > 0 && (
+          <div
+            className={`mt-4 rounded-xl border p-4 ${
+              order.refunded_at
+                ? "border-green-300 bg-green-50"
+                : "border-rose-300 bg-rose-50"
+            }`}
+          >
+            {order.refunded_at ? (
+              <>
+                <p className="text-sm font-bold text-green-900">
+                  ✅ الفلوس رجعت للعميل
+                </p>
+                <p className="mt-1 text-xs text-green-800">
+                  {formatMoney(order.refunded_amount ?? refundAmount)} —{" "}
+                  {formatDate(order.refunded_at)}
+                </p>
+                <form action={undoRefund} className="mt-3">
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <button
+                    type="submit"
+                    className="text-[11px] text-green-800 underline"
+                  >
+                    اتحطت بالغلط؟ ألغِ التأكيد
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-rose-900">
+                  💸 لازم ترجّع فلوس العميل
+                </p>
+                <p className="mt-1 text-xs leading-6 text-rose-800">
+                  المبلغ المحسوب من البنود الراجعة:{" "}
+                  <b>{formatMoney(refundAmount)}</b>
+                  <br />
+                  حوّله للعميل (إنستا باي أو أونلاين) وبعدين أكّد من هنا —
+                  والتنبيهات هتفضل توصلك لحد ما تأكّد.
+                </p>
+                <form action={confirmRefund} className="mt-3 flex items-end gap-2">
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <div className="flex-1">
+                    <label
+                      htmlFor="refund_amount"
+                      className="text-[11px] text-rose-700"
+                    >
+                      المبلغ اللي حوّلته
+                    </label>
+                    <input
+                      id="refund_amount"
+                      name="amount"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={refundAmount}
+                      className="w-full rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-rose-500 focus:outline-none"
+                    />
+                  </div>
+                  <ConfirmButton
+                    message="متأكد إنك حوّلت الفلوس للعميل؟"
+                    className="shrink-0 rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white"
+                  >
+                    أكّد إني حوّلت
+                  </ConfirmButton>
+                </form>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl bg-white shadow-sm">

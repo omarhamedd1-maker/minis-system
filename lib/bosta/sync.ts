@@ -24,6 +24,7 @@ import { BOSTA_FEES } from "../shipping-cost";
 import { orderStatusBadge } from "../format";
 import { failedDeliveryMessage, sendTelegram } from "../telegram";
 import { checkStalePickup, stalePickupMessage } from "./stale-shipment";
+import { checkRefundDue, refundDue, refundReminderMessage } from "../refund";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
@@ -60,6 +61,8 @@ export type SyncSummary = {
   errors: string[];
   /** تفاصيل اللي اتغيّر — بنعرضها في وضع التجربة عشان نراجع قبل التنفيذ */
   details: { order: string; reasons: string[] }[];
+  /** تنبيهات "لسه مارجّعتش فلوس العميل" */
+  refundReminders: number;
   /** شحنات واقفة نبّهنا عليها */
   stalePickups: number;
   /** شحنات مرتجع بعد التسليم اتربطت بأوردراتها */
@@ -199,6 +202,7 @@ export async function runBostaSync(opts: {
     details: [],
     customerReturns: 0,
     stalePickups: 0,
+    refundReminders: 0,
     returnsNeedReview: [],
   };
 
@@ -478,6 +482,67 @@ export async function runBostaSync(opts: {
         summary: `شحنة أوردر ${w.order_number ?? ""} قاعدة ${stale.days} يوم من غير بيك اب (مرحلة ${stale.milestone})`,
         orderId: w.id,
       });
+    }
+
+    // ===== فلوس المرتجع: لسه مارجّعناش للعميل =====
+    // بوسطة مابتدفعش للعميل — عمر اللي بيحوّله. والحوالة دي مالهاش أثر في
+    // السيستم، فبنفضل ننبّه لحد ما يأكّد. تاريخ البداية هو آخر مرة الحالة
+    // بقت "مرتجع بعد التسليم" في السجل، وإلا تاريخ التسليم.
+    const { data: owing } = await db
+      .from("orders")
+      .select(
+        "id, order_number, order_status, delivered_at, refunded_at, refund_reminded_day, order_items(returned_quantity, sale_price_at_order), customers(full_name, phone)"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("order_status", "returned_after_delivery")
+      .is("refunded_at", null);
+
+    for (const o of (owing ?? []) as unknown as {
+      id: string;
+      order_number: string | number | null;
+      order_status: string | null;
+      delivered_at: string | null;
+      refunded_at: string | null;
+      refund_reminded_day: number | null;
+      order_items: { returned_quantity: number | null; sale_price_at_order: number }[] | null;
+      customers: { full_name: string | null; phone: string | null } | null;
+    }[]) {
+      const amount = refundDue(
+        (o.order_items ?? []).map((i) => ({
+          returnedQuantity: i.returned_quantity,
+          salePriceAtOrder: i.sale_price_at_order,
+        }))
+      );
+
+      const due = checkRefundDue({
+        orderStatus: o.order_status,
+        returnedAt: o.delivered_at,
+        refundedAt: o.refunded_at,
+        amountDue: amount,
+        remindedDay: o.refund_reminded_day,
+        now,
+      });
+      if (due.milestone === null) continue;
+
+      summary.refundReminders++;
+      await sendTelegram(
+        db,
+        tenantId,
+        refundReminderMessage({
+          orderNumber: o.order_number,
+          customerName: o.customers?.full_name ?? null,
+          customerPhone: o.customers?.phone ?? null,
+          amount,
+          days: due.days,
+          siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
+        }),
+        fetchImpl
+      );
+
+      await db
+        .from("orders")
+        .update({ refund_reminded_day: due.milestone })
+        .eq("id", o.id);
     }
   }
 

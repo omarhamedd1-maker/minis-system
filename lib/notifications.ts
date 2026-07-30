@@ -9,6 +9,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readSyncHealth, syncHealthMessage } from "./bosta/sync-runs";
+import { refundDue } from "./refund";
 
 export type NoticeLevel = "danger" | "warn" | "info";
 
@@ -90,6 +91,54 @@ export async function collectNotices(
       detail: numbers + (items.length > 4 ? " وغيرهم" : ""),
       href: `/orders?status=${group.status}`,
     });
+  }
+
+  // ٣) فلوس مرتجع لسه مارجعتش للعميل — دي فلوس عليك، فبتبقى في الأحمر
+  try {
+    const { data: owing } = await db
+      .from("orders")
+      .select("order_number, order_items(returned_quantity, sale_price_at_order)")
+      .eq("tenant_id", tenantId)
+      .eq("order_status", "returned_after_delivery")
+      .is("refunded_at", null)
+      .limit(100);
+
+    const pending = (
+      (owing ?? []) as unknown as {
+        order_number: string | null;
+        order_items: {
+          returned_quantity: number | null;
+          sale_price_at_order: number;
+        }[] | null;
+      }[]
+    )
+      .map((o) => ({
+        number: o.order_number,
+        amount: refundDue(
+          (o.order_items ?? []).map((i) => ({
+            returnedQuantity: i.returned_quantity,
+            salePriceAtOrder: i.sale_price_at_order,
+          }))
+        ),
+      }))
+      .filter((o) => o.amount > 0);
+
+    if (pending.length > 0) {
+      const total = Math.round(pending.reduce((s, p) => s + p.amount, 0));
+      notices.push({
+        id: "refunds",
+        level: "danger",
+        title: "فلوس مرتجع لسه مارجعتش للعميل",
+        count: pending.length,
+        detail: `إجمالي ${total} جنيه — ${pending
+          .slice(0, 3)
+          .map((p) => p.number)
+          .join("، ")}${pending.length > 3 ? " وغيرهم" : ""}`,
+        href: "/orders?status=returned_after_delivery",
+      });
+    }
+  } catch {
+    // الخانة لسه مااتعملتش؟ الإشعار بس هو اللي مايبانش
   }
 
   return notices.sort((a, b) => ORDER[a.level] - ORDER[b.level]);
