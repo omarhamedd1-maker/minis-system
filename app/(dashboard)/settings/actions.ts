@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { testConnection } from "@/lib/bosta/client";
-import { discoverChats, testTelegram } from "@/lib/telegram";
+import { discoverChats, looksLikeChatId, testTelegram } from "@/lib/telegram";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
 // مابيتنفذش، فمانحتاجش else في كل مكان
@@ -71,6 +71,10 @@ export async function saveTelegram(formData: FormData) {
   }
 
   if (!token) back("اكتب توكن البوت");
+
+  // قيمة مش على شكل رقم جروب (مثلاً إيميل حطّه المتصفح autofill) بنرميها
+  // ونلاقي الجروب بنفسنا — أحسن من إننا نحفظ حاجة غلط وتفشل بعد كده
+  if (chatId && !looksLikeChatId(chatId)) chatId = "";
 
   // مافيش رقم جروب؟ نلاقيه إحنا بدل ما المستخدم يقرا JSON بإيده
   if (!chatId) {

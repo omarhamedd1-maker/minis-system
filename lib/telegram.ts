@@ -75,6 +75,19 @@ export async function sendTelegram(
 export type FoundChat = { id: string; title: string };
 
 /**
+ * رقم الجروب عند تليجرام: أرقام (بسالب للجروبات) أو `@اسم` للقنوات العامة.
+ *
+ * الفحص ده مش رفاهية: المتصفح عمل autofill وحطّ **إيميل** في الخانة، فاتحفظ
+ * وفشل الإرسال بـ "chat not found" ومحدش فهم ليه. أي قيمة مش على الشكل ده
+ * بنتعامل معاها كأنها فاضية وندوّر على الجروب بنفسنا.
+ */
+export function looksLikeChatId(value: string | null | undefined): boolean {
+  const v = String(value ?? "").trim();
+  if (!v) return false;
+  return /^-?\d{5,}$/.test(v) || /^@[A-Za-z0-9_]{5,}$/.test(v);
+}
+
+/**
  * بيدوّر على الجروبات اللي البوت شايفها.
  * الخطوة دي هي أوحش خطوة في تظبيط تليجرام (لازم تفتح لينك getUpdates وتقرا
  * JSON بإيدك) — فبنعملها إحنا. كل اللي على المستخدم إنه يلزق التوكن.

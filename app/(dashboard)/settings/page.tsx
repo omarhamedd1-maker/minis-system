@@ -6,6 +6,7 @@ import {
   saveBostaKey,
   saveTelegram,
 } from "./actions";
+import { looksLikeChatId } from "@/lib/telegram";
 
 export const dynamic = "force-dynamic";
 
@@ -165,11 +166,15 @@ export default async function SettingsPage({
             <input
               id="telegram_chat_id"
               name="telegram_chat_id"
-              defaultValue={creds?.telegram_chat_id ?? ""}
+              defaultValue={
+                looksLikeChatId(creds?.telegram_chat_id) ? creds!.telegram_chat_id! : ""
+              }
               placeholder="-1001234567890"
               className={input}
               dir="ltr"
+              inputMode="numeric"
               autoComplete="off"
+              data-form-type="other"
             />
           </div>
 

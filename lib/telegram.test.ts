@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   discoverChats,
   failedDeliveryMessage,
+  looksLikeChatId,
   sendTelegram,
   syncDownMessage,
 } from "./telegram";
@@ -164,5 +165,23 @@ describe("لقط الجروب لوحده", () => {
     const r = await discoverChats("  ", f as unknown as typeof fetch);
     expect(r.ok).toBe(false);
     expect(f).not.toHaveBeenCalled();
+  });
+});
+
+describe("شكل رقم الجروب", () => {
+  it("بيقبل أرقام الجروبات والقنوات", () => {
+    expect(looksLikeChatId("-5129764895")).toBe(true);
+    expect(looksLikeChatId("-1001234567890")).toBe(true);
+    expect(looksLikeChatId("123456789")).toBe(true);
+    expect(looksLikeChatId("@minis_alerts")).toBe(true);
+  });
+
+  it("بيرفض اللي المتصفح بيحطه autofill", () => {
+    // دي حصلت فعلًا: المتصفح حطّ الإيميل، اتحفظ، وفشل الإرسال بـ chat not found
+    expect(looksLikeChatId("omarhamedd1@gmail.com")).toBe(false);
+    expect(looksLikeChatId("Omar Hamed")).toBe(false);
+    expect(looksLikeChatId("01001234567 ")).toBe(true); // تليفون شكله رقم — بس التجربة هي اللي بتكشفه
+    expect(looksLikeChatId("")).toBe(false);
+    expect(looksLikeChatId(null)).toBe(false);
   });
 });
