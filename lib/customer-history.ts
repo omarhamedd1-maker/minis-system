@@ -98,14 +98,33 @@ export function orderCountWord(n: number): string {
 }
 
 /**
- * صف الرجيع بيتلوّن؟
- *
- * نفس أسلوب صندوق مصاريف الشحن في نفس الشاشة: الصفوف عادية، والصف اللي
- * يهمّك هو اللي بياخد لون. مابنلوّنش من غير سبب — لو الرجيع في حدوده
- * الطبيعية يفضل صف عادي زي الباقي.
+ * الرجيع يتلوّن؟ مابنلوّنش من غير سبب — لو الرجيع في حدوده الطبيعية يفضل
+ * زي باقي الأرقام، عشان اللون لما يبان يبقى معناه حاجة.
  */
 export function shouldFlagReturns(h: CustomerHistory): boolean {
   return h.returned > 0 && (h.risk === "bad" || h.risk === "watch");
+}
+
+export type HistorySegment = { text: string; highlight: boolean };
+
+/**
+ * تفصيل صغير يتكتب تحت العدد: "استلم ٢ · رجّع ١".
+ *
+ * **مش صندوق ومش مربعات.** ده سطر في نفس الجدول اللي فيه الاسم والتليفون،
+ * وتحته شرح صغير — نفس أسلوب "إجمالي مصاريف الشحن" وتحته تفصيله.
+ * الصندوق بيتعمل لما يكون فيه حسبة ليها نتيجة، وده عدّ مش حسبة.
+ */
+export function historySegments(h: CustomerHistory): HistorySegment[] {
+  const flag = shouldFlagReturns(h);
+  const out: HistorySegment[] = [];
+
+  if (h.delivered > 0) out.push({ text: `استلم ${h.delivered}`, highlight: false });
+  if (h.returned > 0) out.push({ text: `رجّع ${h.returned}`, highlight: flag });
+  if (h.cancelled > 0) out.push({ text: `ألغى ${h.cancelled}`, highlight: false });
+  if (h.inProgress > 0)
+    out.push({ text: `${h.inProgress} لسه شغّال`, highlight: false });
+
+  return out;
 }
 
 /** الشكل اللي بيتعرض في الشاشة */

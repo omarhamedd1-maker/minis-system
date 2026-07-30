@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  historySegments,
   orderCountWord,
   ratePercent,
   riskBadge,
@@ -129,7 +130,42 @@ describe("العدد بالمصري", () => {
   });
 });
 
-describe("تلوين صف الرجيع", () => {
+describe("التفصيل الصغير", () => {
+  const seg = (statuses: string[]) =>
+    historySegments(summarizeCustomerHistory(statuses));
+
+  it("بيكتب اللي حصل بس — مافيش أصفار", () => {
+    expect(seg(["delivered", "delivered"])).toEqual([
+      { text: "استلم 2", highlight: false },
+    ]);
+  });
+
+  it("بيرتّبهم: استلم، رجّع، ألغى، شغّال", () => {
+    expect(
+      seg(["delivered", "returned", "cancelled", "shipped"]).map((s) => s.text)
+    ).toEqual(["استلم 1", "رجّع 1", "ألغى 1", "1 لسه شغّال"]);
+  });
+
+  it("مفيش تاريخ يبقى مفيش تفصيل", () => {
+    expect(seg([])).toEqual([]);
+  });
+
+  it("الرجيع العالي بس هو اللي بيتلوّن", () => {
+    const high = seg(["returned", "returned", "delivered"]);
+    expect(high.find((s) => s.text.startsWith("رجّع"))?.highlight).toBe(true);
+
+    const low = seg([
+      "returned",
+      "delivered",
+      "delivered",
+      "delivered",
+      "delivered",
+    ]);
+    expect(low.find((s) => s.text.startsWith("رجّع"))?.highlight).toBe(false);
+  });
+});
+
+describe("تلوين الرجيع", () => {
   const flag = (statuses: string[]) =>
     shouldFlagReturns(summarizeCustomerHistory(statuses));
 
