@@ -1335,3 +1335,101 @@ export async function undoRefund(formData: FormData) {
   revalidatePath(`/orders/${orderId}`);
   redirect(`/orders/${orderId}?saved=` + encodeURIComponent("اتلغى التأكيد"));
 }
+
+/**
+ * تأكيد إن بوسطة حوّلت فلوس الأوردر فعلًا.
+ *
+ * بوسطة بتحصّل من العميل وبتقعد بالفلوس يوم أو أكتر، وبتحوّل بدفعات. ومسار
+ * محفظتهم مقفول علينا (بيرجّع ٤٠١)، فمفيش طريقة نعرف التحويل تلقائيًا —
+ * التأكيد يدوي بقصد.
+ */
+export async function confirmCashReceived(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) redirect("/orders");
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ cash_received_at: new Date().toISOString() })
+    .eq("id", orderId);
+
+  if (error) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent(
+          "معرفناش نحفظ: " + error.message + " — شغّل sql/cash-received.sql"
+        )
+    );
+  }
+
+  await logActivity(
+    me,
+    "cash.received",
+    `أكّد إن بوسطة حوّلت فلوس أوردر ${await orderNo(supabase, orderId)}`,
+    orderId
+  );
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  redirect(`/orders/${orderId}?saved=` + encodeURIComponent("اتسجّل إن الفلوس وصلت"));
+}
+
+/** بيلغي التأكيد لو اتحط بالغلط */
+export async function undoCashReceived(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) redirect("/orders");
+
+  const supabase = createAdminClient();
+  await supabase
+    .from("orders")
+    .update({ cash_received_at: null })
+    .eq("id", orderId);
+
+  await logActivity(
+    me,
+    "cash.received_undo",
+    `لغى تأكيد وصول فلوس أوردر ${await orderNo(supabase, orderId)}`,
+    orderId
+  );
+  revalidatePath(`/orders/${orderId}`);
+  redirect(`/orders/${orderId}?saved=` + encodeURIComponent("اتلغى التأكيد"));
+}
+
+/**
+ * تأكيد دفعة كاملة مرة واحدة.
+ * بوسطة بتحوّل أسبوعيًا بدفعة فيها أوردرات كتير — فتعليم كل واحد لوحده
+ * مش عملي.
+ */
+export async function bulkConfirmCashReceived(
+  formData: FormData
+): Promise<{ ok: boolean; done: number; error?: string }> {
+  const me = await getSessionUser();
+  if (!me || !can(me, "orders.status")) {
+    return { ok: false, done: 0, error: "مالكش صلاحية" };
+  }
+
+  const ids = formData
+    .getAll("order_ids")
+    .map(String)
+    .filter(Boolean)
+    .slice(0, 200);
+  if (ids.length === 0) return { ok: false, done: 0, error: "محددتش أي أوردر" };
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ cash_received_at: new Date().toISOString() })
+    .in("id", ids)
+    .is("cash_received_at", null);
+
+  if (error) return { ok: false, done: 0, error: error.message };
+
+  await logActivity(
+    me,
+    "cash.received",
+    `أكّد وصول فلوس ${ids.length} أوردر`
+  );
+  revalidatePath("/orders");
+  return { ok: true, done: ids.length };
+}

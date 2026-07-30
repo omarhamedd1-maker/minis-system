@@ -8,10 +8,22 @@ describe("حالة فلوس الأوردر", () => {
     bosta_collected: false,
   };
 
-  it("اتحصّلت = وصلت", () => {
+  it("العميل دفع بس بوسطة لسه ماحوّلتش = مع بوسطة", () => {
+    // الغلط القديم: كانت بتقول "وصلت" أول ما يتسلّم. وبوسطة بتقعد بالفلوس
+    // يوم أو أكتر وبتحوّل بدفعات — فالفلوس تبان وصلت وهي في محفظتهم.
     expect(collectionState({ ...base, bosta_collected: true }).label).toBe(
-      "وصلت"
+      "مع بوسطة"
     );
+  });
+
+  it("بوسطة حوّلت وأكّدنا = وصلت", () => {
+    expect(
+      collectionState({
+        ...base,
+        bosta_collected: true,
+        cash_received_at: "2026-07-30T10:00:00Z",
+      }).label
+    ).toBe("وصلت");
   });
 
   it("لسه في السكة = لسه", () => {
@@ -41,13 +53,24 @@ describe("حالة فلوس الأوردر", () => {
     expect(collectionState({ ...base, bosta_state: null }).label).toBe("—");
   });
 
-  it("اتحصّلت بتكسب على أي حالة تانية", () => {
+  it("الفلوس اللي اتحصّلت بتكسب على أي حالة تانية", () => {
     // لو بوسطة قالت اتحصّلت، ماينفعش نقول "مش جاية"
     expect(
       collectionState({
         ...base,
         order_status: "returned",
         bosta_collected: true,
+      }).label
+    ).toBe("مع بوسطة");
+  });
+
+  it("والتحويل المؤكّد بيكسب على الكل", () => {
+    expect(
+      collectionState({
+        ...base,
+        order_status: "returned",
+        bosta_collected: true,
+        cash_received_at: "2026-07-30T10:00:00Z",
       }).label
     ).toBe("وصلت");
   });

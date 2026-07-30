@@ -41,6 +41,8 @@ import {
   updateShippingPrice,
   confirmRefund,
   undoRefund,
+  confirmCashReceived,
+  undoCashReceived,
 } from "./actions";
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
@@ -64,6 +66,7 @@ type OrderDetails = {
   bosta_created_at: string | null;
   refunded_at: string | null;
   refunded_amount: number | null;
+  cash_received_at: string | null;
   bosta_shipping_cost: number;
   delivered_at: string | null;
   return_note: string | null;
@@ -126,7 +129,7 @@ export default async function OrderDetailsPage({
     .select(
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
-       bosta_created_at, refunded_at, refunded_amount,
+       bosta_created_at, refunded_at, refunded_amount, cash_received_at,
        delivered_at, return_note, return_tracking, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
@@ -586,12 +589,36 @@ export default async function OrderDetailsPage({
                 })()}
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">فلوسك</dt>
-                <dd>
+                <dd className="flex items-center gap-2">
                   <span
                     className={`rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium ${collectionState(order).className}`}
                   >
                     {collectionState(order).label}
                   </span>
+                  {/* بوسطة بتحصّل من العميل وبتقعد بالفلوس يوم أو أكتر قبل
+                      ما تحوّلها. ومسار محفظتهم مقفول علينا، فالتأكيد يدوي. */}
+                  {order.bosta_collected && !order.cash_received_at && (
+                    <form action={confirmCashReceived}>
+                      <input type="hidden" name="order_id" value={order.id} />
+                      <button
+                        type="submit"
+                        className="rounded-lg bg-green-600 px-2.5 py-1 text-[11px] font-medium text-white"
+                      >
+                        بوسطة حوّلت
+                      </button>
+                    </form>
+                  )}
+                  {order.cash_received_at && (
+                    <form action={undoCashReceived}>
+                      <input type="hidden" name="order_id" value={order.id} />
+                      <button
+                        type="submit"
+                        className="text-[11px] text-gray-400 underline"
+                      >
+                        تراجع
+                      </button>
+                    </form>
+                  )}
                 </dd>
               </div>
               {order.bosta_tracking &&

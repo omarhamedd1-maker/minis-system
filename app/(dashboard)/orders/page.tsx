@@ -71,6 +71,7 @@ type OrderRow = {
   bosta_state: string | null;
   bosta_collected: boolean;
   bosta_tracking: string | null;
+  cash_received_at: string | null;
   customers: { full_name: string | null; phone: string | null } | null;
   order_items: {
     quantity: number;
@@ -175,7 +176,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, cancelled_at, shipping_price, discount, bosta_state, bosta_collected, bosta_tracking, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
+      "id, order_number, order_status, order_date, cancelled_at, shipping_price, discount, bosta_state, bosta_collected, bosta_tracking, cash_received_at, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });

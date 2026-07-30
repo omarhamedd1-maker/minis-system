@@ -177,9 +177,17 @@ export function collectionState(order: {
   order_status: string | null;
   bosta_state: string | null;
   bosta_collected: boolean | null;
+  /** امتى أكّدت إن بوسطة حوّلت الفلوس فعلًا */
+  cash_received_at?: string | null;
 }): { label: string; className: string } {
-  if (order.bosta_collected) {
+  // "وصلت" = بوسطة حوّلت الفلوس وإنت أكّدت. **مش** إن الأوردر اتسلّم —
+  // بوسطة بتقعد بالفلوس يوم أو أكتر وبتحوّل بدفعات، فالحالة القديمة كانت
+  // بتقول "وصلت" وهي لسه في محفظتهم.
+  if (order.cash_received_at) {
     return { label: "وصلت", className: "text-green-700" };
+  }
+  if (order.bosta_collected) {
+    return { label: "مع بوسطة", className: "text-amber-700" };
   }
   if (order.order_status === "returned_after_delivery") {
     return { label: "رجّعتها للعميل", className: "text-rose-700" };
