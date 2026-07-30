@@ -4,12 +4,14 @@ import {
   checkBostaConnection,
   checkTelegram,
   saveBostaKey,
-  saveShopify,
+  saveShopifyApp,
   saveTelegram,
-  checkShopifyConnection,
+  disconnectShopify,
 } from "./actions";
 import { looksLikeChatId } from "@/lib/telegram";
 import { EnablePush } from "@/components/EnablePush";
+import { readShopifyApp } from "@/lib/shopify/app";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ export default async function SettingsPage({
     db
       .from("tenant_credentials")
       .select(
-        "bosta_api_key, bosta_pickup_address_id, telegram_bot_token, telegram_chat_id, shopify_shop, shopify_client_id, shopify_client_secret"
+        "bosta_api_key, bosta_pickup_address_id, telegram_bot_token, telegram_chat_id, shopify_shop, shopify_access_token"
       )
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
@@ -39,7 +41,15 @@ export default async function SettingsPage({
 
   const hasBosta = Boolean(creds?.bosta_api_key);
   const hasTelegram = Boolean(creds?.telegram_bot_token);
-  const hasShopify = Boolean(creds?.shopify_client_id && creds?.shopify_shop);
+  // الربط بقى بضغطة — المفتاح المهم هو التوكن مش المفاتيح اليدوية
+  const hasShopify = Boolean(creds?.shopify_access_token && creds?.shopify_shop);
+  const app = await readShopifyApp(db);
+  const appReady = Boolean(app);
+  const appClientId = app?.clientId ?? null;
+  const h = await headers();
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    `https://${h.get("host") ?? "minis-system.vercel.app"}`;
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -135,7 +145,7 @@ export default async function SettingsPage({
         </form>
       </div>
 
-      {/* ===== ربط شوبيفاي ===== */}
+      {/* ===== ربط شوبيفاي بضغطة واحدة ===== */}
       <div className="rounded-xl bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-bold text-gray-900">ربط شوبيفاي</h2>
@@ -154,85 +164,117 @@ export default async function SettingsPage({
           منه بتنزل الأوردرات والمنتجات، وبيه السيستم بيرجّع تعديلاتك للمتجر.
         </p>
 
-        <form action={saveShopify} className="mt-4 space-y-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="shopify_shop" className={label}>
-              دومين المتجر
-            </label>
-            <input
-              id="shopify_shop"
-              name="shopify_shop"
-              defaultValue={creds?.shopify_shop ?? ""}
-              placeholder="yourshop.myshopify.com"
-              className={input}
-              dir="ltr"
-              autoComplete="off"
-            />
-            <span className="text-[11px] text-gray-400">
-              لازم دومين شوبيفاي نفسه، مش الدومين المخصّص بتاع المتجر.
-            </span>
+        {hasShopify ? (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm text-gray-900" dir="ltr">
+              {creds?.shopify_shop}
+            </p>
+            <form action={disconnectShopify}>
+              <button
+                type="submit"
+                className="text-[11px] text-gray-500 underline"
+              >
+                افصل الربط
+              </button>
+            </form>
           </div>
+        ) : appReady ? (
+          <form action="/api/shopify/install" className="mt-4 space-y-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="shop" className={label}>
+                دومين متجرك
+              </label>
+              <input
+                id="shop"
+                name="shop"
+                placeholder="yourshop.myshopify.com"
+                className={input}
+                dir="ltr"
+                autoComplete="off"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            >
+              اربط شوبيفاي
+            </button>
+            <p className="text-[11px] text-gray-400">
+              هنوديك لشوبيفاي توافق، وترجع والربط تمّ. مفيش مفاتيح تلزقها.
+            </p>
+          </form>
+        ) : (
+          <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs leading-6 text-amber-800">
+            تطبيق شوبيفاي لسه مش مظبّط. صاحب المنصة لازم يحط بيانات التطبيق
+            الأول (تحت في نفس الصفحة).
+          </p>
+        )}
+      </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="shopify_client_id" className={label}>
-              Client ID
-            </label>
-            <input
-              id="shopify_client_id"
-              name="shopify_client_id"
-              defaultValue={creds?.shopify_client_id ?? ""}
-              className={input}
-              dir="ltr"
-              autoComplete="off"
-            />
-          </div>
+      {/* ===== بيانات تطبيق شوبيفاي — لصاحب المنصة بس ===== */}
+      {me.isPlatformAdmin && (
+        <div className="rounded-xl border border-gray-300 bg-gray-50 p-5">
+          <h2 className="text-sm font-bold text-gray-900">
+            تطبيق شوبيفاي (صاحب المنصة)
+          </h2>
+          <p className="mt-1 text-xs leading-6 text-gray-500">
+            تطبيق واحد للمنصة كلها، بيتسجّل مرة واحدة — وبعده كل بيزنس بيربط
+            متجره بضغطة.
+          </p>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="shopify_client_secret" className={label}>
-              Client Secret{" "}
-              {hasShopify && "— سيبه فاضي لو مش عايز تغيّره"}
-            </label>
-            <input
-              id="shopify_client_secret"
-              name="shopify_client_secret"
-              type="password"
-              placeholder={hasShopify ? "••••••••••••" : ""}
-              className={input}
-              dir="ltr"
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+          <form action={saveShopifyApp} className="mt-4 space-y-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="app_client_id" className={label}>
+                Client ID
+              </label>
+              <input
+                id="app_client_id"
+                name="app_client_id"
+                defaultValue={appClientId ?? ""}
+                className={input}
+                dir="ltr"
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="app_client_secret" className={label}>
+                Client Secret {appReady && "— سيبه فاضي لو مش عايز تغيّره"}
+              </label>
+              <input
+                id="app_client_secret"
+                name="app_client_secret"
+                type="password"
+                placeholder={appReady ? "••••••••••••" : ""}
+                className={input}
+                dir="ltr"
+                autoComplete="off"
+              />
+            </div>
             <button
               type="submit"
               className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
             >
-              احفظ واتأكد إنه شغال
+              احفظ بيانات التطبيق
             </button>
-            {hasShopify && (
-              <button
-                type="submit"
-                formAction={checkShopifyConnection}
-                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-              >
-                جرّب الاتصال
-              </button>
-            )}
-          </div>
-          <p className="text-[11px] text-gray-400">
-            مش هنحفظ حاجة غير لما نتصل بالمتجر فعلًا ونقرا اسمه — مش مجرد إن
-            شوبيفاي ردّت.
-          </p>
-        </form>
+          </form>
 
-        <div className="mt-4 rounded-xl bg-gray-50 p-3 text-[11px] leading-6 text-gray-500">
-          <span className="font-bold text-gray-700">إزاي تجيبهم:</span>{" "}
-          من <span dir="ltr">Shopify Dev Dashboard</span> ← التطبيق بتاعك ←{" "}
-          <span dir="ltr">Client credentials</span>. والصلاحيات المطلوبة:{" "}
-          <span dir="ltr">read_products, read_orders, write_orders, write_order_edits</span>.
+          <div className="mt-4 rounded-xl bg-white p-3 text-[11px] leading-6 text-gray-500">
+            <span className="font-bold text-gray-700">في لوحة شوبيفاي:</span>
+            <br />
+            partners.shopify.com ← <b>Dev dashboard</b> ← Create app
+            <br />
+            App URL: <span dir="ltr">{origin}/api/shopify/install</span>
+            <br />
+            Redirect URL: <span dir="ltr">{origin}/api/shopify/callback</span>
+            <br />
+            الصلاحيات:{" "}
+            <span dir="ltr">
+              read_products, read_orders, write_orders, write_order_edits
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ===== إشعارات من السيستم نفسه ===== */}
       <div className="rounded-xl bg-white p-5 shadow-sm">
