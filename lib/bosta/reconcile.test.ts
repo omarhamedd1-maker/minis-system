@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { decideSync, isoDate, deliveryOrderNumber, type OurOrder } from "./reconcile";
+import {
+  decideSync,
+  isoDate,
+  sameInstant,
+  deliveryOrderNumber,
+  type OurOrder,
+} from "./reconcile";
 
 const NOW = new Date("2026-07-28T12:00:00.000Z");
 
@@ -256,5 +262,38 @@ describe("الأوردر اللي عليه شحنة مرتجع", () => {
       NOW
     );
     expect(d.changes.order_status).toBe("delivered");
+  });
+});
+
+describe("مقارنة التواريخ بالوقت مش بالنص", () => {
+  it("نفس اللحظة بشكلين مختلفين = متساويين", () => {
+    // ده بالظبط اللي كان بيحصل: بوستجرس بيرجّع الشمال وإحنا بنكتب اليمين
+    expect(sameInstant("2026-04-19T09:58:00+00:00", "2026-04-19T09:58:00.000Z")).toBe(true);
+  });
+
+  it("لحظتين مختلفين = مش متساويين", () => {
+    expect(sameInstant("2026-04-19T09:58:00Z", "2026-04-19T09:59:00Z")).toBe(false);
+  });
+
+  it("الفاضي مع الفاضي متساويين، والفاضي مع قيمة لأ", () => {
+    expect(sameInstant(null, null)).toBe(true);
+    expect(sameInstant(null, "2026-04-19T09:58:00Z")).toBe(false);
+  });
+
+  it("تاريخ مش مفهوم = مش متساوي", () => {
+    expect(sameInstant("مش تاريخ", "2026-04-19T09:58:00Z")).toBe(false);
+  });
+
+  it("والمزامنة مابتكتبش التاريخ تاني لو محفوظ بشكل بوستجرس", () => {
+    const d = decideSync(
+      {
+        ...deliveredShipment,
+        createdAt: "Wed Jul 29 2026 16:11:28 GMT+0000 (Coordinated Universal Time)",
+      },
+      // زي ما بوستجرس بيرجّعه بالظبط
+      syncedOrder({ bosta_created_at: "2026-07-29T16:11:28+00:00" }),
+      NOW
+    );
+    expect(d.changes).toEqual({});
   });
 });

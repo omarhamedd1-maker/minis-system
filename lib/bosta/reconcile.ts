@@ -44,6 +44,22 @@ export function isoDate(raw: string | null | undefined): string | null {
   return Number.isNaN(t.getTime()) ? null : t.toISOString();
 }
 
+/**
+ * نفس اللحظة؟ — مقارنة تواريخ بالوقت مش بالنص.
+ * لازم كده لأن بوستجرس بيرجّع `+00:00` وإحنا بنكتب `.000Z`، ومقارنة النص
+ * بينهم بتفضل تفشل للأبد فبنكتب نفس القيمة كل مزامنة.
+ */
+export function sameInstant(
+  a: string | null | undefined,
+  b: string | null | undefined
+): boolean {
+  if (!a || !b) return !a && !b;
+  const ta = new Date(a).getTime();
+  const tb = new Date(b).getTime();
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return false;
+  return ta === tb;
+}
+
 /** سبب وقوف الشحنة عند بوسطة (عنوان مش واضح، العميل مش بيرد…) */
 export function deliveryException(d: BostaDelivery): string | null {
   return (
@@ -132,8 +148,12 @@ export function decideSync(
   // تاريخ إنشاء الشحنة عند بوسطة — منه بنعرف إنها واقفة من كام يوم.
   // بنكتبه مرة واحدة وبس؛ لو الأوردر عليه شحنة جديدة، رقم التتبع بيتغيّر
   // فوق فبنجدّده معاه.
+  // ⚠️ المقارنة **بالوقت مش بالنص**. بوستجرس بيرجّع
+  // `2026-04-19T09:58:00+00:00` وإحنا بنكتب `2026-04-19T09:58:00.000Z` —
+  // نفس اللحظة بالظبط بس نصّين مختلفين، فمقارنة النص بتفشل دايمًا وبنكتب
+  // التاريخ من جديد كل ١٥ دقيقة في ٢١٦ أوردر على الفاضي.
   const created = isoDate(d.createdAt);
-  if (created && o.bosta_created_at !== created) {
+  if (created && !sameInstant(o.bosta_created_at, created)) {
     changes.bosta_created_at = created;
     // شحنة جديدة = صفحة جديدة، فالتنبيه القديم يتشال
     if (changes.bosta_tracking) changes.bosta_stale_alerted_day = null;
