@@ -41,8 +41,6 @@ import {
   updateShippingPrice,
   confirmRefund,
   undoRefund,
-  confirmCashReceived,
-  undoCashReceived,
 } from "./actions";
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
@@ -589,36 +587,12 @@ export default async function OrderDetailsPage({
                 })()}
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">فلوسك</dt>
-                <dd className="flex items-center gap-2">
+                <dd>
                   <span
                     className={`rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium ${collectionState(order).className}`}
                   >
                     {collectionState(order).label}
                   </span>
-                  {/* بوسطة بتحصّل من العميل وبتقعد بالفلوس يوم أو أكتر قبل
-                      ما تحوّلها. ومسار محفظتهم مقفول علينا، فالتأكيد يدوي. */}
-                  {order.bosta_collected && !order.cash_received_at && (
-                    <form action={confirmCashReceived}>
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-green-600 px-2.5 py-1 text-[11px] font-medium text-white"
-                      >
-                        بوسطة حوّلت
-                      </button>
-                    </form>
-                  )}
-                  {order.cash_received_at && (
-                    <form action={undoCashReceived}>
-                      <input type="hidden" name="order_id" value={order.id} />
-                      <button
-                        type="submit"
-                        className="text-[11px] text-gray-400 underline"
-                      >
-                        تراجع
-                      </button>
-                    </form>
-                  )}
                 </dd>
               </div>
               {order.bosta_tracking &&

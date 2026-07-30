@@ -500,6 +500,7 @@ export async function runBostaSync(opts: {
               tracking: row.bosta_tracking,
               reason: decision.changes.bosta_exception as string | null,
               arrived: to === "returned",
+              waiting: to === "awaiting_action",
               siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
             }),
             { fetchImpl, tag: `order-`, url: "/orders?status=returning" }

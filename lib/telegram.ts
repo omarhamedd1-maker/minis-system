@@ -167,6 +167,8 @@ export type FailedDeliveryAlert = {
   reason: string | null;
   /** رجعت خلاص ولا لسه في الطريق لينا */
   arrived: boolean;
+  /** بوسطة واقفة ومستنية قرار مننا — مش راجعة (لسه) */
+  waiting?: boolean;
   siteUrl?: string | null;
 };
 
@@ -180,9 +182,11 @@ export function failedDeliveryMessage(a: FailedDeliveryAlert): string {
   // على الموبايل من غير ما تفتحه
   const who = a.customerName ? ` — ${a.customerName}` : "";
   const lines = [
-    a.arrived
-      ? `📦 <b>أوردر ${a.orderNumber ?? "—"} رجع ومتسلّمش${who}</b>`
-      : `⚠️ <b>أوردر ${a.orderNumber ?? "—"} العميل مستلمش${who}</b>`,
+    a.waiting
+      ? `🛑 <b>أوردر ${a.orderNumber ?? "—"} بوسطة مستنية قرار منك${who}</b>`
+      : a.arrived
+        ? `📦 <b>أوردر ${a.orderNumber ?? "—"} رجع ومتسلّمش${who}</b>`
+        : `⚠️ <b>أوردر ${a.orderNumber ?? "—"} العميل مستلمش${who}</b>`,
     "",
   ];
   if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
@@ -190,9 +194,11 @@ export function failedDeliveryMessage(a: FailedDeliveryAlert): string {
   if (a.reason) lines.push(`سبب بوسطة: ${a.reason}`);
   lines.push("");
   lines.push(
-    a.arrived
-      ? "البضاعة رجعت — راجع المخزون والفلوس."
-      : "كلّم العميل قبل ما الشحنة ترجع المخزن."
+    a.waiting
+      ? "بوسطة خلّصت محاولاتها ورفعت إيدها. كلّم العميل واطلب محاولة تانية، أو قول لبوسطة ترجّعها."
+      : a.arrived
+        ? "البضاعة رجعت — راجع المخزون والفلوس."
+        : "كلّم العميل قبل ما الشحنة ترجع المخزن."
   );
   if (a.siteUrl) {
     lines.push(`${a.siteUrl}/orders?status=${a.arrived ? "returned" : "returning"}`);

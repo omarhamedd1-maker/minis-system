@@ -94,8 +94,13 @@ const STATE_CODES: Record<number, OrderStatus> = {
   10: "ready", // Pickup requested — الشحنة اتعملت ومستنية المندوب
   24: "shipped", // Received at warehouse
   30: "shipped", // In transit between Hubs
+  41: "out_for_delivery", // Out for delivery — المندوب ماشي بيها للعميل
   45: "delivered", // Delivered
   46: "returned", // Returned to business — **مش delivered**
+  // ٤٧ = Exception: بوسطة واقفة ومستنية قرار مننا (`waitingForBusinessAction`).
+  // الكود ده كان ناقص، فأوردر ١٣٦٤ قعد ٩ أيام عندنا "استلمه بوسطة" وهو
+  // في الحقيقة العميل رفض يستلمه ومحتاج تصرّف.
+  47: "awaiting_action",
   48: "awaiting_action", // Terminated — بوسطة وقفتها ومحتاجة قرار مننا
   104: "awaiting_action", // Archived — الشحنة اتقفلت، لازم نشوف حصل إيه
 };

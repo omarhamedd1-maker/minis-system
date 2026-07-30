@@ -7,6 +7,7 @@
 
 import { shippingCost, type CarrierFeeRules } from "../shipping-cost";
 import { canSyncChangeStatus, mapBostaDelivery } from "./order-status";
+import { summarizeException, type BostaAttempt } from "./exception";
 
 export type BostaDelivery = {
   trackingNumber?: string | null;
@@ -15,6 +16,9 @@ export type BostaDelivery = {
     value?: string | null;
     code?: number | null;
     delayReason?: string | null;
+    /** تفاصيل المحاولات — السبب الحقيقي عايش هنا مش في الخانات التانية */
+    exception?: BostaAttempt[] | null;
+    waitingForBusinessAction?: boolean | null;
   } | null;
   /** النص جاي من جلب الشحنة لوحدها؟ ساعتها هو الأدق حاجة عندنا */
   stateIsDetailed?: boolean;
@@ -62,6 +66,11 @@ export function sameInstant(
 
 /** سبب وقوف الشحنة عند بوسطة (عنوان مش واضح، العميل مش بيرد…) */
 export function deliveryException(d: BostaDelivery): string | null {
+  // **تفاصيل المحاولات الأول.** الخانات التانية بترجع فاضية عند بوسطة،
+  // فسبب وقوف أوردر ١٣٦٤ ("العميل رفض يستلم") مكانش بيوصلنا خالص.
+  const summary = summarizeException(d.state);
+  if (summary) return summary.text;
+
   return (
     d.latestExceptionReason ?? d.state?.delayReason ?? d.exceptionReason ?? null
   );
