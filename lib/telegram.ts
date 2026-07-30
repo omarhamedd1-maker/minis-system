@@ -176,13 +176,14 @@ export type FailedDeliveryAlert = {
  * يكلّم العميل **دلوقتي** قبل ما الشحنة توصل المخزن وتبقى خسارة مؤكدة.
  */
 export function failedDeliveryMessage(a: FailedDeliveryAlert): string {
+  // رقم الأوردر واسم العميل في **السطر الأول** — ده اللي بيبان في الإشعار
+  // على الموبايل من غير ما تفتحه
+  const who = a.customerName ? ` — ${a.customerName}` : "";
   const lines = [
     a.arrived
-      ? "📦 <b>أوردر رجع ومتسلّمش</b>"
-      : "⚠️ <b>العميل مستلمش — الأوردر راجع لك</b>",
+      ? `📦 <b>أوردر ${a.orderNumber ?? "—"} رجع ومتسلّمش${who}</b>`
+      : `⚠️ <b>أوردر ${a.orderNumber ?? "—"} العميل مستلمش${who}</b>`,
     "",
-    `أوردر: <b>${a.orderNumber ?? "—"}</b>`,
-    `العميل: ${a.customerName ?? "—"}`,
   ];
   if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
   if (a.tracking) lines.push(`شحنة: <code>${a.tracking}</code>`);

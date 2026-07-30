@@ -91,7 +91,7 @@ describe("رسالة الشحنة الواقفة", () => {
 
   it("المراحل الأولى: كلّم بوسطة", () => {
     const m = stalePickupMessage({ ...base, days: 5, milestone: 3 });
-    expect(m).toContain("شحنة واقفة");
+    expect(m).toContain("واقفة");
     expect(m).toContain("1374");
     expect(m).toContain("أمينة فتحي");
     expect(m).toContain("5 يوم");

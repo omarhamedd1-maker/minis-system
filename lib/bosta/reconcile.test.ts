@@ -17,6 +17,7 @@ function syncedOrder(over: Partial<OurOrder> = {}): OurOrder {
     bosta_shipping_cost: 92.11,
     bosta_exception: null,
     bosta_created_at: null,
+    hasCustomerReturn: false,
     productValue: 3600,
     ...over,
   };
@@ -219,5 +220,41 @@ describe("تحويل تاريخ بوسطة", () => {
       NOW
     );
     expect(d.changes).toEqual({});
+  });
+});
+
+// ==========================================================================
+// الخانقة اللي قلّبت أوردر ١٢٢٧ كل ١٥ دقيقة
+// ==========================================================================
+describe("الأوردر اللي عليه شحنة مرتجع", () => {
+  it("الشحنة الأصلية مامتغيرش حالته", () => {
+    // ١٢٢٧: الأصلية اتسلّمت، وعليه شحنة مرتجع عملها عمر. جزء المرتجع كان
+    // بيحطه "في الطريق ليك" وجزء التوصيل يرجّعه "تم التسليم" — كل ١٥ دقيقة
+    // واحد يلغي التاني، وطلّع ٤٣ سطر سجل و٣٩ إشعار.
+    const d = decideSync(
+      deliveredShipment,
+      syncedOrder({ order_status: "returning", hasCustomerReturn: true }),
+      NOW
+    );
+    expect(d.statusLocked).toBe(true);
+    expect(d.changes.order_status).toBeUndefined();
+  });
+
+  it("بس الرسوم والتحصيل بيتحدّثوا عادي", () => {
+    const d = decideSync(
+      { ...deliveredShipment, cod: 4000 },
+      syncedOrder({ order_status: "returning", hasCustomerReturn: true }),
+      NOW
+    );
+    expect(d.changes.bosta_cod).toBe(4000);
+  });
+
+  it("ومن غير شحنة مرتجع الحالة بتتحدّث زي الأول", () => {
+    const d = decideSync(
+      deliveredShipment,
+      syncedOrder({ order_status: "shipped", hasCustomerReturn: false }),
+      NOW
+    );
+    expect(d.changes.order_status).toBe("delivered");
   });
 });

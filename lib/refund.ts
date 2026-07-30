@@ -80,11 +80,11 @@ export function refundReminderMessage(a: {
   days: number;
   siteUrl?: string | null;
 }): string {
+  // رقم الأوردر واسم العميل في السطر الأول — ده اللي بيبان في الإشعار
+  const who = a.customerName ? ` — ${a.customerName}` : "";
   const lines = [
-    "💸 <b>لسه مارجّعتش فلوس العميل</b>",
+    `💸 <b>أوردر ${a.orderNumber ?? "—"} لسه مارجّعتش فلوسه${who}</b>`,
     "",
-    `أوردر: <b>${a.orderNumber ?? "—"}</b>`,
-    `العميل: ${a.customerName ?? "—"}`,
   ];
   if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
   lines.push(`المبلغ: <b>${a.amount} جنيه</b>`);

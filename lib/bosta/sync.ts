@@ -359,6 +359,8 @@ export async function runBostaSync(opts: {
       bosta_shipping_cost: row.bosta_shipping_cost,
       bosta_exception: row.bosta_exception,
       bosta_created_at: row.bosta_created_at,
+      // عليه شحنة مرتجع؟ المرتجع هو اللي بيحدد الحالة مش الشحنة الأصلية
+      hasCustomerReturn: Boolean(row.return_tracking),
       productValue: (row.order_items ?? []).reduce(
         (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
         0

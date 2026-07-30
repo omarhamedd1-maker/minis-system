@@ -116,7 +116,7 @@ describe("رسالة التنبيه", () => {
       amount: 1298,
       days: 4,
     });
-    expect(m).toContain("لسه مارجّعتش فلوس العميل");
+    expect(m).toContain("لسه مارجّعتش فلوسه");
     expect(m).toContain("1359");
     expect(m).toContain("شيماء خالد");
     expect(m).toContain("1298 جنيه");

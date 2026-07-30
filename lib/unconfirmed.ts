@@ -50,11 +50,11 @@ export function unconfirmedMessage(a: {
   days: number;
   siteUrl?: string | null;
 }): string {
+  // رقم الأوردر واسم العميل في السطر الأول — ده اللي بيبان في الإشعار
+  const who = a.customerName ? ` — ${a.customerName}` : "";
   const lines = [
-    "📞 <b>أوردر لسه مش مؤكد</b>",
+    `📞 <b>أوردر ${a.orderNumber ?? "—"} لسه مش مؤكد${who}</b>`,
     "",
-    `أوردر: <b>${a.orderNumber ?? "—"}</b>`,
-    `العميل: ${a.customerName ?? "—"}`,
   ];
   if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
   if (a.total > 0) lines.push(`المبلغ: ${a.total} جنيه`);

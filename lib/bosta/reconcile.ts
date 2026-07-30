@@ -63,6 +63,14 @@ export type OurOrder = {
   bosta_shipping_cost: number | null;
   bosta_exception: string | null;
   bosta_created_at: string | null;
+  /**
+   * الأوردر عليه شحنة مرتجع من العميل؟
+   * ساعتها **المرتجع هو اللي بيحدد الحالة** والشحنة الأصلية مالهاش كلمة —
+   * وإلا الاتنين بيتخانقوا: المرتجع يقول "في الطريق ليك" والأصلية تقول
+   * "تم التسليم"، وكل ١٥ دقيقة واحد يلغي التاني. حصل فعلًا في أوردر ١٢٢٧
+   * وطلّع ٤٣ سطر سجل و٣٩ إشعار.
+   */
+  hasCustomerReturn: boolean;
   /** إجمالي بنود الأوردر — التأمين بيتحسب عليه */
   productValue: number;
 };
@@ -165,10 +173,13 @@ export function decideSync(
     reasons.push(collected ? "اتحصّلت" : "اتشالت من المحصّل");
   }
 
-  // الحالات اللي إحنا حددناها بإيدنا المزامنة مامتغيرهاش
+  // الحالات اللي إحنا حددناها بإيدنا المزامنة مامتغيرهاش.
+  // وكمان: الأوردر اللي عليه شحنة مرتجع، الشحنة الأصلية مامتغيرش حالته.
   let statusLocked = false;
   if (mapped && mapped !== o.order_status) {
-    if (canSyncChangeStatus(o.order_status)) {
+    if (o.hasCustomerReturn) {
+      statusLocked = true;
+    } else if (canSyncChangeStatus(o.order_status)) {
       changes.order_status = mapped;
       reasons.push(`حالة الأوردر بقت ${mapped}`);
       // أول ما يبقى متسلّم ومفيش تاريخ، بنسجّل التاريخ

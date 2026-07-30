@@ -81,14 +81,14 @@ export function stalePickupMessage(a: {
 }): string {
   const last = a.milestone === STALE_MILESTONES[STALE_MILESTONES.length - 1];
   const left = BOSTA_ARCHIVES_AFTER_DAYS - a.days;
+  // رقم الأوردر واسم العميل في السطر الأول — ده اللي بيبان في الإشعار
+  const who = a.customerName ? ` — ${a.customerName}` : "";
 
   const lines = [
     last
-      ? "🚨 <b>آخر فرصة — الشحنة على وشك تتأرشف</b>"
-      : "🕗 <b>شحنة واقفة — المندوب مجاش</b>",
+      ? `🚨 <b>آخر فرصة — شحنة أوردر ${a.orderNumber ?? "—"}${who}</b>`
+      : `🕗 <b>شحنة أوردر ${a.orderNumber ?? "—"} واقفة${who}</b>`,
     "",
-    `أوردر: <b>${a.orderNumber ?? "—"}</b>`,
-    `العميل: ${a.customerName ?? "—"}`,
   ];
   if (a.tracking) lines.push(`شحنة: <code>${a.tracking}</code>`);
   lines.push(`قاعدة: <b>${a.days} يوم</b> من غير بيك اب`);
