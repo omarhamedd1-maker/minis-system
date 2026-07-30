@@ -8,7 +8,9 @@ import {
   orderStatusBadge,
 } from "@/lib/format";
 import { BackLink } from "@/components/BackLink";
+import { LinkMissingShipments } from "@/components/LinkMissingShipments";
 import { requirePagePermission } from "@/lib/permissions";
+import { linkMissingShipments } from "./actions";
 
 type Row = {
   id: string;
@@ -279,6 +281,9 @@ export default async function ReconcilePage() {
           <p className="mt-1 text-xl font-bold text-gray-500">{bySeverity.low}</p>
         </div>
       </div>
+
+      {/* الصفحة كانت بتكشف بس — دي أول أداة بتصلّح */}
+      <LinkMissingShipments action={linkMissingShipments} />
 
       {issues.length === 0 ? (
         <div className="rounded-xl bg-green-50 p-8 text-center text-sm text-green-800">
