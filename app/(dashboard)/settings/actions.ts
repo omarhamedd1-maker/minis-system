@@ -6,8 +6,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { testConnection } from "@/lib/bosta/client";
+import { testTelegram } from "@/lib/telegram";
 
-function back(msg: string, ok = false) {
+// بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
+// مابيتنفذش، فمانحتاجش else في كل مكان
+function back(msg: string, ok = false): never {
   redirect(`/settings?${ok ? "saved" : "error"}=` + encodeURIComponent(msg));
 }
 
@@ -38,6 +41,80 @@ export async function saveBostaKey(formData: FormData) {
   await logActivity(me, "settings.bosta", "ربط حساب بوسطة");
   revalidatePath("/settings");
   back("تمام — المفتاح اتجرّب واشتغل واتحفظ", true);
+}
+
+/**
+ * تنبيهات تليجرام. بنجرّبها قبل الحفظ زي مفتاح بوسطة بالظبط — التنبيه اللي
+ * ماوصلش أوحش من إنه مش موجود، فمينفعش نحفظ إعداد ماجرّبناهوش.
+ */
+export async function saveTelegram(formData: FormData) {
+  const me = await requirePermission("admin.settings");
+  const token = String(formData.get("telegram_bot_token") ?? "").trim();
+  const chatId = String(formData.get("telegram_chat_id") ?? "").trim();
+
+  const db = createAdminClient();
+
+  // فاضيين = إيقاف التنبيهات
+  if (!token && !chatId) {
+    const { error } = await db
+      .from("tenant_credentials")
+      .update({
+        telegram_bot_token: null,
+        telegram_chat_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", me.tenantId);
+    if (error) back("معرفناش نحفظ: " + error.message);
+    await logActivity(me, "settings.telegram", "وقّف تنبيهات تليجرام");
+    revalidatePath("/settings");
+    back("التنبيهات اتوقفت", true);
+  }
+
+  if (!token || !chatId) back("محتاج التوكن ورقم الجروب الاتنين");
+
+  const { error } = await db
+    .from("tenant_credentials")
+    .update({
+      telegram_bot_token: token,
+      telegram_chat_id: chatId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) {
+    back(
+      "معرفناش نحفظ: " +
+        error.message +
+        " — لو الخانات لسه مااتعملتش شغّل sql/telegram.sql"
+    );
+  }
+
+  // بنجرّب بعد الحفظ عشان الإرسال بيقرا المفاتيح من الجدول
+  const test = await testTelegram(db, me.tenantId);
+  if (!test.ok) {
+    back(
+      "اتحفظ بس التجربة فشلت: " +
+        (test.reason === "not_configured"
+          ? "المفاتيح مش مقروءة"
+          : (test.error ?? "تليجرام رفض"))
+    );
+  }
+
+  await logActivity(me, "settings.telegram", "ربط تنبيهات تليجرام");
+  revalidatePath("/settings");
+  back("تمام — بعتنا رسالة تجربة على الجروب", true);
+}
+
+/** بيبعت رسالة تجربة بالمفاتيح المحفوظة */
+export async function checkTelegram() {
+  const me = await requirePermission("admin.settings");
+  const result = await testTelegram(createAdminClient(), me.tenantId);
+  if (result.ok) back("الرسالة وصلت الجروب ✓", true);
+  back(
+    result.reason === "not_configured"
+      ? "لسه مفيش بوت محفوظ"
+      : "مااتبعتتش: " + (result.error ?? "تليجرام رفض")
+  );
 }
 
 /** بيجرّب المفتاح المحفوظ من غير ما يغيّر حاجة */

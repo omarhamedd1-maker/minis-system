@@ -1,6 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePagePermission } from "@/lib/permissions";
-import { checkBostaConnection, saveBostaKey } from "./actions";
+import {
+  checkBostaConnection,
+  checkTelegram,
+  saveBostaKey,
+  saveTelegram,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +26,15 @@ export default async function SettingsPage({
     db.from("tenants").select("name").eq("id", me.tenantId).maybeSingle(),
     db
       .from("tenant_credentials")
-      .select("bosta_api_key, bosta_pickup_address_id")
+      .select(
+        "bosta_api_key, bosta_pickup_address_id, telegram_bot_token, telegram_chat_id"
+      )
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
 
   const hasBosta = Boolean(creds?.bosta_api_key);
+  const hasTelegram = Boolean(creds?.telegram_bot_token);
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -120,6 +128,84 @@ export default async function SettingsPage({
             مش هنحفظ المفتاح غير لما نتأكد إنه بيشتغل فعلًا عند بوسطة.
           </p>
         </form>
+      </div>
+
+      {/* ===== تنبيهات تليجرام ===== */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+        <h2 className="text-sm font-bold text-gray-900">
+          تنبيهات على الموبايل
+        </h2>
+        <p className="mt-1 text-xs text-gray-500">
+          أول ما عميل مايستلمش شحنته أو المزامنة تقف، توصلك رسالة فورًا على
+          جروب تليجرام.
+        </p>
+
+        <form action={saveTelegram} className="mt-4 space-y-3">
+          <div>
+            <label htmlFor="telegram_bot_token" className={label}>
+              توكن البوت
+            </label>
+            <input
+              id="telegram_bot_token"
+              name="telegram_bot_token"
+              type="password"
+              defaultValue={hasTelegram ? "" : undefined}
+              placeholder={
+                hasTelegram ? "محفوظ — اكتب واحد جديد لو عايز تغيّره" : "123456:ABC-DEF…"
+              }
+              className={input}
+              dir="ltr"
+              autoComplete="off"
+            />
+          </div>
+          <div>
+            <label htmlFor="telegram_chat_id" className={label}>
+              رقم الجروب
+            </label>
+            <input
+              id="telegram_chat_id"
+              name="telegram_chat_id"
+              defaultValue={creds?.telegram_chat_id ?? ""}
+              placeholder="-1001234567890"
+              className={input}
+              dir="ltr"
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            >
+              احفظ وابعت رسالة تجربة
+            </button>
+            {hasTelegram && (
+              <button
+                type="submit"
+                formAction={checkTelegram}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              >
+                ابعت تجربة
+              </button>
+            )}
+          </div>
+        </form>
+
+        <div className="mt-4 rounded-xl bg-gray-50 p-3 text-[11px] leading-6 text-gray-500">
+          <span className="font-bold text-gray-700">إزاي تجيبهم:</span>
+          <br />
+          ١. في تليجرام كلّم <span dir="ltr">@BotFather</span> واكتب{" "}
+          <span dir="ltr">/newbot</span> — هيديك التوكن.
+          <br />
+          ٢. اعمل جروب وضيف البوت فيه.
+          <br />
+          ٣. ابعت أي رسالة في الجروب، وبعدين افتح{" "}
+          <span dir="ltr">api.telegram.org/bot&lt;التوكن&gt;/getUpdates</span>{" "}
+          وخد الرقم اللي في <span dir="ltr">chat.id</span> (بيبدأ بسالب).
+          <br />
+          وسيب الخانتين فاضيين لو عايز توقّف التنبيهات.
+        </div>
       </div>
 
       <p className="px-1 text-[11px] leading-5 text-gray-400">

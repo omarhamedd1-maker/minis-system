@@ -22,6 +22,7 @@ import { decideSync, type OurOrder } from "./reconcile";
 import { loadTenantCredentials } from "../tenant-settings";
 import { BOSTA_FEES } from "../shipping-cost";
 import { orderStatusBadge } from "../format";
+import { failedDeliveryMessage, sendTelegram } from "../telegram";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
@@ -64,6 +65,12 @@ export type SyncSummary = {
    */
   returnsNeedReview: { tracking: string; customer: string; why: string }[];
 };
+
+/**
+ * الحالات اللي بتبعت تنبيه فوري على الموبايل.
+ * دي اللحظة اللي فيها بضاعة راجعة وفلوس ماوصلتش — ولازم حد يتحرك.
+ */
+const ALERT_ON = ["returning", "returned", "awaiting_action"];
 
 /** الشحنة خلصت خلاص: ٤٥ اتسلّمت، ٤٦ رجعت لنا. دي مش محتاجة تفصيل */
 const FINISHED_CODES = [45, 46];
@@ -359,13 +366,27 @@ export async function runBostaSync(opts: {
       if (updateError) {
         summary.errors.push(`أوردر ${row.order_number}: ${updateError.message}`);
       } else if (typeof decision.changes.order_status === "string") {
-        await logStatusChange(
-          db,
-          row.order_number,
-          row.order_status,
-          decision.changes.order_status,
-          row.id
-        );
+        const to = decision.changes.order_status;
+        await logStatusChange(db, row.order_number, row.order_status, to, row.id);
+
+        // **أهم تنبيه في السيستم**: العميل مستلمش. لازم حد يكلّمه دلوقتي
+        // قبل ما الشحنة توصل المخزن وتبقى خسارة مؤكدة.
+        if (ALERT_ON.includes(to)) {
+          await sendTelegram(
+            db,
+            tenantId,
+            failedDeliveryMessage({
+              orderNumber: row.order_number,
+              customerName: row.customers?.full_name ?? null,
+              customerPhone: row.customers?.phone ?? null,
+              tracking: row.bosta_tracking,
+              reason: decision.changes.bosta_exception as string | null,
+              arrived: to === "returned",
+              siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
+            }),
+            fetchImpl
+          );
+        }
       }
     }
   }
