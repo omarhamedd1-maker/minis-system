@@ -4,7 +4,9 @@ import {
   checkBostaConnection,
   checkTelegram,
   saveBostaKey,
+  saveShopify,
   saveTelegram,
+  checkShopifyConnection,
 } from "./actions";
 import { looksLikeChatId } from "@/lib/telegram";
 
@@ -28,7 +30,7 @@ export default async function SettingsPage({
     db
       .from("tenant_credentials")
       .select(
-        "bosta_api_key, bosta_pickup_address_id, telegram_bot_token, telegram_chat_id"
+        "bosta_api_key, bosta_pickup_address_id, telegram_bot_token, telegram_chat_id, shopify_shop, shopify_client_id, shopify_client_secret"
       )
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
@@ -36,6 +38,7 @@ export default async function SettingsPage({
 
   const hasBosta = Boolean(creds?.bosta_api_key);
   const hasTelegram = Boolean(creds?.telegram_bot_token);
+  const hasShopify = Boolean(creds?.shopify_client_id && creds?.shopify_shop);
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -129,6 +132,105 @@ export default async function SettingsPage({
             مش هنحفظ المفتاح غير لما نتأكد إنه بيشتغل فعلًا عند بوسطة.
           </p>
         </form>
+      </div>
+
+      {/* ===== ربط شوبيفاي ===== */}
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-gray-900">ربط شوبيفاي</h2>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              hasShopify
+                ? "bg-green-50 text-green-700"
+                : "bg-amber-50 text-amber-700"
+            }`}
+          >
+            {hasShopify ? "مربوط" : "لسه مش مربوط"}
+          </span>
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500">
+          منه بتنزل الأوردرات والمنتجات، وبيه السيستم بيرجّع تعديلاتك للمتجر.
+        </p>
+
+        <form action={saveShopify} className="mt-4 space-y-3">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="shopify_shop" className={label}>
+              دومين المتجر
+            </label>
+            <input
+              id="shopify_shop"
+              name="shopify_shop"
+              defaultValue={creds?.shopify_shop ?? ""}
+              placeholder="yourshop.myshopify.com"
+              className={input}
+              dir="ltr"
+              autoComplete="off"
+            />
+            <span className="text-[11px] text-gray-400">
+              لازم دومين شوبيفاي نفسه، مش الدومين المخصّص بتاع المتجر.
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="shopify_client_id" className={label}>
+              Client ID
+            </label>
+            <input
+              id="shopify_client_id"
+              name="shopify_client_id"
+              defaultValue={creds?.shopify_client_id ?? ""}
+              className={input}
+              dir="ltr"
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="shopify_client_secret" className={label}>
+              Client Secret{" "}
+              {hasShopify && "— سيبه فاضي لو مش عايز تغيّره"}
+            </label>
+            <input
+              id="shopify_client_secret"
+              name="shopify_client_secret"
+              type="password"
+              placeholder={hasShopify ? "••••••••••••" : ""}
+              className={input}
+              dir="ltr"
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            >
+              احفظ واتأكد إنه شغال
+            </button>
+            {hasShopify && (
+              <button
+                type="submit"
+                formAction={checkShopifyConnection}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              >
+                جرّب الاتصال
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400">
+            مش هنحفظ حاجة غير لما نتصل بالمتجر فعلًا ونقرا اسمه — مش مجرد إن
+            شوبيفاي ردّت.
+          </p>
+        </form>
+
+        <div className="mt-4 rounded-xl bg-gray-50 p-3 text-[11px] leading-6 text-gray-500">
+          <span className="font-bold text-gray-700">إزاي تجيبهم:</span>{" "}
+          من <span dir="ltr">Shopify Dev Dashboard</span> ← التطبيق بتاعك ←{" "}
+          <span dir="ltr">Client credentials</span>. والصلاحيات المطلوبة:{" "}
+          <span dir="ltr">read_products, read_orders, write_orders, write_order_edits</span>.
+        </div>
       </div>
 
       {/* ===== تنبيهات تليجرام ===== */}

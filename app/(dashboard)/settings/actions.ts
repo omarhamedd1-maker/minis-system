@@ -6,6 +6,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { testConnection } from "@/lib/bosta/client";
+import {
+  isValidShop,
+  normalizeShop,
+  testShopifyConnection,
+} from "@/lib/shopify/client";
+import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { discoverChats, looksLikeChatId, testTelegram } from "@/lib/telegram";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
@@ -128,6 +134,94 @@ export async function saveTelegram(formData: FormData) {
   await logActivity(me, "settings.telegram", "ربط تنبيهات تليجرام");
   revalidatePath("/settings");
   back("تمام — بعتنا رسالة تجربة على الجروب", true);
+}
+
+/**
+ * مفاتيح شوبيفاي. زي بوسطة: **مش بنحفظ غير بعد ما نتأكد إنها بتشتغل فعلاً**
+ * وبنقرا اسم المتجر — مش بنكتفي بردّ ٢٠٠ (الدرس من مسار المدن في بوسطة).
+ */
+export async function saveShopify(formData: FormData) {
+  const me = await requirePermission("admin.settings");
+  const shop = normalizeShop(String(formData.get("shopify_shop") ?? ""));
+  const clientId = String(formData.get("shopify_client_id") ?? "").trim();
+  const secretInput = String(formData.get("shopify_client_secret") ?? "").trim();
+
+  const db = createAdminClient();
+
+  if (!shop && !clientId && !secretInput) {
+    const { error } = await db
+      .from("tenant_credentials")
+      .update({
+        shopify_shop: null,
+        shopify_client_id: null,
+        shopify_client_secret: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", me.tenantId);
+    if (error) back("معرفناش نحفظ: " + error.message);
+    await logActivity(me, "settings.shopify", "فصل ربط شوبيفاي");
+    revalidatePath("/settings");
+    back("ربط شوبيفاي اتفصل", true);
+  }
+
+  if (!isValidShop(shop)) {
+    back("دومين المتجر لازم يبقى بالشكل ده: yourshop.myshopify.com");
+  }
+  if (!clientId) back("اكتب Client ID بتاع التطبيق");
+
+  // السر بيتعرض كنقط، فلو سابه فاضي معناها "سيبه زي ما هو"
+  const creds = await loadTenantCredentials(db, me.tenantId);
+  const clientSecret = secretInput || creds.shopifyClientSecret || "";
+  if (!clientSecret) back("اكتب Client Secret بتاع التطبيق");
+
+  const result = await testShopifyConnection({ shop, clientId, clientSecret });
+  if (!result.ok) back("الاتصال مارضيش يشتغل: " + result.error);
+
+  const { error } = await db
+    .from("tenant_credentials")
+    .update({
+      shopify_shop: shop,
+      shopify_client_id: clientId,
+      shopify_client_secret: clientSecret,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) {
+    back(
+      "معرفناش نحفظ: " +
+        error.message +
+        " — لو الخانات لسه مااتعملتش شغّل sql/shopify-credentials.sql"
+    );
+  }
+
+  await logActivity(me, "settings.shopify", `ربط متجر شوبيفاي ${result.shop.name}`);
+  revalidatePath("/settings");
+  back(`تمام — اتصلنا بمتجر "${result.shop.name}" واتحفظ`, true);
+}
+
+/** بيجرّب المفاتيح المحفوظة من غير ما يغيّر حاجة */
+export async function checkShopifyConnection() {
+  const me = await requirePermission("admin.settings");
+  const creds = await loadTenantCredentials(createAdminClient(), me.tenantId);
+
+  if (!creds.shopifyShop || !creds.shopifyClientId || !creds.shopifyClientSecret) {
+    back("لسه مفيش مفاتيح محفوظة");
+  }
+
+  const result = await testShopifyConnection({
+    shop: creds.shopifyShop!,
+    clientId: creds.shopifyClientId!,
+    clientSecret: creds.shopifyClientSecret!,
+  });
+
+  if (result.ok) {
+    back(
+      `الاتصال شغال ✓ — "${result.shop.name}" (${result.shop.currency})`,
+      true
+    );
+  }
+  back("الاتصال مش شغال: " + result.error);
 }
 
 /** بيبعت رسالة تجربة بالمفاتيح المحفوظة */

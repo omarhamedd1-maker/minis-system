@@ -19,6 +19,9 @@ export type TenantCredentials = {
   /** بوت تليجرام بتاع البيزنس — التنبيهات بتروح على جروبه */
   telegramBotToken: string | null;
   telegramChatId: string | null;
+  /** بيانات تطبيق شوبيفاي — منها بنطلع توكن مؤقت في كل تشغيل */
+  shopifyClientId: string | null;
+  shopifyClientSecret: string | null;
 };
 
 /**
@@ -45,6 +48,8 @@ export async function loadTenantCredentials(
     shopifyWebhookSecret: data?.shopify_webhook_secret ?? null,
     telegramBotToken: data?.telegram_bot_token ?? null,
     telegramChatId: data?.telegram_chat_id ?? null,
+    shopifyClientId: data?.shopify_client_id ?? null,
+    shopifyClientSecret: data?.shopify_client_secret ?? null,
   };
 }
 
