@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CategoryPicker } from "@/components/CategoryPicker";
 import {
   EXPENSE_CATEGORIES,
   cairoToday,
@@ -193,20 +194,12 @@ export default async function ExpensesPage({
             <label htmlFor="category" className="text-xs text-gray-500">
               النوع
             </label>
-            <input
+            <CategoryPicker
               id="category"
-              name="category"
-              list="expense-categories"
               required
-              autoComplete="off"
-              placeholder="اختار أو اكتب نوع جديد"
+              categories={CATEGORY_SUGGESTIONS}
               className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
             />
-            <datalist id="expense-categories">
-              {CATEGORY_SUGGESTIONS.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
           </div>
           <div className="flex min-w-48 flex-1 flex-col gap-1">
             <label htmlFor="description" className="text-xs text-gray-500">

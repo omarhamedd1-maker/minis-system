@@ -18,7 +18,7 @@ describe("حالة فلوس الأوردر", () => {
     expect(collectionState(base).label).toBe("لسه");
   });
 
-  it("رجعت ومتسلمتش = مش جاية، مش لسه", () => {
+  it("رجع ومتسلمش = مش جاية، مش لسه", () => {
     // "لسه" كانت بتوهم إن فيه تحصيل مستنّي وهو مش جاي خلاص
     expect(collectionState({ ...base, order_status: "returned" }).label).toBe(
       "مش جاية"

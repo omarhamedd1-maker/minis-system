@@ -25,6 +25,12 @@ import { orderStatusBadge } from "../format";
 import { failedDeliveryMessage, sendTelegram } from "../telegram";
 import { checkStalePickup, stalePickupMessage } from "./stale-shipment";
 import { checkRefundDue, refundDue, refundReminderMessage } from "../refund";
+import {
+  GROUP_ABOVE,
+  checkUnconfirmed,
+  unconfirmedGroupMessage,
+  unconfirmedMessage,
+} from "../unconfirmed";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
@@ -61,6 +67,8 @@ export type SyncSummary = {
   errors: string[];
   /** تفاصيل اللي اتغيّر — بنعرضها في وضع التجربة عشان نراجع قبل التنفيذ */
   details: { order: string; reasons: string[] }[];
+  /** تنبيهات "أوردر لسه مش مؤكد" */
+  unconfirmedReminders: number;
   /** تنبيهات "لسه مارجّعتش فلوس العميل" */
   refundReminders: number;
   /** شحنات واقفة نبّهنا عليها */
@@ -203,6 +211,7 @@ export async function runBostaSync(opts: {
     customerReturns: 0,
     stalePickups: 0,
     refundReminders: 0,
+    unconfirmedReminders: 0,
     returnsNeedReview: [],
   };
 
@@ -398,9 +407,24 @@ export async function runBostaSync(opts: {
         .eq("id", row.id);
       if (updateError) {
         summary.errors.push(`أوردر ${row.order_number}: ${updateError.message}`);
-      } else if (typeof decision.changes.order_status === "string") {
-        const to = decision.changes.order_status;
-        await logStatusChange(db, row.order_number, row.order_status, to, row.id);
+      } else {
+        // ===== سجل رحلة الشحنة =====
+        // حالة بوسطة التفصيلية بتتغيّر أكتر من حالتنا: "استلمها الفرع" ←
+        // "بين الفروع" ← "خرجت للتسليم" كلهم عندنا "مع المندوب". فلو سجّلنا
+        // حالتنا بس، الرحلة بتضيع. بنسجّل الاتنين — بوسطة الأول لأنها الأدق.
+        if (typeof decision.changes.bosta_state === "string") {
+          await logActivityRow(db, {
+            action: "bosta.state",
+            summary: `شحنة أوردر ${row.order_number ?? ""} عند بوسطة: ${
+              decision.changes.bosta_state
+            }${row.bosta_state ? ` (كانت ${row.bosta_state})` : ""}`,
+            orderId: row.id,
+          });
+        }
+
+        if (typeof decision.changes.order_status === "string") {
+          const to = decision.changes.order_status;
+          await logStatusChange(db, row.order_number, row.order_status, to, row.id);
 
         // **أهم تنبيه في السيستم**: العميل مستلمش. لازم حد يكلّمه دلوقتي
         // قبل ما الشحنة توصل المخزن وتبقى خسارة مؤكدة.
@@ -419,6 +443,7 @@ export async function runBostaSync(opts: {
             }),
             fetchImpl
           );
+          }
         }
       }
     }
@@ -543,6 +568,88 @@ export async function runBostaSync(opts: {
         .from("orders")
         .update({ refund_reminded_day: due.milestone })
         .eq("id", o.id);
+    }
+
+    // ===== أوردرات لسه "جديد" ومحدش أكّدها =====
+    // تنبيه **يومي** (مش مراحل) لحد ما تتأكّد. البضاعة محجوزة والعميل مستني.
+    const { data: unconfirmed } = await db
+      .from("orders")
+      .select(
+        "id, order_number, order_status, order_date, new_reminded_day, order_items(quantity, sale_price_at_order), customers(full_name, phone)"
+      )
+      .eq("tenant_id", tenantId)
+      .eq("archived", false)
+      .eq("order_status", "new");
+
+    type Unconf = {
+      id: string;
+      order_number: string | number | null;
+      order_status: string | null;
+      order_date: string | null;
+      new_reminded_day: number | null;
+      order_items: { quantity: number; sale_price_at_order: number }[] | null;
+      customers: { full_name: string | null; phone: string | null } | null;
+    };
+
+    const dueNow: { order: Unconf; days: number; day: number }[] = [];
+
+    for (const o of (unconfirmed ?? []) as unknown as Unconf[]) {
+      const c = checkUnconfirmed({
+        orderStatus: o.order_status,
+        orderDate: o.order_date,
+        remindedDay: o.new_reminded_day,
+        now,
+      });
+      if (c.day === null) continue;
+      dueNow.push({ order: o, days: c.days, day: c.day });
+    }
+
+    if (dueNow.length > 0) {
+      const site = process.env.NEXT_PUBLIC_SITE_URL ?? null;
+      summary.unconfirmedReminders += dueNow.length;
+
+      // أكتر من ٥؟ رسالة واحدة بالعدد. ٦ رسايل في نفس اللحظة بتبقى إزعاج
+      // ومحدش بيقراها.
+      if (dueNow.length > GROUP_ABOVE) {
+        await sendTelegram(
+          db,
+          tenantId,
+          unconfirmedGroupMessage({
+            count: dueNow.length,
+            oldestDays: Math.max(...dueNow.map((x) => x.days)),
+            siteUrl: site,
+          }),
+          fetchImpl
+        );
+      } else {
+        for (const x of dueNow) {
+          await sendTelegram(
+            db,
+            tenantId,
+            unconfirmedMessage({
+              orderNumber: x.order.order_number,
+              customerName: x.order.customers?.full_name ?? null,
+              customerPhone: x.order.customers?.phone ?? null,
+              total: (x.order.order_items ?? []).reduce(
+                (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
+                0
+              ),
+              days: x.days,
+              siteUrl: site,
+            }),
+            fetchImpl
+          );
+        }
+      }
+
+      // بنعلّم على الكل — حتى في الحالة المجمّعة، عشان بكرة يتنبّه تاني بس
+      // مش النهاردة كل ١٥ دقيقة
+      for (const x of dueNow) {
+        await db
+          .from("orders")
+          .update({ new_reminded_day: x.day })
+          .eq("id", x.order.id);
+      }
     }
   }
 

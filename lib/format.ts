@@ -31,11 +31,11 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
     // الشحنة اتعملت عند بوسطة ومستنية المندوب
     ready: { label: "جاهز للبيك اب", className: "bg-cyan-50 text-cyan-700" },
-    // بوسطة شايلاها: المندوب استلمها منّنا، أو هي في مخزنهم، أو بين الفروع.
-    // الاسم القديم كان "مع المندوب" وده كان بيكدب — شحنة قاعدة في مخزن بوسطة
-    // ماحدش ماشي بيها.
+    // بوسطة شايلة الأوردر: المندوب استلمه منّنا، أو هو في مخزنهم، أو بين
+    // الفروع. الاسم القديم كان "مع المندوب" وده كان بيكدب — شحنة قاعدة في
+    // مخزن بوسطة ماحدش ماشي بيها.
     shipped: {
-      label: "استلمتها بوسطة",
+      label: "استلمه بوسطة",
       className: "bg-indigo-50 text-indigo-700",
     },
     // خرجت من الفرع وماشية للعميل
@@ -57,7 +57,7 @@ const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> 
     cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
     // رجعت لنا فعلاً ومااتسلمتش
     returned: {
-      label: "رجعت ومتسلمتش",
+      label: "رجع ومتسلمش",
       className: "bg-orange-100 text-orange-800",
     },
     // اتسلّم فعلاً وبعدين العميل رجّعه (كله أو جزء) — بشحنة عكسية

@@ -32,14 +32,58 @@ function pushOrderToShopify(orderId: string) {
     const toShopify = (async () => {
       const key = process.env.SYNC_KEY;
       const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!key || !base) return;
+      if (!key) {
+        await logActivity(
+          null,
+          "shopify.push",
+          `⚠️ مفيش SYNC_KEY — تعديل أوردر ${await orderNo(db, orderId)} مااتبعتش لشوبيفاي`,
+          orderId
+        );
+        return;
+      }
       try {
-        await fetch(
+        const res = await fetch(
           `${base}/functions/v1/shopify-order-push?key=${key}&order=${orderId}`,
           { method: "GET", signal: AbortSignal.timeout(20000) }
         );
-      } catch {
-        // فشل الدفع لشوبيفاي ما يوقفش التعديل المحلي (مثلاً أوردر متشحن)
+        // **لازم نبص على الرد.** قبل كده كنا بنبعت وخلاص، فلو شوبيفاي رفضت
+        // مكانش حد يعرف — وأوردر أحمد خالد فضل بقطعة واحدة في شوبيفاي بعد
+        // ما زوّدناها عندنا، ومحدش خد باله.
+        const body = await res.json().catch(() => null);
+        const ok = res.ok && body?.ok !== false;
+
+        if (!ok) {
+          const why =
+            body?.error ??
+            body?.message ??
+            (res.status === 401
+              ? "المفتاح مرفوض"
+              : `شوبيفاي ردّت بكود ${res.status}`);
+          await logActivity(
+            null,
+            "shopify.push",
+            `⚠️ تعديل أوردر ${await orderNo(db, orderId)} مااتبعتش لشوبيفاي: ${why}`,
+            orderId
+          );
+        } else if (body?.changed) {
+          await logActivity(
+            null,
+            "shopify.push",
+            `تعديل أوردر ${await orderNo(db, orderId)} اتبعت لشوبيفاي`,
+            orderId
+          );
+        }
+      } catch (e) {
+        // الأوردر المتشحن شوبيفاي بتقفل تعديل كمياته — ده متوقع، بس لازم
+        // يتسجّل عشان تعرف إن التعديل عندك مش موجود هناك
+        await logActivity(
+          null,
+          "shopify.push",
+          `⚠️ الدفع لشوبيفاي وقع في أوردر ${await orderNo(db, orderId)}: ${
+            e instanceof Error ? e.message : "سبب مش معروف"
+          }`,
+          orderId
+        );
       }
     })();
 

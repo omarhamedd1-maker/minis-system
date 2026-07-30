@@ -1,5 +1,7 @@
 "use client";
 
+import { CategoryPicker } from "@/components/CategoryPicker";
+
 import { useState } from "react";
 import { formatDate, formatMoney } from "@/lib/format";
 
@@ -116,20 +118,14 @@ export function ExpenseCard({
         >
           <input type="hidden" name="expense_id" value={expense.id} />
           <div className="flex gap-2">
-            <input
-              name="category"
-              list={`cats-m-${expense.id}`}
-              defaultValue={expense.category}
-              required
-              autoComplete="off"
-              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-              aria-label="النوع"
-            />
-            <datalist id={`cats-m-${expense.id}`}>
-              {categories.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
+            <div className="flex-1">
+              <CategoryPicker
+                required
+                categories={categories}
+                defaultValue={expense.category}
+                className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm"
+              />
+            </div>
             <input
               type="number"
               name="amount"
