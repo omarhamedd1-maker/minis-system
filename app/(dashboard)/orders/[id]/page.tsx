@@ -23,6 +23,11 @@ import { ReturnPanel } from "@/components/ReturnPanel";
 import { BostaMark } from "@/components/BostaMark";
 import { isDeadShipment } from "@/lib/bosta/order-status";
 import { refundDue } from "@/lib/refund";
+import {
+  ratePercent,
+  riskBadge,
+  summarizeCustomerHistory,
+} from "@/lib/customer-history";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -144,6 +149,20 @@ export default async function OrderDetailsPage({
       </div>
     );
   }
+
+  // تاريخ العميل — بيرجّع كتير ولا لأ. اللي بيأكّد الأوردر لازم يشوفه قبل
+  // ما يمسك التليفون، لأن الشحنة اللي بتروح وترجع بتتحسب رسومها الاتجاهين.
+  const { data: historyRows } = order?.customers?.id
+    ? await supabase
+        .from("orders")
+        .select("order_status")
+        .eq("customer_id", order.customers.id)
+        .overrideTypes<{ order_status: string | null }[]>()
+    : { data: [] };
+  const history = summarizeCustomerHistory(
+    (historyRows ?? []).map((r) => r.order_status)
+  );
+  const historyBadge = riskBadge(history.risk);
 
   // قايمة المنتجات لفورم إضافة منتج (لمن يقدر يعدّل البنود)
   const { data: variantsData } = canItems
@@ -467,7 +486,14 @@ export default async function OrderDetailsPage({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">بيانات العميل</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-gray-900">بيانات العميل</h2>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${historyBadge.className}`}
+              >
+                {historyBadge.label}
+              </span>
+            </div>
             {order.customers?.id && (
               <Link
                 href={`/customers/${order.customers.id}`}
@@ -511,6 +537,60 @@ export default async function OrderDetailsPage({
               <dd className="text-gray-900">{formatDate(order.order_date)}</dd>
             </div>
           </dl>
+
+          {/*
+            تاريخه معانا. النسبة بتتحسب على الأوردرات اللي خلصت بس — اللي
+            لسه في الطريق مش نتيجة، وحسابه ضمن النسبة بيكدب.
+          */}
+          {history.total > 1 && (
+            <div className="mt-4 border-t border-gray-100 pt-3">
+              <div className="mb-2 flex items-baseline justify-between gap-2">
+                <span className="text-xs font-medium text-gray-500">
+                  تاريخه معانا
+                </span>
+                <span className="text-xs text-gray-400">
+                  {history.total} أوردر
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div className="rounded-lg bg-green-50 px-1 py-1.5">
+                  <div className="text-sm font-bold text-green-700">
+                    {history.delivered}
+                  </div>
+                  <div className="text-[11px] text-green-600">اتسلّم</div>
+                </div>
+                <div className="rounded-lg bg-orange-50 px-1 py-1.5">
+                  <div className="text-sm font-bold text-orange-700">
+                    {history.returned}
+                  </div>
+                  <div className="text-[11px] text-orange-600">رجع</div>
+                </div>
+                <div className="rounded-lg bg-red-50 px-1 py-1.5">
+                  <div className="text-sm font-bold text-red-700">
+                    {history.cancelled}
+                  </div>
+                  <div className="text-[11px] text-red-600">ملغي</div>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-1 py-1.5">
+                  <div className="text-sm font-bold text-gray-700">
+                    {history.inProgress}
+                  </div>
+                  <div className="text-[11px] text-gray-500">شغّال</div>
+                </div>
+              </div>
+
+              {history.returnRate !== null && (
+                <p className="mt-2 text-xs text-gray-500">
+                  رجّع{" "}
+                  <span className="font-bold text-gray-900">
+                    {ratePercent(history.returnRate)}
+                  </span>{" "}
+                  من {history.settled} أوردر خلصوا
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl bg-white p-5 shadow-sm">
