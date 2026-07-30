@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  orderCountWord,
   ratePercent,
   riskBadge,
+  shouldFlagReturns,
   summarizeCustomerHistory,
 } from "./customer-history";
 
@@ -114,6 +116,40 @@ describe("التصنيف", () => {
     const h = summarizeCustomerHistory(["cancelled", "cancelled", "delivered"]);
     expect(h.risk).toBe("good");
     expect(h.cancelRate).toBeCloseTo(2 / 3, 5);
+  });
+});
+
+describe("العدد بالمصري", () => {
+  it("مش بيقول ٢ أوردر", () => {
+    expect(orderCountWord(1)).toBe("أوردر واحد");
+    expect(orderCountWord(2)).toBe("أوردرين");
+    expect(orderCountWord(3)).toBe("3 أوردرات");
+    expect(orderCountWord(10)).toBe("10 أوردرات");
+    expect(orderCountWord(11)).toBe("11 أوردر");
+  });
+});
+
+describe("تلوين صف الرجيع", () => {
+  const flag = (statuses: string[]) =>
+    shouldFlagReturns(summarizeCustomerHistory(statuses));
+
+  it("مافيش رجيع يبقى مافيش لون", () => {
+    expect(flag(["delivered", "delivered"])).toBe(false);
+  });
+
+  it("رجيع في حدوده الطبيعية مابيتلوّنش", () => {
+    // واحد من خمسة = ٢٠٪، تحت حد "خد بالك"
+    expect(
+      flag(["returned", "delivered", "delivered", "delivered", "delivered"])
+    ).toBe(false);
+  });
+
+  it("رجيع عالي بيتلوّن", () => {
+    expect(flag(["returned", "returned", "delivered"])).toBe(true);
+  });
+
+  it("أوردر واحد رجع مابيلوّنش — لسه بدري نحكم", () => {
+    expect(flag(["returned"])).toBe(false);
   });
 });
 

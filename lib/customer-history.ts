@@ -86,6 +86,28 @@ export function summarizeCustomerHistory(
   };
 }
 
+/**
+ * "أوردرين" مش "٢ أوردر".
+ * السيستم كله بيتكلم مصري، والعدد لو اتكتب غلط بيبان إنه مترجم.
+ */
+export function orderCountWord(n: number): string {
+  if (n === 1) return "أوردر واحد";
+  if (n === 2) return "أوردرين";
+  if (n >= 3 && n <= 10) return `${n} أوردرات`;
+  return `${n} أوردر`;
+}
+
+/**
+ * صف الرجيع بيتلوّن؟
+ *
+ * نفس أسلوب صندوق مصاريف الشحن في نفس الشاشة: الصفوف عادية، والصف اللي
+ * يهمّك هو اللي بياخد لون. مابنلوّنش من غير سبب — لو الرجيع في حدوده
+ * الطبيعية يفضل صف عادي زي الباقي.
+ */
+export function shouldFlagReturns(h: CustomerHistory): boolean {
+  return h.returned > 0 && (h.risk === "bad" || h.risk === "watch");
+}
+
 /** الشكل اللي بيتعرض في الشاشة */
 export function riskBadge(risk: CustomerRisk): {
   label: string;

@@ -24,8 +24,9 @@ import { BostaMark } from "@/components/BostaMark";
 import { isDeadShipment } from "@/lib/bosta/order-status";
 import { refundDue } from "@/lib/refund";
 import {
-  ratePercent,
+  orderCountWord,
   riskBadge,
+  shouldFlagReturns,
   summarizeCustomerHistory,
 } from "@/lib/customer-history";
 import { can, requirePagePermission } from "@/lib/permissions";
@@ -152,17 +153,22 @@ export default async function OrderDetailsPage({
 
   // تاريخ العميل — بيرجّع كتير ولا لأ. اللي بيأكّد الأوردر لازم يشوفه قبل
   // ما يمسك التليفون، لأن الشحنة اللي بتروح وترجع بتتحسب رسومها الاتجاهين.
+  //
+  // **الأوردر ده نفسه بيتشال** — إحنا بنتكلم عن اللي قبله. لو دخل في العد
+  // هيبقى الكلام ملخبط ("طلب أوردرين" وهو قدامك واحد منهم).
   const { data: historyRows } = order?.customers?.id
     ? await supabase
         .from("orders")
         .select("order_status")
         .eq("customer_id", order.customers.id)
+        .neq("id", id)
         .overrideTypes<{ order_status: string | null }[]>()
     : { data: [] };
   const history = summarizeCustomerHistory(
     (historyRows ?? []).map((r) => r.order_status)
   );
   const historyBadge = riskBadge(history.risk);
+  const flagReturns = shouldFlagReturns(history);
 
   // قايمة المنتجات لفورم إضافة منتج (لمن يقدر يعدّل البنود)
   const { data: variantsData } = canItems
@@ -488,11 +494,22 @@ export default async function OrderDetailsPage({
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-gray-900">بيانات العميل</h2>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${historyBadge.className}`}
-              >
-                {historyBadge.label}
-              </span>
+              {/*
+                **مابنحكمش على حد من غير أساس.** الشارة مابتظهرش غير لما يبقى
+                عنده أوردرين خلصوا على الأقل — قبل كده الجملة تحت بتقول اللي
+                نعرفه من غير ما نلزقله وصف.
+              */}
+              {history.total === 0 ? (
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                  أول أوردر ليه
+                </span>
+              ) : history.risk !== "new" ? (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${historyBadge.className}`}
+                >
+                  {historyBadge.label}
+                </span>
+              ) : null}
             </div>
             {order.customers?.id && (
               <Link
@@ -539,56 +556,79 @@ export default async function OrderDetailsPage({
           </dl>
 
           {/*
-            تاريخه معانا. النسبة بتتحسب على الأوردرات اللي خلصت بس — اللي
-            لسه في الطريق مش نتيجة، وحسابه ضمن النسبة بيكدب.
+            تاريخه معانا — بنفس تقسيمة صندوق مصاريف الشحن اللي تحت: صفوف
+            تسمية/قيمة، والصف اللي يهمّك هو اللي بياخد لون. مابنلوّنش من غير
+            سبب، عشان اللون لما يبان يبقى معناه حاجة.
           */}
-          {history.total > 1 && (
-            <div className="mt-4 border-t border-gray-100 pt-3">
-              <div className="mb-2 flex items-baseline justify-between gap-2">
-                <span className="text-xs font-medium text-gray-500">
-                  تاريخه معانا
-                </span>
-                <span className="text-xs text-gray-400">
-                  {history.total} أوردر
+          {history.total > 0 && (
+            <div className="mt-3 space-y-1 rounded-lg bg-gray-50 p-2.5 text-xs">
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-600">طلب قبل ده</span>
+                <span className="font-medium text-gray-900">
+                  {orderCountWord(history.total)}
                 </span>
               </div>
 
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="rounded-lg bg-green-50 px-1 py-1.5">
-                  <div className="text-sm font-bold text-green-700">
+              {history.delivered > 0 && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-600">استلم</span>
+                  <span className="font-medium text-gray-700">
                     {history.delivered}
-                  </div>
-                  <div className="text-[11px] text-green-600">اتسلّم</div>
+                  </span>
                 </div>
-                <div className="rounded-lg bg-orange-50 px-1 py-1.5">
-                  <div className="text-sm font-bold text-orange-700">
-                    {history.returned}
-                  </div>
-                  <div className="text-[11px] text-orange-600">رجع</div>
-                </div>
-                <div className="rounded-lg bg-red-50 px-1 py-1.5">
-                  <div className="text-sm font-bold text-red-700">
-                    {history.cancelled}
-                  </div>
-                  <div className="text-[11px] text-red-600">ملغي</div>
-                </div>
-                <div className="rounded-lg bg-gray-50 px-1 py-1.5">
-                  <div className="text-sm font-bold text-gray-700">
-                    {history.inProgress}
-                  </div>
-                  <div className="text-[11px] text-gray-500">شغّال</div>
-                </div>
-              </div>
-
-              {history.returnRate !== null && (
-                <p className="mt-2 text-xs text-gray-500">
-                  رجّع{" "}
-                  <span className="font-bold text-gray-900">
-                    {ratePercent(history.returnRate)}
-                  </span>{" "}
-                  من {history.settled} أوردر خلصوا
-                </p>
               )}
+
+              {history.cancelled > 0 && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-600">ألغى</span>
+                  <span className="font-medium text-gray-700">
+                    {history.cancelled}
+                  </span>
+                </div>
+              )}
+
+              {history.inProgress > 0 && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-600">لسه شغّال</span>
+                  <span className="font-medium text-gray-700">
+                    {history.inProgress}
+                  </span>
+                </div>
+              )}
+
+              {history.returned > 0 &&
+                (flagReturns ? (
+                  <div
+                    className={`mt-1 flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 ${
+                      history.risk === "bad" ? "bg-red-50" : "bg-amber-50"
+                    }`}
+                  >
+                    <span
+                      className={`font-medium ${
+                        history.risk === "bad" ? "text-red-800" : "text-amber-800"
+                      }`}
+                    >
+                      رجّع
+                      <span className="block text-[10px] opacity-75">
+                        من {history.settled} خلصوا
+                      </span>
+                    </span>
+                    <span
+                      className={`text-sm font-bold ${
+                        history.risk === "bad" ? "text-red-700" : "text-amber-700"
+                      }`}
+                    >
+                      {history.returned}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-gray-600">رجّع</span>
+                    <span className="font-medium text-gray-700">
+                      {history.returned}
+                    </span>
+                  </div>
+                ))}
             </div>
           )}
         </div>
