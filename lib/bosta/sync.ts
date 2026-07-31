@@ -22,7 +22,7 @@ import { decideSync, type OurOrder } from "./reconcile";
 import { loadTenantCredentials } from "../tenant-settings";
 import { BOSTA_FEES } from "../shipping-cost";
 import { orderStatusBadge } from "../format";
-import { failedDeliveryMessage } from "../telegram";
+import { failedDeliveryMessage } from "../alert-messages";
 import { notifyAll } from "../push/notify";
 import { checkStalePickup, stalePickupMessage } from "./stale-shipment";
 import { checkCod, codMismatchMessage } from "./cod-check";
