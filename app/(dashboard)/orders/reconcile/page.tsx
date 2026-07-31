@@ -8,7 +8,9 @@ import {
   orderStatusBadge,
 } from "@/lib/format";
 import { BackLink } from "@/components/BackLink";
+import { LinkMissingShipments } from "@/components/LinkMissingShipments";
 import { requirePagePermission } from "@/lib/permissions";
+import { linkMissingShipments } from "./actions";
 
 type Row = {
   id: string;
@@ -118,9 +120,20 @@ export default async function ReconcilePage() {
     const bostaMapped = mapBostaState(o.bosta_state);
 
     // 1) الحالة عندنا مش مطابقة لبوسطة
+    //
+    // **بوسطة بتكتب "Delivered" على اللي اتسلّم واللي رجع لنا كمان.**
+    // التفرقة في `state.code` (٤٦ = راجعة) مش في النص، وإحنا مخزنين النص بس.
+    // المزامنة بتقرا الكود وهي المرجع — فلو حالتنا راجعة والنص بيقول
+    // Delivered، دي مش مخالفة دي غموض معروف. من غير الاستثناء ده الصفحة
+    // كانت بتطلّع ٣٩ إنذار كاذب، والصفحة اللي بتكدب أسوأ من مفيش صفحة.
+    const ambiguousDelivered =
+      bostaMapped === "delivered" &&
+      ["returned", "returning", "returned_after_delivery"].includes(sysStatus);
+
     if (
       bostaMapped &&
       bostaMapped !== sysStatus &&
+      !ambiguousDelivered &&
       sysStatus !== "returned_after_delivery" // دي بنحددها إحنا بإيدنا
     ) {
       issues.push({
@@ -252,33 +265,53 @@ export default async function ReconcilePage() {
     low: "bg-gray-100 text-gray-600",
   };
 
+  // ===== الخلاصة =====
+  // الصفحة كانت بتبدأ بأربع مربعات أرقام، واللي بيقراها لازم يستنتج بنفسه
+  // هو تمام ولا لأ. الخلاصة بتقول له على طول.
+  const ordersWithIssues = new Set(issues.map((i) => i.order.id)).size;
+  const verdict =
+    bySeverity.high > 0
+      ? {
+          title: `${bySeverity.high} مشكلة محتاجة تتظبط`,
+          note: "دي بتأثر على فلوسك أو على حالة أوردراتك — بصّ عليها قبل ما تعتمد الأرقام.",
+          box: "bg-red-50",
+          text: "text-red-900",
+          sub: "text-red-800",
+        }
+      : bySeverity.mid + bySeverity.low > 0
+        ? {
+            title: "مفيش حاجة خطيرة",
+            note: "فاضل حاجات بسيطة تحت — تظبطها وقت ما تحب.",
+            box: "bg-amber-50",
+            text: "text-amber-900",
+            sub: "text-amber-800",
+          }
+        : {
+            title: "كل حاجة مظبوطة",
+            note: "أوردراتك متطابقة مع بوسطة، والأرقام اللي في الداشبورد تقدر تعتمد عليها.",
+            box: "bg-green-50",
+            text: "text-green-900",
+            sub: "text-green-800",
+          };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">مطابقة الأوردرات</h1>
+        <h1 className="text-xl font-bold text-gray-900">مراجعة الداتا</h1>
         <BackLink href="/orders" label="الرجوع للأوردرات" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">إجمالي الأوردرات</p>
-          <p className="mt-1 text-xl font-bold text-gray-900">{orders.length}</p>
-        </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">مشاكل مهمة</p>
-          <p className="mt-1 text-xl font-bold text-red-600">{bySeverity.high}</p>
-        </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">متوسطة</p>
-          <p className="mt-1 text-xl font-bold text-amber-600">
-            {bySeverity.mid}
-          </p>
-        </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <p className="text-xs text-gray-500">بسيطة</p>
-          <p className="mt-1 text-xl font-bold text-gray-500">{bySeverity.low}</p>
-        </div>
+      <div className={`rounded-xl p-5 ${verdict.box}`}>
+        <h2 className={`text-lg font-bold ${verdict.text}`}>{verdict.title}</h2>
+        <p className={`mt-1 text-sm ${verdict.sub}`}>{verdict.note}</p>
+        <p className={`mt-2 text-xs ${verdict.sub} opacity-75`}>
+          فحصنا {orders.length} أوردر
+          {ordersWithIssues > 0 && ` — ${ordersWithIssues} منهم فيهم حاجة`}.
+        </p>
       </div>
+
+      {/* الصفحة كانت بتكشف بس — دي أول أداة بتصلّح */}
+      <LinkMissingShipments action={linkMissingShipments} />
 
       {issues.length === 0 ? (
         <div className="rounded-xl bg-green-50 p-8 text-center text-sm text-green-800">

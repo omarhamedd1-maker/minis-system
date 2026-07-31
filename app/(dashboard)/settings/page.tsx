@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePagePermission } from "@/lib/permissions";
 import {
@@ -12,6 +13,9 @@ import { looksLikeChatId } from "@/lib/telegram";
 import { EnablePush } from "@/components/EnablePush";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { headers } from "next/headers";
+import { ImportHistory } from "@/components/ImportHistory";
+import { describeUndo, listImportRuns } from "@/lib/import-runs";
+import { undoImport } from "../orders/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +42,21 @@ export default async function SettingsPage({
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
+
+  // سجل الاستيراد — بيرجع فاضي لو الجدول لسه ماتعملش (`sql/import-runs.sql`)
+  const importRuns = (await listImportRuns(db)).map((run) => ({
+    id: run.id,
+    kind: run.kind,
+    summary: run.summary,
+    actorName: run.actor_name,
+    createdAt: new Date(run.created_at).toLocaleString("ar-EG", {
+      timeZone: "Africa/Cairo",
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
+    undoneAt: run.undone_at,
+    undoLines: describeUndo(run.payload ?? {}),
+  }));
 
   const hasBosta = Boolean(creds?.bosta_api_key);
   const hasTelegram = Boolean(creds?.telegram_bot_token);
@@ -370,6 +389,25 @@ export default async function SettingsPage({
           وسيب الخانتين فاضيين لو عايز توقّف التنبيهات.
         </div>
       </div>
+
+      <ImportHistory runs={importRuns} undoAction={undoImport} />
+
+      {/* ===== المراجعة النهائية ===== */}
+      <Link
+        href="/orders/reconcile"
+        className="block rounded-xl bg-white p-5 shadow-sm transition-colors hover:bg-gray-50"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-gray-900">مراجعة الداتا</h2>
+            <p className="mt-0.5 text-xs text-gray-500">
+              بتقارن أوردراتك ببوسطة وبتطلّع اللي مش مظبوط: تحصيل مختلف، شحنة
+              ضايعة، تكلفة ناقصة. افتحها بعد التركيب وكل شوية بعد كده.
+            </p>
+          </div>
+          <span className="shrink-0 text-gray-300">←</span>
+        </div>
+      </Link>
 
       <p className="px-1 text-[11px] leading-5 text-gray-400">
         الشحن اللي العميل بيدفعه بيتقرا من كل أوردر لوحده زي ما نزل من

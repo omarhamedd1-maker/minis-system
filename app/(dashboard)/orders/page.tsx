@@ -55,6 +55,8 @@ import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
 import { SendBostaRowButton } from "@/components/SendBostaRowButton";
 import { SelectableOrderCard } from "@/components/SelectableOrderCard";
 import { bulkUpdateStatus, bulkSendToBosta } from "./[id]/actions";
+import { ImportShopifyOrders } from "@/components/ImportShopifyOrders";
+import { importShopifyOrders } from "./actions";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -226,6 +228,7 @@ export default async function OrdersPage({
           <span className="text-sm text-gray-500">{orders.length} أوردر</span>
           {/* زرار "مطابقة" اتشال — الصفحة نفسها لسه موجودة على
               /orders/reconcile لو احتجتها، بس مش بتاخد مكان في الشاشة */}
+          {canCreate && <ImportShopifyOrders action={importShopifyOrders} />}
           {canCreate && (
             <Link
               href="/orders/new"

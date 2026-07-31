@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney } from "@/lib/format";
-import { requirePagePermission } from "@/lib/permissions";
+import { LEGACY_BUCKET_PRODUCT, formatMoney } from "@/lib/format";
+import { can, requirePagePermission } from "@/lib/permissions";
+import { ImportShopifyProducts } from "@/components/ImportShopifyProducts";
+import { CostFile } from "@/components/CostFile";
+import { importShopifyProducts, uploadCostFile } from "./actions";
 
 const SHOPIFY_STATUS: Record<
   string,
@@ -51,11 +54,20 @@ export default async function ProductsPage({
     saved?: string;
     deleted?: string;
     q?: string;
+    missing_cost?: string;
   }>;
 }) {
-  const { error: actionError, saved, deleted, q } = await searchParams;
+  const {
+    error: actionError,
+    saved,
+    deleted,
+    q,
+    missing_cost: missingCost,
+  } = await searchParams;
   const searchTerm = (q ?? "").trim();
-  await requirePagePermission("products.view");
+  const onlyMissingCost = missingCost === "1";
+  const me = await requirePagePermission("products.view");
+  const canEdit = can(me, "products.edit");
   const supabase = await createClient();
 
   const { data: allProducts, error } = await supabase
@@ -78,7 +90,7 @@ export default async function ProductsPage({
   // ونرتّب بالكود (الرقمي الأول، واللي مالوش كود في الآخر)
   const skuOf = (p: ProductRow) => p.product_variants[0]?.sku ?? "";
   const visibleProducts = allProducts
-    .filter((p) => p.name !== "أوردر قديم (منتجات متعددة)")
+    .filter((p) => p.name !== LEGACY_BUCKET_PRODUCT)
     .sort((a, b) => {
       const sa = skuOf(a);
       const sb = skuOf(b);
@@ -91,9 +103,23 @@ export default async function ProductsPage({
       return sa.localeCompare(sb);
     });
 
+  // كام شكل لسه محتاج تكلفة — بيتعرض على زرار التنزيل
+  const missingCostCount = visibleProducts.reduce(
+    (sum, p) =>
+      sum + p.product_variants.filter((v) => !(Number(v.cost_price) > 0)).length,
+    0
+  );
+
+  // فلتر "الناقص" — الأشكال اللي تكلفتها صفر، اللي الجلب من شوبيفاي بيوديك لها
+  const costFiltered = onlyMissingCost
+    ? visibleProducts.filter((p) =>
+        p.product_variants.some((v) => !(Number(v.cost_price) > 0))
+      )
+    : visibleProducts;
+
   const normalized = searchTerm.toLowerCase().replace(/\s+/g, "");
   const products = searchTerm
-    ? visibleProducts.filter((p) => {
+    ? costFiltered.filter((p) => {
         const ar = (p.name_ar ?? "").toLowerCase().replace(/\s+/g, "");
         const en = (p.name ?? "").toLowerCase().replace(/\s+/g, "");
         const sku = (p.product_variants[0]?.sku ?? "").toLowerCase();
@@ -103,7 +129,7 @@ export default async function ProductsPage({
           sku.includes(searchTerm.toLowerCase())
         );
       })
-    : visibleProducts;
+    : costFiltered;
 
   const variantCount = products.reduce(
     (sum, product) => sum + product.product_variants.length,
@@ -140,8 +166,28 @@ export default async function ProductsPage({
               </Link>
             )}
           </form>
+          {canEdit && <ImportShopifyProducts action={importShopifyProducts} />}
         </div>
       </div>
+
+      {onlyMissingCost && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+          <span>
+            بنعرض المنتجات اللي فيها شكل بتكلفة صفر بس — الربح فيها بيطلع أكبر
+            من الحقيقة.
+          </span>
+          <Link
+            href="/products"
+            className="shrink-0 font-medium underline hover:text-amber-950"
+          >
+            اعرض الكل
+          </Link>
+        </div>
+      )}
+
+      {canEdit && (
+        <CostFile action={uploadCostFile} missingCount={missingCostCount} />
+      )}
 
       {actionError && (
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
