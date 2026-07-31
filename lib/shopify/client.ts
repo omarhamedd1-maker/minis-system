@@ -38,12 +38,32 @@ export type ShopifyCreds = {
  * المخصّص. اللي شوبيفاي بتفهمه هو `xxx.myshopify.com` بس.
  */
 export function normalizeShop(raw: string | null | undefined): string {
-  return String(raw ?? "")
+  const cleaned = String(raw ?? "")
     .trim()
     .toLowerCase()
     .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
     .replace(/\/.*$/, "")
     .replace(/\s+/g, "");
+
+  // **اسم المتجر لوحده بيكمّل نفسه.** أغلب الناس بتعرف اسم متجرها بس
+  // (`minis`) مش الدومين الكامل، وكانوا بياخدوا رسالة خطأ على حاجة هي
+  // صح في الأساس.
+  if (cleaned && !cleaned.includes(".")) return `${cleaned}.myshopify.com`;
+
+  return cleaned;
+}
+
+/**
+ * دومين شوبيفاي بس اللي ينفع في الربط.
+ *
+ * **الدومين اللي العميل بيشوفه (زي `minis.com`) مابينفعش** — شوبيفاي بتطلب
+ * دومين الأدمن، وده شرط منهم مش نقص عندنا. فبنفرّق بين "مش مكتوب صح" و
+ * "ده دومينك التاني" عشان الرسالة تفيد.
+ */
+export function isCustomDomain(raw: string | null | undefined): boolean {
+  const shop = normalizeShop(raw);
+  return shop.includes(".") && !shop.endsWith(".myshopify.com");
 }
 
 /** الدومين شكله صح؟ لو لأ بنقول قبل ما نضيّع نداء على الفاضي */
