@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePagePermission } from "@/lib/permissions";
 import {
@@ -370,6 +371,23 @@ export default async function SettingsPage({
           وسيب الخانتين فاضيين لو عايز توقّف التنبيهات.
         </div>
       </div>
+
+      {/* ===== المراجعة النهائية ===== */}
+      <Link
+        href="/orders/reconcile"
+        className="block rounded-xl bg-white p-5 shadow-sm transition-colors hover:bg-gray-50"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-gray-900">مراجعة الداتا</h2>
+            <p className="mt-0.5 text-xs text-gray-500">
+              بتقارن أوردراتك ببوسطة وبتطلّع اللي مش مظبوط: تحصيل مختلف، شحنة
+              ضايعة، تكلفة ناقصة. افتحها بعد التركيب وكل شوية بعد كده.
+            </p>
+          </div>
+          <span className="shrink-0 text-gray-300">←</span>
+        </div>
+      </Link>
 
       <p className="px-1 text-[11px] leading-5 text-gray-400">
         الشحن اللي العميل بيدفعه بيتقرا من كل أوردر لوحده زي ما نزل من
