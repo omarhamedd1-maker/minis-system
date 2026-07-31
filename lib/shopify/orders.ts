@@ -153,6 +153,8 @@ export type OrderImportResult =
       dry: boolean;
       plan: OrderImportPlan;
       added?: { orders: number; customers: number };
+      /** اللي اتعمل فعلًا — بيتسجّل في `import_runs` عشان التراجع */
+      undo?: { orders: string[]; customers: string[] };
     }
   | { ok: false; error: string };
 
@@ -236,6 +238,9 @@ export async function runOrderImport(opts: {
 
   let addedOrders = 0;
   let addedCustomers = 0;
+  // بنسجّل اللي بيتعمل عشان التراجع يبقى ممكن
+  const madeOrders: string[] = [];
+  const madeCustomers: string[] = [];
   // عملاء اتعملوا في نفس الدفعة — عشان عميل ليه أوردرين مايتعملش مرتين
   const created = new Map<string, string>();
 
@@ -265,6 +270,7 @@ export async function runOrderImport(opts: {
           customerId = newCustomer.id;
           created.set(key, newCustomer.id);
           addedCustomers++;
+          madeCustomers.push(newCustomer.id);
         }
       }
     }
@@ -287,6 +293,7 @@ export async function runOrderImport(opts: {
 
     if (orderError || !newOrder) continue;
     addedOrders++;
+    madeOrders.push(newOrder.id);
 
     for (const line of o.lines) {
       const variant = variantByShopifyId.get(String(line.shopifyVariantId));
@@ -308,5 +315,6 @@ export async function runOrderImport(opts: {
     dry: false,
     plan,
     added: { orders: addedOrders, customers: addedCustomers },
+    undo: { orders: madeOrders, customers: madeCustomers },
   };
 }

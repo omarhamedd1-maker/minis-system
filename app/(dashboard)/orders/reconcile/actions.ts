@@ -8,6 +8,7 @@ import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { fetchAllDeliveries } from "@/lib/bosta/client";
 import { planShipmentLinks, type LinkPlan } from "@/lib/bosta/link-missing";
 import { AT_CARRIER_STATUSES } from "@/lib/format";
+import { recordImportRun } from "@/lib/import-runs";
 
 export type LinkMissingResult =
   | { ok: true; dry: boolean; plan: LinkPlan; linked?: number }
@@ -107,6 +108,14 @@ export async function linkMissingShipments(
       "bosta.link",
       `ربط ${linked} شحنة ضايعة بأوردراتها من صفحة المطابقة`
     );
+    await recordImportRun(db, {
+      kind: "shipments",
+      summary: `${linked} شحنة اتربطت`,
+      actorName: me.fullName ?? me.email ?? null,
+      payload: {
+        trackings: plan.links.map((l) => ({ orderId: l.orderId })),
+      },
+    });
   }
 
   revalidatePath("/orders/reconcile");

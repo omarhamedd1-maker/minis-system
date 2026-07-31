@@ -98,7 +98,14 @@ export async function fetchShopifyProducts(
 }
 
 export type ImportResult =
-  | { ok: true; dry: boolean; plan: ImportPlan; added?: { products: number; variants: number } }
+  | {
+      ok: true;
+      dry: boolean;
+      plan: ImportPlan;
+      added?: { products: number; variants: number };
+      /** اللي اتعمل فعلًا — بيتسجّل في `import_runs` عشان التراجع */
+      undo?: { products: string[]; variants: string[] };
+    }
   | { ok: false; error: string };
 
 /**
@@ -188,6 +195,9 @@ export async function runProductImport(opts: {
 
   let addedProducts = 0;
   let addedVariants = 0;
+  // بنسجّل اللي بيتعمل عشان التراجع يبقى ممكن
+  const madeProducts: string[] = [];
+  const madeVariants: string[] = [];
 
   // منتجات جديدة: المنتج الأول وبعدين أشكاله
   for (const p of plan.newProducts) {
@@ -199,6 +209,7 @@ export async function runProductImport(opts: {
 
     if (error || !created) continue;
     addedProducts++;
+    madeProducts.push(created.id);
 
     for (const v of p.variants) {
       const { error: vErr } = await db.from("product_variants").insert({
@@ -215,18 +226,26 @@ export async function runProductImport(opts: {
     }
   }
 
-  // أشكال جديدة لمنتجات موجودة
+  // أشكال جديدة لمنتجات موجودة — دي بتتسجّل لوحدها في التراجع، لأن منتجها
+  // موجود من قبل ومينفعش يتمسح معاها
   for (const nv of plan.newVariants) {
-    const { error } = await db.from("product_variants").insert({
-      product_id: nv.ourProductId,
-      shopify_variant_id: nv.variant.variantId,
-      variant_name: nv.variant.title,
-      sku: nv.variant.sku,
-      sale_price: nv.variant.price,
-      cost_price: 0,
-      quantity_on_hand: 0,
-    });
-    if (!error) addedVariants++;
+    const { data: made, error } = await db
+      .from("product_variants")
+      .insert({
+        product_id: nv.ourProductId,
+        shopify_variant_id: nv.variant.variantId,
+        variant_name: nv.variant.title,
+        sku: nv.variant.sku,
+        sale_price: nv.variant.price,
+        cost_price: 0,
+        quantity_on_hand: 0,
+      })
+      .select("id")
+      .maybeSingle();
+    if (!error && made) {
+      addedVariants++;
+      madeVariants.push(made.id);
+    }
   }
 
   return {
@@ -234,5 +253,6 @@ export async function runProductImport(opts: {
     dry: false,
     plan,
     added: { products: addedProducts, variants: addedVariants },
+    undo: { products: madeProducts, variants: madeVariants },
   };
 }

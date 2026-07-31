@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/activity";
 import { COST_COMPONENTS } from "@/lib/format";
 import { runProductImport, type ImportResult } from "@/lib/shopify/products";
 import { parseCostFile, type CostFilePlan } from "@/lib/costs-file";
+import { recordImportRun } from "@/lib/import-runs";
 
 export async function deleteProduct(formData: FormData) {
   const me = await requirePermission("products.edit");
@@ -352,6 +353,12 @@ export async function importShopifyProducts(
       "products.import",
       `جلب من شوبيفاي: ${res.added.products} منتج و${res.added.variants} شكل`
     );
+    await recordImportRun(createAdminClient(), {
+      kind: "products",
+      summary: `${res.added.products} منتج و${res.added.variants} شكل`,
+      actorName: me.fullName ?? me.email ?? null,
+      payload: res.undo ?? {},
+    });
     revalidatePath("/products");
   }
 
@@ -418,6 +425,18 @@ export async function uploadCostFile(
 
   if (applied > 0) {
     await logActivity(me, "products.costs", `حدّث تكلفة ${applied} شكل من ملف`);
+    // التراجع هنا مش مسح — ده رجوع كل تكلفة لقيمتها اللي كانت قبل الملف
+    await recordImportRun(db, {
+      kind: "costs",
+      summary: `تكلفة ${applied} شكل`,
+      actorName: me.fullName ?? me.email ?? null,
+      payload: {
+        costs: plan.updates.map((u) => ({
+          variantId: u.variantId,
+          previous: u.from,
+        })),
+      },
+    });
     revalidatePath("/products");
   }
 

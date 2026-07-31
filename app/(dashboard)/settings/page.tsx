@@ -13,6 +13,9 @@ import { looksLikeChatId } from "@/lib/telegram";
 import { EnablePush } from "@/components/EnablePush";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { headers } from "next/headers";
+import { ImportHistory } from "@/components/ImportHistory";
+import { describeUndo, listImportRuns } from "@/lib/import-runs";
+import { undoImport } from "../orders/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +42,21 @@ export default async function SettingsPage({
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
+
+  // سجل الاستيراد — بيرجع فاضي لو الجدول لسه ماتعملش (`sql/import-runs.sql`)
+  const importRuns = (await listImportRuns(db)).map((run) => ({
+    id: run.id,
+    kind: run.kind,
+    summary: run.summary,
+    actorName: run.actor_name,
+    createdAt: new Date(run.created_at).toLocaleString("ar-EG", {
+      timeZone: "Africa/Cairo",
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
+    undoneAt: run.undone_at,
+    undoLines: describeUndo(run.payload ?? {}),
+  }));
 
   const hasBosta = Boolean(creds?.bosta_api_key);
   const hasTelegram = Boolean(creds?.telegram_bot_token);
@@ -371,6 +389,8 @@ export default async function SettingsPage({
           وسيب الخانتين فاضيين لو عايز توقّف التنبيهات.
         </div>
       </div>
+
+      <ImportHistory runs={importRuns} undoAction={undoImport} />
 
       {/* ===== المراجعة النهائية ===== */}
       <Link
