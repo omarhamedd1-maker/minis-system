@@ -11,6 +11,7 @@
 // ==========================================================================
 import fs from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { createTenantWithOwner } from "../lib/create-tenant.ts";
 
 const env = Object.fromEntries(
   fs.readFileSync("./.env.local", "utf8").split(/\r?\n/).filter((l) => l.includes("="))
@@ -29,24 +30,36 @@ const ok = (name, pass, detail = "") =>
 let tenantId, roleId, authUserId;
 
 try {
-  // ===== نعمل البيزنس بنفس خطوات الشاشة =====
-  const { data: t } = await admin.from("tenants").insert({ name: "بيزنس تجريبي" }).select("id").single();
-  tenantId = t.id;
-
-  const { data: role } = await admin.from("roles").insert({ name: "Owner", tenant_id: tenantId }).select("id").single();
-  roleId = role.id;
-
-  const { data: created } = await admin.auth.admin.createUser({
-    email: EMAIL, password: PASSWORD, email_confirm: true,
+  // ===== نعمل البيزنس **بنفس الكود اللي بيشتغل فعلًا** =====
+  // قبل كده السكريبت كان بيكرر الخطوات بإيده، يعني بيختبر الشكل مش اللي
+  // العميل بيعدّي منه. دلوقتي بينادي نفس الدالة اللي ورا شاشة التسجيل
+  // وشاشة البيزنسات — فأي كسر فيها بيبان هنا.
+  const res = await createTenantWithOwner(admin, {
+    businessName: "بيزنس تجريبي",
+    ownerName: "صاحب البيزنس",
+    email: EMAIL,
+    password: PASSWORD,
   });
-  authUserId = created.user.id;
+  if (!res.ok) throw new Error("إنشاء البيزنس فشل: " + res.error);
+  tenantId = res.tenantId;
+  authUserId = res.userId;
 
-  await admin.from("app_users").insert({
-    auth_user_id: authUserId, full_name: "صاحب البيزنس", role_id: roleId,
-    permissions: ["orders.view", "customers.view", "expenses.view", "products.view",
-      "cash.view", "finance.dashboard", "admin.users", "admin.settings"],
-    active: true, tenant_id: tenantId, is_platform_admin: false,
+  const { data: roleRow } = await admin
+    .from("roles").select("id").eq("tenant_id", tenantId).maybeSingle();
+  roleId = roleRow?.id;
+
+  // ===== ٠) الإيميل المكرر بيترفض =====
+  const dup = await createTenantWithOwner(admin, {
+    businessName: "بيزنس مكرر",
+    ownerName: "حد تاني",
+    email: EMAIL,
+    password: PASSWORD,
   });
+  ok(
+    "الإيميل المكرر بيترفض ومابيسيبش بيزنس معلّق",
+    !dup.ok && String(dup.error).includes("متسجّل"),
+    dup.ok ? "اتقبل!" : dup.error
+  );
 
   // ===== ١) صف المفاتيح اتعمل لوحده؟ =====
   const { data: c } = await admin.from("tenant_credentials").select("tenant_id").eq("tenant_id", tenantId).maybeSingle();

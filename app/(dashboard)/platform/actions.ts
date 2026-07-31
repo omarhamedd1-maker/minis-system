@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
-import { ALL_PERMISSION_KEYS } from "@/lib/permissions";
+import { checkNewTenant, createTenantWithOwner } from "@/lib/create-tenant";
 
 function back(msg: string, ok = false) {
   redirect(`/platform?${ok ? "saved" : "error"}=` + encodeURIComponent(msg));
@@ -30,61 +30,23 @@ export async function createTenant(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const ownerName = String(formData.get("owner_name") ?? "").trim();
 
-  if (!name) back("اكتب اسم البيزنس");
-  if (!email.includes("@")) back("اكتب إيميل صحيح لصاحب البيزنس");
-  if (password.length < 8) back("الباسورد لازم 8 حروف على الأقل");
-  if (!ownerName) back("اكتب اسم صاحب البيزنس");
-
-  const db = createAdminClient();
-
-  // ١) البيزنس — الإعدادات والمفاتيح بتتعمل لوحدها بترجر
-  const { data: tenant, error: tenantError } = await db
-    .from("tenants")
-    .insert({ name })
-    .select("id")
-    .single();
-  if (tenantError || !tenant) {
-    back("معرفناش نعمل البيزنس: " + (tenantError?.message ?? ""));
-  }
-
-  // ٢) دور أساسي للبيزنس ده
-  const { data: role, error: roleError } = await db
-    .from("roles")
-    .insert({ name: "Owner", tenant_id: tenant!.id })
-    .select("id")
-    .single();
-  if (roleError || !role) {
-    await db.from("tenants").delete().eq("id", tenant!.id);
-    back("معرفناش نعمل دور للبيزنس: " + (roleError?.message ?? ""));
-  }
-
-  // ٣) حساب صاحب البيزنس
-  const { data: created, error: authError } = await db.auth.admin.createUser({
+  // نفس الفحص ونفس الإنشاء بتوع شاشة التسجيل — **مكان واحد بقصد**، عشان
+  // أي تصليح أمني مايتعملش في واحد وينسى التاني
+  const problem = checkNewTenant({
+    businessName: name,
+    ownerName,
     email,
     password,
-    email_confirm: true,
   });
-  if (authError || !created?.user) {
-    await db.from("tenants").delete().eq("id", tenant!.id);
-    back("معرفناش نعمل الحساب: " + (authError?.message ?? ""));
-  }
-  const newUserId = created!.user!.id;
+  if (problem) back(problem);
 
-  // ٤) صلاحياته — كل صلاحيات بيزنسه، بس مش صاحب منصة
-  const { error: userError } = await db.from("app_users").insert({
-    auth_user_id: newUserId,
-    full_name: ownerName,
-    role_id: role!.id,
-    permissions: [...ALL_PERMISSION_KEYS],
-    active: true,
-    tenant_id: tenant!.id,
-    is_platform_admin: false,
+  const res = await createTenantWithOwner(createAdminClient(), {
+    businessName: name,
+    ownerName,
+    email,
+    password,
   });
-  if (userError) {
-    await db.auth.admin.deleteUser(newUserId);
-    await db.from("tenants").delete().eq("id", tenant!.id);
-    back("معرفناش نحفظ صلاحيات الحساب: " + userError.message);
-  }
+  if (!res.ok) back(res.error);
 
   await logActivity(me, "platform.tenant.create", `أنشأ بيزنس ${name}`);
   revalidatePath("/platform");

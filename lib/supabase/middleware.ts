@@ -31,9 +31,13 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isLoginPage = pathname.startsWith("/login");
+  // **شاشة التسجيل لازم تفتح من غير حساب** — دي المكان اللي العميل بيعمل
+  // فيه بيزنسه بنفسه، ولو اتقفلت بالبوابة محدش هيوصلها أصلًا.
+  const isSignupPage = pathname.startsWith("/signup");
   // مسارات عامة: تعريف البرنامج وأيقوناته لازم تفتح من غير تسجيل دخول
   const isPublic =
     isLoginPage ||
+    isSignupPage ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/icon" ||
     pathname === "/apple-icon";
@@ -44,7 +48,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isLoginPage) {
+  // اللي داخل خلاص مالوش لازمة في الدخول ولا التسجيل
+  if (user && (isLoginPage || isSignupPage)) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
