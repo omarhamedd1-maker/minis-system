@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { COST_COMPONENTS } from "@/lib/format";
+import { runProductImport, type ImportResult } from "@/lib/shopify/products";
 
 export async function deleteProduct(formData: FormData) {
   const me = await requirePermission("products.edit");
@@ -323,4 +324,35 @@ export async function saveCostComponents(formData: FormData) {
   revalidatePath("/products");
   revalidatePath(returnTo);
   redirect(returnTo + "?saved=1");
+}
+
+/**
+ * جلب المنتجات من شوبيفاي (بند ٤.٣).
+ *
+ * **`dry` بيعرض بس مابيكتبش** — القاعدة في المشروع إن أي عملية بتلمس داتا
+ * بتتعرض قبل ما تتنفّذ.
+ *
+ * وبيرجّع معاها **الناقص**: الأشكال اللي تكلفتها صفر. من غير ده العميل
+ * الجديد هيفتكر إنه خلّص وهو لسه مابدأش — شوبيفاي مافيهاش تكلفة أصلًا.
+ */
+export async function importShopifyProducts(
+  dry: boolean
+): Promise<ImportResult> {
+  const me = await requirePermission("products.edit");
+  const res = await runProductImport({
+    db: createAdminClient(),
+    tenantId: me.tenantId,
+    dry,
+  });
+
+  if (res.ok && !res.dry && res.added && res.added.products + res.added.variants > 0) {
+    await logActivity(
+      me,
+      "products.import",
+      `جلب من شوبيفاي: ${res.added.products} منتج و${res.added.variants} شكل`
+    );
+    revalidatePath("/products");
+  }
+
+  return res;
 }

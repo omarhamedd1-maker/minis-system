@@ -93,6 +93,8 @@ npm install
 | `lib/shopify/oauth.ts` | الربط بضغطة واحدة (الـstate والتوقيع) |
 | `lib/shopify/order-push-plan.ts` | القرار: يتغيّر إيه في الأوردر عند شوبيفاي |
 | `lib/shopify/order-push.ts` | تنفيذ القرار عند شوبيفاي |
+| `lib/shopify/product-import-plan.ts` | القرار: إيه الجديد وإيه الناقص في المنتجات |
+| `lib/shopify/products.ts` | جلب المنتجات وإدخالها |
 
 الفكرة إن اللي بيقرر منفصل عن اللي بيتصل بالشبكة — عشان ينفع يتختبر.
 
