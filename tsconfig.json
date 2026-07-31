@@ -11,6 +11,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // سكريبتات الفحص في `scripts/` بتشغّل الكود الحقيقي من `lib/` على نود
+    // مباشرةً، ونود بيطلب امتداد صريح في الاستيراد. مسموح هنا لأن المشروع
+    // `noEmit` أصلًا — البناء بيعمله نكست.
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [

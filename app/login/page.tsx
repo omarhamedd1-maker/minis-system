@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { login } from "./actions";
 
 export default async function LoginPage({
@@ -67,6 +68,13 @@ export default async function LoginPage({
             دخول
           </button>
         </form>
+
+        <p className="mt-5 text-center text-sm text-gray-500">
+          لسه مالكش حساب؟{" "}
+          <Link href="/signup" className="font-medium text-gray-900 underline">
+            اعمل بيزنسك
+          </Link>
+        </p>
       </div>
     </div>
   );
