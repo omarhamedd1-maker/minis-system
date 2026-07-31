@@ -95,6 +95,7 @@ npm install
 | `lib/shopify/order-push.ts` | تنفيذ القرار عند شوبيفاي |
 | `lib/shopify/product-import-plan.ts` | القرار: إيه الجديد وإيه الناقص في المنتجات |
 | `lib/shopify/products.ts` | جلب المنتجات وإدخالها |
+| `lib/costs-file.ts` | ملف التكاليف: بناه وقراه |
 
 الفكرة إن اللي بيقرر منفصل عن اللي بيتصل بالشبكة — عشان ينفع يتختبر.
 

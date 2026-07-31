@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { EXCLUDED_STATUSES, formatMoney, orderStatusBadge } from "@/lib/format";
+import {
+  EXCLUDED_STATUSES,
+  LEGACY_BUCKET_PRODUCT,
+  formatMoney,
+  orderStatusBadge,
+} from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { DayPicker } from "@/components/DayPicker";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
@@ -486,7 +491,7 @@ export default async function StatsPage({
     }
   }
   const topProducts = [...productStats.entries()]
-    .filter(([name]) => name !== "أوردر قديم (منتجات متعددة)")
+    .filter(([name]) => name !== LEGACY_BUCKET_PRODUCT)
     .sort((a, b) => b[1].revenue - a[1].revenue)
     .slice(0, 5);
 

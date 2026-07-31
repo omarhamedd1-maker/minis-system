@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney } from "@/lib/format";
+import { LEGACY_BUCKET_PRODUCT, formatMoney } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { ImportShopifyProducts } from "@/components/ImportShopifyProducts";
-import { importShopifyProducts } from "./actions";
+import { CostFile } from "@/components/CostFile";
+import { importShopifyProducts, uploadCostFile } from "./actions";
 
 const SHOPIFY_STATUS: Record<
   string,
@@ -89,7 +90,7 @@ export default async function ProductsPage({
   // ونرتّب بالكود (الرقمي الأول، واللي مالوش كود في الآخر)
   const skuOf = (p: ProductRow) => p.product_variants[0]?.sku ?? "";
   const visibleProducts = allProducts
-    .filter((p) => p.name !== "أوردر قديم (منتجات متعددة)")
+    .filter((p) => p.name !== LEGACY_BUCKET_PRODUCT)
     .sort((a, b) => {
       const sa = skuOf(a);
       const sb = skuOf(b);
@@ -101,6 +102,13 @@ export default async function ProductsPage({
       if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
       return sa.localeCompare(sb);
     });
+
+  // كام شكل لسه محتاج تكلفة — بيتعرض على زرار التنزيل
+  const missingCostCount = visibleProducts.reduce(
+    (sum, p) =>
+      sum + p.product_variants.filter((v) => !(Number(v.cost_price) > 0)).length,
+    0
+  );
 
   // فلتر "الناقص" — الأشكال اللي تكلفتها صفر، اللي الجلب من شوبيفاي بيوديك لها
   const costFiltered = onlyMissingCost
@@ -175,6 +183,10 @@ export default async function ProductsPage({
             اعرض الكل
           </Link>
         </div>
+      )}
+
+      {canEdit && (
+        <CostFile action={uploadCostFile} missingCount={missingCostCount} />
       )}
 
       {actionError && (
