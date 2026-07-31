@@ -11,7 +11,6 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendTelegram } from "../telegram";
 import { sendPush } from "./send";
 
 /** بيشيل وسوم HTML ويسيب النص — الإشعار مابيعرضش وسوم */
@@ -37,13 +36,12 @@ export async function notifyAll(
 ): Promise<void> {
   const { title, body } = splitTitle(message);
 
-  await Promise.allSettled([
-    sendTelegram(db, tenantId, message, opts?.fetchImpl),
-    sendPush(db, tenantId, {
-      title,
-      body,
-      url: opts?.url,
-      tag: opts?.tag,
-    }),
-  ]);
+  // **تليجرام اتشال.** التنبيهات بقت على الموبايل بس — إشعار من البرنامج
+  // نفسه من غير وسيط ولا بوت ولا جروب يتظبّط.
+  await sendPush(db, tenantId, {
+    title,
+    body,
+    url: opts?.url,
+    tag: opts?.tag,
+  });
 }

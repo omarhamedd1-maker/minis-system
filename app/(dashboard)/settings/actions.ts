@@ -13,7 +13,6 @@ import {
 } from "@/lib/shopify/client";
 import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { readShopifyApp } from "@/lib/shopify/app";
-import { discoverChats, looksLikeChatId, testTelegram } from "@/lib/telegram";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
 // مابيتنفذش، فمانحتاجش else في كل مكان
@@ -53,93 +52,6 @@ export async function saveBostaKey(formData: FormData) {
 /**
  * تنبيهات تليجرام. بنجرّبها قبل الحفظ زي مفتاح بوسطة بالظبط — التنبيه اللي
  * ماوصلش أوحش من إنه مش موجود، فمينفعش نحفظ إعداد ماجرّبناهوش.
- */
-export async function saveTelegram(formData: FormData) {
-  const me = await requirePermission("admin.settings");
-  const token = String(formData.get("telegram_bot_token") ?? "").trim();
-  let chatId = String(formData.get("telegram_chat_id") ?? "").trim();
-
-  const db = createAdminClient();
-
-  // فاضيين = إيقاف التنبيهات
-  if (!token && !chatId) {
-    const { error } = await db
-      .from("tenant_credentials")
-      .update({
-        telegram_bot_token: null,
-        telegram_chat_id: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("tenant_id", me.tenantId);
-    if (error) back("معرفناش نحفظ: " + error.message);
-    await logActivity(me, "settings.telegram", "وقّف تنبيهات تليجرام");
-    revalidatePath("/settings");
-    back("التنبيهات اتوقفت", true);
-  }
-
-  if (!token) back("اكتب توكن البوت");
-
-  // قيمة مش على شكل رقم جروب (مثلاً إيميل حطّه المتصفح autofill) بنرميها
-  // ونلاقي الجروب بنفسنا — أحسن من إننا نحفظ حاجة غلط وتفشل بعد كده
-  if (chatId && !looksLikeChatId(chatId)) chatId = "";
-
-  // مافيش رقم جروب؟ نلاقيه إحنا بدل ما المستخدم يقرا JSON بإيده
-  if (!chatId) {
-    const found = await discoverChats(token);
-    if (!found.ok) back("التوكن مارضيش يشتغل: " + found.error);
-
-    if (found.chats.length === 0) {
-      // السبب الأشهر: خصوصية البوت مفعّلة (وهي الافتراضي)، فالرسايل العادية
-      // مابتوصلهوش خالص. الأوامر اللي بتبدأ بـ / بتوصل دايمًا.
-      back(
-        "البوت مش شايف الجروب. ابعت في الجروب /start بالظبط (كلمة عادية مش بتوصله لأن خصوصية البوت مفعّلة)، وبعدين دوس احفظ تاني."
-      );
-    }
-    if (found.chats.length > 1) {
-      back(
-        "البوت شايف أكتر من محادثة — اكتب رقم اللي عايزه في خانة رقم الجروب: " +
-          found.chats.map((c) => `${c.title} (${c.id})`).join(" · ")
-      );
-    }
-    chatId = found.chats[0].id;
-  }
-
-  const { error } = await db
-    .from("tenant_credentials")
-    .update({
-      telegram_bot_token: token,
-      telegram_chat_id: chatId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("tenant_id", me.tenantId);
-
-  if (error) {
-    back(
-      "معرفناش نحفظ: " +
-        error.message +
-        " — لو الخانات لسه مااتعملتش شغّل sql/telegram.sql"
-    );
-  }
-
-  // بنجرّب بعد الحفظ عشان الإرسال بيقرا المفاتيح من الجدول
-  const test = await testTelegram(db, me.tenantId);
-  if (!test.ok) {
-    back(
-      "اتحفظ بس التجربة فشلت: " +
-        (test.reason === "not_configured"
-          ? "المفاتيح مش مقروءة"
-          : (test.error ?? "تليجرام رفض"))
-    );
-  }
-
-  await logActivity(me, "settings.telegram", "ربط تنبيهات تليجرام");
-  revalidatePath("/settings");
-  back("تمام — بعتنا رسالة تجربة على الجروب", true);
-}
-
-/**
- * مفاتيح شوبيفاي. زي بوسطة: **مش بنحفظ غير بعد ما نتأكد إنها بتشتغل فعلاً**
- * وبنقرا اسم المتجر — مش بنكتفي بردّ ٢٠٠ (الدرس من مسار المدن في بوسطة).
  */
 export async function saveShopify(formData: FormData) {
   const me = await requirePermission("admin.settings");
@@ -226,17 +138,6 @@ export async function checkShopifyConnection() {
 }
 
 /** بيبعت رسالة تجربة بالمفاتيح المحفوظة */
-export async function checkTelegram() {
-  const me = await requirePermission("admin.settings");
-  const result = await testTelegram(createAdminClient(), me.tenantId);
-  if (result.ok) back("الرسالة وصلت الجروب ✓", true);
-  back(
-    result.reason === "not_configured"
-      ? "لسه مفيش بوت محفوظ"
-      : "مااتبعتتش: " + (result.error ?? "تليجرام رفض")
-  );
-}
-
 /** بيجرّب المفتاح المحفوظ من غير ما يغيّر حاجة */
 export async function checkBostaConnection() {
   const me = await requirePermission("admin.settings");

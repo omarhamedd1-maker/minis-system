@@ -102,6 +102,61 @@ export async function fetchAllDeliveries(
   return out;
 }
 
+export type BostaPickupLocation = {
+  id: string;
+  /** الاسم اللي العميل هيعرفه بيه — المخزن أو الفرع */
+  label: string;
+};
+
+/**
+ * عناوين الاستلام المسجّلة عند بوسطة.
+ *
+ * **الفايدة إن العميل مايكتبش رقم عنوان بإيده.** الخانة القديمة كانت بتطلب
+ * رقم مالوش أي معنى عنده، وكان لازم يدوّر عليه في لوحة بوسطة. دلوقتي
+ * بنجيب العناوين ونختار — ولو عنده واحد بس بيتحط لوحده.
+ */
+export async function fetchPickupLocations(
+  rawKey: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<BostaPickupLocation[]> {
+  const apiKey = assertUsableKey(rawKey);
+
+  const res = await fetchImpl(`${BOSTA_BASE}/pickup-locations`, {
+    headers: headers(apiKey),
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (res.status !== 200) return [];
+
+  const json = await res.json().catch(() => null);
+  const list: unknown[] = json?.data?.list ?? [];
+
+  return list
+    .map((raw) => {
+      const l = raw as {
+        _id?: string;
+        locationName?: string;
+        address?: {
+          firstLine?: string;
+          city?: { name?: string; nameAr?: string };
+          zone?: { name?: string; nameAr?: string };
+        };
+      };
+      if (!l?._id) return null;
+
+      // الاسم اللي بيتعرض: اسم المكان لو موجود، وإلا المنطقة والمحافظة
+      const city = l.address?.city?.nameAr || l.address?.city?.name || "";
+      const zone = l.address?.zone?.nameAr || l.address?.zone?.name || "";
+      const label =
+        String(l.locationName ?? "").trim() ||
+        [zone, city].filter(Boolean).join("، ") ||
+        String(l.address?.firstLine ?? "").slice(0, 40) ||
+        "عنوان استلام";
+
+      return { id: String(l._id), label };
+    })
+    .filter((l): l is BostaPickupLocation => l !== null);
+}
+
 /**
  * قايمة المحافظات عند بوسطة (٢٨ محافظة، من غير مناطق).
  * ⚠️ المسار ده **مابيتحققش من المفتاح** — بيرد ٢٠٠ لأي حاجة، فمينفعش
