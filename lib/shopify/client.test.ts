@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ShopifyError,
   fetchAccessToken,
+  isCustomDomain,
   isValidShop,
   normalizeShop,
   testShopifyConnection,
@@ -34,9 +35,31 @@ describe("دومين المتجر", () => {
     expect(isValidShop("d8rtv0-uq.myshopify.com")).toBe(true);
     // الدومين المخصّص مابينفعش مع الـAPI
     expect(isValidShop("minishomedecor.com")).toBe(false);
-    expect(isValidShop("d8rtv0-uq")).toBe(false);
     expect(isValidShop("")).toBe(false);
     expect(isValidShop(null)).toBe(false);
+  });
+
+  it("**الاسم لوحده بيكمّل نفسه**", () => {
+    // أغلب الناس بتعرف اسم متجرها بس مش الدومين الكامل، وكانوا بياخدوا
+    // رسالة خطأ على حاجة هي صح في الأساس
+    expect(normalizeShop("d8rtv0-uq")).toBe("d8rtv0-uq.myshopify.com");
+    expect(isValidShop("d8rtv0-uq")).toBe(true);
+    expect(normalizeShop("  MINIS  ")).toBe("minis.myshopify.com");
+  });
+
+  it("بيشيل www من الدومين", () => {
+    expect(normalizeShop("www.d8rtv0-uq.myshopify.com")).toBe(
+      "d8rtv0-uq.myshopify.com"
+    );
+  });
+
+  it("بيفرّق بين الدومين المخصّص والغلط", () => {
+    // الفرق ده بيحدد الرسالة اللي العميل بيشوفها
+    expect(isCustomDomain("minishomedecor.com")).toBe(true);
+    expect(isCustomDomain("https://www.minishomedecor.com/shop")).toBe(true);
+    expect(isCustomDomain("d8rtv0-uq.myshopify.com")).toBe(false);
+    expect(isCustomDomain("d8rtv0-uq")).toBe(false);
+    expect(isCustomDomain("")).toBe(false);
   });
 });
 

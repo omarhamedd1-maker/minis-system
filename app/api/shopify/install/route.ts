@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/permissions";
 import { callbackUrl, readShopifyApp } from "@/lib/shopify/app";
 import { buildInstallUrl, newState } from "@/lib/shopify/oauth";
-import { isValidShop, normalizeShop } from "@/lib/shopify/client";
+import { isCustomDomain, isValidShop, normalizeShop } from "@/lib/shopify/client";
 
 /**
  * بداية ربط شوبيفاي.
@@ -23,7 +23,20 @@ export async function GET(req: Request) {
     redirect("/settings?error=" + encodeURIComponent(msg));
 
   if (!isValidShop(shop)) {
-    back("اكتب دومين المتجر بالشكل ده: yourshop.myshopify.com");
+    back(
+      isCustomDomain(shop)
+        ? `"${shop}" ده دومين متجرك اللي العميل بيشوفه، وشوبيفاي بتطلب دومين الأدمن. هتلاقيه في لوحة شوبيفاي تحت الإعدادات ← الدومينات، وشكله كده: yourshop.myshopify.com`
+        : "اكتب اسم متجرك أو دومينه — مثلًا yourshop أو yourshop.myshopify.com"
+    );
+  }
+
+  // **الربط مابيشتغلش محليًا.** عنوان الرجوع لازم يكون مسجّل بالحرف في لوحة
+  // شوبيفاي، وعنوان النسخة المحلية مش مسجّل — فشوبيفاي بترد بصفحة خطأ ٥٠٠
+  // مش مفهومة. بنقولها بالعربي قبل ما نوديه هناك.
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) {
+    back(
+      "ربط شوبيفاي مابيشتغلش على النسخة المحلية — جرّبه من الموقع الحقيقي"
+    );
   }
 
   const db = createAdminClient();
