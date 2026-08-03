@@ -5,9 +5,9 @@ import {
   BUNDLE_COVERS,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
-  collectionState,
   formatDate,
   formatMoney,
+  lastMove,
   orderStatusBadge,
   paymentMethodLabel,
 } from "@/lib/format";
@@ -22,6 +22,7 @@ import { OrderItemCard } from "@/components/OrderItemCard";
 import { ReturnPanel } from "@/components/ReturnPanel";
 import { BostaMark } from "@/components/BostaMark";
 import { isDeadShipment } from "@/lib/bosta/order-status";
+import { exceptionAdvice } from "@/lib/bosta/exception";
 import { refundDue } from "@/lib/refund";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -316,6 +317,9 @@ export default async function OrderDetailsPage({
     : null;
   const whatsappLink = intlPhone ? `https://wa.me/${intlPhone}` : null;
 
+  // نعمل إيه في الأوردر الواقف — بتتحدد من سبب بوسطة نفسه
+  const advice = exceptionAdvice(order.bosta_exception);
+
   return (
     <div className="space-y-6">
       <AutoRefresh seconds={30} />
@@ -376,23 +380,34 @@ export default async function OrderDetailsPage({
         </div>
       </div>
 
-      {/* بوسطة واقفة ومحتاجة تصرّف — بنوضّح السبب ونخلي الأكشن من هنا */}
-      {(order.order_status === "awaiting_action" || order.bosta_exception) && (
+      {/*
+        بوسطة واقفة ومحتاجة تصرّف.
+
+        **الشرط بقى الحالة بس.** كان كمان `|| order.bosta_exception`، وسبب
+        الوقوف بيفضل مكتوب في الأوردر بعد ما يتحل — فالتحذير كان بيفضل فوق
+        الأوردر وهو متسلّم أو راجع خلاص. دلوقتي بيمشي أول ما الحالة تتغيّر،
+        والسبب بيفضل مكتوب تحت في تفاصيل الشحنة.
+
+        **والكلام والأزرار بيتكتبوا من السبب الحقيقي** — العميل اللي مش
+        بيرد عنوانه مظبوط، فمالوش لازمة يشوف زرار "عدّل العنوان".
+      */}
+      {order.order_status === "awaiting_action" && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
           <div className="flex items-start gap-2">
             <span className="mt-0.5 text-lg leading-none">⚠️</span>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-bold text-amber-900">
-                بوسطة محتاجة تصرّف منك
+                {advice.title}
               </div>
               {order.bosta_exception && (
                 <div className="mt-0.5 text-sm text-amber-800" dir="auto">
                   السبب: {order.bosta_exception}
                 </div>
               )}
+              <div className="mt-1 text-sm text-amber-800">{advice.hint}</div>
               {isAdmin && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {whatsappLink && (
+                  {advice.actions.includes("whatsapp") && whatsappLink && (
                     <a
                       href={whatsappLink}
                       target="_blank"
@@ -402,7 +417,7 @@ export default async function OrderDetailsPage({
                       كلّم العميل واتساب
                     </a>
                   )}
-                  {order.customers?.id && (
+                  {advice.actions.includes("address") && order.customers?.id && (
                     <Link
                       href={`/customers/${order.customers.id}`}
                       className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm"
@@ -410,21 +425,31 @@ export default async function OrderDetailsPage({
                       عدّل العنوان
                     </Link>
                   )}
-                  <form action={updateOrderStatus}>
-                    <input type="hidden" name="order_id" value={order.id} />
-                    <input type="hidden" name="status" value="cancelled" />
-                    <input
-                      type="hidden"
-                      name="return_to"
-                      value={`/orders/${order.id}`}
-                    />
-                    <ConfirmButton
-                      message="تلغي الأوردر ده؟ (بلّغ بوسطة كمان إنك عايز ترجّع الشحنة)"
-                      className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700"
+                  {advice.actions.includes("phone") && order.customers?.id && (
+                    <Link
+                      href={`/customers/${order.customers.id}`}
+                      className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm"
                     >
-                      ألغِ الأوردر
-                    </ConfirmButton>
-                  </form>
+                      صحّح رقم التليفون
+                    </Link>
+                  )}
+                  {advice.actions.includes("cancel") && (
+                    <form action={updateOrderStatus}>
+                      <input type="hidden" name="order_id" value={order.id} />
+                      <input type="hidden" name="status" value="cancelled" />
+                      <input
+                        type="hidden"
+                        name="return_to"
+                        value={`/orders/${order.id}`}
+                      />
+                      <ConfirmButton
+                        message="تلغي الأوردر ده؟ (بلّغ بوسطة كمان إنك عايز ترجّع الشحنة)"
+                        className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700"
+                      >
+                        ألغِ الأوردر
+                      </ConfirmButton>
+                    </form>
+                  )}
                 </div>
               )}
             </div>
@@ -586,15 +611,27 @@ export default async function OrderDetailsPage({
                   );
                 })()}
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-gray-500">فلوسك</dt>
+                <dt className="text-gray-500">آخر حركة</dt>
                 <dd>
                   <span
-                    className={`rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium ${collectionState(order).className}`}
+                    className={`rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium ${lastMove(order).className}`}
                   >
-                    {collectionState(order).label}
+                    {lastMove(order).label}
                   </span>
                 </dd>
               </div>
+              {/*
+                سبب وقوف بوسطة بيفضل هنا بعد ما التحذير اللي فوق يمشي —
+                المعلومة مش بتضيع، هي بس بطّلت تصرخ في وش الأوردر.
+              */}
+              {order.bosta_exception && order.order_status !== "awaiting_action" && (
+                <div className="flex items-start justify-between gap-4">
+                  <dt className="text-gray-500">آخر ملاحظة من بوسطة</dt>
+                  <dd className="text-end text-xs text-gray-600" dir="auto">
+                    {order.bosta_exception}
+                  </dd>
+                </div>
+              )}
               {order.bosta_tracking &&
                 canPrint &&
                 !PRINT_DONE_STATUSES.includes(order.order_status ?? "") && (

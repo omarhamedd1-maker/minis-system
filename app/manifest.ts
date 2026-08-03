@@ -2,9 +2,12 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Minis System",
-    short_name: "Minis",
-    description: "نظام إدارة تشغيل Minis",
+    // **الاسم ده هو اللي بيتكتب تحت الإشعار على الموبايل** — النظام بياخده
+    // من هنا مش من الكود. كان "Minis System" فكل إشعار بيجي وتحته السطر ده،
+    // فبقى بالعربي زي باقي السيستم.
+    name: "مينيز",
+    short_name: "مينيز",
+    description: "نظام إدارة تشغيل مينيز",
     start_url: "/",
     display: "standalone",
     background_color: "#f9fafb",

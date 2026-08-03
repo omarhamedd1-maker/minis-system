@@ -534,7 +534,6 @@ export async function runBostaSync(opts: {
               orderNumber: row.order_number,
               customerName: row.customers?.full_name ?? null,
               customerPhone: row.customers?.phone ?? null,
-              tracking: row.bosta_tracking,
               reason: decision.changes.bosta_exception as string | null,
               arrived: to === "returned",
               waiting: to === "awaiting_action",
@@ -586,7 +585,6 @@ export async function runBostaSync(opts: {
         stalePickupMessage({
           orderNumber: w.order_number,
           customerName: w.customers?.full_name ?? null,
-          tracking: w.bosta_tracking,
           days: stale.days,
           milestone: stale.milestone,
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,

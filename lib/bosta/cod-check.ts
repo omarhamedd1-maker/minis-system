@@ -14,6 +14,8 @@
 // فالتنبيه بيوصلك بالرقمين، وإنت تدوس الزرار لو التصليح فعلًا مطلوب.
 // ==========================================================================
 
+import { alertHead } from "../alert-messages";
+
 /** فرق أقل من ده بنعتبره تقريب مش مشكلة */
 const TOLERANCE = 1;
 
@@ -77,13 +79,13 @@ export function codMismatchMessage(a: {
   fixable: boolean;
   siteUrl?: string | null;
 }): string {
-  const who = a.customerName ? ` — ${a.customerName}` : "";
-  const lines = [
-    `💰 <b>أوردر ${a.orderNumber ?? "—"} التحصيل مختلف${who}</b>`,
-    "",
-    `عندنا: <b>${a.ours}</b> — عند بوسطة: <b>${a.bosta}</b>`,
-    "",
-  ];
+  const lines = alertHead(
+    "💰",
+    `أوردر ${a.orderNumber ?? "—"} التحصيل مختلف`,
+    a.customerName
+  );
+  lines.push(`عندنا: <b>${a.ours}</b> — عند بوسطة: <b>${a.bosta}</b>`);
+  lines.push("");
 
   lines.push(
     a.fixable
