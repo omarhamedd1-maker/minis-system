@@ -106,28 +106,60 @@ const STATE_CODES: Record<number, OrderStatus> = {
 };
 
 /**
- * حالة الأوردر من كائن الحالة كامل.
+ * أنواع الشحنة عند بوسطة — **النوع بيغيّر معنى نفس الكود**.
  *
- * فيه مصدرين للنص وفرقهم كبير:
+ * شحنة نوعها "رجوع للأصل" وكودها ٤١ معناها **راجعة ليك**، ونفس الكود على
+ * شحنة "إرسال" معناه **رايحة للعميل**. الاتنين ٤١.
+ */
+export const DELIVERY_TYPE_SEND = 10;
+export const DELIVERY_TYPE_RETURN_TO_ORIGIN = 20;
+
+/** الحالة وهي راجعة لك — نفس الأكواد بمعنى مقلوب */
+const RETURN_LEG_CODES: Record<number, OrderStatus> = {
+  10: "returning",
+  24: "returning",
+  30: "returning",
+  41: "returning", // المندوب ماشي بيها **ليك** مش للعميل
+  45: "returned", // وصلت مخزنك
+  46: "returned",
+};
+
+/**
+ * حالة الأوردر من الشحنة.
  *
- * - **نص مجمّع** (اللي بيجي من مسار المزامنة): بيخلط المتسلّم بالراجع، فمينفعش
- *   نصدّقه. بنمشي بالكود، ولو الكود مش معروف ومكتوب "Delivered" مانغيّرش حاجة.
- * - **نص تفصيلي** (من جلب الشحنة لوحدها): ده اللي بوسطة نفسها بتعرضه، وأدق من
- *   أي جدول أكواد بنبنيه إحنا — فبيكسب على الكود.
+ * **الكود دايمًا أدق من النص.** القاعدة القديمة كانت بتقول العكس (إن النص
+ * التفصيلي يكسب)، وده كان بيخلّي الحالة تقف مكانها: بوسطة بترجّع للشحنة
+ * الواحدة `value: "Picked up"` مع `code: 41`، فالنص بيترجم "استلمه بوسطة"
+ * والكود بيقول "في الطريق للعميل" — والنص كان بيكسب فمافيش حاجة بتتغيّر.
+ * (اتأكدنا من ده على أوردر ١٣٧٧ و١٣٦٤ الحقيقيين.)
+ *
+ * والنص فضل مفيد لحاجة واحدة: الكود اللي مش في الجدول.
  */
 export function mapBostaDelivery(
   state:
     | { value?: string | null; code?: number | null }
     | null
     | undefined,
-  /** النص جاي من جلب الشحنة لوحدها؟ ساعتها هو الأدق */
-  detailed = false
+  /** النص جاي من جلب الشحنة لوحدها؟ بيتستخدم بس لما الكود مش معروف */
+  detailed = false,
+  /** نوع الشحنة عند بوسطة — من غيره الراجعة بتبان رايحة */
+  typeCode?: number | null
 ): OrderStatus | null {
-  const byText = mapBostaState(state?.value);
-  if (detailed && byText) return byText;
-
   const code = state?.code;
-  if (typeof code === "number" && STATE_CODES[code]) return STATE_CODES[code];
+  const isReturnLeg = typeCode === DELIVERY_TYPE_RETURN_TO_ORIGIN;
+
+  if (typeof code === "number") {
+    const table = isReturnLeg ? RETURN_LEG_CODES : STATE_CODES;
+    if (table[code]) return table[code];
+    // الملغية والمؤرشفة معناها واحد في الاتجاهين
+    if (STATE_CODES[code]) return STATE_CODES[code];
+  }
+
+  // الكود مش معروف — نرجع للنص
+  const byText = mapBostaState(state?.value);
+
+  // شحنة راجعة والنص بيقول اتسلّمت؟ يعني وصلت **لك** مش للعميل
+  if (isReturnLeg && byText === "delivered") return "returned";
 
   // كود مش معروف + نص مجمّع مكتوب فيه Delivered = ممكن تكون راجعة.
   // مانخاطرش بفلوس على تخمين.
