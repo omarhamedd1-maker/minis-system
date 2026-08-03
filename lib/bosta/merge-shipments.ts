@@ -8,11 +8,17 @@
 // القاعدة:
 //   الحالة ورقم التتبع  ← من أحدث شحنة (هي اللي بتوصف وضع الأوردر دلوقتي)
 //   الرسوم والتحصيل     ← مجموع كل الشحنات (لأنك دفعتهم فعلاً)
+//
+// **إلا الشحنة الميتة**: المؤرشفة أو الملغية مش هتتحرك ومش هتحصّل مليم،
+// فتحصيلها **صفر** ورسوم الفلوس بتاعتها (عمولة التحصيل ورسم التحويل) مالهاش
+// معنى. أوردر ١٣٣٦ هو اللي كشفها: شحنة مؤرشفة بتحصيل ١١٬٩٧٨ وشحنة حية
+// بتحصيل صفر — السيستم كان بيجمعهم ويقول التحصيل ١١٬٩٧٨ وهو صفر، ويحسب
+// رسوم ٣١١٫٨٦ منهم ٢٨١ على شحنة ماتحركتش أصلاً.
 // ==========================================================================
 
 import type { BostaRawDelivery } from "./client";
 import { shippingCost, type CarrierFeeRules } from "../shipping-cost";
-import { mapBostaState } from "./order-status";
+import { isDeadShipment, mapBostaState } from "./order-status";
 
 /** بيرتّب الشحنات من الأقدم للأحدث. اللي مالهاش تاريخ بتتحط الأول */
 export function sortByCreated(deliveries: BostaRawDelivery[]): BostaRawDelivery[] {
@@ -53,7 +59,9 @@ export function mergeShipments(
   let totalFee = 0;
 
   for (const d of sorted) {
-    const cod = Number(d.cod ?? 0);
+    // الشحنة الميتة مش هتحصّل حاجة — تحصيلها صفر مهما كان مكتوب عليها
+    const dead = isDeadShipment(d.state?.value, d.state?.code);
+    const cod = dead ? 0 : Number(d.cod ?? 0);
     totalCod += cod;
 
     // كل شحنة ليها رسومها حسب حالتها هي — المرتجع رسومه أقل
@@ -66,7 +74,10 @@ export function mergeShipments(
         cod,
         productValue,
         allowToOpenPackage: Boolean(d.allowToOpenPackage),
-        returned: asReturned,
+        // الميتة زي الراجعة: مفيش عمولة تحصيل ولا رسم تحويل. سايبين رسم
+        // الفتح والتأمين عليها لأن بوسطة ساعات بتحاسب عليهم، والزيادة في
+        // التكلفة أأمن من النقص فيها
+        returned: asReturned || dead,
         collected: mapped === "delivered",
       },
       rules
