@@ -3,7 +3,9 @@ import {
   isCustomerReturn,
   matchCustomerReturn,
   phoneKey,
+  pickReturnShipment,
   returnArrived,
+  returnDead,
   type ReturnCandidate,
   type ReturnDelivery,
 } from "./customer-return";
@@ -62,6 +64,44 @@ describe("وصلت ولا لسه", () => {
   it("لسه في السكة", () => {
     expect(returnArrived(ret())).toBe(false);
     expect(returnArrived(ret({ state: { value: "Out for delivery", code: 30 } }))).toBe(false);
+  });
+});
+
+describe("الشحنة الميتة", () => {
+  it("٤٨ (موقوفة) و١٠٤ (مؤرشفة) = مش جاية", () => {
+    expect(returnDead(ret({ state: { value: "Terminated", code: 48 } }))).toBe(true);
+    expect(returnDead(ret({ state: { value: "Archived", code: 104 } }))).toBe(true);
+  });
+
+  it("اللي لسه ماشية أو وصلت مش ميتة", () => {
+    expect(returnDead(ret())).toBe(false);
+    expect(returnDead(ret({ state: { value: "Delivered", code: 46 } }))).toBe(false);
+  });
+});
+
+describe("أنهي شحنة مرتجع تكسب", () => {
+  // أوردر ١٠٨١ (Seif Kodsy) — الدليل الحقيقي على الباج
+  const arrived = ret({ trackingNumber: "20535411", state: { value: "Delivered", code: 46 } });
+  const cancelled = ret({ trackingNumber: "44805425", state: { value: "Terminated", code: 48 } });
+
+  it("اللي وصلت تكسب حتى لو الملغية أحدث", () => {
+    expect(pickReturnShipment([arrived, cancelled])?.trackingNumber).toBe("20535411");
+    // والترتيب مايفرقش — دي كانت المشكلة أصلاً
+    expect(pickReturnShipment([cancelled, arrived])?.trackingNumber).toBe("20535411");
+  });
+
+  it("اللي لسه في السكة تكسب على الملغية", () => {
+    expect(pickReturnShipment([cancelled, ret()])?.trackingNumber).toBe("1715263323");
+  });
+
+  it("مافيش غير ملغية؟ بترجّعها عشان اللي بره يقرر", () => {
+    const best = pickReturnShipment([cancelled]);
+    expect(best?.trackingNumber).toBe("44805425");
+    expect(returnDead(best!)).toBe(true);
+  });
+
+  it("قايمة فاضية = مفيش", () => {
+    expect(pickReturnShipment([])).toBeNull();
   });
 });
 
