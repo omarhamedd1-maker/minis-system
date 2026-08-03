@@ -192,6 +192,9 @@ export function decideSync(
           productValue: o.productValue,
           allowToOpenPackage: Boolean(d.allowToOpenPackage),
           returned: feesAsReturned,
+          // اتحصّلت؟ يبقى الفلوس اتحرّكت ورسم التحويل واجب — حتى لو بوسطة
+          // بترجّع التحصيل صفر دلوقتي بعد ما حصّلت
+          collected: mapped === "delivered",
         },
         rules
       ).total;
