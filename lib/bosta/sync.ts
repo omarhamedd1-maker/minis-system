@@ -21,6 +21,7 @@ import {
 } from "./customer-return";
 import { computeCod } from "./build-shipment";
 import { newFailedAttempt } from "./exception";
+import { backfillRealFees } from "./fees-backfill";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
@@ -88,6 +89,8 @@ export type SyncSummary = {
   refundReminders: number;
   /** شحنات واقفة نبّهنا عليها */
   stalePickups: number;
+  /** رسوم بوسطة الحقيقية اللي اتجابت في التشغيل ده */
+  realFees?: { saved: number; notReady: number; remaining: number };
   /** شحنات مرتجع بعد التسليم اتربطت بأوردراتها */
   customerReturns: number;
   /**
@@ -784,6 +787,18 @@ export async function runBostaSync(opts: {
           .eq("id", x.order.id);
       }
     }
+  }
+
+  // ===== رسوم بوسطة الحقيقية =====
+  // دفعة صغيرة كل مزامنة بدل ٣٠٠ نداء مرة واحدة. آخر حاجة بقصد: لو وقعت
+  // أو خدت وقت، كل اللي فوق يكون اتعمل خلاص.
+  if (!dry) {
+    summary.realFees = await backfillRealFees({
+      db,
+      tenantId,
+      apiKey,
+      fetchImpl,
+    });
   }
 
   return summary;

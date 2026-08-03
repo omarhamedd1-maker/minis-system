@@ -6,7 +6,11 @@
 // ==========================================================================
 
 import { shippingCost, type CarrierFeeRules } from "../shipping-cost";
-import { canSyncChangeStatus, mapBostaDelivery } from "./order-status";
+import {
+  canSyncChangeStatus,
+  isDeadShipment,
+  mapBostaDelivery,
+} from "./order-status";
 import { summarizeException, type BostaAttempt } from "./exception";
 
 export type BostaDelivery = {
@@ -139,7 +143,9 @@ export function decideSync(
 
   const tracking = d.trackingNumber ? String(d.trackingNumber) : "";
   const state = d.state?.value ?? null;
-  const cod = totals ? totals.cod : Number(d.cod ?? 0);
+  // الشحنة الميتة (مؤرشفة/ملغية) مش هتحصّل حاجة — تحصيلها صفر
+  const deadShipment = isDeadShipment(d.state?.value, d.state?.code);
+  const cod = totals ? totals.cod : deadShipment ? 0 : Number(d.cod ?? 0);
   // بالكود مش بالنص المجمّع — النص بيلبّس الشحنة الراجعة على المتسلّمة.
   // ولو جبنا الحالة التفصيلية من بوسطة، هي الأدق فبتكسب.
   const mapped = mapBostaDelivery(d.state, d.stateIsDetailed, d.type?.code);
@@ -182,7 +188,8 @@ export function decideSync(
   // "مرتجع بعد التسليم" اتسلّم فعلاً، فرسومه كاملة زي المتسلّم —
   // رسوم المرتجع المخففة بتبقى للي رجع من غير ما يتسلّم أصلاً
   const feesAsReturned =
-    mapped === "returned" && o.order_status !== "returned_after_delivery";
+    (mapped === "returned" && o.order_status !== "returned_after_delivery") ||
+    deadShipment;
 
   const fee = totals
     ? totals.fee

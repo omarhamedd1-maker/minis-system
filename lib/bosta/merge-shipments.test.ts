@@ -84,3 +84,38 @@ describe("دمج شحنات الأوردر الواحد", () => {
     expect(mergeShipments([], 1000, "shipped")).toBe(null);
   });
 });
+
+describe("الشحنة الميتة مابتتحسبش تحصيل", () => {
+  // أوردر ١٣٣٦ الحقيقي: شحنة مؤرشفة بتحصيل ١١٬٩٧٨ وشحنة حية بتحصيل صفر
+  const dead = {
+    trackingNumber: "9349282587",
+    cod: 11978,
+    state: { value: "Archived", code: 104 },
+    createdAt: "2026-07-20T10:00:00Z",
+    allowToOpenPackage: true,
+  } as never;
+  const alive = {
+    trackingNumber: "6119085721",
+    cod: 0,
+    state: { value: "Created", code: 10 },
+    createdAt: "2026-08-03T21:32:31Z",
+    allowToOpenPackage: true,
+  } as never;
+
+  it("التحصيل بياخد الحية بس", () => {
+    const m = mergeShipments([dead, alive], 11888, "ready");
+    expect(m?.totalCod).toBe(0);
+  });
+
+  it("ومفيش عمولة تحصيل ولا رسم تحويل على الميتة", () => {
+    const m = mergeShipments([dead, alive], 11888, "ready");
+    // من غير ده كانت بتطلع ٣١١٫٨٦، منهم ٢٨١ على شحنة ماتحركتش
+    expect(m!.totalFee).toBeLessThan(70);
+  });
+
+  it("الحية لوحدها زي ما هي", () => {
+    const m = mergeShipments([alive], 11888, "ready");
+    expect(m?.totalCod).toBe(0);
+    expect(m?.count).toBe(1);
+  });
+});

@@ -6,6 +6,7 @@
 // ==========================================================================
 
 import type { BostaCity } from "./cities";
+import type { BostaWallet } from "./real-fees";
 import type { BostaDelivery } from "./reconcile";
 
 const BOSTA_BASE = "https://app.bosta.co/api/v2";
@@ -226,6 +227,33 @@ export type DeliveryLookup = {
   /** بوسطة نفسها بتقول التعديل مقفول ولا لأ — أدق من التخمين من اسم الحالة */
   codUpdateBlocked: boolean | null;
 };
+
+/**
+ * كشف حساب الشحنة الحقيقي من بوسطة.
+ *
+ * مسار البحث اللي المزامنة بتستخدمه **مابيرجّعش الكشف ده خالص** (`pricing`
+ * بيرجع فاضي ومفيش `wallet`)، فلازم نجيب الشحنة لوحدها. وعشان كده بنجيبه
+ * مرة واحدة بس لكل شحنة خلصت ونخزّنه.
+ */
+export async function fetchDeliveryWallet(
+  rawKey: string,
+  tracking: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<BostaWallet> {
+  const apiKey = assertUsableKey(rawKey);
+  const res = await fetchImpl(
+    `${BOSTA_BASE}/deliveries/business/${encodeURIComponent(tracking)}`,
+    { headers: headers(apiKey), signal: AbortSignal.timeout(TIMEOUT_MS) }
+  );
+  if (res.status === 401 || res.status === 403) {
+    throw new BostaError("مفتاح بوسطة مرفوض", res.status);
+  }
+  if (!res.ok) return null;
+
+  const json = await res.json().catch(() => null);
+  const d = json?.data ?? json;
+  return (d?.wallet ?? null) as BostaWallet;
+}
 
 /**
  * بيلاقي الشحنة برقم تتبعها بالظبط.
