@@ -9,6 +9,7 @@
 // ==========================================================================
 
 import { normalizeName } from "./match";
+import { isDeadShipment } from "./order-status";
 
 /** أنواع الشحنات عند بوسطة — اتأكدنا منها من شحنات حقيقية */
 export const DELIVERY_TYPES = {
@@ -56,6 +57,40 @@ export function returnArrived(d: ReturnDelivery): boolean {
 
 export function isCustomerReturn(d: ReturnDelivery): boolean {
   return d.type?.code === DELIVERY_TYPES.customerReturn;
+}
+
+/**
+ * شحنة المرتجع دي اتلغت أو بوسطة وقفتها (٤٨ · ١٠٤) — يعني **مش جاية**.
+ * الأوردر مايفضلش مستنيها.
+ */
+export function returnDead(d: ReturnDelivery): boolean {
+  return isDeadShipment(d.state?.value, d.state?.code);
+}
+
+/**
+ * الأوردر الواحد ممكن يبقى عليه أكتر من شحنة مرتجع — واحدة اتعملت واتلغت
+ * وواحدة تانية اتعملت بدالها ووصلت. **الأولوية للي وصلت فعلًا، مش لأحدث
+ * واحدة.**
+ *
+ * أوردر ١٠٨١ كان الدليل: شحنة ٢٠٥٣٥٤١١ وصلت المخزن (٤٦) وشحنة ٤٤٨٠٥٤٢٥
+ * ملغية (٤٨) — والسيستم كان رابط الأوردر بالملغية، فقعد متجمّد على «في
+ * الطريق ليك» وهو واصل من زمان.
+ *
+ * الترتيب: وصلت ← لسه في السكة ← ملغية.
+ */
+export function pickReturnShipment<T extends ReturnDelivery>(
+  shipments: T[]
+): T | null {
+  let best: T | null = null;
+  let bestRank = -1;
+  for (const d of shipments) {
+    const rank = returnArrived(d) ? 2 : returnDead(d) ? 0 : 1;
+    if (rank > bestRank) {
+      best = d;
+      bestRank = rank;
+    }
+  }
+  return best;
 }
 
 /**

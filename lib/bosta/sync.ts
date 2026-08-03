@@ -14,6 +14,9 @@ import {
 import {
   isCustomerReturn,
   matchCustomerReturn,
+  pickReturnShipment,
+  returnArrived,
+  returnDead,
   type ReturnCandidate,
 } from "./customer-return";
 import { buildIndex, matchDelivery } from "./match";
@@ -261,6 +264,15 @@ export async function runBostaSync(opts: {
 
   const deliveryShipments: BostaRawDelivery[] = [];
 
+  // **شحنات المرتجع بتتجمّع لكل أوردر الأول والقرار بيتاخد مرة واحدة.**
+  // الأوردر ممكن يبقى عليه أكتر من شحنة مرتجع (واحدة اتلغت وواحدة وصلت)،
+  // ولو مشينا شحنة شحنة بتبقى آخر واحدة اتقرت هي اللي تكسب — وده اللي جمّد
+  // أوردر ١٠٨١ على شحنة ملغية.
+  const returnsByOrder = new Map<
+    string,
+    { order: ReturnCandidate; shipments: BostaRawDelivery[] }
+  >();
+
   for (const d of deliveries as BostaRawDelivery[]) {
     if (!isCustomerReturn(d)) {
       deliveryShipments.push(d);
@@ -288,21 +300,46 @@ export async function runBostaSync(opts: {
       continue;
     }
 
+    const bucket = returnsByOrder.get(m.order.id);
+    if (bucket) bucket.shipments.push(d);
+    else returnsByOrder.set(m.order.id, { order: m.order, shipments: [d] });
+  }
+
+  for (const { order, shipments } of returnsByOrder.values()) {
+    const best = pickReturnShipment(shipments);
+    if (!best) continue;
+
+    const tracking = best.trackingNumber ? String(best.trackingNumber) : "";
+
+    // كل شحنات المرتجع اللي على الأوردر ده ملغية — مش هتيجي حاجة.
+    // مانحرّكش الحالة على شحنة ميتة، وننبّه بس لو الأوردر واقف عليها فعلًا.
+    if (returnDead(best)) {
+      if (order.return_tracking === tracking || order.order_status === "returning") {
+        summary.returnsNeedReview.push({
+          tracking,
+          customer: order.customerName ?? "",
+          why: `أوردر ${order.order_number}: شحنة المرتجع اتلغت عند بوسطة والأوردر واقف مستنيها`,
+        });
+      }
+      continue;
+    }
+
     // الحالة النهائية بتستنى البضاعة توصلنا فعلًا
-    const wanted = m.arrived ? "returned_after_delivery" : "returning";
+    const arrived = returnArrived(best);
+    const wanted = arrived ? "returned_after_delivery" : "returning";
     const changes: Record<string, unknown> = {};
-    if (m.order.return_tracking !== tracking && tracking) {
+    if (order.return_tracking !== tracking && tracking) {
       changes.return_tracking = tracking;
     }
-    if (m.order.order_status !== wanted) changes.order_status = wanted;
+    if (order.order_status !== wanted) changes.order_status = wanted;
 
     if (Object.keys(changes).length === 0) continue;
 
     summary.customerReturns++;
     summary.details.push({
-      order: String(m.order.order_number),
+      order: String(order.order_number),
       reasons: [
-        m.arrived
+        arrived
           ? `المرتجع وصلك — الحالة بقت مرتجع بعد التسليم (شحنة ${tracking})`
           : `العميل عمل مرتجع — الحالة بقت في الطريق ليك (شحنة ${tracking})`,
       ],
@@ -312,18 +349,18 @@ export async function runBostaSync(opts: {
       const { error: retErr } = await db
         .from("orders")
         .update(changes)
-        .eq("id", m.order.id);
+        .eq("id", order.id);
       if (retErr) {
         summary.errors.push(
-          `مرتجع أوردر ${m.order.order_number}: ${retErr.message}`
+          `مرتجع أوردر ${order.order_number}: ${retErr.message}`
         );
       } else if (typeof changes.order_status === "string") {
         await logStatusChange(
           db,
-          m.order.order_number,
-          m.order.order_status,
+          order.order_number,
+          order.order_status,
           changes.order_status,
-          m.order.id
+          order.id
         );
       }
     }
