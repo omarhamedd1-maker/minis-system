@@ -19,6 +19,7 @@ import {
   returnDead,
   type ReturnCandidate,
 } from "./customer-return";
+import { computeCod } from "./build-shipment";
 import { newFailedAttempt } from "./exception";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
@@ -41,7 +42,7 @@ import {
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
   bosta_shipping_cost, return_tracking, bosta_created_at, bosta_stale_alerted_day, cod_alerted_diff, cod_diff_ignored,
-  shipping_price, discount,
+  shipping_price, discount, amount_paid,
   order_items(quantity, sale_price_at_order),
   customers(full_name, phone)`;
 
@@ -63,6 +64,7 @@ type OrderRow = {
   cod_diff_ignored: boolean | null;
   shipping_price: number | null;
   discount: number | null;
+  amount_paid: number | null;
   order_items: { quantity: number; sale_price_at_order: number }[] | null;
   customers: { full_name: string | null; phone: string | null } | null;
 };
@@ -446,15 +448,18 @@ export async function runBostaSync(opts: {
     // لأي سبب تاني مفيش حاجة بتكتشف — والفحص لقى ١٥ أوردر بفرق ١٨ ألف جنيه.
     // **بننبّه بس مانصلّحش** — أحيانًا الاتنين صح (شحنة جزئية).
     if (!dry && !row.cod_diff_ignored) {
-      const ourCod = Math.max(
-        0,
-        (row.order_items ?? []).reduce(
-          (a, i) => a + Number(i.quantity) * Number(i.sale_price_at_order),
-          0
-        ) -
-          Number(row.discount ?? 0) +
-          Number(row.shipping_price ?? 0)
-      );
+      // نفس حسبة الإرسال — لو اختلفت، كل أوردر مدفوع مقدم هيطلع "فرق تحصيل"
+      // كاذب كل ١٥ دقيقة
+      const ourCod = computeCod({
+        items: (row.order_items ?? []).map((i) => ({
+          quantity: i.quantity,
+          salePrice: i.sale_price_at_order,
+          productName: null,
+        })),
+        discount: row.discount,
+        shippingPrice: row.shipping_price,
+        amountPaid: row.amount_paid,
+      });
       const c = checkCod({
         orderStatus: row.order_status,
         ours: ourCod,

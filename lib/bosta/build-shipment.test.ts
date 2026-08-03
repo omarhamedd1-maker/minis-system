@@ -69,6 +69,52 @@ describe("حسبة التحصيل", () => {
       })
     ).toBe(600);
   });
+
+  it("اللي اتدفع مقدم بيتخصم", () => {
+    expect(
+      computeCod({
+        items: [{ quantity: 1, salePrice: 1000, productName: null }],
+        discount: 0,
+        shippingPrice: 90,
+        amountPaid: 500,
+      })
+    ).toBe(590);
+  });
+
+  it("**المدفوع بالكامل بيروح بتحصيل صفر** — حالة أوردر ١٣٣٦", () => {
+    // اتدفع ١١٬٩٧٨ إنستا باي وراح لبوسطة بتحصيل ١١٬٩٧٨، فبوسطة حسبت
+    // عمولة تحصيل ورسم تحويل على فلوس مالهاش لازمة تتحصّل أصلاً
+    expect(
+      computeCod({
+        items: [{ quantity: 1, salePrice: 11888, productName: null }],
+        discount: 0,
+        shippingPrice: 90,
+        amountPaid: 11978,
+      })
+    ).toBe(0);
+  });
+
+  it("دفع أكتر من المطلوب برضه صفر مش بالسالب", () => {
+    expect(
+      computeCod({
+        items: [{ quantity: 1, salePrice: 100, productName: null }],
+        discount: 0,
+        shippingPrice: 0,
+        amountPaid: 500,
+      })
+    ).toBe(0);
+  });
+
+  it("مافيش مدفوع = زي ما كانت بالظبط", () => {
+    const base = {
+      items: [{ quantity: 2, salePrice: 500, productName: null }],
+      discount: 100,
+      shippingPrice: 90,
+    };
+    expect(computeCod(base)).toBe(990);
+    expect(computeCod({ ...base, amountPaid: null })).toBe(990);
+    expect(computeCod({ ...base, amountPaid: 0 })).toBe(990);
+  });
 });
 
 describe("سطر العنوان", () => {

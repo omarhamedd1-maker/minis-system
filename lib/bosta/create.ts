@@ -24,7 +24,7 @@ import { matchCity, matchZone, type BostaCity } from "./cities";
 import { isDeadShipment } from "./order-status";
 import { loadTenantCredentials } from "../tenant-settings";
 
-const ORDER_FIELDS = `id, order_number, discount, shipping_price, bosta_tracking, tenant_id,
+const ORDER_FIELDS = `id, order_number, discount, shipping_price, amount_paid, bosta_tracking, tenant_id,
   customers(full_name, phone, address, city, zone, street, building, floor, apartment, landmark),
   order_items(quantity, sale_price_at_order, product_variants(products(name, name_ar)))`;
 
@@ -33,6 +33,7 @@ type OrderRow = {
   order_number: string | number | null;
   discount: number | null;
   shipping_price: number | null;
+  amount_paid: number | null;
   bosta_tracking: string | null;
   tenant_id: string;
   customers: ShipmentCustomer | null;
@@ -182,6 +183,7 @@ export async function runBostaCreate(opts: {
     orderNumber: order.order_number,
     discount: order.discount,
     shippingPrice: order.shipping_price,
+    amountPaid: order.amount_paid,
     items,
     customer,
     city,
@@ -236,12 +238,22 @@ export async function runBostaCreate(opts: {
     };
   }
 
+  // **الشحنة الجديدة معناها إن كل اللي متسجّل عن القديمة بقى تاريخ.**
+  // من غير المسح ده، الأوردر اللي شحنته ماتت (مؤرشفة عند بوسطة) كان بيفضل
+  // مكتوب عليه "الشحنة دي ماتت" بعد ما تبعت له شحنة جديدة سليمة — لأن
+  // `bosta_state` بيفضل "Archived" لحد ما المزامنة تعدّي بعد ١٥ دقيقة.
+  // وعدّاد الشحنة الواقفة بيبدأ من الأول برضه — الشحنة الجديدة عمرها صفر.
   const { error: updateError } = await db
     .from("orders")
     .update({
       bosta_tracking: tracking,
       order_status: "ready",
       cancelled_at: null,
+      bosta_state: null,
+      bosta_exception: null,
+      bosta_cod: s.cod,
+      bosta_created_at: new Date().toISOString(),
+      bosta_stale_alerted_day: null,
     })
     .eq("id", orderId);
 
