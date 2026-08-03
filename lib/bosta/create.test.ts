@@ -137,13 +137,42 @@ describe("إرسال شحنة", () => {
       city: "القاهرة",
       usedVariant: "city+zoneId",
     });
-    expect(patches[0]).toEqual({
+    // الشحنة الجديدة بتمسح كل اللي متسجّل عن القديمة — من غير كده الأوردر
+    // اللي شحنته ماتت بيفضل مكتوب عليه "ماتت" بعد ما تبعت له واحدة جديدة
+    expect(patches[0]).toMatchObject({
       bosta_tracking: "2237843281",
       order_status: "ready",
       cancelled_at: null,
+      bosta_state: null,
+      bosta_exception: null,
+      bosta_cod: 1090,
+      bosta_stale_alerted_day: null,
     });
+    expect(typeof patches[0].bosta_created_at).toBe("string");
     // التحصيل = ٢×٥٠٠ + ٩٠ شحن
     expect((calls[1].body as { cod: number }).cod).toBe(1090);
+  });
+
+  it("الأوردر المدفوع بالكامل بيروح لبوسطة بتحصيل صفر", async () => {
+    // حالة أوردر ١٣٣٦: اتدفع كامل إنستا باي وراح بتحصيل ١١٬٩٧٨، فبوسطة
+    // حسبت عمولة تحصيل ورسم تحويل على فلوس مالهاش لازمة تتحصّل
+    const { f, calls } = fakeFetch([created("999")]);
+    await runBostaCreate({
+      db: fakeDb({ order: { ...ORDER, amount_paid: 1090 } }),
+      orderId: "o1",
+      fetchImpl: f,
+    });
+    expect((calls[1].body as { cod: number }).cod).toBe(0);
+  });
+
+  it("المدفوع جزئيًا بيروح بالباقي بس", async () => {
+    const { f, calls } = fakeFetch([created("998")]);
+    await runBostaCreate({
+      db: fakeDb({ order: { ...ORDER, amount_paid: 500 } }),
+      orderId: "o1",
+      fetchImpl: f,
+    });
+    expect((calls[1].body as { cod: number }).cod).toBe(590);
   });
 
   it("بيستخدم مفتاح البيزنس صاحب الأوردر مش مفتاح واحد للكل", async () => {

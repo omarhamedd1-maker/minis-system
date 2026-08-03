@@ -102,10 +102,20 @@ export default async function OrdersPage({
     bulk?: string;
     show?: string;
     period?: string;
+    /** أرقام أوردرات محددة بالظبط — بييجي من الإشعارات */
+    only?: string;
   }>;
 }) {
-  const { status, deleted, archived, saved, q, bulk, show, period: rawPeriod } =
+  const { status, deleted, archived, saved, q, bulk, show, period: rawPeriod, only } =
     await searchParams;
+
+  // **الإشعار بيوديك على أوردراته هو بس.** قبل كده كان بيوديك على القايمة
+  // كلها بالحالة، فإشعار بيقول "أوردر واحد رجع" يفتحلك ٧ أوردرات وإنت
+  // تدوّر على اللي هو قصده.
+  const onlyIds = (only ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const showArchived = archived === "1";
   const searchTerm = (q ?? "").trim();
   const period = ORDER_PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "all";
@@ -186,11 +196,16 @@ export default async function OrdersPage({
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });
 
-  if (status) {
-    query = query.eq("order_status", status);
-  }
-  if (periodStart) {
-    query = query.gte("order_date", periodStart);
+  // جاي من إشعار؟ الأوردرات دي بالظبط ومفيش فلاتر تانية تشيل واحد منهم
+  if (onlyIds.length > 0) {
+    query = query.in("id", onlyIds);
+  } else {
+    if (status) {
+      query = query.eq("order_status", status);
+    }
+    if (periodStart) {
+      query = query.gte("order_date", periodStart);
+    }
   }
 
   const { data: fetchedOrders, error } = await query
@@ -261,6 +276,18 @@ export default async function OrdersPage({
 
       {/* التنبيهات كلها بقت في أيقونة الإشعارات فوق — عمر مش عايز بانرات
           بتاخد نص الشاشة */}
+
+      {/* جاي من إشعار: بنقول له إنه شايف جزء بس، وإزاي يرجع للكل */}
+      {onlyIds.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          <span>
+            بتشوف {orders.length === 1 ? "أوردر واحد" : `${orders.length} أوردر`} جايين من إشعار
+          </span>
+          <Link href="/orders" className="font-medium underline">
+            اعرض كل الأوردرات
+          </Link>
+        </div>
+      )}
 
       {pendingDeletions.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">

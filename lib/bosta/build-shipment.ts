@@ -39,6 +39,8 @@ export type ShipmentInput = {
   orderNumber: string | number | null;
   discount: number | null;
   shippingPrice: number | null;
+  /** اللي العميل دفعه مقدم — بيتخصم من التحصيل */
+  amountPaid?: number | null;
   items: ShipmentItem[];
   customer: ShipmentCustomer | null;
   city: BostaCity | null;
@@ -81,11 +83,23 @@ export function buildAddressLine(c: ShipmentCustomer): string {
   return parts.length ? parts.join(" — ") : String(c.address ?? "").trim();
 }
 
-/** التحصيل = البضاعة − الخصم + الشحن، ومابينزلش تحت الصفر */
+/**
+ * التحصيل = البضاعة − الخصم + الشحن − **اللي العميل دفعه قبل الشحن**.
+ *
+ * **الجزء الأخير ده كان ناقص، وكان بيكلّف فلوس حقيقية.** أوردر ١٣٣٦ اتدفع
+ * كامل بإنستا باي (١١٬٩٧٨ ج) وراح لبوسطة بتحصيل ١١٬٩٧٨ — يعني المندوب كان
+ * هيطلب من العميل فلوس هو دافعها خلاص، وبوسطة حسبت رسوم على التحصيل ده:
+ * عمولة تحصيل ٩٩٫٧٨ + رسم تحويل ١١٩٫٧٨، فالرسوم طلعت ٢٨١ بدل ٤٦.
+ *
+ * الأوردر المدفوع بالكامل بيروح **بتحصيل صفر**، والمدفوع جزئيًا بيروح
+ * بالباقي بس.
+ */
 export function computeCod(input: {
   items: ShipmentItem[];
   discount: number | null;
   shippingPrice: number | null;
+  /** اللي العميل دفعه مقدم (إنستا باي، فودافون كاش، تحويل…) */
+  amountPaid?: number | null;
 }): number {
   const itemsTotal = input.items.reduce(
     (s, i) => s + Number(i.quantity) * Number(i.salePrice),
@@ -93,7 +107,10 @@ export function computeCod(input: {
   );
   return Math.max(
     0,
-    itemsTotal - Number(input.discount ?? 0) + Number(input.shippingPrice ?? 0)
+    itemsTotal -
+      Number(input.discount ?? 0) +
+      Number(input.shippingPrice ?? 0) -
+      Number(input.amountPaid ?? 0)
   );
 }
 

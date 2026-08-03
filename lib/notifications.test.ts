@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { changedWithin } from "./notifications";
+import { changedWithin, noticeHref } from "./notifications";
+
+describe("رابط الإشعار", () => {
+  const fallback = "/orders?status=returned";
+
+  it("أوردر واحد = يفتح الأوردر نفسه على طول", () => {
+    // ده اللي كان مضايق عمر: إشعار بأوردر واحد بيفتح القايمة كلها
+    expect(noticeHref(["abc"], fallback)).toBe("/orders/abc");
+  });
+
+  it("أكتر من واحد = القايمة متفلترة عليهم هم بس", () => {
+    expect(noticeHref(["a", "b", "c"], fallback)).toBe("/orders?only=a,b,c");
+  });
+
+  it("عدد كبير جدًا = بيرجع للفلتر العادي عشان الرابط مايطولش", () => {
+    const many = Array.from({ length: 41 }, (_, i) => `id${i}`);
+    expect(noticeHref(many, fallback)).toBe(fallback);
+  });
+
+  it("مفيش أوردرات = الفلتر العادي", () => {
+    expect(noticeHref([], fallback)).toBe(fallback);
+  });
+});
 
 describe("مين اتغيّرت حالته من قريب", () => {
   const now = new Date("2026-08-04T12:00:00Z");

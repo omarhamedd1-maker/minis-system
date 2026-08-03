@@ -73,8 +73,27 @@ describe("حالات خاصة", () => {
       allowToOpenPackage: false,
     });
     expect(c.openFee).toBe(0);
-    // تحويل بالحد الأدنى ١٣ + تأمين بالسقف ٢٠ = ٣٣، × ١.١٤
-    expect(c.total).toBe(37.62);
+    // تحصيل صفر = مفيش تحويل، فالتأمين بالسقف ٢٠ لوحده × ١.١٤
+    expect(c.total).toBe(22.8);
+  });
+
+  it("**التحصيل صفر = مفيش رسم تحويل** حتى الحد الأدنى", () => {
+    // الحد الأدنى ١٣ بيتطبّق على فلوس بتتحوّل فعلاً، مش على شحنة مافيهاش
+    // فلوس. الدليل من شاشة بوسطة: تحصيل صفر وقيمة بضاعة ٥٠٠٠ = ٦٤٫٩٨،
+    // و٦٤٫٩٨ ÷ ١٫١٤ = ٥٧ = ٥٠ تأمين + ٧ رسم فتح. مفيش تحويل.
+    const c = shippingCost({
+      cod: 0,
+      productValue: 5000,
+      allowToOpenPackage: true,
+    });
+    expect(c.transferFee).toBe(0);
+    expect(c.codFee).toBe(0);
+    expect(c.openFee).toBe(7);
+  });
+
+  it("أول جنيه تحصيل بيرجّع الحد الأدنى للتحويل", () => {
+    const c = shippingCost({ cod: 1, productValue: 500, allowToOpenPackage: true });
+    expect(c.transferFee).toBe(13);
   });
 
   it("المرتجع: مفيش عمولة تحصيل ولا رسم تحويل", () => {

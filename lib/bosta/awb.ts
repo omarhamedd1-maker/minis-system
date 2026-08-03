@@ -13,6 +13,7 @@ import {
   fetchDeliveryByTracking,
   updateDeliveryCod,
 } from "./client";
+import { computeCod } from "./build-shipment";
 import { canEditDelivery } from "./order-status";
 import { loadTenantCredentials } from "../tenant-settings";
 
@@ -111,7 +112,7 @@ export async function runBostaAwb(opts: {
 // تحديث مبلغ التحصيل عند بوسطة بعد تعديل الأوردر
 // ==========================================================================
 
-const COD_FIELDS = `id, order_number, bosta_tracking, tenant_id, discount, shipping_price,
+const COD_FIELDS = `id, order_number, bosta_tracking, tenant_id, discount, shipping_price, amount_paid,
   order_items(quantity, sale_price_at_order)`;
 
 export type UpdateCodResult =
@@ -133,18 +134,23 @@ export async function runBostaUpdateCod(opts: {
   const order = loaded.order as TrackedOrder & {
     discount: number | null;
     shipping_price: number | null;
+    amount_paid: number | null;
     order_items: { quantity: number; sale_price_at_order: number }[] | null;
   };
 
   const items = order.order_items ?? [];
-  const itemsTotal = items.reduce(
-    (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
-    0
-  );
-  const cod = Math.max(
-    0,
-    itemsTotal - Number(order.discount ?? 0) + Number(order.shipping_price ?? 0)
-  );
+  // نفس حسبة الإرسال بالظبط — **مصدر واحد**. لو الاتنين اتفرقوا، التحديث
+  // بيبعت لبوسطة رقم غير اللي الشحنة اتعملت بيه والمندوب بيحصّل غلط.
+  const cod = computeCod({
+    items: items.map((i) => ({
+      quantity: i.quantity,
+      salePrice: i.sale_price_at_order,
+      productName: null,
+    })),
+    discount: order.discount,
+    shippingPrice: order.shipping_price,
+    amountPaid: order.amount_paid,
+  });
   const itemsCount = items.reduce((s, i) => s + Number(i.quantity), 0);
 
   let delivery;
