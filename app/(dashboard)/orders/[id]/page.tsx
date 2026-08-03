@@ -320,6 +320,23 @@ export default async function OrderDetailsPage({
   // نعمل إيه في الأوردر الواقف — بتتحدد من سبب بوسطة نفسه
   const advice = exceptionAdvice(order.bosta_exception);
 
+  // رسوم بوسطة الحقيقية — **استعلام لوحده بقصد**: الأعمدة دي بتتضاف بملف
+  // SQL عمر بيشغّله بإيده، ولو حطيناها في الاستعلام الأساسي وهي لسه
+  // مااتعملتش الصفحة كلها هتقع. كده أسوأ حاجة إن الرقم الحقيقي مايبانش.
+  const realFee = await (async () => {
+    try {
+      const { data } = await supabase
+        .from("orders")
+        .select("bosta_fees_real, bosta_ship_fee_real")
+        .eq("id", id)
+        .maybeSingle();
+      const f = data as { bosta_fees_real: number | null; bosta_ship_fee_real: number | null } | null;
+      return f?.bosta_fees_real ? f : null;
+    } catch {
+      return null;
+    }
+  })();
+
   return (
     <div className="space-y-6">
       <AutoRefresh seconds={30} />
@@ -560,10 +577,14 @@ export default async function OrderDetailsPage({
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
               </div>
               {/* تقسيمة الشحن: الإجمالي − الباقة − العميل = الباقي */}
-              {order.bosta_shipping_cost > 0 &&
+              {(realFee || order.bosta_shipping_cost > 0) &&
                 (() => {
-                  // إجمالي اللي بوسطة بتاخده: الشحن الأساسي + رسومها
-                  const totalCost = BUNDLE_COVERS + order.bosta_shipping_cost;
+                  // **لو بوسطة قالت رقمها الحقيقي، هو اللي يتحاسب** — التقدير
+                  // للشحنة اللي لسه شغالة بس، لأن بوسطة مابتقفلش الحساب غير
+                  // بعد ما تخلص.
+                  const real = realFee?.bosta_fees_real ?? null;
+                  const shipPart = realFee?.bosta_ship_fee_real ?? BUNDLE_COVERS;
+                  const totalCost = real ?? BUNDLE_COVERS + order.bosta_shipping_cost;
                   const rest = totalCost - BUNDLE_COVERS - order.shipping_price;
                   const backToMe = rest < 0;
                   return (
@@ -572,7 +593,9 @@ export default async function OrderDetailsPage({
                         <span className="text-gray-600">
                           إجمالي مصاريف الشحن
                           <span className="block text-[10px] text-gray-400">
-                            {BUNDLE_COVERS} شحن + {formatMoney(order.bosta_shipping_cost)} رسوم
+                            {real
+                              ? `${formatMoney(shipPart)} شحن + ${formatMoney(real - shipPart)} رسوم — رقم بوسطة الحقيقي`
+                              : `${BUNDLE_COVERS} شحن + ${formatMoney(order.bosta_shipping_cost)} رسوم — تقدير`}
                           </span>
                         </span>
                         <span className="font-medium text-gray-900">
