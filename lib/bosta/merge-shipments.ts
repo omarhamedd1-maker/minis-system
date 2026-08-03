@@ -67,6 +67,7 @@ export function mergeShipments(
         productValue,
         allowToOpenPackage: Boolean(d.allowToOpenPackage),
         returned: asReturned,
+        collected: mapped === "delivered",
       },
       rules
     ).total;
