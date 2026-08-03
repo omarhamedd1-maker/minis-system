@@ -11,6 +11,8 @@
 // دي راحت. لو عايز ترجّعها للعميل كمجاملة تقدر تعدّل المبلغ بإيدك.
 // ==========================================================================
 
+import { alertHead } from "./alert-messages";
+
 /** مراحل تنبيه الحوالة بالأيام من ساعة ما المرتجع اتسجّل */
 export const REFUND_MILESTONES = [1, 3, 7, 10] as const;
 
@@ -80,12 +82,11 @@ export function refundReminderMessage(a: {
   days: number;
   siteUrl?: string | null;
 }): string {
-  // رقم الأوردر واسم العميل في السطر الأول — ده اللي بيبان في الإشعار
-  const who = a.customerName ? ` — ${a.customerName}` : "";
-  const lines = [
-    `💸 <b>أوردر ${a.orderNumber ?? "—"} لسه مارجّعتش فلوسه${who}</b>`,
-    "",
-  ];
+  const lines = alertHead(
+    "💸",
+    `أوردر ${a.orderNumber ?? "—"} لسه مارجّعتش فلوسه`,
+    a.customerName
+  );
   if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
   lines.push(`المبلغ: <b>${a.amount} جنيه</b>`);
   lines.push(

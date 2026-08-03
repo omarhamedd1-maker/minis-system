@@ -5,9 +5,9 @@ import {
   ORDER_STATUS_OPTIONS,
   SHIPMENT_STATUSES,
   cairoToday,
-  collectionState,
   formatDate,
   formatMoney,
+  lastMove,
   orderStatusBadge,
 } from "@/lib/format";
 
@@ -67,6 +67,9 @@ type OrderRow = {
   order_number: string | null;
   order_status: string | null;
   order_date: string | null;
+  created_at: string | null;
+  delivered_at: string | null;
+  bosta_created_at: string | null;
   cancelled_at: string | null;
   shipping_price: number;
   discount: number;
@@ -178,7 +181,7 @@ export default async function OrdersPage({
   let query = supabase
     .from("orders")
     .select(
-      "id, order_number, order_status, order_date, cancelled_at, shipping_price, discount, bosta_state, bosta_collected, bosta_tracking, cash_received_at, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
+      "id, order_number, order_status, order_date, created_at, delivered_at, bosta_created_at, cancelled_at, shipping_price, discount, bosta_state, bosta_collected, bosta_tracking, cash_received_at, customers(full_name, phone), order_items(quantity, sale_price_at_order), order_comments(id, author_name, body, created_at)"
     )
     .eq("archived", showArchived)
     .order("created_at", { referencedTable: "order_comments", ascending: true });
@@ -476,9 +479,9 @@ export default async function OrdersPage({
                     </span>
                     <span>القطع: {pieces}</span>
                     <span className="flex items-center gap-1">
-                      فلوسك:
-                      <span className={collectionState(order).className}>
-                        {collectionState(order).label}
+                      آخر حركة:
+                      <span className={lastMove(order).className}>
+                        {lastMove(order).label}
                       </span>
                     </span>
                   </div>
@@ -575,7 +578,7 @@ export default async function OrdersPage({
                   الإجمالي
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
-                  فلوسك
+                  آخر حركة
                 </th>
                 <th className="whitespace-nowrap px-4 py-3 font-medium">
                   عدد القطع
@@ -631,10 +634,8 @@ export default async function OrdersPage({
                       {formatMoney(total)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <span
-                        className={`text-xs font-medium ${collectionState(order).className}`}
-                      >
-                        {collectionState(order).label}
+                      <span className={`text-xs ${lastMove(order).className}`}>
+                        {lastMove(order).label}
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-gray-700">

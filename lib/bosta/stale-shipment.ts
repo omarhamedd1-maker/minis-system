@@ -9,6 +9,8 @@
 // بتشتغل كل ١٥ دقيقة، فمن غير الشرط ده كانت هتزنّ ٩٦ مرة في اليوم.
 // ==========================================================================
 
+import { alertHead } from "../alert-messages";
+
 /** مراحل التنبيه بالأيام. الأخيرة قبل الأرشفة بيوم */
 export const STALE_MILESTONES = [3, 7, 10, 13] as const;
 
@@ -74,23 +76,20 @@ export function checkStalePickup(input: {
 export function stalePickupMessage(a: {
   orderNumber: string | number | null;
   customerName: string | null;
-  tracking: string | null;
   days: number;
   milestone: number;
   siteUrl?: string | null;
 }): string {
   const last = a.milestone === STALE_MILESTONES[STALE_MILESTONES.length - 1];
   const left = BOSTA_ARCHIVES_AFTER_DAYS - a.days;
-  // رقم الأوردر واسم العميل في السطر الأول — ده اللي بيبان في الإشعار
-  const who = a.customerName ? ` — ${a.customerName}` : "";
 
-  const lines = [
+  const lines = alertHead(
+    last ? "🚨" : "🕗",
     last
-      ? `🚨 <b>آخر فرصة — شحنة أوردر ${a.orderNumber ?? "—"}${who}</b>`
-      : `🕗 <b>شحنة أوردر ${a.orderNumber ?? "—"} واقفة${who}</b>`,
-    "",
-  ];
-  if (a.tracking) lines.push(`شحنة: <code>${a.tracking}</code>`);
+      ? `آخر فرصة — شحنة أوردر ${a.orderNumber ?? "—"}`
+      : `شحنة أوردر ${a.orderNumber ?? "—"} واقفة`,
+    a.customerName
+  );
   lines.push(`قاعدة: <b>${a.days} يوم</b> من غير بيك اب`);
   lines.push("");
 

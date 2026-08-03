@@ -86,7 +86,6 @@ describe("رسالة الشحنة الواقفة", () => {
   const base = {
     orderNumber: "1374",
     customerName: "أمينة فتحي",
-    tracking: "102657691",
   };
 
   it("المراحل الأولى: كلّم بوسطة", () => {
@@ -115,7 +114,6 @@ describe("رسالة الشحنة الواقفة", () => {
     const m = stalePickupMessage({
       orderNumber: null,
       customerName: null,
-      tracking: null,
       days: 4,
       milestone: 3,
     });
