@@ -129,6 +129,31 @@ export function summarizeException(
 // دالة صافية عشان تتختبر: نص السبب داخل، والجملة والأزرار خارجة.
 // ==========================================================================
 
+/**
+ * جوهر سبب الوقوف من غير الزوايد اللي بتتغيّر لوحدها.
+ *
+ * النص المخزّن شكله: «العميل رفض يستلم (٣ أغسطس) — ٢ محاولات — اتجدولت ٥ أغسطس».
+ * التاريخ والجدولة بيتغيّروا من غير ما يحصل جديد، فلو قارنّا النص كله كنا
+ * هنبعت إشعار على كل تغيير تافه. أما **السبب + عدد المحاولات** فتغيّرهم
+ * معناه محاولة فشلت من جديد — ودي تستاهل تنبيه.
+ */
+export function exceptionKey(text: string | null | undefined): string {
+  const s = String(text ?? "").trim();
+  if (!s) return "";
+  const reason = s.split("(")[0].split("—")[0].trim();
+  const attempts = s.match(/(\d+)\s*محاولات/)?.[1] ?? "";
+  return attempts ? `${reason}|${attempts}` : reason;
+}
+
+/** حصل محاولة فاشلة جديدة؟ (مش مجرد تعديل في التاريخ) */
+export function newFailedAttempt(
+  before: string | null | undefined,
+  after: string | null | undefined
+): boolean {
+  const key = exceptionKey(after);
+  return key !== "" && key !== exceptionKey(before);
+}
+
 /** زرار واحد بمعنى واحد — الصفحة هي اللي بترسمه */
 export type ExceptionAction = "whatsapp" | "address" | "phone" | "cancel";
 

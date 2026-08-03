@@ -19,6 +19,7 @@ import {
   returnDead,
   type ReturnCandidate,
 } from "./customer-return";
+import { newFailedAttempt } from "./exception";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
 import { decideSync, type OurOrder } from "./reconcile";
@@ -97,6 +98,9 @@ export type SyncSummary = {
 /**
  * الحالات اللي بتبعت تنبيه فوري على الموبايل.
  * دي اللحظة اللي فيها بضاعة راجعة وفلوس ماوصلتش — ولازم حد يتحرك.
+ *
+ * ودي مش الطريق الوحيد للتنبيه: أول محاولة فاشلة بتنبّه كمان حتى لو حالة
+ * الأوردر لسه ماتغيّرتش (`newFailedAttempt`).
  */
 const ALERT_ON = ["returning", "returned", "awaiting_action"];
 
@@ -520,13 +524,33 @@ export async function runBostaSync(opts: {
           });
         }
 
-        if (typeof decision.changes.order_status === "string") {
-          const to = decision.changes.order_status;
-          await logStatusChange(db, row.order_number, row.order_status, to, row.id);
+        const to =
+          typeof decision.changes.order_status === "string"
+            ? decision.changes.order_status
+            : null;
 
-        // **أهم تنبيه في السيستم**: العميل مستلمش. لازم حد يكلّمه دلوقتي
-        // قبل ما الشحنة توصل المخزن وتبقى خسارة مؤكدة.
-        if (ALERT_ON.includes(to)) {
+        if (to) {
+          await logStatusChange(db, row.order_number, row.order_status, to, row.id);
+        }
+
+        // ===== أهم تنبيه في السيستم: العميل مستلمش =====
+        //
+        // **بيروح من أول محاولة فاشلة، مش لما الأوردر يرجع خلاص.** بوسطة
+        // بتحاول أكتر من مرة على مدى أيام قبل ما تبدأ ترجّع الشحنة، وقبل
+        // كده كان التنبيه مربوط بتغيير حالة الأوردر بس — يعني كان بيوصلك
+        // بعد ما الشحنة تكون بقت راجعة والفرصة تكون ضاعت. دلوقتي أول ما
+        // بوسطة تقول "العميل رفض" أو "مش بيرد" التنبيه بيوصل في وقته
+        // وإنت لسه تقدر تكلّم العميل وتنقذ الأوردر.
+        //
+        // والحالة اللي بتوصل لـ"راجع" أو "مستنية قرار" بتنبّه برضه — دي
+        // أخبار تانية غير المحاولة الفاشلة.
+        const attempt = newFailedAttempt(
+          row.bosta_exception,
+          decision.changes.bosta_exception as string | null | undefined
+        );
+        const settled = to === "cancelled" || row.order_status === "cancelled";
+
+        if ((attempt || (to && ALERT_ON.includes(to))) && !settled) {
           await notifyAll(
             db,
             tenantId,
@@ -534,14 +558,21 @@ export async function runBostaSync(opts: {
               orderNumber: row.order_number,
               customerName: row.customers?.full_name ?? null,
               customerPhone: row.customers?.phone ?? null,
-              reason: decision.changes.bosta_exception as string | null,
+              reason: (decision.changes.bosta_exception ??
+                row.bosta_exception) as string | null,
               arrived: to === "returned",
               waiting: to === "awaiting_action",
               siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
             }),
-            { fetchImpl, tag: `order-`, url: "/orders?status=returning" }
+            {
+              fetchImpl,
+              // **تاج لكل أوردر لوحده.** كان `order-` ثابت للكل، يعني لو
+              // تلات أوردرات وقعوا في نفس المزامنة، الإشعار الأخير كان
+              // بيمسح اللي قبله من على الشاشة ومحدش ياخد باله.
+              tag: `order-${row.id}`,
+              url: `/orders/${row.id}`,
+            }
           );
-          }
         }
       }
     }

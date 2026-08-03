@@ -1,5 +1,99 @@
 import { describe, expect, it } from "vitest";
-import { reasonInArabic, summarizeException } from "./exception";
+import {
+  exceptionAdvice,
+  exceptionKey,
+  newFailedAttempt,
+  reasonInArabic,
+  summarizeException,
+} from "./exception";
+
+describe("محاولة فاشلة جديدة", () => {
+  it("أول محاولة = تنبيه", () => {
+    // ودي اللي التنبيه كان بيتأخر عليها لحد ما الأوردر يبقى راجع خلاص
+    expect(newFailedAttempt(null, "العميل مش بيرد (٣ أغسطس)")).toBe(true);
+    expect(newFailedAttempt("", "العميل رفض يستلم (٣ أغسطس)")).toBe(true);
+  });
+
+  it("محاولة تانية فشلت = تنبيه تاني", () => {
+    expect(
+      newFailedAttempt(
+        "العميل مش بيرد (٣ أغسطس) — 2 محاولات",
+        "العميل مش بيرد (٤ أغسطس) — 3 محاولات"
+      )
+    ).toBe(true);
+  });
+
+  it("نفس المحاولة والتاريخ اتغيّر بس = سكوت", () => {
+    // بوسطة بتعدّل الجدولة من غير ما يحصل جديد — ده مايستاهلش إشعار
+    expect(
+      newFailedAttempt(
+        "العميل طلب التأجيل (٣ أغسطس) — 2 محاولات",
+        "العميل طلب التأجيل (٥ أغسطس) — 2 محاولات — اتجدولت ٧ أغسطس"
+      )
+    ).toBe(false);
+  });
+
+  it("السبب اتغيّر = تنبيه حتى لو نفس عدد المحاولات", () => {
+    expect(
+      newFailedAttempt(
+        "العميل طلب التأجيل (٣ أغسطس) — 2 محاولات",
+        "العميل رفض يستلم (٤ أغسطس) — 2 محاولات"
+      )
+    ).toBe(true);
+  });
+
+  it("السبب اتشال = مفيش تنبيه", () => {
+    expect(newFailedAttempt("العميل مش بيرد", null)).toBe(false);
+  });
+
+  it("المفتاح بيشيل التواريخ ويسيب السبب والمحاولات", () => {
+    expect(exceptionKey("العميل رفض يستلم (٣ أغسطس) — 2 محاولات")).toBe(
+      "العميل رفض يستلم|2"
+    );
+    expect(exceptionKey(null)).toBe("");
+  });
+});
+
+describe("نعمل إيه في الأوردر الواقف", () => {
+  it("العميل مش بيرد: نكلّمه — ومفيش «عدّل العنوان»", () => {
+    // ده كان الغلط: كل أوردر واقف بيعرض «عدّل العنوان» حتى لو العنوان مظبوط
+    const a = exceptionAdvice("العميل مش بيرد (٣ أغسطس) — ٢ محاولات");
+    expect(a.actions).toContain("whatsapp");
+    expect(a.actions).not.toContain("address");
+  });
+
+  it("العنوان غلط: نعدّل العنوان", () => {
+    const a = exceptionAdvice("العنوان غلط");
+    expect(a.actions).toContain("address");
+    expect(a.title).toBe("العنوان غلط");
+  });
+
+  it("بره التغطية بتكسب على «العنوان» العامة", () => {
+    // الاتنين فيهم كلمة "العنوان" — والترتيب هو اللي بيفصل
+    const a = exceptionAdvice("العنوان بره نطاق التغطية");
+    expect(a.title).toContain("بره تغطية");
+    expect(a.actions).toContain("cancel");
+  });
+
+  it("رقم التليفون غلط: نصحّح الرقم مش العنوان", () => {
+    const a = exceptionAdvice("رقم التليفون غلط");
+    expect(a.actions).toContain("phone");
+    expect(a.actions).not.toContain("address");
+  });
+
+  it("التأجيل مالوش زرار إلغاء — الشحنة لسه ماشية", () => {
+    const a = exceptionAdvice("العميل طلب التأجيل (٤ أغسطس)");
+    expect(a.actions).toEqual(["whatsapp"]);
+  });
+
+  it("السبب المش معروف أو الفاضي بياخد النصيحة العامة", () => {
+    for (const r of [null, "", "Some new reason from Bosta"]) {
+      const a = exceptionAdvice(r);
+      expect(a.title).toBe("بوسطة واقفة ومستنية قرار منك");
+      expect(a.actions).toContain("whatsapp");
+    }
+  });
+});
 
 describe("ترجمة سبب بوسطة", () => {
   it("بتترجم الأسباب اللي شفناها فعلًا", () => {
