@@ -22,6 +22,11 @@ export type BostaDelivery = {
   } | null;
   /** النص جاي من جلب الشحنة لوحدها؟ ساعتها هو الأدق حاجة عندنا */
   stateIsDetailed?: boolean;
+  /**
+   * نوع الشحنة عند بوسطة — **لازم**، لأن نفس الكود معناه بيختلف بيه.
+   * ١٠ = إرسال للعميل · ٢٠ = رجوع لك
+   */
+  type?: { code?: number | null; value?: string | null } | null;
   cod?: number | null;
   allowToOpenPackage?: boolean | null;
   shopifyInfo?: { orderNumber?: string | null } | null;
@@ -137,7 +142,7 @@ export function decideSync(
   const cod = totals ? totals.cod : Number(d.cod ?? 0);
   // بالكود مش بالنص المجمّع — النص بيلبّس الشحنة الراجعة على المتسلّمة.
   // ولو جبنا الحالة التفصيلية من بوسطة، هي الأدق فبتكسب.
-  const mapped = mapBostaDelivery(d.state, d.stateIsDetailed);
+  const mapped = mapBostaDelivery(d.state, d.stateIsDetailed, d.type?.code);
 
   if (tracking && o.bosta_tracking !== tracking) {
     changes.bosta_tracking = tracking;

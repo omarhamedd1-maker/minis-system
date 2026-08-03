@@ -93,6 +93,40 @@ describe("الحالة بالكود مش بالنص", () => {
     expect(mapBostaDelivery({ value: "", code: 104 })).toBe("awaiting_action");
   });
 
+  it("**الكود بيكسب على النص حتى لو تفصيلي** — ده اللي كان مجمّد الحالات", () => {
+    // بوسطة بترجّع للشحنة الواحدة value:"Picked up" مع code:41.
+    // القاعدة القديمة كانت بتصدّق النص التفصيلي، فالحالة كانت بتقف على
+    // "استلمه بوسطة" والشحنة في الحقيقة مع المندوب.
+    // (أوردر ١٣٧٧ الحقيقي — قعد كده وبوسطة بتقول في الطريق للعميل.)
+    expect(mapBostaDelivery({ value: "Picked up", code: 41 }, true)).toBe(
+      "out_for_delivery"
+    );
+  });
+
+  it("**نوع الشحنة بيقلب معنى الكود**", () => {
+    // نفس الكود ٤١: على شحنة إرسال = رايحة للعميل، وعلى شحنة رجوع = جاية لك.
+    // (أوردر ١٣٦٤ الحقيقي — نوعه ٢٠ وكان بيبان "في الطريق للعميل".)
+    const state = { value: "Picked up", code: 41 };
+    expect(mapBostaDelivery(state, true, 10)).toBe("out_for_delivery");
+    expect(mapBostaDelivery(state, true, 20)).toBe("returning");
+  });
+
+  it("الشحنة الراجعة لما توصل = رجع ومتسلمش", () => {
+    expect(mapBostaDelivery({ value: "Delivered", code: 45 }, true, 20)).toBe(
+      "returned"
+    );
+    // ومن غير النوع كانت بتبان "اتسلّمت للعميل"
+    expect(mapBostaDelivery({ value: "Delivered", code: 45 }, true, 10)).toBe(
+      "delivered"
+    );
+  });
+
+  it("الملغي والمؤرشف معناهم واحد في الاتجاهين", () => {
+    expect(mapBostaDelivery({ value: "Terminated", code: 48 }, true, 20)).toBe(
+      "awaiting_action"
+    );
+  });
+
   it("كود مش معروف + Delivered = مانغيّرش حاجة", () => {
     // ممكن تكون راجعة زي ٤٦ — مانخاطرش بفلوس على تخمين
     expect(mapBostaDelivery({ value: "Delivered", code: 999 })).toBeNull();
