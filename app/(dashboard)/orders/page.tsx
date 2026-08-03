@@ -277,6 +277,18 @@ export default async function OrdersPage({
       {/* التنبيهات كلها بقت في أيقونة الإشعارات فوق — عمر مش عايز بانرات
           بتاخد نص الشاشة */}
 
+      {/* جاي من إشعار: بنقول له إنه شايف جزء بس، وإزاي يرجع للكل */}
+      {onlyIds.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800">
+          <span>
+            بتشوف {orders.length === 1 ? "أوردر واحد" : `${orders.length} أوردر`} جايين من إشعار
+          </span>
+          <Link href="/orders" className="font-medium underline">
+            اعرض كل الأوردرات
+          </Link>
+        </div>
+      )}
+
       {pendingDeletions.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <div className="mb-2 text-sm font-bold text-amber-800">

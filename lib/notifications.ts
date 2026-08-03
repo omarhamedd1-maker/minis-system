@@ -54,6 +54,27 @@ const ATTENTION_STATUSES = [
 const ORDER = { danger: 0, warn: 1, info: 2 };
 
 /**
+ * الحد اللي بعده بنسيب الرابط على الفلتر بدل الأوردرات بالاسم — عشان
+ * الرابط مايبقاش أطول من اللازم.
+ */
+const MAX_IDS_IN_LINK = 40;
+
+/**
+ * رابط الإشعار: **بيوديك على أوردراته هو بالظبط، مش على القايمة كلها.**
+ *
+ * إشعار بيقول "أوردر واحد رجع" كان بيفتحلك كل الأوردرات الراجعة (٧ منهم)
+ * وإنت تدوّر على اللي هو قصده. دلوقتي الواحد بيفتح على طول، والأكتر بيفتح
+ * القايمة متفلترة عليهم هم بس.
+ */
+export function noticeHref(ids: string[], fallback: string): string {
+  if (ids.length === 1) return `/orders/${ids[0]}`;
+  if (ids.length > 1 && ids.length <= MAX_IDS_IN_LINK) {
+    return `/orders?only=${ids.join(",")}`;
+  }
+  return fallback;
+}
+
+/**
  * أنهي أوردر اتغيّرت حالته من ساعات قريبة.
  *
  * **مافيش عمود بيسجّل وقت تغيير الحالة** في `orders`، بس سجل النشاط بيسجّل
@@ -157,7 +178,10 @@ export async function collectNotices(
       title: group.title,
       count: items.length,
       detail: numbers + (items.length > 4 ? " وغيرهم" : ""),
-      href: `/orders?status=${group.status}`,
+      href: noticeHref(
+        items.map((i) => i.id),
+        `/orders?status=${group.status}`
+      ),
     });
   }
 
@@ -165,7 +189,7 @@ export async function collectNotices(
   try {
     const { data: owing } = await db
       .from("orders")
-      .select("order_number, order_items(returned_quantity, sale_price_at_order)")
+      .select("id, order_number, order_items(returned_quantity, sale_price_at_order)")
       .eq("tenant_id", tenantId)
       .eq("order_status", "returned_after_delivery")
       .is("refunded_at", null)
@@ -173,6 +197,7 @@ export async function collectNotices(
 
     const pending = (
       (owing ?? []) as unknown as {
+        id: string;
         order_number: string | null;
         order_items: {
           returned_quantity: number | null;
@@ -181,6 +206,7 @@ export async function collectNotices(
       }[]
     )
       .map((o) => ({
+        id: o.id,
         number: o.order_number,
         amount: refundDue(
           (o.order_items ?? []).map((i) => ({
@@ -202,7 +228,10 @@ export async function collectNotices(
           .slice(0, 3)
           .map((p) => p.number)
           .join("، ")}${pending.length > 3 ? " وغيرهم" : ""}`,
-        href: "/orders?status=returned_after_delivery",
+        href: noticeHref(
+          pending.map((p) => p.id),
+          "/orders?status=returned_after_delivery"
+        ),
       });
     }
   } catch {
