@@ -124,7 +124,13 @@ export function deliveryOrderNumber(d: BostaDelivery): string {
     d?.shopifyInfo?.orderNumber ??
     String(d?.businessReference ?? "").split(":").pop() ??
     "";
-  return String(raw).replace("#", "").trim();
+  // **شحنة المرتجع والتبديل مرجعها `RET-1371` و`EXC-1371`** — إحنا اللي
+  // بنحط البادئة عشان نفرّقها. من غير ما نشيلها هنا الشحنة مابتلاقيش
+  // أوردرها، فتتحسب "مش مربوطة" **ورسومها ماتدخلش تكلفة الأوردر خالص**.
+  return String(raw)
+    .replace("#", "")
+    .replace(/^(RET|EXC)-/i, "")
+    .trim();
 }
 
 export function decideSync(

@@ -13,6 +13,7 @@ import {
 } from "./client";
 import {
   isCustomerReturn,
+  isExchange,
   matchCustomerReturn,
   pickReturnShipment,
   returnArrived,
@@ -24,9 +25,10 @@ import { newFailedAttempt } from "./exception";
 import { backfillRealFees } from "./fees-backfill";
 import { buildIndex, matchDelivery } from "./match";
 import { mergeShipments } from "./merge-shipments";
+import { isDeadShipment, mapBostaState } from "./order-status";
 import { decideSync, type OurOrder } from "./reconcile";
 import { loadTenantCredentials } from "../tenant-settings";
-import { BOSTA_FEES } from "../shipping-cost";
+import { BOSTA_FEES, shippingCost } from "../shipping-cost";
 import { orderStatusBadge } from "../format";
 import { failedDeliveryMessage } from "../alert-messages";
 import { notifyAll } from "../push/notify";
@@ -289,6 +291,35 @@ export async function runBostaSync(opts: {
 
   const deliveryShipments: BostaRawDelivery[] = [];
 
+  /**
+   * الشحنات الجانبية (المرتجع والتبديل) لكل أوردر — رسومها وتحصيلها.
+   *
+   * دي شحنات حقيقية بوسطة بتحاسب عليها وممكن تحصّل فيها فلوس (فرق سعر
+   * التبديل مثلاً)، بس **مالهاش كلمة في حالة الأوردر ولا رقم تتبعه**.
+   *
+   * قبل كده شحنة التبديل كانت بتمشي في مسار التوصيل العادي، فبما إنها أحدث
+   * شحنة على الأوردر كانت بتخطف حالته ورقم تتبعه — والأوردر متسلّم من زمان.
+   * دلوقتي بتتفصل زي المرتجع، وفلوسها بتتجمّع هنا وتتضاف للأوردر.
+   */
+  const sideTotals = new Map<string, { fee: number; cod: number }>();
+  const addSide = (orderId: string, d: BostaRawDelivery, value: number) => {
+    const cod = isDeadShipment(d.state?.value, d.state?.code)
+      ? 0
+      : Number(d.cod ?? 0);
+    const fee = shippingCost(
+      {
+        cod,
+        productValue: value,
+        allowToOpenPackage: Boolean(d.allowToOpenPackage),
+        returned: isDeadShipment(d.state?.value, d.state?.code),
+        collected: mapBostaState(d.state?.value ?? null) === "delivered",
+      },
+      rules
+    ).total;
+    const prev = sideTotals.get(orderId) ?? { fee: 0, cod: 0 };
+    sideTotals.set(orderId, { fee: prev.fee + fee, cod: prev.cod + cod });
+  };
+
   // **شحنات المرتجع بتتجمّع لكل أوردر الأول والقرار بيتاخد مرة واحدة.**
   // الأوردر ممكن يبقى عليه أكتر من شحنة مرتجع (واحدة اتلغت وواحدة وصلت)،
   // ولو مشينا شحنة شحنة بتبقى آخر واحدة اتقرت هي اللي تكسب — وده اللي جمّد
@@ -299,6 +330,27 @@ export async function runBostaSync(opts: {
   >();
 
   for (const d of deliveries as BostaRawDelivery[]) {
+    // **شحنة التبديل بتتفصل زي المرتجع بالظبط.** لو سيبناها تمشي في مسار
+    // التوصيل، هي أحدث شحنة على الأوردر فهتخطف حالته ورقم تتبعه — والأوردر
+    // متسلّم خلاص. رسومها بس هي اللي بتدخل.
+    if (isExchange(d)) {
+      const m = matchDelivery(d, index);
+      if (m.kind === "order_number" || m.kind === "tracking") {
+        const row = m.order.row;
+        addSide(
+          row.id,
+          d,
+          (row.order_items ?? []).reduce(
+            (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
+            0
+          )
+        );
+      } else {
+        summary.unmatched++;
+      }
+      continue;
+    }
+
     if (!isCustomerReturn(d)) {
       deliveryShipments.push(d);
       continue;
@@ -331,6 +383,17 @@ export async function runBostaSync(opts: {
   }
 
   for (const { order, shipments } of returnsByOrder.values()) {
+    // **رسوم كل شحنات المرتجع بتتحسب**، مش أحسنها بس. بوسطة بتحاسب على كل
+    // شحنة اتعملت حتى لو اتلغت بعدين.
+    const orderRow = index.byNumber.get(String(order.order_number))?.row;
+    if (orderRow) {
+      const value = (orderRow.order_items ?? []).reduce(
+        (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
+        0
+      );
+      for (const d of shipments) addSide(orderRow.id, d, value);
+    }
+
     const best = pickReturnShipment(shipments);
     if (!best) continue;
 
@@ -451,14 +514,24 @@ export async function runBostaSync(opts: {
     // إن الحالة عندنا تبقى نفس اللي بوسطة بتعرضه بالظبط.
     const latest = await withDetailedState(merged.latest, apiKey, fetchImpl);
 
-    // شحنة واحدة؟ نمشي بالحسبة العادية. أكتر من واحدة؟ نبعت المجاميع
+    // **رسوم شحنات المرتجع والتبديل بتتضاف هنا.** دي بتتفصل عن مسار
+    // التوصيل عشان ماتلخبطش حالة الأوردر ورقم تتبعه — بس بوسطة بتحاسب
+    // عليها زي أي شحنة، فتكلفتها لازم تدخل تكلفة الأوردر. من غير ده كانت
+    // بتضيع بالكامل من حسبة الأرباح.
+    const side = sideTotals.get(row.id) ?? { fee: 0, cod: 0 };
+
+    // شحنة واحدة ومفيش شحنات جانبية؟ نمشي بالحسبة العادية.
+    // غير كده نبعت المجاميع.
     const decision = decideSync(
       latest,
       our,
       now,
       rules,
-      merged.count > 1
-        ? { cod: merged.totalCod, fee: merged.totalFee }
+      merged.count > 1 || side.fee > 0
+        ? {
+            cod: merged.totalCod + side.cod,
+            fee: Math.round((merged.totalFee + side.fee) * 100) / 100,
+          }
         : undefined
     );
 
