@@ -20,6 +20,7 @@ type OrderRow = {
   shipping_price: number;
   discount: number;
   bosta_shipping_cost: number;
+  bosta_fees_real: number | null;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
   customers: { full_name: string | null } | null;
@@ -164,7 +165,7 @@ export default async function StatsPage({
       supabase
         .from("orders")
         .select(
-          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_cod, bosta_collected, customers(full_name),
+          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, customers(full_name),
            order_items(quantity, sale_price_at_order, cost_price_at_order,
              product_variants(id, variant_name, products(name)))`
         )
