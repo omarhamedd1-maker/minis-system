@@ -31,6 +31,10 @@ export type PermissionKey =
   | "cash.view"
   | "cash.edit"
   | "finance.export"
+  | "tasks.view"
+  | "tasks.edit"
+  | "tasks.assign"
+  | "tasks.delete"
   | "admin.users"
   | "admin.settings";
 
@@ -93,6 +97,27 @@ export const PERMISSIONS: PermissionGroup[] = [
         label: "تسجيل فواتير ودفعات الموردين",
         hint: "بيأثر على الخزنة",
       },
+    ],
+  },
+  {
+    group: "التاسكات",
+    items: [
+      {
+        key: "tasks.view",
+        label: "عرض التاسكات",
+        hint: "من غيرها الموظف مايشوفش الشاشة خالص",
+      },
+      {
+        key: "tasks.edit",
+        label: "إضافة وتعديل التاسكات",
+        hint: "والخطوات والتعليقات",
+      },
+      {
+        key: "tasks.assign",
+        label: "إسناد التاسك لموظف",
+        hint: "من غيرها بيقدر يشتغل على اللي عليه بس",
+      },
+      { key: "tasks.delete", label: "حذف التاسكات" },
     ],
   },
   {

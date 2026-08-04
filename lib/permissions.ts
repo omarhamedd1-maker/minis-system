@@ -37,6 +37,9 @@ export const PRESETS: Preset[] = [
       "products.edit",
       "suppliers.view",
       "suppliers.edit",
+      "tasks.view",
+      "tasks.edit",
+      "tasks.assign",
     ],
   },
   {
@@ -49,6 +52,8 @@ export const PRESETS: Preset[] = [
       "ship.send",
       "ship.print",
       "ship.link",
+      "tasks.view",
+      "tasks.edit",
     ],
   },
   {

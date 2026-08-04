@@ -21,6 +21,9 @@ import { OrderItemRow } from "@/components/OrderItemRow";
 import { OrderItemCard } from "@/components/OrderItemCard";
 import { ReturnPanel } from "@/components/ReturnPanel";
 import { ExchangePanel } from "@/components/ExchangePanel";
+import { AddTask } from "@/components/AddTask";
+import { taskStatusBadge } from "@/lib/tasks";
+import { createTask } from "../../tasks/actions";
 import { BostaMark } from "@/components/BostaMark";
 import { isDeadShipment } from "@/lib/bosta/order-status";
 import { exceptionAdvice } from "@/lib/bosta/exception";
@@ -335,6 +338,44 @@ export default async function OrderDetailsPage({
         .maybeSingle();
       const f = data as { bosta_fees_real: number | null; bosta_ship_fee_real: number | null } | null;
       return f?.bosta_fees_real ? f : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  // تاسكات الأوردر — استعلام لوحده عشان لو جدول التاسكات لسه ماتعملش
+  // الصفحة تفضل شغالة عادي
+  const orderTasks = await (async () => {
+    if (!can(user, "tasks.view")) return null;
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id, title, status, assignee_name")
+        .eq("order_id", id)
+        .order("created_at", { ascending: true });
+      if (error) return null;
+
+      const { data: team } = await supabase
+        .from("app_users")
+        .select("id, full_name")
+        .eq("tenant_id", user.tenantId)
+        .eq("active", true)
+        .order("full_name");
+
+      return {
+        list: (data ?? []) as {
+          id: string;
+          title: string;
+          status: string | null;
+          assignee_name: string | null;
+        }[],
+        team: ((team ?? []) as { id: string; full_name: string | null }[]).map((u) => ({
+          id: u.id,
+          name: u.full_name ?? "بدون اسم",
+        })),
+        canEdit: can(user, "tasks.edit"),
+        canAssign: can(user, "tasks.assign"),
+      };
     } catch {
       return null;
     }
@@ -886,6 +927,55 @@ export default async function OrderDetailsPage({
                 quantity: i.quantity,
               }))}
             />
+          </div>
+        )}
+
+        {/* تاسكات الأوردر ده — «كلّم العميل» وكده */}
+        {orderTasks && (
+          <div className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-sm font-bold text-gray-900">تاسكات الأوردر</h2>
+              {orderTasks.canEdit && (
+                <AddTask
+                  team={orderTasks.team}
+                  canAssign={orderTasks.canAssign}
+                  action={createTask}
+                  orderId={order.id}
+                />
+              )}
+            </div>
+            {orderTasks.list.length === 0 ? (
+              <p className="text-xs text-gray-400">مفيش تاسكات على الأوردر ده</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {orderTasks.list.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      href={`/tasks/${t.id}`}
+                      className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2 hover:bg-gray-100"
+                    >
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] ${taskStatusBadge(t.status).className}`}
+                      >
+                        {taskStatusBadge(t.status).label}
+                      </span>
+                      <span
+                        className={`min-w-0 flex-1 truncate text-xs ${
+                          t.status === "done" ? "text-gray-400 line-through" : "text-gray-800"
+                        }`}
+                      >
+                        {t.title}
+                      </span>
+                      {t.assignee_name && (
+                        <span className="shrink-0 text-[10px] text-gray-500">
+                          {t.assignee_name}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
