@@ -15,12 +15,15 @@ const lexend = Lexend({
 });
 
 export const metadata: Metadata = {
-  title: "Minis System",
-  description: "نظام إدارة تشغيل Minis",
+  title: "مينيز",
+  description: "نظام إدارة تشغيل مينيز",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Minis System",
+    // **ده اللي الآيفون بيكتبه تحت الإشعار** — اسم التطبيق زي ما هو متسجّل
+    // على الشاشة الرئيسية. كان "Minis System" فكل إشعار بيجي وتحته السطر ده.
+    // (وعلى أندرويد الاسم بيتاخد من `manifest.ts`، والاتنين بقوا بالعربي.)
+    title: "مينيز",
     statusBarStyle: "default",
   },
 };
