@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { realFees, realFeesBreakdown } from "./real-fees";
+import { bundleCovered, realFees, realFeesBreakdown } from "./real-fees";
+
+describe("الباقة غطّت الشحن ولا لأ", () => {
+  it("أوردر ١٣٢٠: شحن ٨٨ واتخصم ٢٢٫٧٨ = الباقة غطّته", () => {
+    expect(bundleCovered(22.78, 88)).toBe(true);
+  });
+
+  it("أوردر ١٠٧٤: شحن ١١٣ واتخصم ١٣٥٫٦٦ = الباقة ماغطّتوش", () => {
+    expect(bundleCovered(135.66, 113)).toBe(false);
+  });
+
+  it("الأرقام الناقصة مابتتحسبش تغطية", () => {
+    expect(bundleCovered(null, 88)).toBe(false);
+    expect(bundleCovered(22.78, null)).toBe(false);
+    expect(bundleCovered(0, 88)).toBe(false);
+  });
+});
 
 // كشف حساب أوردر ١٠٧٤ الحقيقي زي ما بوسطة ردّت بيه بالظبط
 const CYCLE_1074 = {
