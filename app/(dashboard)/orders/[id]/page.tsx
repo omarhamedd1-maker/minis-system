@@ -20,6 +20,7 @@ import { BackLink } from "@/components/BackLink";
 import { OrderItemRow } from "@/components/OrderItemRow";
 import { OrderItemCard } from "@/components/OrderItemCard";
 import { ReturnPanel } from "@/components/ReturnPanel";
+import { ExchangePanel } from "@/components/ExchangePanel";
 import { BostaMark } from "@/components/BostaMark";
 import { isDeadShipment } from "@/lib/bosta/order-status";
 import { exceptionAdvice } from "@/lib/bosta/exception";
@@ -35,6 +36,7 @@ import {
   sendOrderToBosta,
   toggleOrderArchive,
   saveReturnedItems,
+  createExchangeShipment,
   createReturnShipment,
   updatePayment,
   updateDiscount,
@@ -333,6 +335,23 @@ export default async function OrderDetailsPage({
         .maybeSingle();
       const f = data as { bosta_fees_real: number | null; bosta_ship_fee_real: number | null } | null;
       return f?.bosta_fees_real ? f : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  // شحنة التبديل — استعلام لوحده لنفس السبب: الأعمدة بتتضاف بملف SQL
+  const exchange = await (async () => {
+    try {
+      const { data } = await supabase
+        .from("orders")
+        .select("exchange_tracking, exchange_note")
+        .eq("id", id)
+        .maybeSingle();
+      return data as {
+        exchange_tracking: string | null;
+        exchange_note: string | null;
+      } | null;
     } catch {
       return null;
     }
@@ -852,6 +871,23 @@ export default async function OrderDetailsPage({
               }))}
             />
           )}
+
+        {/* التبديل — نفس شرط المرتجع: الأوردر لازم يكون اتسلّم */}
+        {order.order_status === "delivered" && isAdmin && canSend && (
+          <div className="mt-4">
+            <ExchangePanel
+              orderId={order.id}
+              exchangeTracking={exchange?.exchange_tracking ?? null}
+              exchangeNote={exchange?.exchange_note ?? null}
+              shipmentAction={createExchangeShipment}
+              items={order.order_items.map((i) => ({
+                id: i.id,
+                name: i.product_variants?.products?.name ?? "منتج",
+                quantity: i.quantity,
+              }))}
+            />
+          </div>
+        )}
 
         {/* ===== فلوس المرتجع =====
             بوسطة مابتدفعش للعميل — إنت اللي بتحوّله. الكارت ده بيقولك المبلغ

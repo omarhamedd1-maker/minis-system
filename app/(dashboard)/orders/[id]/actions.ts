@@ -9,6 +9,7 @@ import { logActivity } from "@/lib/activity";
 import {
   loadBostaCities,
   runBostaCreate,
+  runBostaExchange,
   runBostaReturn,
 } from "@/lib/bosta/create";
 import { runBostaUpdateCod } from "@/lib/bosta/awb";
@@ -1432,4 +1433,79 @@ export async function bulkConfirmCashReceived(
   );
   revalidatePath("/orders");
   return { ok: true, done: ids.length };
+}
+
+// شحنة التبديل: بوسطة توصّل الجديد وتاخد القديم في نفس الرحلة
+export async function createExchangeShipment(formData: FormData) {
+  const me = await requirePermission("ship.send");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) redirect("/orders");
+
+  const supabase = createAdminClient();
+
+  // بنقرا الكميات من الفورم ونحوّلها لبنود بأسماء المنتجات
+  const { data: rows } = await supabase
+    .from("order_items")
+    .select("id, product_variants(products(name, name_ar))")
+    .eq("order_id", orderId);
+
+  const named = (
+    (rows ?? []) as unknown as {
+      id: string;
+      product_variants: {
+        products: { name: string | null; name_ar: string | null } | null;
+      } | null;
+    }[]
+  ).map((r) => ({
+    id: r.id,
+    name:
+      r.product_variants?.products?.name_ar ||
+      r.product_variants?.products?.name ||
+      null,
+  }));
+
+  const lines = (prefix: string) =>
+    named
+      .map((r) => ({
+        quantity: Number(formData.get(`${prefix}_${r.id}`) ?? 0),
+        productName: r.name,
+      }))
+      .filter((l) => l.quantity > 0);
+
+  const outgoing = lines("out");
+  const incoming = lines("back");
+  const cod = Number(formData.get("exchange_cod") ?? 0);
+
+  let ok = false;
+  let message = "معرفناش نعمل شحنة التبديل";
+  try {
+    const res = await runBostaExchange({
+      db: supabase,
+      orderId,
+      outgoing,
+      incoming,
+      cod: Number.isFinite(cod) ? cod : 0,
+    });
+    if (res.ok) ok = true;
+    else message = res.error;
+  } catch (e) {
+    message = e instanceof Error ? e.message : "الاتصال ببوسطة فشل — جرّب تاني";
+  }
+
+  if (ok) {
+    await logActivity(
+      me,
+      "bosta.exchange",
+      `عمل شحنة تبديل لأوردر ${await orderNo(supabase, orderId)} — بوسطة هتوصّل الجديد وتاخد القديم`,
+      orderId
+    );
+  }
+
+  revalidatePath(`/orders/${orderId}`);
+  redirect(
+    ok
+      ? `/orders/${orderId}?saved=` +
+          encodeURIComponent("اتعملت شحنة التبديل — بوسطة هتوصّل الجديد وتاخد القديم")
+      : `/orders/${orderId}?error=` + encodeURIComponent(message)
+  );
 }

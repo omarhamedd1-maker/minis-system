@@ -1,8 +1,9 @@
 // ==========================================================================
 // عمل شحنات عند بوسطة — الملف اللي بيوصّل القرار بقاعدة البيانات
 // --------------------------------------------------------------------------
-// فيه عمليتين: `runBostaCreate` بتبعت الأوردر للعميل، و`runBostaReturn`
-// بتخلي بوسطة تسحب المرتجع من عنده.
+// فيه تلات عمليات: `runBostaCreate` بتبعت الأوردر للعميل، و`runBostaReturn`
+// بتخلي بوسطة تسحب المرتجع من عنده، و`runBostaExchange` بتوصّل الجديد وتاخد
+// القديم في نفس الرحلة.
 //
 // القرار في build-shipment.ts والمطابقة في cities.ts — هنا بنقرا الأوردر،
 // نجيب مفتاح بيزنسه هو، نبعت، ونحفظ رقم التتبع. وضع التجربة بيعمل كل حاجة
@@ -15,6 +16,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  buildExchangeShipment,
   buildReturnShipment,
   buildShipment,
   type ShipmentCustomer,
@@ -425,6 +427,172 @@ export async function runBostaReturn(opts: {
   const { error: updateError } = await db
     .from("orders")
     .update({ return_tracking: tracking })
+    .eq("id", orderId);
+
+  return {
+    ok: true,
+    tracking,
+    city: s.city.name,
+    usedVariant,
+    ...(updateError
+      ? {
+          warning:
+            "الشحنة اتعملت بس معرفناش نحفظ رقم التتبع: " + updateError.message,
+        }
+      : {}),
+  };
+}
+
+// ==========================================================================
+// شحنة التبديل — بوسطة توصّل الجديد وتاخد القديم في نفس الرحلة
+// ==========================================================================
+
+const EXCHANGE_FIELDS = `id, order_number, bosta_tracking, exchange_tracking, tenant_id,
+  customers(full_name, phone, address, city, zone, street, building, floor, apartment, landmark)`;
+
+type ExchangeRow = {
+  id: string;
+  order_number: string | number | null;
+  bosta_tracking: string | null;
+  exchange_tracking: string | null;
+  tenant_id: string;
+  customers: ShipmentCustomer | null;
+};
+
+export type ExchangeLine = { quantity: number; productName: string | null };
+
+export type ExchangeResult =
+  | { ok: true; already: true; tracking: string }
+  | {
+      ok: true;
+      dry: true;
+      cod: number;
+      outCount: number;
+      inCount: number;
+      city: string;
+      payload: Record<string, unknown>;
+    }
+  | { ok: true; tracking: string; city: string; usedVariant: string; warning?: string }
+  | { ok: false; error: string; attempts?: CreateAttempt[] };
+
+export async function runBostaExchange(opts: {
+  db: SupabaseClient;
+  orderId: string;
+  /** الرايح للعميل */
+  outgoing: ExchangeLine[];
+  /** الراجع منه */
+  incoming: ExchangeLine[];
+  /** فرق السعر — صفر يعني مفيش فرق */
+  cod?: number | null;
+  dry?: boolean;
+  fetchImpl?: typeof fetch;
+  cities?: BostaCity[] | null;
+}): Promise<ExchangeResult> {
+  const { db, orderId, outgoing, incoming, cod, dry = false, fetchImpl } = opts;
+
+  const { data, error } = await db
+    .from("orders")
+    .select(EXCHANGE_FIELDS)
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (error) return { ok: false, error: "معرفناش نقرا الأوردر: " + error.message };
+  if (!data) return { ok: false, error: "الأوردر مش موجود" };
+
+  const order = data as unknown as ExchangeRow;
+
+  // عليه شحنة تبديل خلاص؟ مانعملش تانية — شحنتين تبديل = رسوم مرتين وعميل ملخبط
+  if (order.exchange_tracking) {
+    return { ok: true, already: true, tracking: order.exchange_tracking };
+  }
+
+  const creds = await loadTenantCredentials(db, order.tenant_id);
+  if (!creds.bostaApiKey) {
+    return { ok: false, error: "البيزنس ده لسه مربطش حساب بوسطة" };
+  }
+
+  let cities = opts.cities ?? null;
+  if (!cities) {
+    try {
+      cities = await fetchCities(creds.bostaApiKey, fetchImpl);
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "معرفناش نجيب المدن من بوسطة",
+      };
+    }
+  }
+
+  const customer = order.customers;
+  const city =
+    (customer?.city ? matchCity(cities, customer.city) : null) ??
+    matchCity(
+      cities,
+      `${customer?.city ?? ""} ${customer?.zone ?? ""} ${customer?.address ?? ""}`
+    );
+  const zoneText = `${customer?.zone ?? ""} ${customer?.address ?? ""}`;
+  const zone =
+    matchZone(city?.zones, zoneText) ?? matchZone(city?.districts, zoneText);
+
+  const result = buildExchangeShipment({
+    orderNumber: order.order_number,
+    originalTracking: order.bosta_tracking,
+    outgoing,
+    incoming,
+    cod,
+    customer,
+    city,
+    zone,
+    pickupAddressId: creds.bostaPickupAddressId,
+  });
+
+  if (!result.ok) return { ok: false, error: result.error };
+  const s = result.shipment;
+
+  if (dry) {
+    return {
+      ok: true,
+      dry: true,
+      cod: s.cod,
+      outCount: s.outCount,
+      inCount: s.inCount,
+      city: s.city.name,
+      payload: { ...s.base, dropOffAddress: s.variants[0].dropOffAddress },
+    };
+  }
+
+  const attempts: CreateAttempt[] = [];
+  let tracking: string | null = null;
+  let usedVariant = "";
+
+  for (const v of s.variants) {
+    const res = await createDelivery(
+      creds.bostaApiKey,
+      { ...s.base, dropOffAddress: v.dropOffAddress },
+      fetchImpl
+    );
+    if (res.ok && res.trackingNumber) {
+      tracking = res.trackingNumber;
+      usedVariant = v.name;
+      break;
+    }
+    attempts.push({ variant: v.name, status: res.status, message: res.message });
+  }
+
+  if (!tracking) {
+    return {
+      ok: false,
+      error: attempts[0]?.message || "بوسطة رفضت شحنة التبديل",
+      attempts,
+    };
+  }
+
+  const { error: updateError } = await db
+    .from("orders")
+    .update({
+      exchange_tracking: tracking,
+      exchange_note: `رايح: ${s.outDescription} — راجع: ${s.inDescription}`,
+    })
     .eq("id", orderId);
 
   return {

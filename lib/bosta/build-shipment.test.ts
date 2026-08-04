@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAddressLine,
+  buildExchangeShipment,
   buildShipment,
   computeCod,
   type ShipmentCustomer,
@@ -219,5 +220,89 @@ describe("أسباب الرفض", () => {
 
   it("أوردر من غير عميل", () => {
     expect(reject({ customer: null })).toContain("مالوش عميل");
+  });
+});
+
+describe("شحنة التبديل", () => {
+  const exchange = (over: Record<string, unknown> = {}) =>
+    buildExchangeShipment({
+      orderNumber: "1371",
+      originalTracking: "102657691",
+      outgoing: [{ quantity: 1, productName: "مرايه كبيرة" }],
+      incoming: [{ quantity: 1, productName: "مرايه صغيرة" }],
+      customer,
+      city: cairo,
+      zone: null,
+      ...over,
+    });
+
+  const okShipment = (over: Record<string, unknown> = {}) => {
+    const r = exchange(over);
+    if (!r.ok) throw new Error("المفروض تنجح: " + r.error);
+    return r.shipment;
+  };
+
+  it("نوعها ٣٠ عند بوسطة", () => {
+    expect(okShipment().base.type).toBe(30);
+  });
+
+  it("بتوصف الرايح والراجع كل واحد لوحده", () => {
+    const s = okShipment();
+    expect(s.base.specs).toMatchObject({
+      packageDetails: { itemsCount: 1, description: "مرايه كبيرة × 1" },
+    });
+    expect(s.base.returnSpecs).toMatchObject({
+      packageDetails: { itemsCount: 1, description: "مرايه صغيرة × 1" },
+    });
+  });
+
+  it("**التحصيل فرق السعر بس، والافتراضي صفر**", () => {
+    // الحاجة القديمة مدفوعة خلاص — مانحصّلش سعر الأوردر تاني
+    expect(okShipment().cod).toBe(0);
+    expect(okShipment({ cod: 150 }).cod).toBe(150);
+  });
+
+  it("مابينزلش تحت الصفر — بوسطة مابتدفعش للعميل", () => {
+    expect(okShipment({ cod: -200 }).cod).toBe(0);
+  });
+
+  it("مفيش رايح = مش تبديل", () => {
+    const r = exchange({ outgoing: [] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("هيروح للعميل");
+  });
+
+  it("مفيش راجع = ده إرسال عادي مش تبديل", () => {
+    const r = exchange({ incoming: [] });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("إرسال عادي");
+  });
+
+  it("الكميات بصفر بتتشال زي المرتجع", () => {
+    const r = exchange({ outgoing: [{ quantity: 0, productName: "مرايه" }] });
+    expect(r.ok).toBe(false);
+  });
+
+  it("بترفض بنفس أسباب الإرسال: مفيش عنوان أو مدينة", () => {
+    const noCity = exchange({ city: null });
+    expect(noCity.ok).toBe(false);
+    const noAddress = exchange({
+      customer: { ...customer, address: null, street: null },
+    });
+    expect(noAddress.ok).toBe(false);
+  });
+
+  it("بتربطها بالشحنة الأصلية وبتديها مرجع مميز", () => {
+    const s = okShipment();
+    expect(s.base.originalTrackingNumber).toBe("102657691");
+    expect(s.base.businessReference).toBe("EXC-1371");
+  });
+
+  it("بتجرّب نفس أشكال العنوان بالترتيب", () => {
+    expect(okShipment().variants.map((v) => v.name)).toEqual([
+      "city+zoneId",
+      "city-only",
+      "cityId+city",
+    ]);
   });
 });
