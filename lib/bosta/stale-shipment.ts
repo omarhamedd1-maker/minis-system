@@ -78,7 +78,6 @@ export function stalePickupMessage(a: {
   customerName: string | null;
   days: number;
   milestone: number;
-  siteUrl?: string | null;
 }): string {
   const last = a.milestone === STALE_MILESTONES[STALE_MILESTONES.length - 1];
   const left = BOSTA_ARCHIVES_AFTER_DAYS - a.days;
@@ -103,6 +102,5 @@ export function stalePickupMessage(a: {
     lines.push("كلّم بوسطة واطلب المندوب.");
   }
 
-  if (a.siteUrl) lines.push(`${a.siteUrl}/orders?status=ready`);
   return lines.join("\n");
 }

@@ -77,7 +77,6 @@ export function codMismatchMessage(a: {
   ours: number;
   bosta: number;
   fixable: boolean;
-  siteUrl?: string | null;
 }): string {
   const lines = alertHead(
     "💰",
@@ -95,6 +94,5 @@ export function codMismatchMessage(a: {
   lines.push(
     "ولو الفرق مقصود (شحنة جزئية مثلًا) اعمله تجاهل من جوّه الأوردر."
   );
-  if (a.siteUrl) lines.push(`${a.siteUrl}/orders/`);
   return lines.join("\n");
 }

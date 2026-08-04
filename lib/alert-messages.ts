@@ -18,13 +18,19 @@ import { exceptionAdvice } from "./bosta/exception";
 /**
  * أول سطرين في أي إشعار.
  * لو مافيش اسم بنسيب السطر فاضي عشان الشكل مايختلفش والجسم يفضل مفصول.
+ *
+ * ⚠️ **الإيموجي في آخر السطر مش أوله — وده مقصود.**
+ * التليفون بيحدد اتجاه كل سطر من **أول حرف حقيقي فيه**. الإيموجي مالوش
+ * اتجاه، فالسطر اللي بيبدأ بيه بيتحسب إنجليزي ويترمي على الشمال — والباقي
+ * عربي على اليمين. النتيجة كانت إشعار نصه شمال ونصه يمين.
+ * أول حرف عربي = السطر كله يمين زي باقي الإشعار.
  */
 export function alertHead(
   icon: string,
   headline: string,
   customerName: string | null | undefined
 ): string[] {
-  return [`${icon} <b>${headline}</b>`, String(customerName ?? "").trim()];
+  return [`<b>${headline}</b> ${icon}`.trim(), String(customerName ?? "").trim()];
 }
 
 export type FailedDeliveryAlert = {
@@ -37,7 +43,6 @@ export type FailedDeliveryAlert = {
   arrived: boolean;
   /** بوسطة واقفة ومستنية قرار مننا — مش راجعة (لسه) */
   waiting?: boolean;
-  siteUrl?: string | null;
 };
 
 /**
@@ -67,16 +72,12 @@ export function failedDeliveryMessage(a: FailedDeliveryAlert): string {
         ? "البضاعة رجعت — راجع المخزون والفلوس."
         : "كلّم العميل قبل ما الشحنة ترجع المخزن."
   );
-  if (a.siteUrl) {
-    lines.push(`${a.siteUrl}/orders?status=${a.arrived ? "returned" : "returning"}`);
-  }
   return lines.join("\n");
 }
 
 /** رسالة "المزامنة واقفة" — دي مالهاش عميل، فمفيش سطر تاني */
-export function syncDownMessage(detail: string, siteUrl?: string | null): string {
-  const lines = ["🔴 <b>المزامنة مع بوسطة واقفة</b>", "", detail, ""];
+export function syncDownMessage(detail: string): string {
+  const lines = ["<b>المزامنة مع بوسطة واقفة</b> 🔴", "", detail, ""];
   lines.push("الحالات والتحصيل مش بيتحدّثوا — الأرقام في السيستم قديمة.");
-  if (siteUrl) lines.push(siteUrl);
   return lines.join("\n");
 }
