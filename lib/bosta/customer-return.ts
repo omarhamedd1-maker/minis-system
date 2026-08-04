@@ -59,6 +59,11 @@ export function isCustomerReturn(d: ReturnDelivery): boolean {
   return d.type?.code === DELIVERY_TYPES.customerReturn;
 }
 
+/** شحنة تبديل — بوسطة بتوصّل الجديد وتاخد القديم في نفس الرحلة */
+export function isExchange(d: ReturnDelivery): boolean {
+  return d.type?.code === DELIVERY_TYPES.exchange;
+}
+
 /**
  * شحنة المرتجع دي اتلغت أو بوسطة وقفتها (٤٨ · ١٠٤) — يعني **مش جاية**.
  * الأوردر مايفضلش مستنيها.

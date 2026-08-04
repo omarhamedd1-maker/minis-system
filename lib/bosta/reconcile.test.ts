@@ -297,3 +297,25 @@ describe("مقارنة التواريخ بالوقت مش بالنص", () => {
     expect(d.changes).toEqual({});
   });
 });
+
+describe("رقم الأوردر من مرجع الشحنة", () => {
+  it("شحنة المرتجع والتبديل بتلاقي أوردرها", () => {
+    // من غير ده الشحنتين دول بيتحسبوا "مش مربوطين" ورسومهم بتضيع خالص
+    expect(deliveryOrderNumber({ businessReference: "RET-1371" })).toBe("1371");
+    expect(deliveryOrderNumber({ businessReference: "EXC-1371" })).toBe("1371");
+  });
+
+  it("الشحنة العادية زي ما هي", () => {
+    expect(deliveryOrderNumber({ businessReference: "1371" })).toBe("1371");
+    expect(deliveryOrderNumber({ businessReference: "d8rtv0-uq:#1336" })).toBe("1336");
+  });
+
+  it("رقم شوبيفاي بيكسب لو موجود", () => {
+    expect(
+      deliveryOrderNumber({
+        businessReference: "RET-1371",
+        shopifyInfo: { orderNumber: "1400" },
+      })
+    ).toBe("1400");
+  });
+});
