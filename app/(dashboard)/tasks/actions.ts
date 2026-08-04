@@ -8,6 +8,12 @@ import { requirePermission } from "@/lib/permissions";
 import { notifyAll } from "@/lib/push/notify";
 import { allStepsDone } from "@/lib/tasks";
 
+/** بنقبل القيم اللي نعرفها بس — أي حاجة تانية = مش متكرر */
+function repeatKind(v: FormDataEntryValue | null): string | null {
+  const s = String(v ?? "");
+  return ["daily", "weekly", "monthly"].includes(s) ? s : null;
+}
+
 /** رسالة الخطأ بترجع في الرابط زي باقي الشاشات */
 function back(taskId?: string, msg?: string) {
   const base = taskId ? `/tasks/${taskId}` : "/tasks";
@@ -40,6 +46,10 @@ export async function createTask(formData: FormData) {
       body: String(formData.get("body") ?? "").trim() || null,
       priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
       due_on: String(formData.get("due_on") ?? "").trim() || null,
+      // **المتكرر من غير ميعاد مالوش معنى** — مافيش "الجاي" من غير "الحالي"
+      repeat_kind: String(formData.get("due_on") ?? "").trim()
+        ? repeatKind(formData.get("repeat_kind"))
+        : null,
       order_id: String(formData.get("order_id") ?? "").trim() || null,
       assignee_id: assigneeId,
       assignee_name: assigneeName,
@@ -100,6 +110,9 @@ export async function updateTask(formData: FormData) {
   }
   if (formData.has("due_on")) {
     patch.due_on = String(formData.get("due_on") ?? "").trim() || null;
+  }
+  if (formData.has("repeat_kind")) {
+    patch.repeat_kind = patch.due_on ? repeatKind(formData.get("repeat_kind")) : null;
   }
 
   if (Object.keys(patch).length > 0) {

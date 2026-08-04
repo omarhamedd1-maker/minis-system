@@ -95,6 +95,24 @@ export function AddTask({
         </label>
       </div>
 
+      <label className="block text-[11px] text-gray-500">
+        بيتكرر؟
+        <select
+          name="repeat_kind"
+          defaultValue=""
+          className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+        >
+          <option value="">مرة واحدة</option>
+          <option value="daily">كل يوم</option>
+          <option value="weekly">كل أسبوع</option>
+          <option value="monthly">كل شهر</option>
+        </select>
+        <span className="mt-0.5 block text-[10px] text-gray-400">
+          المتكرر لازم يبقى ليه ميعاد، والنسخة الجاية مابتتعملش غير لما اللي
+          قبلها تخلص
+        </span>
+      </label>
+
       {canAssign && (
         <label className="block text-[11px] text-gray-500">
           مين عليه التاسك

@@ -122,3 +122,81 @@ export function stepsProgress(
 export function allStepsDone(steps: { done: boolean }[]): boolean {
   return steps.length > 0 && steps.every((s) => s.done);
 }
+
+// ==========================================================================
+// التاسك اللي بيتكرر
+// ==========================================================================
+
+export type RepeatKind = "daily" | "weekly" | "monthly";
+
+export const REPEAT_KINDS: { key: RepeatKind; label: string }[] = [
+  { key: "daily", label: "كل يوم" },
+  { key: "weekly", label: "كل أسبوع" },
+  { key: "monthly", label: "كل شهر" },
+];
+
+export function repeatLabel(kind: string | null | undefined): string | null {
+  return REPEAT_KINDS.find((r) => r.key === kind)?.label ?? null;
+}
+
+/**
+ * الميعاد الجاي بعد ميعاد.
+ *
+ * الشهري بيمشي بالشهر مش بـ٣٠ يوم، و**اليوم اللي مش موجود بينزل لآخر يوم
+ * في الشهر**: ٣١ يناير + شهر = ٢٨ فبراير مش ٣ مارس. جافاسكريبت بتلف لوحدها
+ * للشهر اللي بعده وده بيخلّي تاسك آخر الشهر يهرب يوم كل شهر.
+ */
+export function nextDue(due: string, kind: RepeatKind): string {
+  const [y, m, d] = String(due).slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return due;
+
+  if (kind === "daily" || kind === "weekly") {
+    const t = Date.UTC(y, m - 1, d) + (kind === "daily" ? 1 : 7) * 86_400_000;
+    return new Date(t).toISOString().slice(0, 10);
+  }
+
+  // شهري
+  const ny = m === 12 ? y + 1 : y;
+  const nm = m === 12 ? 1 : m + 1;
+  const lastDay = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
+  const day = Math.min(d, lastDay);
+  return `${ny}-${String(nm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export type RepeatingTask = {
+  id: string;
+  due_on: string | null;
+  repeat_kind: string | null;
+  status: string | null;
+};
+
+/**
+ * أنهي تاسك متكرر محتاج نسخة جديدة دلوقتي؟
+ *
+ * الشرطين:
+ *   ١. ميعاد النسخة الجاية وصل (أو فات)
+ *   ٢. **مفيش نسخة مفتوحة منه** — من غير ده التاسك اليومي اللي نسيته أسبوع
+ *      بيولّد ٧ نسخ ويغرق اللوحة
+ *
+ * `openByFamily` = عدد النسخ المفتوحة لكل عيلة (الأصل ونسخه).
+ */
+export function dueForRepeat(
+  tasks: RepeatingTask[],
+  openByFamily: Map<string, number>,
+  today: string
+): { task: RepeatingTask; due: string }[] {
+  const out: { task: RepeatingTask; due: string }[] = [];
+
+  for (const t of tasks) {
+    const kind = t.repeat_kind as RepeatKind | null;
+    if (!kind || !REPEAT_KINDS.some((r) => r.key === kind)) continue;
+    // التاسك المتكرر لازم يبقى ليه ميعاد — من غيره مفيش معنى لـ"الجاي"
+    if (!t.due_on) continue;
+    if ((openByFamily.get(t.id) ?? 0) > 0) continue;
+
+    const due = nextDue(String(t.due_on).slice(0, 10), kind);
+    if (due <= today) out.push({ task: t, due });
+  }
+
+  return out;
+}

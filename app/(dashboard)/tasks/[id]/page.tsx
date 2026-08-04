@@ -4,10 +4,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cairoToday, formatDate } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
 import {
+  REPEAT_KINDS,
   TASK_PRIORITIES,
   TASK_STATUSES,
   dueLabel,
   isOverdue,
+  repeatLabel,
   stepsProgress,
   taskStatusBadge,
 } from "@/lib/tasks";
@@ -38,6 +40,8 @@ type TaskDetail = {
   assignee_id: string | null;
   assignee_name: string | null;
   order_id: string | null;
+  repeat_kind: string | null;
+  repeat_parent_id: string | null;
   task_steps: { id: string; title: string; done: boolean; position: number }[];
   task_comments: { id: string; author_name: string; body: string; created_at: string }[];
 };
@@ -62,7 +66,7 @@ export default async function TaskPage({
     .from("tasks")
     .select(
       `id, title, body, status, priority, due_on, created_at, created_by, done_at, done_by,
-       assignee_id, assignee_name, order_id,
+       assignee_id, assignee_name, order_id, repeat_kind, repeat_parent_id,
        task_steps(id, title, done, position),
        task_comments(id, author_name, body, created_at)`
     )
@@ -122,6 +126,14 @@ export default async function TaskPage({
         )}
         {task.assignee_name && (
           <span className="text-xs text-gray-600">على {task.assignee_name}</span>
+        )}
+        {repeatLabel(task.repeat_kind) && (
+          <span className="rounded bg-violet-50 px-2 py-0.5 text-xs text-violet-700">
+            بيتكرر {repeatLabel(task.repeat_kind)}
+          </span>
+        )}
+        {task.repeat_parent_id && (
+          <span className="text-[10px] text-gray-400">نسخة من تاسك متكرر</span>
         )}
         {task.order_id && (
           <Link
@@ -355,6 +367,21 @@ export default async function TaskPage({
                   defaultValue={task.due_on ?? ""}
                   className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
                 />
+              </label>
+              <label className="text-[11px] text-gray-500">
+                بيتكرر
+                <select
+                  name="repeat_kind"
+                  defaultValue={task.repeat_kind ?? ""}
+                  className="mt-1 block rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                >
+                  <option value="">مرة واحدة</option>
+                  {REPEAT_KINDS.map((r) => (
+                    <option key={r.key} value={r.key}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="text-[11px] text-gray-500">
                 الأولوية

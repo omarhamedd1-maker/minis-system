@@ -6,6 +6,10 @@ import {
   sortTasks,
   stepsProgress,
   taskStatusBadge,
+  dueForRepeat,
+  nextDue,
+  repeatLabel,
+  type RepeatingTask,
 } from "./tasks";
 
 const TODAY = "2026-08-04";
@@ -125,5 +129,74 @@ describe("شريحة الحالة", () => {
   it("الحالة الغريبة مابتكسرش الشاشة", () => {
     expect(taskStatusBadge("whatever").label).toBe("whatever");
     expect(taskStatusBadge(null).label).toBe("مفتوح");
+  });
+});
+
+describe("الميعاد الجاي للتاسك المتكرر", () => {
+  it("يومي وأسبوعي", () => {
+    expect(nextDue("2026-08-04", "daily")).toBe("2026-08-05");
+    expect(nextDue("2026-08-04", "weekly")).toBe("2026-08-11");
+  });
+
+  it("بيعدّي على آخر الشهر صح", () => {
+    expect(nextDue("2026-08-31", "daily")).toBe("2026-09-01");
+    expect(nextDue("2026-12-28", "weekly")).toBe("2027-01-04");
+  });
+
+  it("الشهري بيمشي بالشهر مش بـ٣٠ يوم", () => {
+    expect(nextDue("2026-08-15", "monthly")).toBe("2026-09-15");
+    expect(nextDue("2026-12-15", "monthly")).toBe("2027-01-15");
+  });
+
+  it("**٣١ يناير + شهر = آخر فبراير، مش ٣ مارس**", () => {
+    // جافاسكريبت بتلف لوحدها للشهر اللي بعده، وده بيخلّي تاسك آخر الشهر
+    // يهرب يوم كل مرة
+    expect(nextDue("2026-01-31", "monthly")).toBe("2026-02-28");
+    expect(nextDue("2026-03-31", "monthly")).toBe("2026-04-30");
+  });
+
+  it("التاريخ البايظ بيرجع زي ما هو من غير ما يكسر", () => {
+    expect(nextDue("مش تاريخ", "daily")).toBe("مش تاريخ");
+  });
+});
+
+describe("مين محتاج نسخة جديدة", () => {
+  const t = (over: Partial<RepeatingTask> & { id: string }): RepeatingTask => ({
+    due_on: "2026-08-01",
+    repeat_kind: "daily",
+    status: "done",
+    ...over,
+  });
+
+  it("ميعاده وصل ومفيش نسخة مفتوحة = يتولّد", () => {
+    const out = dueForRepeat([t({ id: "a" })], new Map(), TODAY);
+    expect(out).toHaveLength(1);
+    expect(out[0].due).toBe("2026-08-02");
+  });
+
+  it("**فيه نسخة مفتوحة = مايتولّدش**", () => {
+    // من غير ده التاسك اليومي اللي نسيته أسبوع بيولّد ٧ نسخ ويغرق اللوحة
+    const out = dueForRepeat([t({ id: "a" })], new Map([["a", 1]]), TODAY);
+    expect(out).toHaveLength(0);
+  });
+
+  it("ميعاده لسه مجاش = مايتولّدش", () => {
+    const out = dueForRepeat(
+      [t({ id: "a", due_on: "2026-08-20" })],
+      new Map(),
+      TODAY
+    );
+    expect(out).toHaveLength(0);
+  });
+
+  it("مش متكرر أو مالوش ميعاد = بيتعدّى", () => {
+    expect(dueForRepeat([t({ id: "a", repeat_kind: null })], new Map(), TODAY)).toHaveLength(0);
+    expect(dueForRepeat([t({ id: "b", due_on: null })], new Map(), TODAY)).toHaveLength(0);
+    expect(dueForRepeat([t({ id: "c", repeat_kind: "كل ساعة" })], new Map(), TODAY)).toHaveLength(0);
+  });
+
+  it("بيسمّي التكرار بالعربي", () => {
+    expect(repeatLabel("weekly")).toBe("كل أسبوع");
+    expect(repeatLabel(null)).toBeNull();
   });
 });
