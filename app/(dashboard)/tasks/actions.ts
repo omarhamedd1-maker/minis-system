@@ -9,6 +9,38 @@ import { notifyAll } from "@/lib/push/notify";
 import { allStepsDone } from "@/lib/tasks";
 import { checkFile, ownsFile, storagePath, type TaskFile } from "@/lib/task-files";
 
+/**
+ * بيقرا كل اللي اتختاروا من الفورم ويجيب أساميهم.
+ * الفورم بيبعت `assignee_id` أكتر من مرة (multiple select)، فبناخدهم كلهم.
+ */
+async function readAssignees(
+  db: ReturnType<typeof createAdminClient>,
+  formData: FormData,
+  tenantId: string
+): Promise<{ user_id: string; user_name: string | null }[]> {
+  const ids = [
+    ...new Set(
+      formData
+        .getAll("assignee_id")
+        .map((v) => String(v ?? "").trim())
+        .filter(Boolean)
+    ),
+  ];
+  if (ids.length === 0) return [];
+
+  // **بنتأكد إنهم من نفس البيزنس** — مانسندش تاسك لحد من بيزنس تاني
+  const { data } = await db
+    .from("app_users")
+    .select("id, full_name")
+    .eq("tenant_id", tenantId)
+    .in("id", ids);
+
+  return ((data ?? []) as { id: string; full_name: string | null }[]).map((u) => ({
+    user_id: u.id,
+    user_name: u.full_name,
+  }));
+}
+
 /** بنقبل القيم اللي نعرفها بس — أي حاجة تانية = مش متكرر */
 function repeatKind(v: FormDataEntryValue | null): string | null {
   const s = String(v ?? "");
@@ -30,18 +62,7 @@ export async function createTask(formData: FormData) {
   if (!title) back(undefined, "اكتب عنوان التاسك الأول");
 
   const db = createAdminClient();
-  const assigneeId = String(formData.get("assignee_id") ?? "").trim() || null;
-
-  // الاسم بيتخزّن جنب الرقم عشان لو المستخدم اتشال التاسك يفضل مفهوم
-  let assigneeName: string | null = null;
-  if (assigneeId) {
-    const { data } = await db
-      .from("app_users")
-      .select("full_name")
-      .eq("id", assigneeId)
-      .maybeSingle();
-    assigneeName = (data as { full_name: string | null } | null)?.full_name ?? null;
-  }
+  const people = await readAssignees(db, formData, me.tenantId);
 
   const { data: created, error } = await db
     .from("tasks")
@@ -55,8 +76,6 @@ export async function createTask(formData: FormData) {
         ? repeatKind(formData.get("repeat_kind"))
         : null,
       order_id: String(formData.get("order_id") ?? "").trim() || null,
-      assignee_id: assigneeId,
-      assignee_name: assigneeName,
       created_by: me.fullName ?? me.email ?? null,
       tenant_id: me.tenantId,
     })
@@ -66,33 +85,45 @@ export async function createTask(formData: FormData) {
   if (error) back(undefined, "معرفناش نضيف التاسك: " + error.message);
 
   const taskId = (created as { id: string } | null)?.id;
+
+  if (taskId && people.length > 0) {
+    await db.from("task_assignees").insert(
+      people.map((p) => ({ ...p, task_id: taskId, tenant_id: me.tenantId }))
+    );
+  }
+
   await logActivity(me, "task.create", `ضاف تاسك: ${title}`);
 
-  // **الإشعار بيروح للي التاسك اتسند له.** الإرسال مايوقفش أي حاجة زي
-  // باقي السيستم — لو وقع، التاسك اتعمل عادي.
-  if (assigneeId) {
-    await notifyAssignee(db, me.tenantId, title, assigneeName, taskId);
+  // **الإشعار بيروح لكل اللي التاسك اتسند لهم.** الإرسال مايوقفش أي حاجة
+  // زي باقي السيستم — لو وقع، التاسك اتعمل عادي.
+  if (people.length > 0) {
+    await notifyAssignee(db, me.tenantId, title, people, taskId);
   }
 
   revalidatePath("/tasks");
   redirect(taskId ? `/tasks/${taskId}` : "/tasks");
 }
 
-/** إشعار «تاسك جديد عليك» — نفس شكل باقي الإشعارات: العنوان فوق والاسم تحته */
+/**
+ * إشعار «تاسك جديد عليك» — نفس شكل باقي الإشعارات:
+ * الجملة فوق، والأسامي تحتها.
+ */
 async function notifyAssignee(
   db: ReturnType<typeof createAdminClient>,
   tenantId: string,
   title: string,
-  who: string | null,
+  people: { user_name: string | null }[],
   taskId?: string
 ) {
+  const names = people
+    .map((p) => p.user_name)
+    .filter(Boolean)
+    .join("، ");
   try {
-    await notifyAll(
-      db,
-      tenantId,
-      [`📋 <b>تاسك جديد عليك</b>`, who ?? "", title].join("\n"),
-      { tag: `task-${taskId ?? ""}`, url: taskId ? `/tasks/${taskId}` : "/tasks" }
-    );
+    await notifyAll(db, tenantId, [`📋 <b>تاسك جديد عليك</b>`, names, title].join("\n"), {
+      tag: `task-${taskId ?? ""}`,
+      url: taskId ? `/tasks/${taskId}` : "/tasks",
+    });
   } catch {
     // إشعار مايوصلش أهون من تاسك مايتعملش
   }
@@ -160,42 +191,46 @@ export async function assignTask(formData: FormData) {
   if (!taskId) back();
 
   const db = createAdminClient();
-  const assigneeId = String(formData.get("assignee_id") ?? "").trim() || null;
-
-  let assigneeName: string | null = null;
-  if (assigneeId) {
-    const { data } = await db
-      .from("app_users")
-      .select("full_name")
-      .eq("id", assigneeId)
-      .maybeSingle();
-    assigneeName = (data as { full_name: string | null } | null)?.full_name ?? null;
-  }
+  const people = await readAssignees(db, formData, me.tenantId);
 
   const { data: before } = await db
     .from("tasks")
-    .select("title, assignee_id")
+    .select("title")
     .eq("id", taskId)
     .maybeSingle();
-  const prev = (before as { title: string; assignee_id: string | null } | null) ?? null;
+  const title = (before as { title: string } | null)?.title ?? "";
 
-  const { error } = await db
-    .from("tasks")
-    .update({ assignee_id: assigneeId, assignee_name: assigneeName })
-    .eq("id", taskId);
-  if (error) back(taskId, "معرفناش نسند التاسك: " + error.message);
+  // مين كان مسنود قبل كده — عشان ننبّه الجداد بس
+  const { data: had } = await db
+    .from("task_assignees")
+    .select("user_id")
+    .eq("task_id", taskId);
+  const wasThere = new Set(
+    ((had ?? []) as { user_id: string }[]).map((r) => r.user_id)
+  );
 
+  // بنمسح ونكتب من جديد — أبسط من الحسبة، والقايمة صغيرة
+  await db.from("task_assignees").delete().eq("task_id", taskId);
+  if (people.length > 0) {
+    const { error } = await db.from("task_assignees").insert(
+      people.map((p) => ({ ...p, task_id: taskId, tenant_id: me.tenantId }))
+    );
+    if (error) back(taskId, "معرفناش نسند التاسك: " + error.message);
+  }
+
+  const names = people.map((p) => p.user_name).filter(Boolean).join("، ");
   await logActivity(
     me,
     "task.assign",
-    assigneeName
-      ? `سند تاسك «${prev?.title ?? ""}» لـ ${assigneeName}`
-      : `شال الإسناد عن تاسك «${prev?.title ?? ""}»`
+    names
+      ? `سند تاسك «${title}» لـ ${names}`
+      : `شال الإسناد عن تاسك «${title}»`
   );
 
-  // **بننبّه بس لو اتغيّر فعلًا** — مش كل حفظ
-  if (assigneeId && assigneeId !== prev?.assignee_id) {
-    await notifyAssignee(db, me.tenantId, prev?.title ?? "", assigneeName, taskId);
+  // **بننبّه الجداد بس** — مش كل حفظ، ومش اللي كان مسنود خلاص
+  const fresh = people.filter((p) => !wasThere.has(p.user_id));
+  if (fresh.length > 0) {
+    await notifyAssignee(db, me.tenantId, title, fresh, taskId);
   }
 
   revalidatePath(`/tasks/${taskId}`);

@@ -350,7 +350,7 @@ export default async function OrderDetailsPage({
     try {
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, title, status, assignee_name")
+        .select("id, title, status, task_assignees(user_name)")
         .eq("order_id", id)
         .order("created_at", { ascending: true });
       if (error) return null;
@@ -367,7 +367,7 @@ export default async function OrderDetailsPage({
           id: string;
           title: string;
           status: string | null;
-          assignee_name: string | null;
+          task_assignees: { user_name: string | null }[];
         }[],
         team: ((team ?? []) as { id: string; full_name: string | null }[]).map((u) => ({
           id: u.id,
@@ -966,9 +966,12 @@ export default async function OrderDetailsPage({
                       >
                         {t.title}
                       </span>
-                      {t.assignee_name && (
+                      {(t.task_assignees ?? []).length > 0 && (
                         <span className="shrink-0 text-[10px] text-gray-500">
-                          {t.assignee_name}
+                          {(t.task_assignees ?? [])
+                            .map((a) => a.user_name)
+                            .filter(Boolean)
+                            .join("، ")}
                         </span>
                       )}
                     </Link>

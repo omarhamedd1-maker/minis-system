@@ -87,8 +87,9 @@ export function AppNav({
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // التليفون: 4 ثابتة (داشبورد، أوردرات، منتجات، خزنة)، والباقي في "المزيد"
-  const PRIMARY_HREFS = ["/", "/orders", "/expenses", "/cash"];
+  // التليفون: الثابتة في البار السفلي، والباقي في "المزيد".
+  // التاسكات بعد الخزنة وقبل "المزيد" — عمر طلبها كده بالنص.
+  const PRIMARY_HREFS = ["/", "/orders", "/expenses", "/cash", "/tasks"];
   const primary = PRIMARY_HREFS.map((h) =>
     allowed.find((i) => i.href === h)
   ).filter((i): i is Item => Boolean(i));

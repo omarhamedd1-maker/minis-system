@@ -89,6 +89,14 @@ export const PRESETS: Preset[] = [
 // ===== المستخدم الحالي =====
 export type SessionUser = {
   authUserId: string;
+  /**
+   * رقم الصف في `app_users` — **مش نفس `authUserId`**.
+   *
+   * الفرق ده كان باج: فلتر «اللي عليّا» في التاسكات كان بيقارن
+   * `assignee_id` (بيشاور على `app_users.id`) برقم حساب الدخول، فعمره
+   * ما طابق. أي حاجة بتربط بـ`app_users` لازم تستخدم ده.
+   */
+  appUserId: string | null;
   email: string | null;
   fullName: string | null;
   isAdmin: boolean;
@@ -119,10 +127,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     supabase.rpc("is_admin"),
     supabase
       .from("app_users")
-      .select("full_name, permissions, active, last_seen_at, tenant_id, is_platform_admin")
+      .select("id, full_name, permissions, active, last_seen_at, tenant_id, is_platform_admin")
       .eq("auth_user_id", user.id)
       .maybeSingle()
       .overrideTypes<{
+        id: string;
         full_name: string | null;
         permissions: string[] | null;
         active: boolean | null;
@@ -152,6 +161,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   return {
     authUserId: user.id,
+    appUserId: appUser?.id ?? null,
     email: user.email ?? null,
     fullName: appUser?.full_name ?? null,
     isAdmin: Boolean(isAdmin),
