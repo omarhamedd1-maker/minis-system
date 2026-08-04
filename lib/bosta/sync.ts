@@ -101,6 +101,22 @@ export type SyncSummary = {
 };
 
 /**
+ * البيزنس ده مالوش حساب بوسطة أصلاً — **دي مش مشكلة، دي حالة عادية**.
+ *
+ * كانت بتترمي كخطأ عادي، فالمزامنة كل ١٥ دقيقة كانت بتسجّل تشغيل فاشل على
+ * البيزنس التاني (٩٦ سطر خطأ في اليوم). ومع الوقت السجل بيبقى كله أخطاء
+ * وهمية، فالخطأ الحقيقي لما ييجي محدش بياخد باله.
+ *
+ * بنوعها بنوع خاص عشان اللي بيناديها يفرّق بين "مش مربوط" و"وقعت".
+ */
+export class BostaNotLinked extends Error {
+  constructor() {
+    super("البيزنس ده لسه مربطش حساب بوسطة");
+    this.name = "BostaNotLinked";
+  }
+}
+
+/**
  * الحالات اللي بتبعت تنبيه فوري على الموبايل.
  * دي اللحظة اللي فيها بضاعة راجعة وفلوس ماوصلتش — ولازم حد يتحرك.
  *
@@ -213,7 +229,7 @@ export async function runBostaSync(opts: {
   const creds = await loadTenantCredentials(db, tenantId);
 
   if (!creds.bostaApiKey) {
-    throw new Error("البيزنس ده لسه مربطش حساب بوسطة");
+    throw new BostaNotLinked();
   }
   const apiKey = creds.bostaApiKey;
   // رسوم بوسطة واحدة لكل العملاء، فبتفضل في الكود ومتغطية باختبارات

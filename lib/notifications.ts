@@ -10,6 +10,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { readSyncHealth, syncHealthMessage } from "./bosta/sync-runs";
 import { refundDue } from "./refund";
+import { loadTenantCredentials } from "./tenant-settings";
 
 export type NoticeLevel = "danger" | "warn" | "info";
 
@@ -109,16 +110,31 @@ export async function collectNotices(
 ): Promise<Notice[]> {
   const notices: Notice[] = [];
 
-  // ١) المزامنة — ده أخطر إشعار، لأن لو واقفة كل الأرقام تحته قديمة
-  const health = await readSyncHealth(db, tenantId);
-  const msg = syncHealthMessage(health);
-  if (msg) {
-    notices.push({
-      id: "sync",
-      level: "danger",
-      title: "المزامنة مع بوسطة فيها مشكلة",
-      detail: msg,
-    });
+  // ١) المزامنة — ده أخطر إشعار، لأن لو واقفة كل الأرقام تحته قديمة.
+  //
+  // **بس البيزنس اللي لسه مربطش بوسطة مايشوفهوش خالص** — مزامنة مالهاش
+  // حساب تشتغل عليه أصلاً، فـ"واقفة من كذا دقيقة" إنذار كاذب بيستقبله
+  // العميل الجديد من أول يوم.
+  const linked = await (async () => {
+    try {
+      const creds = await loadTenantCredentials(db, tenantId);
+      return Boolean(creds.bostaApiKey);
+    } catch {
+      return true;
+    }
+  })();
+
+  if (linked) {
+    const health = await readSyncHealth(db, tenantId);
+    const msg = syncHealthMessage(health);
+    if (msg) {
+      notices.push({
+        id: "sync",
+        level: "danger",
+        title: "المزامنة مع بوسطة فيها مشكلة",
+        detail: msg,
+      });
+    }
   }
 
   // ٢) الأوردرات الواقفة

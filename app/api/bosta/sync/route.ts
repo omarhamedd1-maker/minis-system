@@ -9,7 +9,7 @@
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { runBostaSync, type SyncSummary } from "@/lib/bosta/sync";
+import { BostaNotLinked, runBostaSync, type SyncSummary } from "@/lib/bosta/sync";
 import { recordSyncRun } from "@/lib/bosta/sync-runs";
 import { activeTenantIds } from "@/lib/tenant-settings";
 
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
     const results: Record<
       string,
-      SyncSummary | { error: string }
+      SyncSummary | { error: string } | { skipped: string }
     > = {};
 
     for (const tenantId of tenants) {
@@ -55,7 +55,14 @@ export async function GET(request: Request) {
           durationMs: Date.now() - startedAt,
         });
       } catch (e) {
-        // بيزنس وقع؟ نسجّل ونكمّل الباقي
+        // **البيزنس مش مربوط ببوسطة؟ دي مش مشكلة.** بنعدّيه بهدوء من غير ما
+        // نسجّل تشغيل فاشل — وإلا السجل بيمتلي ٩٦ خطأ وهمي في اليوم ويخفي
+        // الخطأ الحقيقي.
+        if (e instanceof BostaNotLinked) {
+          results[tenantId] = { skipped: e.message };
+          continue;
+        }
+        // بيزنس وقع فعلاً؟ نسجّل ونكمّل الباقي
         const message = e instanceof Error ? e.message : "المزامنة وقعت";
         results[tenantId] = { error: message };
         await recordSyncRun(db, {
