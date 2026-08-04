@@ -15,6 +15,7 @@ import type { BostaCity, BostaZone } from "./cities";
 // ⚠️ كنا كاتبين ١٥ للمرتجع وده رقم مش موجود عند بوسطة خالص.
 const DELIVERY_TYPE_SEND = 10;
 const DELIVERY_TYPE_CUSTOMER_RETURN = 25;
+const DELIVERY_TYPE_EXCHANGE = 30;
 
 export type ShipmentCustomer = {
   full_name: string | null;
@@ -280,6 +281,164 @@ export type BuiltReturn = {
 export type BuildReturnResult =
   | { ok: false; error: string }
   | { ok: true; shipment: BuiltReturn };
+
+// ==========================================================================
+// شحنة التبديل — بوسطة بتوصّل الجديد وتاخد القديم في نفس الرحلة
+// --------------------------------------------------------------------------
+// فرقها عن المرتجع: المرتجع بيسحب من العميل وخلاص. التبديل بيروح بحاجة
+// **و**يرجع بحاجة، فبوسطة محتاجة تعرف الاتنين: `specs` للي رايح للعميل،
+// و`returnSpecs` للي راجع منه.
+//
+// والتحصيل هنا **فرق السعر بس**، مش سعر الأوردر. الحاجة القديمة مدفوعة
+// خلاص، فلو البديل بنفس السعر التحصيل صفر. ولو أغلى بيتحصّل الفرق.
+// وبنخلّي الافتراضي صفر بقصد — مانخمّنش في فلوس بتتاخد من عميل.
+// ==========================================================================
+
+export type ExchangeInput = {
+  orderNumber: string | number | null;
+  /** رقم تتبع الشحنة الأصلية — بوسطة بتربطهم ببعض */
+  originalTracking: string | null;
+  /** الرايح للعميل */
+  outgoing: { quantity: number; productName: string | null }[];
+  /** الراجع من العميل */
+  incoming: { quantity: number; productName: string | null }[];
+  /** فرق السعر اللي المندوب يحصّله — صفر يعني مفيش فرق */
+  cod?: number | null;
+  customer: ShipmentCustomer | null;
+  city: BostaCity | null;
+  zone: BostaZone | null;
+  pickupAddressId?: string | null;
+};
+
+export type BuiltExchange = {
+  cod: number;
+  outCount: number;
+  inCount: number;
+  outDescription: string;
+  inDescription: string;
+  addressLine: string;
+  city: { id: string; name: string };
+  base: Record<string, unknown>;
+  variants: PayloadVariant[];
+};
+
+export type BuildExchangeResult =
+  | { ok: false; error: string }
+  | { ok: true; shipment: BuiltExchange };
+
+/** وصف البنود في سطر واحد — نفس شكل الإرسال والمرتجع */
+function describe(
+  items: { quantity: number; productName: string | null }[],
+  fallback: string
+): string {
+  return (
+    items
+      .map((i) => `${i.productName?.trim() || "منتج"} × ${i.quantity}`)
+      .join(" + ")
+      .slice(0, 250) || fallback
+  );
+}
+
+export function buildExchangeShipment(
+  input: ExchangeInput
+): BuildExchangeResult {
+  const outgoing = input.outgoing.filter((i) => Number(i.quantity) > 0);
+  const incoming = input.incoming.filter((i) => Number(i.quantity) > 0);
+
+  // **الاتنين لازم** — تبديل من غير واحد فيهم مش تبديل أصلاً
+  if (outgoing.length === 0) {
+    return {
+      ok: false,
+      error: "حدّد الأول إيه اللي هيروح للعميل — من غيره دي مش شحنة تبديل.",
+    };
+  }
+  if (incoming.length === 0) {
+    return {
+      ok: false,
+      error:
+        "حدّد إيه اللي هيرجع من العميل — لو مفيش حاجة راجعة يبقى ده إرسال عادي مش تبديل.",
+    };
+  }
+
+  const prep = prepareCustomer(
+    input.customer,
+    input.city,
+    "اعمل شحنة التبديل يدوي من بوسطة."
+  );
+  if (!prep.ok) return prep;
+  const { addressLine, phone, firstName, lastName } = prep.ready;
+  const cust = input.customer as ShipmentCustomer;
+
+  const outCount = outgoing.reduce((s, i) => s + Number(i.quantity), 0);
+  const inCount = incoming.reduce((s, i) => s + Number(i.quantity), 0);
+  const outDescription = describe(outgoing, "تبديل");
+  const inDescription = describe(incoming, "المرتجع");
+
+  // فرق السعر بس — ومابينزلش تحت الصفر (بوسطة مابتدفعش للعميل)
+  const cod = Math.max(0, Number(input.cod ?? 0));
+
+  const cityId = input.city!._id;
+  const cityName = input.city!.nameAr || input.city!.name || "";
+
+  const base: Record<string, unknown> = {
+    type: DELIVERY_TYPE_EXCHANGE,
+    // الرايح للعميل
+    specs: {
+      packageType: "Parcel",
+      packageDetails: { itemsCount: outCount, description: outDescription },
+    },
+    // الراجع منه
+    returnSpecs: {
+      packageType: "Parcel",
+      packageDetails: { itemsCount: inCount, description: inDescription },
+    },
+    cod,
+    receiver: { firstName, lastName, phone },
+    businessReference: `EXC-${input.orderNumber ?? ""}`,
+    notes: `تبديل أوردر ${input.orderNumber ?? ""} — رايح: ${outDescription} / راجع: ${inDescription}`
+      .trim()
+      .slice(0, 500),
+    allowToOpenPackage: true,
+    ...(input.originalTracking
+      ? { originalTrackingNumber: String(input.originalTracking) }
+      : {}),
+    ...(input.pickupAddressId ? { pickupAddressId: input.pickupAddressId } : {}),
+  };
+
+  const extras = { firstLine: addressLine, ...addressExtras(cust) };
+
+  // نفس درس الإرسال: `city` وجوّاه رقم المدينة هو الشكل الشغال، والباقي بدايل
+  const variants: PayloadVariant[] = [
+    {
+      name: "city+zoneId",
+      dropOffAddress: {
+        city: cityId,
+        ...(input.zone ? { zoneId: input.zone._id } : {}),
+        ...extras,
+      },
+    },
+    { name: "city-only", dropOffAddress: { city: cityId, ...extras } },
+    {
+      name: "cityId+city",
+      dropOffAddress: { cityId, city: cityName, ...extras },
+    },
+  ];
+
+  return {
+    ok: true,
+    shipment: {
+      cod,
+      outCount,
+      inCount,
+      outDescription,
+      inDescription,
+      addressLine,
+      city: { id: cityId, name: cityName },
+      base,
+      variants,
+    },
+  };
+}
 
 export function buildReturnShipment(input: ReturnInput): BuildReturnResult {
   const returning = input.returning.filter((i) => Number(i.returnedQuantity) > 0);
