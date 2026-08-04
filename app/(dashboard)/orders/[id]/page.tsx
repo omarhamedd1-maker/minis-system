@@ -23,6 +23,7 @@ import { ReturnPanel } from "@/components/ReturnPanel";
 import { BostaMark } from "@/components/BostaMark";
 import { isDeadShipment } from "@/lib/bosta/order-status";
 import { exceptionAdvice } from "@/lib/bosta/exception";
+import { bundleCovered } from "@/lib/bosta/real-fees";
 import { refundDue } from "@/lib/refund";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -594,7 +595,9 @@ export default async function OrderDetailsPage({
                           إجمالي مصاريف الشحن
                           <span className="block text-[10px] text-gray-400">
                             {real
-                              ? `${formatMoney(shipPart)} شحن + ${formatMoney(real - shipPart)} رسوم — رقم بوسطة الحقيقي`
+                              ? bundleCovered(real, shipPart)
+                                ? `شحن ${formatMoney(shipPart)} دفعته الباقة — رقم بوسطة الحقيقي`
+                                : `${formatMoney(shipPart)} شحن + ${formatMoney(real - shipPart)} رسوم — رقم بوسطة الحقيقي`
                               : `${BUNDLE_COVERS} شحن + ${formatMoney(order.bosta_shipping_cost)} رسوم — تقدير`}
                           </span>
                         </span>

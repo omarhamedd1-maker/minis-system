@@ -5,9 +5,12 @@
 // بتستخدمه مابيرجّعوش. يعني لو عايزينه لكل الأوردرات، ده ٣٠٠+ نداء لبوسطة —
 // مينفعش كل ١٥ دقيقة.
 //
-// فبناخد دفعة صغيرة كل مرة، **من الأقدم للأحدث**: الشحنة القديمة دورة الكاش
-// بتاعتها اتقفلت خلاص فرقمها نهائي وبتخرج من الطابور. والجديدة اللي لسه
-// ماقفلتش بتفضل مستنية دورها من غير ما تقفل الطابور على غيرها.
+// فبناخد دفعة صغيرة كل مرة. الشحنة اللي دورة الكاش بتاعتها اتقفلت بتاخد
+// رقمها وتخرج من الطابور خالص، واللي لسه ماقفلتش بتستنى دورها.
+//
+// **والدفعة بتتاخد من مكان عشوائي في الطابور مش من أوله.** لأن فيه أوردرات
+// عمرها ما هيبقى ليها كشف — ملغية أو شحنتها اتأرشفت من غير ما تتحرك — ولو
+// مشينا بالترتيب دول هيقعدوا في أول الطابور للأبد ويمنعوا اللي وراهم.
 //
 // **والرقم بيتجاب مرة واحدة وخلاص** — بعد ما دورة الكاش تتقفل مابيتغيّرش.
 //
@@ -51,20 +54,30 @@ export async function backfillRealFees(opts: {
 
   let rows: { id: string; bosta_tracking: string | null }[] = [];
   try {
-    const { data, error, count } = await db
-      .from("orders")
-      .select("id, bosta_tracking", { count: "exact" })
-      .eq("tenant_id", tenantId)
-      .in("order_status", FINISHED)
-      .not("bosta_tracking", "is", null)
-      .is("bosta_fees_at", null)
-      .order("bosta_created_at", { ascending: true, nullsFirst: false })
-      .limit(limit);
+    // بنبني الاستعلام من جديد كل مرة — مانعيدش استخدام نفس الكائن
+    const pending = () =>
+      db
+        .from("orders")
+        .select("id, bosta_tracking", { count: "exact" })
+        .eq("tenant_id", tenantId)
+        .in("order_status", FINISHED)
+        .not("bosta_tracking", "is", null)
+        .is("bosta_fees_at", null)
+        // ترتيب ثابت عشان الشباك العشوائي يبقى له معنى
+        .order("order_date", { ascending: true });
+
+    const { count } = await pending().range(0, 0);
+    const total = count ?? 0;
+    if (total === 0) return out;
+
+    const start =
+      total > limit ? Math.floor(Math.random() * (total - limit + 1)) : 0;
+    const { data, error } = await pending().range(start, start + limit - 1);
 
     // الأعمدة لسه مااتعملتش (ملف SQL ماتشغّلش)؟ نعدّي بهدوء
     if (error) return out;
     rows = (data ?? []) as { id: string; bosta_tracking: string | null }[];
-    out.remaining = Math.max(0, (count ?? rows.length) - rows.length);
+    out.remaining = Math.max(0, total - rows.length);
   } catch {
     return out;
   }

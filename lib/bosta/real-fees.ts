@@ -101,6 +101,27 @@ export function realFeesBreakdown(f: RealFees): { label: string; amount: number 
   return rows.filter(([, v]) => v > 0).map(([label, amount]) => ({ label, amount }));
 }
 
+/**
+ * الباقة غطّت شحن الشحنة دي ولا لأ؟
+ *
+ * بوسطة بتكتب `bundle_discount` بنفس قيمة `shipping_fees` لما الشحنة تتحسب
+ * من الباقة، فالإجمالي بينزل تحت رقم الشحن. مثال حقيقي:
+ *
+ *   أوردر ١٣٢٠: شحن ٨٨ − خصم باقة ٨٨ + تأمين ١٢٫٩٨ + فتح ٧ + ضريبة = ٢٢٫٧٨
+ *   أوردر ١٠٧٤: شحن ١١٣ + تأمين ٦ + ضريبة ١٦٫٦٦ = ١٣٥٫٦٦ (مافيش خصم)
+ *
+ * فبنستنتجها من الرقمين المخزّنين من غير ما نخزّن عمود تالت: **الإجمالي أقل
+ * من الشحن معناه إن حاجة غطّته**.
+ */
+export function bundleCovered(
+  total: number | null | undefined,
+  shipping: number | null | undefined
+): boolean {
+  const t = Number(total ?? 0);
+  const s = Number(shipping ?? 0);
+  return s > 0 && t > 0 && t < s;
+}
+
 function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
