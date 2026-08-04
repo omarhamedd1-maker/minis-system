@@ -59,10 +59,32 @@ export type StatOrder = {
   discount: number;
   shipping_price?: number | null;
   bosta_shipping_cost: number | null;
+  /** الرقم الحقيقي من كشف بوسطة — بيكسب على التقدير لما يكون موجود */
+  bosta_fees_real?: number | null;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
   order_items: OrderItem[];
 };
+
+/**
+ * تكلفة بوسطة على الأوردر.
+ *
+ * **الحقيقي بيكسب على التقدير.** بوسطة بترجّع كشف حساب مفصّل باللي خدته
+ * فعلًا بعد ما الشحنة تخلص، وده بيتخزّن في `bosta_fees_real`. التقدير
+ * (`bosta_shipping_cost`) بيفضل للشحنة اللي لسه شغالة، لأن بوسطة مابتقفلش
+ * الحساب غير بعد ما تخلص.
+ *
+ * الفرق مش بسيط: أوردر ١٠٧٤ تقديره ٣٧٫٦٢ والحقيقي ١٣٥٫٦٦، لأن الباقة
+ * ماغطّتش شحنه — وده اللي التقدير مش شايفه.
+ */
+export function orderCarrierCost(o: {
+  bosta_shipping_cost: number | null;
+  bosta_fees_real?: number | null;
+}): number {
+  const real = Number(o.bosta_fees_real ?? 0);
+  if (real > 0) return real;
+  return Number(o.bosta_shipping_cost ?? 0);
+}
 export type StatExpense = { amount: number };
 
 export type Headline = {
@@ -116,10 +138,10 @@ export function computeHeadline(
   const bostaChargedOrders = periodOrders.filter(
     (o) =>
       AT_CARRIER_STATUSES.includes(o.order_status ?? "") &&
-      Number(o.bosta_shipping_cost ?? 0) > 0
+      orderCarrierCost(o) > 0
   );
   const bostaShippingTotal = bostaChargedOrders.reduce(
-    (s, o) => s + Number(o.bosta_shipping_cost ?? 0),
+    (s, o) => s + orderCarrierCost(o),
     0
   );
   // الشحن اللي العميل دفعه — بنجمعه من الأوردرات نفسها زي ما نزل من شوبيفاي،
