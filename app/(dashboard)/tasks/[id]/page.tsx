@@ -13,6 +13,7 @@ import {
   stepsProgress,
   taskStatusBadge,
 } from "@/lib/tasks";
+import type { TaskFile } from "@/lib/task-files";
 import { BackLink } from "@/components/BackLink";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import {
@@ -24,6 +25,8 @@ import {
   setTaskStatus,
   toggleStep,
   updateTask,
+  uploadTaskFile,
+  deleteTaskFile,
 } from "../actions";
 
 type TaskDetail = {
@@ -42,6 +45,7 @@ type TaskDetail = {
   order_id: string | null;
   repeat_kind: string | null;
   repeat_parent_id: string | null;
+  attachments: unknown;
   task_steps: { id: string; title: string; done: boolean; position: number }[];
   task_comments: { id: string; author_name: string; body: string; created_at: string }[];
 };
@@ -66,7 +70,7 @@ export default async function TaskPage({
     .from("tasks")
     .select(
       `id, title, body, status, priority, due_on, created_at, created_by, done_at, done_by,
-       assignee_id, assignee_name, order_id, repeat_kind, repeat_parent_id,
+       assignee_id, assignee_name, order_id, repeat_kind, repeat_parent_id, attachments,
        task_steps(id, title, done, position),
        task_comments(id, author_name, body, created_at)`
     )
@@ -95,6 +99,21 @@ export default async function TaskPage({
     .order("full_name");
 
   const members = (team ?? []) as { id: string; full_name: string | null }[];
+
+  // **روابط موقّتة بس** — الـbucket مقفول عشان صورة إثبات ممكن يبقى فيها
+  // عنوان عميل أو فاتورة. ساعة كفاية إنك تفتح وتشوف.
+  const files = await Promise.all(
+    ((task.attachments ?? []) as TaskFile[]).map(async (f) => {
+      try {
+        const { data: signed } = await db.storage
+          .from("task-files")
+          .createSignedUrl(f.path, 3600);
+        return { ...f, url: signed?.signedUrl ?? null };
+      } catch {
+        return { ...f, url: null };
+      }
+    })
+  );
 
   return (
     <div className="space-y-4">
@@ -272,6 +291,74 @@ export default async function TaskPage({
             أول ما كل الخطوات تتعلّم، التاسك بيقفل لوحده.
           </p>
         )}
+      </div>
+
+      {/* ===== المرفقات ===== */}
+      <div className="rounded-xl bg-white p-4 shadow-sm">
+        <h2 className="mb-3 text-sm font-bold text-gray-900">المرفقات</h2>
+
+        {files.length === 0 ? (
+          <p className="text-xs text-gray-400">مفيش مرفقات</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {files.map((f) => (
+              <li
+                key={f.path}
+                className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2"
+              >
+                {f.url ? (
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 truncate text-xs text-sky-700 underline"
+                  >
+                    {f.name}
+                  </a>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-xs text-gray-400">
+                    {f.name} (الرابط مش متاح)
+                  </span>
+                )}
+                {canEdit && (
+                  <form action={deleteTaskFile}>
+                    <input type="hidden" name="task_id" value={task.id} />
+                    <input type="hidden" name="path" value={f.path} />
+                    <button
+                      type="submit"
+                      aria-label="امسح المرفق"
+                      className="text-xs text-gray-300 hover:text-red-600"
+                    >
+                      ✕
+                    </button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {canEdit && (
+          <form action={uploadTaskFile} className="mt-2 flex flex-wrap items-center gap-2">
+            <input type="hidden" name="task_id" value={task.id} />
+            <input
+              type="file"
+              name="file"
+              required
+              accept="image/*,application/pdf"
+              className="min-w-0 flex-1 text-xs text-gray-600 file:me-2 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:text-gray-700"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+            >
+              ارفع
+            </button>
+          </form>
+        )}
+        <p className="mt-1 text-[10px] text-gray-400">
+          صور وPDF بس، وأقصى حجم ٨ ميجا. الروابط موقّتة بساعة.
+        </p>
       </div>
 
       {/* ===== التعليقات ===== */}

@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity";
 import { requirePermission } from "@/lib/permissions";
 import { notifyAll } from "@/lib/push/notify";
 import { allStepsDone } from "@/lib/tasks";
+import { checkFile, ownsFile, storagePath, type TaskFile } from "@/lib/task-files";
 
 /** بنقبل القيم اللي نعرفها بس — أي حاجة تانية = مش متكرر */
 function repeatKind(v: FormDataEntryValue | null): string | null {
@@ -14,8 +15,11 @@ function repeatKind(v: FormDataEntryValue | null): string | null {
   return ["daily", "weekly", "monthly"].includes(s) ? s : null;
 }
 
-/** رسالة الخطأ بترجع في الرابط زي باقي الشاشات */
-function back(taskId?: string, msg?: string) {
+/**
+ * رسالة الخطأ بترجع في الرابط زي باقي الشاشات.
+ * `never` مقصودة عشان تايب سكريبت يعرف إن الكود بعدها مابيتنفذش.
+ */
+function back(taskId?: string, msg?: string): never {
   const base = taskId ? `/tasks/${taskId}` : "/tasks";
   redirect(msg ? `${base}?error=${encodeURIComponent(msg)}` : base);
 }
@@ -307,4 +311,76 @@ export async function deleteTask(formData: FormData) {
   );
   revalidatePath("/tasks");
   redirect("/tasks");
+}
+
+// ==========================================================================
+// المرفقات
+// ==========================================================================
+
+export async function uploadTaskFile(formData: FormData) {
+  const me = await requirePermission("tasks.edit");
+  const taskId = String(formData.get("task_id") ?? "");
+  const file = formData.get("file");
+  if (!taskId) back();
+  if (!(file instanceof File)) back(taskId, "اختار ملف الأول");
+
+  const check = checkFile({ type: file.type, size: file.size });
+  if (!check.ok) back(taskId, check.error);
+
+  const db = createAdminClient();
+  const path = storagePath(me.tenantId, taskId, file.name, crypto.randomUUID());
+
+  const { error: upErr } = await db.storage
+    .from("task-files")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (upErr) back(taskId, "الرفع فشل: " + upErr.message);
+
+  // بنقرا القايمة ونضيف عليها — الرفع نفسه خلص، فلو الحفظ وقع الملف
+  // بيفضل في التخزين بس مش ظاهر (أهون من العكس)
+  const { data } = await db
+    .from("tasks")
+    .select("attachments")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  const current = ((data as { attachments: TaskFile[] } | null)?.attachments ??
+    []) as TaskFile[];
+
+  const { error } = await db
+    .from("tasks")
+    .update({ attachments: [...current, { path, name: file.name }] })
+    .eq("id", taskId);
+  if (error) back(taskId, "الملف اترفع بس معرفناش نسجّله: " + error.message);
+
+  revalidatePath(`/tasks/${taskId}`);
+  redirect(`/tasks/${taskId}`);
+}
+
+export async function deleteTaskFile(formData: FormData) {
+  await requirePermission("tasks.edit");
+  const taskId = String(formData.get("task_id") ?? "");
+  const path = String(formData.get("path") ?? "");
+  if (!taskId || !path) back(taskId);
+
+  const db = createAdminClient();
+  const { data } = await db
+    .from("tasks")
+    .select("attachments")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  const current = ((data as { attachments: TaskFile[] } | null)?.attachments ??
+    []) as TaskFile[];
+
+  // **المسار لازم يكون مسجّل على التاسك ده** — مانمسحش أي مسار جاي من الفورم
+  if (!ownsFile(current, path)) back(taskId, "الملف ده مش على التاسك ده");
+
+  await db.storage.from("task-files").remove([path]);
+  await db
+    .from("tasks")
+    .update({ attachments: current.filter((f) => f.path !== path) })
+    .eq("id", taskId);
+
+  revalidatePath(`/tasks/${taskId}`);
+  redirect(`/tasks/${taskId}`);
 }
