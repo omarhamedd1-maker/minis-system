@@ -63,7 +63,9 @@ export function failedDeliveryMessage(a: FailedDeliveryAlert): string {
   const lines = alertHead(a.waiting ? "🛑" : a.arrived ? "📦" : "⚠️", headline, a.customerName);
 
   if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
-  if (a.reason) lines.push(`سبب بوسطة: ${a.reason}`);
+  // السبب من غير مقدمة — «العميل رفض يستلم» بتقول نفسها، و«سبب بوسطة:»
+  // كانت بتاكل من عرض سطر ضيق أصلاً
+  if (a.reason) lines.push(a.reason);
   lines.push("");
   lines.push(
     a.waiting

@@ -644,9 +644,23 @@ export async function runBostaSync(opts: {
           row.bosta_exception,
           decision.changes.bosta_exception as string | null | undefined
         );
-        const settled = to === "cancelled" || row.order_status === "cancelled";
+        // **حالة الأوردر بعد التغيير** — لو مافيش تغيير يبقى هي زي ما هي.
+        // من غيرها الإشعار اللي جاي من محاولة فاشلة (مش من تغيير حالة) كان
+        // بيقول "العميل مستلمش" لأي أوردر مهما كانت حالته.
+        const current = to ?? row.order_status;
 
-        if ((attempt || (to && ALERT_ON.includes(to))) && !settled) {
+        // **الخبر ده قديم؟ مانزنّش بيه.**
+        // أوردر ١٢٢٧ هو اللي كشفها: عليه شحنة مرتجع شغالة وحالته "في الطريق
+        // ليك" من يومين، وجاله إشعار "العميل مستلمش" من محاولة فاشلة على
+        // الشحنة **الأصلية** — خبر إحنا عارفينه وعامل على أساسه خلاص.
+        const knownAlready =
+          Boolean(row.return_tracking) ||
+          ["returning", "returned", "returned_after_delivery", "delivered", "cancelled"]
+            .includes(String(row.order_status ?? ""));
+
+        const settled = current === "cancelled";
+
+        if (((attempt && !knownAlready) || (to && ALERT_ON.includes(to))) && !settled) {
           await notifyAll(
             db,
             tenantId,
@@ -656,8 +670,8 @@ export async function runBostaSync(opts: {
               customerPhone: row.customers?.phone ?? null,
               reason: (decision.changes.bosta_exception ??
                 row.bosta_exception) as string | null,
-              arrived: to === "returned",
-              waiting: to === "awaiting_action",
+              arrived: current === "returned",
+              waiting: current === "awaiting_action",
             }),
             {
               fetchImpl,
