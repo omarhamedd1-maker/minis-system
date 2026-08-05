@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cairoToday } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
-import { dueLabel, isOverdue, sortTasks, taskStatusBadge } from "@/lib/tasks";
+import { dueLabel, groupTasks, isOverdue, taskStatusBadge } from "@/lib/tasks";
 import { AddTask } from "@/components/AddTask";
 import { createTask, setTaskStatus } from "./actions";
 
@@ -72,10 +72,10 @@ export default async function TasksPage({
     (t.task_assignees ?? []).some((a) => a.user_id === user.appUserId)
   );
 
-  const shown = sortTasks(
-    view === "mine" ? mine : view === "open" ? all.filter((t) => t.status !== "done") : all,
-    today
-  );
+  const picked =
+    view === "mine" ? mine : view === "open" ? all.filter((t) => t.status !== "done") : all;
+  const groups = groupTasks(picked, today);
+  const shown = picked;
 
   const overdueCount = all.filter((t) => isOverdue(t, today)).length;
 
@@ -139,8 +139,30 @@ export default async function TasksPage({
           {view === "mine" ? "مفيش تاسكات عليك — تمام" : "مفيش تاسكات هنا"}
         </p>
       ) : (
+        // **مقسّمة بعناوين مش قايمة واحدة طويلة** — القايمة الواحدة مابتقولش
+        // لك تبدأ منين، والتقسيمة بتجاوب على "إيه اللي محتاج مني حاجة دلوقتي"
+        groups.map((g) => (
+        <section key={g.key} className="space-y-2">
+          <div className="flex items-center gap-2 px-1">
+            <h2
+              className={`text-xs font-bold ${
+                g.tone === "bad"
+                  ? "text-red-700"
+                  : g.tone === "warn"
+                    ? "text-amber-700"
+                    : g.tone === "muted"
+                      ? "text-gray-400"
+                      : "text-gray-700"
+              }`}
+            >
+              {g.label}
+            </h2>
+            <span className="text-[11px] text-gray-400">{g.items.length}</span>
+            <span className="h-px flex-1 bg-gray-200" />
+          </div>
+
         <ul className="space-y-2">
-          {shown.map((t) => {
+          {g.items.map((t) => {
             const badge = taskStatusBadge(t.status);
             const late = isOverdue(t, today);
             const due = dueLabel(t.due_on, today);
@@ -230,6 +252,8 @@ export default async function TasksPage({
             );
           })}
         </ul>
+        </section>
+        ))
       )}
     </div>
   );

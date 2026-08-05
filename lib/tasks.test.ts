@@ -10,6 +10,8 @@ import {
   nextDue,
   repeatLabel,
   type RepeatingTask,
+  type TaskLike,
+  groupTasks,
 } from "./tasks";
 
 const TODAY = "2026-08-04";
@@ -198,5 +200,49 @@ describe("مين محتاج نسخة جديدة", () => {
   it("بيسمّي التكرار بالعربي", () => {
     expect(repeatLabel("weekly")).toBe("كل أسبوع");
     expect(repeatLabel(null)).toBeNull();
+  });
+});
+
+describe("تقسيم اللوحة", () => {
+  const t = (id: string, over: Partial<TaskLike> = {}) => ({
+    id,
+    status: "open",
+    priority: "normal",
+    due_on: null,
+    created_at: "2026-08-01T10:00:00Z",
+    ...over,
+  });
+
+  it("بيقسّم على: متأخر · النهاردة · جاي · من غير ميعاد · خلص", () => {
+    const g = groupTasks(
+      [
+        t("خلص", { status: "done", due_on: "2026-07-01" }),
+        t("مالوش"),
+        t("جاي", { due_on: "2026-08-20" }),
+        t("النهاردة", { due_on: TODAY }),
+        t("متأخر", { due_on: "2026-08-01" }),
+      ],
+      TODAY
+    );
+    expect(g.map((x) => x.key)).toEqual(["late", "today", "next", "someday", "done"]);
+    expect(g.map((x) => x.items[0].id)).toEqual([
+      "متأخر", "النهاردة", "جاي", "مالوش", "خلص",
+    ]);
+  });
+
+  it("**المجموعة الفاضية مابتظهرش**", () => {
+    // مافيش لازمة لعنوان تحته "مفيش"
+    const g = groupTasks([t("واحد", { due_on: TODAY })], TODAY);
+    expect(g).toHaveLength(1);
+    expect(g[0].key).toBe("today");
+  });
+
+  it("اللي خلص بيروح لمجموعته مهما كان ميعاده فات", () => {
+    const g = groupTasks([t("a", { status: "done", due_on: "2026-01-01" })], TODAY);
+    expect(g[0].key).toBe("done");
+  });
+
+  it("قايمة فاضية = مفيش مجموعات", () => {
+    expect(groupTasks([], TODAY)).toEqual([]);
   });
 });
