@@ -40,6 +40,7 @@ export const PRESETS: Preset[] = [
       "tasks.view",
       "tasks.edit",
       "tasks.assign",
+      "admin.notify",
     ],
   },
   {

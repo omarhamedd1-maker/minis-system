@@ -112,23 +112,45 @@ export type PushResult = {
   skipped: "no_keys" | "no_devices" | null;
 };
 
+export type PushTarget = {
+  /**
+   * أصحاب الأجهزة اللي الإشعار يروح لهم (`auth_user_id`).
+   *
+   * **مش موجودة = الكل** زي ما كان قبل التوجيه ما يتعمل — كل تنبيهات
+   * السيستم التلقائية بتروح للكل ومحدش لازمه يغيّر حاجة.
+   *
+   * ⚠️ **والقايمة الفاضية معناها محدش، مش الكل.** لو المستخدم اختار
+   * «ناس محددة» ومااختارش حد، الإشعار مايروحش لكل البيزنس بالغلط.
+   */
+  authUserIds?: string[] | null;
+};
+
 /**
- * بيبعت لكل أجهزة البيزنس.
+ * بيبعت لأجهزة البيزنس — كلها أو لناس محددة.
  * الجهاز اللي المتصفح بيقول عليه إنه مابقاش موجود (٤٠٤/٤١٠) بيتشال فورًا —
  * ده معناه إن المستخدم شال التطبيق أو الاشتراك انتهى.
  */
 export async function sendPush(
   db: SupabaseClient,
   tenantId: string,
-  msg: PushMessage
+  msg: PushMessage,
+  target?: PushTarget
 ): Promise<PushResult> {
   const keys = await ensurePushKeys(db);
   if (!keys) return { sent: 0, removed: 0, skipped: "no_keys" };
 
-  const { data: subs } = await db
+  const only = target?.authUserIds;
+  if (only && only.length === 0) {
+    return { sent: 0, removed: 0, skipped: "no_devices" };
+  }
+
+  let q = db
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth, failures")
     .eq("tenant_id", tenantId);
+  if (only) q = q.in("auth_user_id", only);
+
+  const { data: subs } = await q;
 
   const devices = (subs ?? []) as unknown as {
     id: string;
