@@ -25,7 +25,7 @@ export async function generateRecurringTasks(opts: {
   const { data, error } = await db
     .from("tasks")
     .select(
-      "id, title, body, priority, due_on, repeat_kind, status, order_id, task_assignees(user_id, user_name)"
+      "id, title, body, priority, due_on, repeat_kind, repeat_every, repeat_unit, status, order_id, task_assignees(user_id, user_name)"
     )
     .eq("tenant_id", tenantId)
     .not("repeat_kind", "is", null)
@@ -85,6 +85,8 @@ export async function generateRecurringTasks(opts: {
         order_id: p.order_id,
         repeat_parent_id: p.id,
         created_by: "التكرار",
+        // **التنبيه مابيتنقلش للنسخة بقصد** — تنبيه اتظبط على تاسك واحد
+        // مش وعد بتنبيه على كل نسخة بعده لحد آخر الدهر
       })
       .select("id")
       .maybeSingle();

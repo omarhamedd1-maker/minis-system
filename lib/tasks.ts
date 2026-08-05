@@ -164,16 +164,77 @@ export function allStepsDone(steps: { done: boolean }[]): boolean {
 // التاسك اللي بيتكرر
 // ==========================================================================
 
-export type RepeatKind = "daily" | "weekly" | "monthly";
+export type RepeatKind = "daily" | "weekly" | "monthly" | "custom";
+export type RepeatUnit = "day" | "week" | "month";
 
 export const REPEAT_KINDS: { key: RepeatKind; label: string }[] = [
   { key: "daily", label: "كل يوم" },
   { key: "weekly", label: "كل أسبوع" },
   { key: "monthly", label: "كل شهر" },
+  { key: "custom", label: "كل كام؟" },
 ];
 
-export function repeatLabel(kind: string | null | undefined): string | null {
-  return REPEAT_KINDS.find((r) => r.key === kind)?.label ?? null;
+export const REPEAT_UNITS: { key: RepeatUnit; label: string; plural: string }[] = [
+  { key: "day", label: "يوم", plural: "أيام" },
+  { key: "week", label: "أسبوع", plural: "أسابيع" },
+  { key: "month", label: "شهر", plural: "شهور" },
+];
+
+/** حد أقصى للتكرار — «كل ٥٠٠ يوم» غلطة كتابة مش نية */
+export const MAX_REPEAT_EVERY = 365;
+
+export type RepeatFields = {
+  repeat_kind: string | null | undefined;
+  repeat_every?: number | null;
+  repeat_unit?: string | null;
+};
+
+export type RepeatStep = { every: number; unit: RepeatUnit };
+
+/**
+ * بيحوّل أي تكرار لخطوة موحّدة: **كام × وحدة**.
+ *
+ * الجاهزين (يومي/أسبوعي/شهري) بيتحوّلوا لـ(١ × وحدتهم)، والكاستم بيتقرا
+ * من خانتين. كده الحسبة واحدة للكل بدل شرط لكل نوع، وإضافة نوع جاهز جديد
+ * بقت سطر واحد.
+ *
+ * وبيرجّع `null` لأي حاجة مش مفهومة — التاسك ساعتها مايتكررش، وده أأمن
+ * من إننا نخمّن.
+ */
+export function repeatStep(t: RepeatFields): RepeatStep | null {
+  switch (t.repeat_kind) {
+    case "daily":
+      return { every: 1, unit: "day" };
+    case "weekly":
+      return { every: 1, unit: "week" };
+    case "monthly":
+      return { every: 1, unit: "month" };
+    case "custom": {
+      const every = Math.floor(Number(t.repeat_every ?? 0));
+      const unit = String(t.repeat_unit ?? "");
+      if (!Number.isFinite(every) || every < 1 || every > MAX_REPEAT_EVERY) {
+        return null;
+      }
+      if (!REPEAT_UNITS.some((u) => u.key === unit)) return null;
+      return { every, unit: unit as RepeatUnit };
+    }
+    default:
+      return null;
+  }
+}
+
+/** «كل يوم» · «كل ٣ أيام» — العربي بيفرّق بين الواحد والاتنين والجمع */
+export function repeatLabel(t: RepeatFields | string | null | undefined): string | null {
+  const fields: RepeatFields =
+    typeof t === "string" || t == null ? { repeat_kind: t ?? null } : t;
+
+  const step = repeatStep(fields);
+  if (!step) return null;
+
+  const u = REPEAT_UNITS.find((x) => x.key === step.unit)!;
+  if (step.every === 1) return `كل ${u.label}`;
+  if (step.every === 2) return `كل ${u.label}ين`;
+  return `كل ${step.every} ${u.plural}`;
 }
 
 /**
@@ -183,27 +244,46 @@ export function repeatLabel(kind: string | null | undefined): string | null {
  * في الشهر**: ٣١ يناير + شهر = ٢٨ فبراير مش ٣ مارس. جافاسكريبت بتلف لوحدها
  * للشهر اللي بعده وده بيخلّي تاسك آخر الشهر يهرب يوم كل شهر.
  */
-export function nextDue(due: string, kind: RepeatKind): string {
+export function stepDue(due: string, step: RepeatStep): string {
   const [y, m, d] = String(due).slice(0, 10).split("-").map(Number);
   if (!y || !m || !d) return due;
 
-  if (kind === "daily" || kind === "weekly") {
-    const t = Date.UTC(y, m - 1, d) + (kind === "daily" ? 1 : 7) * 86_400_000;
+  if (step.unit === "day" || step.unit === "week") {
+    const days = step.every * (step.unit === "week" ? 7 : 1);
+    const t = Date.UTC(y, m - 1, d) + days * 86_400_000;
     return new Date(t).toISOString().slice(0, 10);
   }
 
-  // شهري
-  const ny = m === 12 ? y + 1 : y;
-  const nm = m === 12 ? 1 : m + 1;
+  // بالشهور — بنزوّد على رقم الشهر ونقصّ اليوم لآخر يوم في الشهر الناتج
+  const total = m - 1 + step.every;
+  const ny = y + Math.floor(total / 12);
+  const nm = (total % 12) + 1;
   const lastDay = new Date(Date.UTC(ny, nm, 0)).getUTCDate();
   const day = Math.min(d, lastDay);
   return `${ny}-${String(nm).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** نفس `stepDue` بس بتاخد نوع التكرار زي ما هو مخزّن */
+export function nextDue(
+  due: string,
+  kind: RepeatKind,
+  every?: number,
+  unit?: RepeatUnit
+): string {
+  const step = repeatStep({
+    repeat_kind: kind,
+    repeat_every: every,
+    repeat_unit: unit,
+  });
+  return step ? stepDue(due, step) : due;
 }
 
 export type RepeatingTask = {
   id: string;
   due_on: string | null;
   repeat_kind: string | null;
+  repeat_every?: number | null;
+  repeat_unit?: string | null;
   status: string | null;
 };
 
@@ -225,13 +305,13 @@ export function dueForRepeat(
   const out: { task: RepeatingTask; due: string }[] = [];
 
   for (const t of tasks) {
-    const kind = t.repeat_kind as RepeatKind | null;
-    if (!kind || !REPEAT_KINDS.some((r) => r.key === kind)) continue;
+    const step = repeatStep(t);
+    if (!step) continue;
     // التاسك المتكرر لازم يبقى ليه ميعاد — من غيره مفيش معنى لـ"الجاي"
     if (!t.due_on) continue;
     if ((openByFamily.get(t.id) ?? 0) > 0) continue;
 
-    const due = nextDue(String(t.due_on).slice(0, 10), kind);
+    const due = stepDue(String(t.due_on).slice(0, 10), step);
     if (due <= today) out.push({ task: t, due });
   }
 

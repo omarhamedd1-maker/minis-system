@@ -6,7 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity";
 import { requirePermission } from "@/lib/permissions";
 import { notifyAll } from "@/lib/push/notify";
-import { allStepsDone } from "@/lib/tasks";
+import { allStepsDone, MAX_REPEAT_EVERY } from "@/lib/tasks";
+import { MAX_REMIND_EVERY } from "@/lib/task-remind";
+import { cairoInputToUtc } from "@/lib/cairo-time";
 import { checkFile, ownsFile, storagePath, type TaskFile } from "@/lib/task-files";
 
 /**
@@ -44,7 +46,57 @@ async function readAssignees(
 /** بنقبل القيم اللي نعرفها بس — أي حاجة تانية = مش متكرر */
 function repeatKind(v: FormDataEntryValue | null): string | null {
   const s = String(v ?? "");
-  return ["daily", "weekly", "monthly"].includes(s) ? s : null;
+  return ["daily", "weekly", "monthly", "custom"].includes(s) ? s : null;
+}
+
+/** رقم موجب في مدى معقول، وإلا فاضي */
+function countIn(v: FormDataEntryValue | null, max: number): number | null {
+  const n = Math.floor(Number(String(v ?? "").trim()));
+  return Number.isFinite(n) && n >= 1 && n <= max ? n : null;
+}
+
+function oneOf(v: FormDataEntryValue | null, allowed: string[]): string | null {
+  const s = String(v ?? "").trim();
+  return allowed.includes(s) ? s : null;
+}
+
+/**
+ * التكرار والتنبيه — بيتقروا من الفورم مرة واحدة للإضافة وللتعديل.
+ *
+ * **الوقت بيتكتب بتوقيت مصر وبيتخزّن عالمي** (`lib/cairo-time.ts`) —
+ * والفرق مش ثابت لأن مصر عندها توقيت صيفي.
+ *
+ * وكل حاجة ناقصة بتترمي بدل ما تتخزّن نص: تكرار كاستم من غير وحدة =
+ * تاسك مش هيتكرر أبدًا، وأحسن ما يتخزّن ويفضل ساكت من غير ما حد يفهم ليه.
+ */
+function scheduleFrom(formData: FormData): Record<string, unknown> {
+  const kind = repeatKind(formData.get("repeat_kind"));
+  const custom = kind === "custom";
+
+  const every = custom ? countIn(formData.get("repeat_every"), MAX_REPEAT_EVERY) : null;
+  const unit = custom
+    ? oneOf(formData.get("repeat_unit"), ["day", "week", "month"])
+    : null;
+
+  const at = cairoInputToUtc(String(formData.get("remind_at") ?? ""));
+  const remindEvery = at ? countIn(formData.get("remind_every"), MAX_REMIND_EVERY) : null;
+  const remindUnit = at
+    ? oneOf(formData.get("remind_unit"), ["hour", "day", "week"])
+    : null;
+  // فاصل من غير وحدة (أو العكس) = مرة واحدة، مش تكرار نصّه ناقص
+  const repeating = remindEvery !== null && remindUnit !== null;
+
+  return {
+    // الكاستم الناقص بيتلغي — مش بيتخزّن ويفضل ساكت
+    repeat_kind: custom && !(every && unit) ? null : kind,
+    repeat_every: every,
+    repeat_unit: unit,
+    remind_at: at,
+    remind_every: repeating ? remindEvery : null,
+    remind_unit: repeating ? remindUnit : null,
+    // **ميعاد جديد = العدّاد من الأول** وإلا التاسك المؤجّل يفضل مسكوت
+    remind_count: 0,
+  };
 }
 
 /**
@@ -71,10 +123,11 @@ export async function createTask(formData: FormData) {
       body: String(formData.get("body") ?? "").trim() || null,
       priority: formData.get("priority") === "urgent" ? "urgent" : "normal",
       due_on: String(formData.get("due_on") ?? "").trim() || null,
+      ...scheduleFrom(formData),
       // **المتكرر من غير ميعاد مالوش معنى** — مافيش "الجاي" من غير "الحالي"
-      repeat_kind: String(formData.get("due_on") ?? "").trim()
-        ? repeatKind(formData.get("repeat_kind"))
-        : null,
+      ...(String(formData.get("due_on") ?? "").trim()
+        ? {}
+        : { repeat_kind: null, repeat_every: null, repeat_unit: null }),
       order_id: String(formData.get("order_id") ?? "").trim() || null,
       created_by: me.fullName ?? me.email ?? null,
       tenant_id: me.tenantId,
@@ -146,8 +199,14 @@ export async function updateTask(formData: FormData) {
   if (formData.has("due_on")) {
     patch.due_on = String(formData.get("due_on") ?? "").trim() || null;
   }
-  if (formData.has("repeat_kind")) {
-    patch.repeat_kind = patch.due_on ? repeatKind(formData.get("repeat_kind")) : null;
+  if (formData.has("repeat_kind") || formData.has("remind_at")) {
+    Object.assign(patch, scheduleFrom(formData));
+    // **المتكرر من غير ميعاد مالوش معنى** — نفس قاعدة الإنشاء
+    if (!patch.due_on) {
+      patch.repeat_kind = null;
+      patch.repeat_every = null;
+      patch.repeat_unit = null;
+    }
   }
 
   if (Object.keys(patch).length > 0) {
