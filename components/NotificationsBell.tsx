@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Notice } from "@/lib/notifications";
+import { SendAnnouncement, type NotifyMember } from "./SendAnnouncement";
+import type { AnnounceState } from "@/app/(dashboard)/notify/actions";
 
 const DOT: Record<Notice["level"], string> = {
   danger: "bg-red-500",
@@ -16,18 +18,47 @@ const TEXT: Record<Notice["level"], string> = {
   info: "text-sky-700",
 };
 
-export function NotificationsBell({ notices }: { notices: Notice[] }) {
+/**
+ * جرس الإشعارات — بيعرض الواقف، **وبيبعت كمان** لو معاك الصلاحية.
+ *
+ * زرار الإرسال جوّه الجرس مش في القايمة الجنبية بقرار من عمر: الجرس هو
+ * مكان الإشعارات في السيستم، فاللي بيبعت واحد يلاقيه في نفس المكان اللي
+ * بيستقبل فيه.
+ */
+export function NotificationsBell({
+  notices,
+  canNotify,
+  team,
+  senderName,
+  sendAction,
+}: {
+  notices: Notice[];
+  canNotify?: boolean;
+  team?: NotifyMember[];
+  senderName?: string;
+  sendAction?: (prev: AnnounceState, fd: FormData) => Promise<AnnounceState>;
+}) {
   const [open, setOpen] = useState(false);
+  // بيتفتح على قايمة الإشعارات دايمًا — الكتابة اختيار تاني
+  const [composing, setComposing] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+  const canSend = Boolean(canNotify && sendAction);
+
+  // القفل بيرجّع الجرس لقايمة الإشعارات — عشان لما تفتحه تاني تلاقي
+  // الإشعارات مش فورم نصّه مكتوب من ساعة
+  const close = () => {
+    setOpen(false);
+    setComposing(false);
+  };
 
   // الدوسة برّه بتقفل — ومابتعملش حاجة تانية
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!boxRef.current?.contains(e.target as Node)) close();
     };
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") close();
     };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onEsc);
@@ -45,7 +76,7 @@ export function NotificationsBell({ notices }: { notices: Notice[] }) {
     <div ref={boxRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? close() : setOpen(true))}
         className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100"
         aria-label={total ? `${total} إشعار` : "الإشعارات"}
         title={total ? `${total} حاجة محتاجة تتحرك` : "مفيش إشعارات"}
@@ -65,12 +96,56 @@ export function NotificationsBell({ notices }: { notices: Notice[] }) {
       </button>
 
       {open && (
-        <div className="absolute end-0 top-full z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-          <div className="border-b border-gray-100 px-3 py-2 text-xs font-bold text-gray-700">
-            الإشعارات
+        <div
+          className={`absolute end-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg ${
+            composing
+              ? "w-[min(22rem,calc(100vw-2rem))]"
+              : "w-[min(20rem,calc(100vw-2rem))]"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-3 py-2">
+            <span className="text-xs font-bold text-gray-700">
+              {composing ? "ابعت إشعار للتيم" : "الإشعارات"}
+            </span>
+            {canSend &&
+              (composing ? (
+                <button
+                  type="button"
+                  onClick={() => setComposing(false)}
+                  className="text-[11px] font-medium text-gray-400 hover:text-gray-700"
+                >
+                  رجوع
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setComposing(true)}
+                  title="ابعت إشعار للتيم"
+                  aria-label="ابعت إشعار للتيم"
+                  className="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-900 hover:text-white"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    className="h-3.5 w-3.5"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+              ))}
           </div>
 
-          {notices.length === 0 ? (
+          {composing && sendAction ? (
+            <SendAnnouncement
+              team={team ?? []}
+              senderName={senderName ?? "الإدارة"}
+              action={sendAction}
+              onDone={close}
+            />
+          ) : notices.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-gray-400">
               مفيش حاجة واقفة — كل حاجة تمام
             </p>
@@ -100,7 +175,7 @@ export function NotificationsBell({ notices }: { notices: Notice[] }) {
                     {n.href ? (
                       <Link
                         href={n.href}
-                        onClick={() => setOpen(false)}
+                        onClick={close}
                         className="block hover:bg-gray-50"
                       >
                         {body}

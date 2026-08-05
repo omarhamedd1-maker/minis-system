@@ -4,7 +4,9 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 import { PushPrompt } from "@/components/PushPrompt";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectNotices } from "@/lib/notifications";
-import { getSessionUser } from "@/lib/permissions";
+import { can, getSessionUser } from "@/lib/permissions";
+import { sendAnnouncement } from "./notify/actions";
+import type { NotifyMember } from "@/components/SendAnnouncement";
 
 // ترحيب بالاسم الأول حسب وقت اليوم (بتوقيت مصر)
 function greeting(name: string | null) {
@@ -19,6 +21,38 @@ function greeting(name: string | null) {
   const part =
     hour < 12 ? "صباح الخير" : hour < 17 ? "أهلاً" : "مساء الخير";
   return first ? `${part} يا ${first} 👋` : `${part} 👋`;
+}
+
+/**
+ * التيم مع عدد موبايلات كل واحد.
+ * **الأجهزة مش الحسابات** — الإشعار بيروح للموبايل، فاللي مافتحش السيستم
+ * من موبايله مش هيوصله حاجة مهما كان مختار في القايمة.
+ */
+async function loadTeam(tenantId: string): Promise<NotifyMember[]> {
+  const db = createAdminClient();
+  const [{ data: users }, { data: subs }] = await Promise.all([
+    db
+      .from("app_users")
+      .select("auth_user_id, full_name")
+      .eq("tenant_id", tenantId)
+      .eq("active", true)
+      .order("full_name"),
+    db.from("push_subscriptions").select("auth_user_id").eq("tenant_id", tenantId),
+  ]);
+
+  const devices = new Map<string, number>();
+  for (const s of (subs ?? []) as { auth_user_id: string | null }[]) {
+    if (!s.auth_user_id) continue;
+    devices.set(s.auth_user_id, (devices.get(s.auth_user_id) ?? 0) + 1);
+  }
+
+  return ((users ?? []) as { auth_user_id: string; full_name: string | null }[]).map(
+    (u) => ({
+      authUserId: u.auth_user_id,
+      name: u.full_name ?? "بدون اسم",
+      devices: devices.get(u.auth_user_id) ?? 0,
+    })
+  );
 }
 
 export default async function DashboardLayout({
@@ -45,6 +79,18 @@ export default async function DashboardLayout({
     notices = [];
   }
 
+  // قايمة التيم بتتجاب بس لو معاك صلاحية الإرسال — مالهاش لازمة لغيرك،
+  // وكل صفحة في السيستم بتعدّي من هنا
+  const canNotify = can(user, "admin.notify");
+  let team: NotifyMember[] = [];
+  if (canNotify) {
+    try {
+      team = await loadTeam(user.tenantId);
+    } catch {
+      team = [];
+    }
+  }
+
   return (
     <div className="min-h-screen">
       {/* هيدر التليفون — اللوجو + الإشعارات + ترحيب باسم المستخدم */}
@@ -56,7 +102,13 @@ export default async function DashboardLayout({
           <span className="truncate text-sm text-gray-500">
             {greeting(user.fullName ?? user.email)}
           </span>
-          <NotificationsBell notices={notices} />
+          <NotificationsBell
+            notices={notices}
+            canNotify={canNotify}
+            team={team}
+            senderName={user.fullName ?? user.email ?? "الإدارة"}
+            sendAction={sendAnnouncement}
+          />
         </div>
       </header>
 
@@ -66,7 +118,13 @@ export default async function DashboardLayout({
           {/* ترحيب على الكمبيوتر (على التليفون بيظهر في الهيدر فوق) */}
           <div className="mb-4 hidden items-center justify-between gap-3 text-sm text-gray-500 md:flex">
             <span>{greeting(user.fullName ?? user.email)}</span>
-            <NotificationsBell notices={notices} />
+            <NotificationsBell
+            notices={notices}
+            canNotify={canNotify}
+            team={team}
+            senderName={user.fullName ?? user.email ?? "الإدارة"}
+            sendAction={sendAnnouncement}
+          />
           </div>
           {/* طلب تشغيل الإشعارات — بيبان لوحده أول ما تفتح، ودوسة واحدة
               تخلص. مينفعش نطلب الإذن من غير دوسة، آبل بترفض. */}
