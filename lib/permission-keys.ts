@@ -36,7 +36,8 @@ export type PermissionKey =
   | "tasks.assign"
   | "tasks.delete"
   | "admin.users"
-  | "admin.settings";
+  | "admin.settings"
+  | "admin.notify";
 
 export type PermissionGroup = {
   group: string;
@@ -143,6 +144,11 @@ export const PERMISSIONS: PermissionGroup[] = [
         key: "admin.settings",
         label: "إعدادات البيزنس",
         hint: "الشحن والباقة ورسوم بوسطة ومفاتيح الربط",
+      },
+      {
+        key: "admin.notify",
+        label: "إرسال إشعارات للتيم",
+        hint: "بتوصل على موبايلاتهم — لناس محددة أو للكل",
       },
     ],
   },

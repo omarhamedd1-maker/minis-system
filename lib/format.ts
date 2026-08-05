@@ -117,6 +117,16 @@ export const AT_CARRIER_STATUSES = [
   "returned_after_delivery",
 ];
 
+/**
+ * الحالات اللي فيها **العميل دفع الشحن فعلاً**.
+ *
+ * الشحن بيتحصّل على الباب، فالأوردر اللي ماوصلش العميل مادفعش فيه ولا جنيه
+ * شحن مهما كان مكتوب عليه رقم. و"مرتجع بعد التسليم" داخل معاهم لأن العميل
+ * استلم ودفع بجد — والمرتجع بيرجّع تمن البضاعة بس مش الشحن
+ * (`lib/refund.ts`).
+ */
+export const CUSTOMER_PAID_STATUSES = ["delivered", "returned_after_delivery"];
+
 // الحالات اللي معناها الأوردر مش بيتحسب في المبيعات/الأرباح
 export const EXCLUDED_STATUSES = [
   "cancelled",

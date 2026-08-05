@@ -85,6 +85,57 @@ export function orderCarrierCost(o: {
   if (real > 0) return real;
   return Number(o.bosta_shipping_cost ?? 0);
 }
+
+export type ShippingSettlement = {
+  /** اللي بوسطة خدته فعلاً على الشحنة دي */
+  cost: number;
+  /** اللي العميل دفعه شحن — صفر لو ماستلمش */
+  paidByCustomer: number;
+  /** موجب = الشحن عليك · سالب = زيادة معاك · صفر = متعادل */
+  net: number;
+  /** الرقم ده من كشف بوسطة ولا لسه تقدير */
+  real: boolean;
+};
+
+/**
+ * تسوية شحن الأوردر الواحد: كلّفك كام، والعميل دفع كام، والفرق لصالح مين.
+ *
+ * **الباج اللي الدالة دي بتصلّحه** (شاشة الأوردر، ٦ أغسطس ٢٠٢٦): الصفحة
+ * كانت بتطرح ٨٨ «دفعته الباقة» من الرقم الحقيقي — والرقم الحقيقي اللي
+ * بوسطة بتقوله **خصم الباقة متطرح منه جوّه أصلاً** (`bundleCovered`).
+ * فأوردر شحنه ٩٣ والباقة غطّته بيرجع بـ٣٤٫٢، والصفحة كانت تطرح ٨٨ تاني
+ * وتطرح ٩٠ بتاع العميل وتقول **«بترجع لك ١٤٣٫٨»** — فلوس مالهاش وجود.
+ * وفي الشحنة اللي الباقة ماغطّتهاش كان الطرح أسوأ: بيخترع ٨٨ محدش دفعها.
+ *
+ * **ونصيب الباقة مش محسوب هنا بقصد**: قسطها الشهري بيتسجّل كمصروف في
+ * شاشة المصاريف، فلو اتحسب على الأوردر كمان يبقى مدفوع مرتين.
+ *
+ * والتكلفة هي نفسها `orderCarrierCost` — عشان الشاشة ماتقولش رقم والأرباح
+ * تتحسب برقم تاني.
+ */
+export function shippingSettlement(input: {
+  feesReal: number | null | undefined;
+  feesEstimate: number | null | undefined;
+  shippingPrice: number | null | undefined;
+  /** العميل استلم فعلاً؟ من غير كده مافيش شحن اتحصّل منه */
+  customerReceived: boolean;
+}): ShippingSettlement {
+  const cost = orderCarrierCost({
+    bosta_shipping_cost: input.feesEstimate ?? null,
+    bosta_fees_real: input.feesReal ?? null,
+  });
+  const paidByCustomer = input.customerReceived
+    ? Math.max(0, Number(input.shippingPrice ?? 0))
+    : 0;
+
+  return {
+    cost,
+    paidByCustomer,
+    net: Math.round((cost - paidByCustomer) * 100) / 100,
+    real: Number(input.feesReal ?? 0) > 0,
+  };
+}
+
 export type StatExpense = { amount: number };
 
 export type Headline = {

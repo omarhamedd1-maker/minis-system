@@ -11,7 +11,7 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendPush } from "./send";
+import { sendPush, type PushResult } from "./send";
 
 /** بيشيل وسوم HTML ويسيب النص — الإشعار مابيعرضش وسوم */
 export function plainText(html: string): string {
@@ -71,4 +71,27 @@ export async function notifyAll(
     url: opts?.url,
     tag: opts?.tag,
   });
+}
+
+/**
+ * إشعار لناس محددة بأسمائهم — ده اللي شاشة `/notify` بتستخدمه.
+ *
+ * الفرق عن `notifyAll` إنه بيرجّع نتيجة الإرسال بدل ما يبلعها: التنبيه
+ * التلقائي مايوقفش المزامنة لو فشل، لكن الرسالة اللي حد كتبها بإيده
+ * **لازم يعرف وصلت لكام جهاز** — «اتبعتت» من غير رقم كذبة.
+ */
+export async function notifyPeople(
+  db: SupabaseClient,
+  tenantId: string,
+  authUserIds: string[],
+  message: string,
+  opts?: { url?: string; tag?: string }
+): Promise<PushResult> {
+  const { title, body } = splitTitle(message);
+  return sendPush(
+    db,
+    tenantId,
+    { title, body, url: opts?.url, tag: opts?.tag },
+    { authUserIds }
+  );
 }

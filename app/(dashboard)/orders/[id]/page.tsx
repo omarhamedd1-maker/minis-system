@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  BUNDLE_COVERS,
+  CUSTOMER_PAID_STATUSES,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
   formatDate,
@@ -11,6 +11,7 @@ import {
   orderStatusBadge,
   paymentMethodLabel,
 } from "@/lib/format";
+import { shippingSettlement } from "@/lib/dashboard-stats";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { StatusBox } from "@/components/StatusBox";
@@ -637,62 +638,91 @@ export default async function OrderDetailsPage({
                 <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
               </div>
-              {/* تقسيمة الشحن: الإجمالي − الباقة − العميل = الباقي */}
+              {/* تسوية الشحن: اللي بوسطة خدته − اللي العميل دفعه = الباقي */}
               {(realFee || order.bosta_shipping_cost > 0) &&
                 (() => {
                   // **لو بوسطة قالت رقمها الحقيقي، هو اللي يتحاسب** — التقدير
                   // للشحنة اللي لسه شغالة بس، لأن بوسطة مابتقفلش الحساب غير
                   // بعد ما تخلص.
                   const real = realFee?.bosta_fees_real ?? null;
-                  const shipPart = realFee?.bosta_ship_fee_real ?? BUNDLE_COVERS;
-                  const totalCost = real ?? BUNDLE_COVERS + order.bosta_shipping_cost;
-                  const rest = totalCost - BUNDLE_COVERS - order.shipping_price;
-                  const backToMe = rest < 0;
+                  const shipPart = realFee?.bosta_ship_fee_real ?? null;
+                  const covered = bundleCovered(real, shipPart);
+                  const received = CUSTOMER_PAID_STATUSES.includes(
+                    order.order_status ?? ""
+                  );
+                  const s = shippingSettlement({
+                    feesReal: real,
+                    feesEstimate: order.bosta_shipping_cost,
+                    shippingPrice: order.shipping_price,
+                    customerReceived: received,
+                  });
+
+                  // **خصم الباقة متطرح جوّه الرقم الحقيقي أصلاً** — فبنقوله
+                  // بس ومابنطرحوش تاني. الطرح التاني هو اللي كان بيطلّع
+                  // «بترجع لك ١٤٣٫٨».
+                  const detail = !real
+                    ? "تقدير — الشحن نفسه محسوب على الباقة"
+                    : covered
+                      ? `الشحن ${formatMoney(shipPart ?? 0)} دفعته الباقة — ده الباقي بعد خصمها`
+                      : shipPart && shipPart > 0
+                        ? `${formatMoney(shipPart)} شحن + ${formatMoney(
+                            Math.round((real - shipPart) * 100) / 100
+                          )} رسوم — الباقة ماغطّتش الشحنة دي`
+                        : "رقم بوسطة الحقيقي";
+
+                  const tone =
+                    s.net === 0
+                      ? { box: "bg-gray-100", label: "text-gray-700", value: "text-gray-800" }
+                      : s.net < 0
+                        ? { box: "bg-green-50", label: "text-green-800", value: "text-green-700" }
+                        : { box: "bg-red-50", label: "text-red-800", value: "text-red-700" };
+
                   return (
                     <div className="mt-1 space-y-1 rounded-lg bg-gray-50 p-2.5 text-xs">
                       <div className="flex justify-between gap-3">
                         <span className="text-gray-600">
-                          إجمالي مصاريف الشحن
+                          اللي بوسطة خدته
                           <span className="block text-[10px] text-gray-400">
-                            {real
-                              ? bundleCovered(real, shipPart)
-                                ? `شحن ${formatMoney(shipPart)} دفعته الباقة — رقم بوسطة الحقيقي`
-                                : `${formatMoney(shipPart)} شحن + ${formatMoney(real - shipPart)} رسوم — رقم بوسطة الحقيقي`
-                              : `${BUNDLE_COVERS} شحن + ${formatMoney(order.bosta_shipping_cost)} رسوم — تقدير`}
+                            {detail}
                           </span>
                         </span>
                         <span className="font-medium text-gray-900">
-                          {formatMoney(totalCost)}
+                          {formatMoney(s.cost)}
                         </span>
                       </div>
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-600">دفعته الباقة</span>
-                        <span className="font-medium text-gray-700">
-                          − {formatMoney(BUNDLE_COVERS)}
+                        <span className="text-gray-600">
+                          دفعه العميل
+                          {!received && order.shipping_price > 0 && (
+                            <span className="block text-[10px] text-gray-400">
+                              ماستلمش، فشحن الأوردر (
+                              {formatMoney(order.shipping_price)}) ماتحصّلش
+                            </span>
+                          )}
                         </span>
-                      </div>
-                      <div className="flex justify-between gap-3">
-                        <span className="text-gray-600">دفعه العميل</span>
                         <span className="font-medium text-gray-700">
-                          − {formatMoney(order.shipping_price)}
+                          − {formatMoney(s.paidByCustomer)}
                         </span>
                       </div>
                       <div
-                        className={`mt-1 flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 ${
-                          backToMe ? "bg-green-50" : "bg-red-50"
-                        }`}
+                        className={`mt-1 flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 ${tone.box}`}
                       >
-                        <span
-                          className={`font-medium ${backToMe ? "text-green-800" : "text-red-800"}`}
-                        >
-                          {backToMe ? "بترجع لك" : "عليك"}
+                        <span className={`font-medium ${tone.label}`}>
+                          {s.net === 0
+                            ? "متعادل"
+                            : s.net < 0
+                              ? "زيادة معاك من الشحن"
+                              : "الشحن عليك"}
                         </span>
-                        <span
-                          className={`text-sm font-bold ${backToMe ? "text-green-700" : "text-red-700"}`}
-                        >
-                          {formatMoney(Math.abs(rest))}
+                        <span className={`text-sm font-bold ${tone.value}`}>
+                          {formatMoney(Math.abs(s.net))}
                         </span>
                       </div>
+                      {/* قسط الباقة الشهري مصروف لوحده — مايتحسبش هنا تاني */}
+                      <p className="pt-0.5 text-[10px] text-gray-400">
+                        قسط الباقة الشهري مش داخل في الحسبة دي — بيتسجّل مصروف
+                        لوحده.
+                      </p>
                     </div>
                   );
                 })()}
