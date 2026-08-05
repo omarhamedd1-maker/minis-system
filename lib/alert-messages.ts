@@ -13,7 +13,7 @@
 // القفل، وكان بياخد سطر من مساحة ضيقة أصلاً — واللي عايزه بيلاقيه في الأوردر.
 // ==========================================================================
 
-import { exceptionAdvice } from "./bosta/exception";
+import { exceptionAdvice, shortReason } from "./bosta/exception";
 
 /**
  * أول سطرين في أي إشعار.
@@ -60,26 +60,31 @@ export function failedDeliveryMessage(a: FailedDeliveryAlert): string {
       ? `أوردر ${a.orderNumber ?? "—"} رجع ومتسلّمش`
       : `أوردر ${a.orderNumber ?? "—"} العميل مستلمش`;
 
-  const lines = alertHead(a.waiting ? "🛑" : a.arrived ? "📦" : "⚠️", headline, a.customerName);
+  // **الاسم والتليفون في سطر واحد.** الآيفون بيعرض ٤ سطور بس على شاشة
+  // القفل، فكل سطر بيتحرق معناه إن السطر اللي بيقول "اعمل إيه" بيتقص.
+  const who = [a.customerName?.trim(), a.customerPhone?.trim()]
+    .filter(Boolean)
+    .join(" · ");
 
-  if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
-  // السبب من غير مقدمة — «العميل رفض يستلم» بتقول نفسها، و«سبب بوسطة:»
-  // كانت بتاكل من عرض سطر ضيق أصلاً
-  if (a.reason) lines.push(a.reason);
-  lines.push("");
+  const lines = alertHead(a.waiting ? "🛑" : a.arrived ? "📦" : "⚠️", headline, who);
+
+  // السبب من غير مقدمة ومن غير التواريخ — «العميل رفض يستلم» بتقول نفسها،
+  // والتفاصيل كاملة في شاشة الأوردر
+  const reason = shortReason(a.reason);
+  if (reason) lines.push(reason);
   lines.push(
     a.waiting
       ? exceptionAdvice(a.reason).hint
       : a.arrived
-        ? "البضاعة رجعت — راجع المخزون والفلوس."
-        : "كلّم العميل قبل ما الشحنة ترجع المخزن."
+        ? "البضاعة رجعت — راجع المخزون والفلوس"
+        : "كلّمه قبل ما الشحنة ترجع المخزن"
   );
   return lines.join("\n");
 }
 
 /** رسالة "المزامنة واقفة" — دي مالهاش عميل، فمفيش سطر تاني */
 export function syncDownMessage(detail: string): string {
-  const lines = ["<b>المزامنة مع بوسطة واقفة</b> 🔴", "", detail, ""];
-  lines.push("الحالات والتحصيل مش بيتحدّثوا — الأرقام في السيستم قديمة.");
+  const lines = ["<b>المزامنة مع بوسطة واقفة</b> 🔴", detail];
+  lines.push("الحالات والتحصيل مش بيتحدّثوا — الأرقام قديمة");
   return lines.join("\n");
 }

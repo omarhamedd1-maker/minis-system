@@ -90,7 +90,6 @@ export function stalePickupMessage(a: {
     a.customerName
   );
   lines.push(`قاعدة: <b>${a.days} يوم</b> من غير بيك اب`);
-  lines.push("");
 
   if (last) {
     lines.push(

@@ -84,16 +84,15 @@ export function refundReminderMessage(a: {
   const lines = alertHead(
     "💸",
     `أوردر ${a.orderNumber ?? "—"} لسه مارجّعتش فلوسه`,
-    a.customerName
+    [a.customerName?.trim(), a.customerPhone?.trim()].filter(Boolean).join(" · ")
   );
-  if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
-  lines.push(`المبلغ: <b>${a.amount} جنيه</b>`);
+  // السطر بيبدأ بكلمة عربي مش برقم — مع علامة "ابدأ من الشمال" الرقم
+  // في أول السطر بيقفز لآخره
   lines.push(
-    a.days <= 1
-      ? "المرتجع اتسجّل امبارح."
-      : `المرتجع اتسجّل من ${a.days} يوم.`
+    `المبلغ <b>${a.amount} جنيه</b> · ${
+      a.days <= 1 ? "اتسجّل امبارح" : `اتسجّل من ${a.days} يوم`
+    }`
   );
-  lines.push("");
-  lines.push("حوّله وبعدين أكّد من جوّه الأوردر عشان التنبيه يوقف.");
+  lines.push("حوّله وأكّد من جوّه الأوردر");
   return lines.join("\n");
 }

@@ -21,11 +21,38 @@ export function plainText(html: string): string {
     .trim();
 }
 
+/**
+ * علامة «ابدأ من الشمال» — حرف مخفي مالوش شكل.
+ * https://unicode.org/reports/tr9 — علامة LRM
+ */
+const LEFT_MARK = "‎";
+
+/**
+ * بيخلّي كل سطور الإشعار على الشمال.
+ *
+ * التليفون بيحدد اتجاه كل سطر لوحده من **أول حرف حقيقي فيه**: السطر اللي
+ * بيبدأ بعربي بيروح يمين واللي بيبدأ بإنجليزي بيروح شمال. وسطر `from MINIS`
+ * بتاع آبل إنجليزي دايمًا وعلى الشمال دايمًا — فالإشعار كان بيطلع مقسوم.
+ *
+ * العلامة دي بتتحط قبل كل سطر فبتخلّيه شمال زي سطر آبل، والكلمات العربي
+ * جوّاه بتفضل متقرية عادي. عمر شافها على تليفونه وقرر إن الشكل الموحّد
+ * أوضح من إن كل سطر يروح ناحية.
+ */
+export function forceLeft(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => (line.trim() ? LEFT_MARK + line : line))
+    .join("\n");
+}
+
 /** أول سطر = عنوان الإشعار، والباقي = جسمه */
 function splitTitle(text: string): { title: string; body: string } {
   const lines = plainText(text).split("\n");
   const title = (lines.shift() ?? "مينيز").trim();
-  return { title, body: lines.join("\n").trim() };
+  return {
+    title: forceLeft(title),
+    body: forceLeft(lines.join("\n").trim()),
+  };
 }
 
 export async function notifyAll(

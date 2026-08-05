@@ -100,6 +100,43 @@ export function sortTasks<T extends TaskLike>(tasks: T[], today: string): T[] {
   });
 }
 
+/**
+ * تقسيم اللوحة لمجموعات ليها عناوين.
+ *
+ * القايمة الواحدة الطويلة مابتقولش لك تبدأ منين — كل التاسكات شكلها واحد
+ * والفرق بينهم في سطر رمادي صغير تحت. التقسيم بيجاوب على السؤال الحقيقي:
+ * **إيه اللي محتاج مني حاجة دلوقتي؟**
+ *
+ * والمجموعة الفاضية مابتظهرش خالص — مافيش لازمة لعنوان تحته "مفيش".
+ */
+export function groupTasks<T extends TaskLike & { id: string }>(
+  tasks: T[],
+  today: string
+): { key: string; label: string; tone: "bad" | "warn" | "plain" | "muted"; items: T[] }[] {
+  const sorted = sortTasks(tasks, today);
+
+  const bucket = (t: T) => {
+    if (t.status === "done") return "done";
+    if (isOverdue(t, today)) return "late";
+    const due = t.due_on ? String(t.due_on).slice(0, 10) : null;
+    if (due && due === today) return "today";
+    if (!due) return "someday";
+    return "next";
+  };
+
+  const groups: { key: string; label: string; tone: "bad" | "warn" | "plain" | "muted" }[] = [
+    { key: "late", label: "متأخر", tone: "bad" },
+    { key: "today", label: "النهاردة", tone: "warn" },
+    { key: "next", label: "جاي", tone: "plain" },
+    { key: "someday", label: "من غير ميعاد", tone: "plain" },
+    { key: "done", label: "خلص", tone: "muted" },
+  ];
+
+  return groups
+    .map((g) => ({ ...g, items: sorted.filter((t) => bucket(t) === g.key) }))
+    .filter((g) => g.items.length > 0);
+}
+
 /** تقدّم الخطوات — بيتعرض كشريط جوّه التاسك */
 export function stepsProgress(
   steps: { done: boolean }[]

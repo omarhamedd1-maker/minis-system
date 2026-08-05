@@ -54,15 +54,20 @@ export function unconfirmedMessage(a: {
   const lines = alertHead(
     "📞",
     `أوردر ${a.orderNumber ?? "—"} لسه مش مؤكد`,
-    a.customerName
+    [a.customerName?.trim(), a.customerPhone?.trim()].filter(Boolean).join(" · ")
   );
-  if (a.customerPhone) lines.push(`تليفون: ${a.customerPhone}`);
-  if (a.total > 0) lines.push(`المبلغ: ${a.total} جنيه`);
+  // **السطر بيبدأ بكلمة عربي مش برقم.** كل السطور بتتبعت بعلامة "ابدأ من
+  // الشمال"، والسطر اللي بيبدأ برقم بيتلخبط ترتيبه فالرقم بيقفز لآخر السطر
+  // («جنيه · نزل من ٢ يوم ٦٤٩»). الكلمة الأولى بتثبّت الترتيب.
   lines.push(
-    a.days === 1 ? "نزل امبارح ومحدش أكّده." : `نزل من ${a.days} يوم ومحدش أكّده.`
+    [
+      a.total > 0 ? `المبلغ ${a.total} جنيه` : null,
+      a.days === 1 ? "نزل امبارح" : `نزل من ${a.days} يوم`,
+    ]
+      .filter(Boolean)
+      .join(" · ")
   );
-  lines.push("");
-  lines.push("كلّم العميل وأكّد الأوردر — والتنبيه هيفضل ييجي كل يوم لحد ما تأكّده.");
+  lines.push("كلّم العميل وأكّده");
   return lines.join("\n");
 }
 
@@ -80,12 +85,10 @@ export function unconfirmedGroupMessage(a: {
 }): string {
   const lines = [
     `<b>عندك ${a.count} أوردر لسه مش مؤكدين</b> 📞`,
-    "",
     a.oldestDays === 1
-      ? "أقدم واحد نزل امبارح."
-      : `أقدم واحد نزل من ${a.oldestDays} يوم.`,
-    "",
-    "افتحهم وكلّم العملاء — التنبيه هيفضل ييجي كل يوم لحد ما تأكّدهم.",
+      ? "أقدم واحد نزل امبارح"
+      : `أقدم واحد نزل من ${a.oldestDays} يوم`,
+    "افتحهم وكلّم العملاء",
   ];
   return lines.join("\n");
 }

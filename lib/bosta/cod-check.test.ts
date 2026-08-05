@@ -81,7 +81,7 @@ describe("رسالة الفرق", () => {
     expect(m).toContain("محمد فراج");
     expect(m).toContain("739");
     expect(m).toContain("1388");
-    expect(m).toContain("ابعته لبوسطة");
+    expect(m).toContain("ابعت رقمنا لبوسطة");
   });
 
   it("مش قابل للتصليح = بتقول إن المندوب ماشي بالمبلغ القديم", () => {
@@ -104,6 +104,6 @@ describe("رسالة الفرق", () => {
       bosta: 790,
       fixable: true,
     });
-    expect(m).toContain("شحنة جزئية");
+    expect(m).toContain("تجاهل");
   });
 });
