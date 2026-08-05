@@ -70,6 +70,42 @@ export type PushMessage = {
   tag?: string;
 };
 
+/** الجهاز ده آيفون؟ آبل ليها عنوان خدمة خاص بيها */
+export function isApple(endpoint: string): boolean {
+  return String(endpoint ?? "").includes("web.push.apple.com");
+}
+
+/**
+ * شكل الإشعار حسب الجهاز.
+ *
+ * **آبل بتحط سطر `from <اسم التطبيق>` تحت العنوان مباشرةً**، فالإشعار كان
+ * بيطلع: الجملة، وتحتها سطر آبل، وتحته الاسم — يعني سطر آبل مقحوم في نص
+ * كلامنا.
+ *
+ * الحيلة: نسيب العنوان **مسافة واحدة** وننزّل كل الكلام في الجسم. ساعتها
+ * آبل بتحط سطرها فوق خالص والكلام كله يبقى تحته بالترتيب:
+ *
+ *     from MINIS
+ *     أوردر ١٣٧٤ لسه مش مؤكد
+ *     أمينة فتحي
+ *
+ * ⚠️ **والعنوان الفاضي تمامًا مش حل** — جرّبناه فالخدمة حطّت اسم التطبيق
+ * كعنوان، فطلع سطر زيادة مالوش لازمة.
+ *
+ * وعلى الأندرويد بنسيبه زي ما هو: هناك العنوان بيتعرض عريض والمصدر بيتكتب
+ * تحت خالص، فالمسافة كانت هتطلع سطر عريض فاضي.
+ */
+export function shapeFor(
+  endpoint: string,
+  msg: PushMessage
+): { title: string; body: string } {
+  if (!isApple(endpoint)) return { title: msg.title, body: msg.body };
+  return {
+    title: " ",
+    body: [msg.title, msg.body].filter((s) => s.trim()).join("\n"),
+  };
+}
+
 export type PushResult = {
   sent: number;
   removed: number;
@@ -112,17 +148,17 @@ export async function sendPush(
     keys.privateKey
   );
 
-  const payload = JSON.stringify({
-    title: msg.title,
-    body: msg.body,
-    url: msg.url ?? "/orders",
-    tag: msg.tag,
-  });
-
   let sent = 0;
   let removed = 0;
 
   for (const d of devices) {
+    // **الشكل بيتبنى لكل جهاز لوحده** — الآيفون ليه ترتيب مختلف
+    const payload = JSON.stringify({
+      ...shapeFor(d.endpoint, msg),
+      url: msg.url ?? "/orders",
+      tag: msg.tag,
+    });
+
     try {
       await webpush.sendNotification(
         {

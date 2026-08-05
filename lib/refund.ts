@@ -80,7 +80,6 @@ export function refundReminderMessage(a: {
   customerPhone: string | null;
   amount: number;
   days: number;
-  siteUrl?: string | null;
 }): string {
   const lines = alertHead(
     "💸",
@@ -96,6 +95,5 @@ export function refundReminderMessage(a: {
   );
   lines.push("");
   lines.push("حوّله وبعدين أكّد من جوّه الأوردر عشان التنبيه يوقف.");
-  if (a.siteUrl) lines.push(`${a.siteUrl}/orders?status=returned_after_delivery`);
   return lines.join("\n");
 }

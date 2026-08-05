@@ -25,7 +25,7 @@ export async function generateRecurringTasks(opts: {
   const { data, error } = await db
     .from("tasks")
     .select(
-      "id, title, body, priority, due_on, repeat_kind, status, assignee_id, assignee_name, order_id"
+      "id, title, body, priority, due_on, repeat_kind, status, order_id, task_assignees(user_id, user_name)"
     )
     .eq("tenant_id", tenantId)
     .not("repeat_kind", "is", null)
@@ -39,9 +39,8 @@ export async function generateRecurringTasks(opts: {
     title: string;
     body: string | null;
     priority: string | null;
-    assignee_id: string | null;
-    assignee_name: string | null;
     order_id: string | null;
+    task_assignees: { user_id: string; user_name: string | null }[];
   })[];
   out.checked = parents.length;
   if (parents.length === 0) return out;
@@ -75,19 +74,35 @@ export async function generateRecurringTasks(opts: {
 
   for (const { task, due } of wanted) {
     const p = parents.find((x) => x.id === task.id)!;
-    const { error: insErr } = await db.from("tasks").insert({
-      tenant_id: tenantId,
-      title: p.title,
-      body: p.body,
-      priority: p.priority ?? "normal",
-      due_on: due,
-      assignee_id: p.assignee_id,
-      assignee_name: p.assignee_name,
-      order_id: p.order_id,
-      repeat_parent_id: p.id,
-      created_by: "التكرار",
-    });
+    const { data: made, error: insErr } = await db
+      .from("tasks")
+      .insert({
+        tenant_id: tenantId,
+        title: p.title,
+        body: p.body,
+        priority: p.priority ?? "normal",
+        due_on: due,
+        order_id: p.order_id,
+        repeat_parent_id: p.id,
+        created_by: "التكرار",
+      })
+      .select("id")
+      .maybeSingle();
     if (insErr) continue;
+
+    // نفس الناس اللي على الأصل بيتنقلوا للنسخة
+    const kidId = (made as { id: string } | null)?.id;
+    const people = p.task_assignees ?? [];
+    if (kidId && people.length > 0) {
+      await db.from("task_assignees").insert(
+        people.map((a) => ({
+          task_id: kidId,
+          user_id: a.user_id,
+          user_name: a.user_name,
+          tenant_id: tenantId,
+        }))
+      );
+    }
 
     // **الأصل بيتحرّك لميعاده الجديد** عشان المرة الجاية تتحسب منه.
     // من غير ده كل تشغيل هيحسب من نفس التاريخ القديم.

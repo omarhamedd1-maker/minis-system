@@ -114,24 +114,31 @@ export function AddTask({
       </label>
 
       {canAssign && (
-        <label className="block text-[11px] text-gray-500">
-          مين عليه التاسك
-          <select
-            name="assignee_id"
-            defaultValue=""
-            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-          >
-            <option value="">مسنودش لحد</option>
+        <fieldset>
+          <legend className="text-[11px] text-gray-500">
+            مين عليه التاسك
+            <span className="text-gray-400"> (تقدر تختار أكتر من واحد)</span>
+          </legend>
+          <div className="mt-1 flex flex-wrap gap-1.5">
             {team.map((m) => (
-              <option key={m.id} value={m.id}>
+              <label
+                key={m.id}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-gray-900 has-checked:text-white"
+              >
+                <input
+                  type="checkbox"
+                  name="assignee_id"
+                  value={m.id}
+                  className="h-3.5 w-3.5"
+                />
                 {m.name}
-              </option>
+              </label>
             ))}
-          </select>
-          <span className="mt-0.5 block text-[10px] text-gray-400">
-            هيوصله إشعار على الموبايل
+          </div>
+          <span className="mt-1 block text-[10px] text-gray-400">
+            هيوصلهم إشعار على الموبايل
           </span>
-        </label>
+        </fieldset>
       )}
 
       <button

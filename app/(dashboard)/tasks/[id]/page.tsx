@@ -40,8 +40,7 @@ type TaskDetail = {
   created_by: string | null;
   done_at: string | null;
   done_by: string | null;
-  assignee_id: string | null;
-  assignee_name: string | null;
+  task_assignees: { user_id: string; user_name: string | null }[];
   order_id: string | null;
   repeat_kind: string | null;
   repeat_parent_id: string | null;
@@ -70,7 +69,8 @@ export default async function TaskPage({
     .from("tasks")
     .select(
       `id, title, body, status, priority, due_on, created_at, created_by, done_at, done_by,
-       assignee_id, assignee_name, order_id, repeat_kind, repeat_parent_id, attachments,
+       order_id, repeat_kind, repeat_parent_id, attachments,
+       task_assignees(user_id, user_name),
        task_steps(id, title, done, position),
        task_comments(id, author_name, body, created_at)`
     )
@@ -99,6 +99,8 @@ export default async function TaskPage({
     .order("full_name");
 
   const members = (team ?? []) as { id: string; full_name: string | null }[];
+  const assignees = task.task_assignees ?? [];
+  const assignedIds = new Set(assignees.map((a) => a.user_id));
 
   // **روابط موقّتة بس** — الـbucket مقفول عشان صورة إثبات ممكن يبقى فيها
   // عنوان عميل أو فاتورة. ساعة كفاية إنك تفتح وتشوف.
@@ -143,8 +145,10 @@ export default async function TaskPage({
             {due}
           </span>
         )}
-        {task.assignee_name && (
-          <span className="text-xs text-gray-600">على {task.assignee_name}</span>
+        {assignees.length > 0 && (
+          <span className="text-xs text-gray-600">
+            على {assignees.map((a) => a.user_name).filter(Boolean).join("، ")}
+          </span>
         )}
         {repeatLabel(task.repeat_kind) && (
           <span className="rounded bg-violet-50 px-2 py-0.5 text-xs text-violet-700">
@@ -407,21 +411,30 @@ export default async function TaskPage({
           {canAssign && (
             <form action={assignTask} className="mb-3 flex flex-wrap items-end gap-2">
               <input type="hidden" name="task_id" value={task.id} />
-              <label className="min-w-40 flex-1 text-[11px] text-gray-500">
-                مين عليه التاسك
-                <select
-                  name="assignee_id"
-                  defaultValue={task.assignee_id ?? ""}
-                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-                >
-                  <option value="">مسنودش لحد</option>
+              {/* مربعات مش قايمة — الاختيار المتعدد بقايمة صعب على التليفون */}
+              <fieldset className="min-w-40 flex-1">
+                <legend className="text-[11px] text-gray-500">
+                  مين عليه التاسك
+                  <span className="text-gray-400"> (تقدر تختار أكتر من واحد)</span>
+                </legend>
+                <div className="mt-1 flex flex-wrap gap-1.5">
                   {members.map((m) => (
-                    <option key={m.id} value={m.id}>
+                    <label
+                      key={m.id}
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-gray-900 has-checked:text-white"
+                    >
+                      <input
+                        type="checkbox"
+                        name="assignee_id"
+                        value={m.id}
+                        defaultChecked={assignedIds.has(m.id)}
+                        className="h-3.5 w-3.5"
+                      />
                       {m.full_name ?? "بدون اسم"}
-                    </option>
+                    </label>
                   ))}
-                </select>
-              </label>
+                </div>
+              </fieldset>
               <button
                 type="submit"
                 className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"

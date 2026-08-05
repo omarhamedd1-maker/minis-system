@@ -13,10 +13,9 @@ type TaskRow = {
   priority: string | null;
   due_on: string | null;
   created_at: string | null;
-  assignee_id: string | null;
-  assignee_name: string | null;
   order_id: string | null;
   task_steps: { done: boolean }[];
+  task_assignees: { user_id: string; user_name: string | null }[];
 };
 
 /** الفلاتر اللي فوق — «اللي عليّا» الافتراضي لأنه أهم سؤال للموظف */
@@ -43,7 +42,7 @@ export default async function TasksPage({
   const { data, error } = await db
     .from("tasks")
     .select(
-      "id, title, status, priority, due_on, created_at, assignee_id, assignee_name, order_id, task_steps(done)"
+      "id, title, status, priority, due_on, created_at, order_id, task_steps(done), task_assignees(user_id, user_name)"
     )
     .eq("tenant_id", user.tenantId)
     .limit(500)
@@ -67,7 +66,11 @@ export default async function TasksPage({
   }
 
   const all = data ?? [];
-  const mine = all.filter((t) => t.assignee_id === user.authUserId);
+  // **بـ`appUserId` مش `authUserId`** — الإسناد بيشاور على `app_users.id`.
+  // كان بيقارن برقم حساب الدخول فالفلتر عمره ما طابق حاجة.
+  const mine = all.filter((t) =>
+    (t.task_assignees ?? []).some((a) => a.user_id === user.appUserId)
+  );
 
   const shown = sortTasks(
     view === "mine" ? mine : view === "open" ? all.filter((t) => t.status !== "done") : all,
@@ -173,7 +176,14 @@ export default async function TasksPage({
                       <span className={`rounded-full px-2 py-0.5 ${badge.className}`}>
                         {badge.label}
                       </span>
-                      {t.assignee_name && <span>{t.assignee_name}</span>}
+                      {(t.task_assignees ?? []).length > 0 && (
+                        <span>
+                          {(t.task_assignees ?? [])
+                            .map((a) => a.user_name)
+                            .filter(Boolean)
+                            .join("، ")}
+                        </span>
+                      )}
                       {due && (
                         <span className={late ? "font-medium text-red-600" : ""}>
                           {due}

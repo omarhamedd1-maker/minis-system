@@ -50,7 +50,6 @@ export function unconfirmedMessage(a: {
   customerPhone: string | null;
   total: number;
   days: number;
-  siteUrl?: string | null;
 }): string {
   const lines = alertHead(
     "📞",
@@ -64,7 +63,6 @@ export function unconfirmedMessage(a: {
   );
   lines.push("");
   lines.push("كلّم العميل وأكّد الأوردر — والتنبيه هيفضل ييجي كل يوم لحد ما تأكّده.");
-  if (a.siteUrl) lines.push(`${a.siteUrl}/orders?status=new`);
   return lines.join("\n");
 }
 
@@ -79,10 +77,9 @@ export const GROUP_ABOVE = 5;
 export function unconfirmedGroupMessage(a: {
   count: number;
   oldestDays: number;
-  siteUrl?: string | null;
 }): string {
   const lines = [
-    `📞 <b>عندك ${a.count} أوردر لسه مش مؤكدين</b>`,
+    `<b>عندك ${a.count} أوردر لسه مش مؤكدين</b> 📞`,
     "",
     a.oldestDays === 1
       ? "أقدم واحد نزل امبارح."
@@ -90,6 +87,5 @@ export function unconfirmedGroupMessage(a: {
     "",
     "افتحهم وكلّم العملاء — التنبيه هيفضل ييجي كل يوم لحد ما تأكّدهم.",
   ];
-  if (a.siteUrl) lines.push(`${a.siteUrl}/orders?status=new`);
   return lines.join("\n");
 }

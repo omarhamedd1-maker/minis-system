@@ -571,7 +571,6 @@ export async function runBostaSync(opts: {
             ours: ourCod,
             bosta: Number(merged.latest.cod ?? 0),
             fixable: c.fixable,
-            siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
           }),
           { fetchImpl, tag: "cod-" + row.id, url: "/orders/" + row.id }
         );
@@ -645,9 +644,23 @@ export async function runBostaSync(opts: {
           row.bosta_exception,
           decision.changes.bosta_exception as string | null | undefined
         );
-        const settled = to === "cancelled" || row.order_status === "cancelled";
+        // **حالة الأوردر بعد التغيير** — لو مافيش تغيير يبقى هي زي ما هي.
+        // من غيرها الإشعار اللي جاي من محاولة فاشلة (مش من تغيير حالة) كان
+        // بيقول "العميل مستلمش" لأي أوردر مهما كانت حالته.
+        const current = to ?? row.order_status;
 
-        if ((attempt || (to && ALERT_ON.includes(to))) && !settled) {
+        // **الخبر ده قديم؟ مانزنّش بيه.**
+        // أوردر ١٢٢٧ هو اللي كشفها: عليه شحنة مرتجع شغالة وحالته "في الطريق
+        // ليك" من يومين، وجاله إشعار "العميل مستلمش" من محاولة فاشلة على
+        // الشحنة **الأصلية** — خبر إحنا عارفينه وعامل على أساسه خلاص.
+        const knownAlready =
+          Boolean(row.return_tracking) ||
+          ["returning", "returned", "returned_after_delivery", "delivered", "cancelled"]
+            .includes(String(row.order_status ?? ""));
+
+        const settled = current === "cancelled";
+
+        if (((attempt && !knownAlready) || (to && ALERT_ON.includes(to))) && !settled) {
           await notifyAll(
             db,
             tenantId,
@@ -657,9 +670,8 @@ export async function runBostaSync(opts: {
               customerPhone: row.customers?.phone ?? null,
               reason: (decision.changes.bosta_exception ??
                 row.bosta_exception) as string | null,
-              arrived: to === "returned",
-              waiting: to === "awaiting_action",
-              siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
+              arrived: current === "returned",
+              waiting: current === "awaiting_action",
             }),
             {
               fetchImpl,
@@ -715,7 +727,6 @@ export async function runBostaSync(opts: {
           customerName: w.customers?.full_name ?? null,
           days: stale.days,
           milestone: stale.milestone,
-          siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
         }),
         { fetchImpl, tag: "stale-" + w.id, url: "/orders?status=ready" }
       );
@@ -784,7 +795,6 @@ export async function runBostaSync(opts: {
           customerPhone: o.customers?.phone ?? null,
           amount,
           days: due.days,
-          siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
         }),
         { fetchImpl, tag: "refund-" + o.id, url: "/orders?status=returned_after_delivery" }
       );
@@ -830,7 +840,6 @@ export async function runBostaSync(opts: {
     }
 
     if (dueNow.length > 0) {
-      const site = process.env.NEXT_PUBLIC_SITE_URL ?? null;
       summary.unconfirmedReminders += dueNow.length;
 
       // أكتر من ٥؟ رسالة واحدة بالعدد. ٦ رسايل في نفس اللحظة بتبقى إزعاج
@@ -842,7 +851,6 @@ export async function runBostaSync(opts: {
           unconfirmedGroupMessage({
             count: dueNow.length,
             oldestDays: Math.max(...dueNow.map((x) => x.days)),
-            siteUrl: site,
           }),
           { fetchImpl, tag: "unconfirmed-group", url: "/orders?status=new" }
         );
@@ -860,7 +868,6 @@ export async function runBostaSync(opts: {
                 0
               ),
               days: x.days,
-              siteUrl: site,
             }),
             { fetchImpl, tag: "new-" + x.order.id, url: "/orders?status=new" }
           );
