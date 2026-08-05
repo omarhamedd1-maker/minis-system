@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TaskSchedule } from "./TaskSchedule";
 
 type Member = { id: string; name: string };
 
@@ -23,6 +24,9 @@ export function AddTask({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // بنتابع الاختيار عشان خانة التنبيه تعرف تحذّر: التنبيه بيروح للي التاسك
+  // عليه، فمن غير مسؤول مافيش حد يتبعتله
+  const [picked, setPicked] = useState<string[]>([]);
 
   if (!open) {
     return (
@@ -95,23 +99,7 @@ export function AddTask({
         </label>
       </div>
 
-      <label className="block text-[11px] text-gray-500">
-        بيتكرر؟
-        <select
-          name="repeat_kind"
-          defaultValue=""
-          className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-        >
-          <option value="">مرة واحدة</option>
-          <option value="daily">كل يوم</option>
-          <option value="weekly">كل أسبوع</option>
-          <option value="monthly">كل شهر</option>
-        </select>
-        <span className="mt-0.5 block text-[10px] text-gray-400">
-          المتكرر لازم يبقى ليه ميعاد، والنسخة الجاية مابتتعملش غير لما اللي
-          قبلها تخلص
-        </span>
-      </label>
+      <TaskSchedule hasAssignee={!canAssign || picked.length > 0} />
 
       {canAssign && (
         <fieldset>
@@ -129,6 +117,12 @@ export function AddTask({
                   type="checkbox"
                   name="assignee_id"
                   value={m.id}
+                  checked={picked.includes(m.id)}
+                  onChange={() =>
+                    setPicked((p) =>
+                      p.includes(m.id) ? p.filter((x) => x !== m.id) : [...p, m.id]
+                    )
+                  }
                   className="h-3.5 w-3.5"
                 />
                 {m.name}

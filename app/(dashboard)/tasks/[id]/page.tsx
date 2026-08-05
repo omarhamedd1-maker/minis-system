@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cairoToday, formatDate } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
 import {
-  REPEAT_KINDS,
   TASK_PRIORITIES,
   dueLabel,
   isOverdue,
@@ -12,9 +11,12 @@ import {
   stepsProgress,
   taskStatusBadge,
 } from "@/lib/tasks";
+import { reminderLabel } from "@/lib/task-remind";
+import { cairoTimeText, utcToCairoInput } from "@/lib/cairo-time";
 import type { TaskFile } from "@/lib/task-files";
 import { BackLink } from "@/components/BackLink";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { TaskSchedule } from "@/components/TaskSchedule";
 import {
   addStep,
   addTaskComment,
@@ -42,6 +44,11 @@ type TaskDetail = {
   task_assignees: { user_id: string; user_name: string | null }[];
   order_id: string | null;
   repeat_kind: string | null;
+  repeat_every: number | null;
+  repeat_unit: string | null;
+  remind_at: string | null;
+  remind_every: number | null;
+  remind_unit: string | null;
   repeat_parent_id: string | null;
   attachments: unknown;
   task_steps: { id: string; title: string; done: boolean; position: number }[];
@@ -68,7 +75,8 @@ export default async function TaskPage({
     .from("tasks")
     .select(
       `id, title, body, status, priority, due_on, created_at, created_by, done_at, done_by,
-       order_id, repeat_kind, repeat_parent_id, attachments,
+       order_id, repeat_kind, repeat_every, repeat_unit, repeat_parent_id, attachments,
+       remind_at, remind_every, remind_unit,
        task_assignees(user_id, user_name),
        task_steps(id, title, done, position),
        task_comments(id, author_name, body, created_at)`
@@ -196,9 +204,14 @@ export default async function TaskPage({
                   على {assignees.map((a) => a.user_name).filter(Boolean).join("، ")}
                 </span>
               )}
-              {repeatLabel(task.repeat_kind) && (
-                <span className="text-violet-700">
-                  بيتكرر {repeatLabel(task.repeat_kind)}
+              {repeatLabel(task) && (
+                <span className="text-violet-700">بيتكرر {repeatLabel(task)}</span>
+              )}
+              {/* التنبيه المحجوز — بيختفي أول ما التاسك يخلص لأنه بيسكت */}
+              {task.remind_at && !done && (
+                <span className="text-amber-700">
+                  ⏰ {cairoTimeText(task.remind_at)}
+                  {reminderLabel(task) ? ` · ${reminderLabel(task)}` : ""}
                 </span>
               )}
               {task.order_id && (
@@ -557,21 +570,6 @@ export default async function TaskPage({
                 />
               </label>
               <label className="text-[11px] text-gray-500">
-                بيتكرر
-                <select
-                  name="repeat_kind"
-                  defaultValue={task.repeat_kind ?? ""}
-                  className="mt-1 block rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
-                >
-                  <option value="">مرة واحدة</option>
-                  {REPEAT_KINDS.map((r) => (
-                    <option key={r.key} value={r.key}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[11px] text-gray-500">
                 الأولوية
                 <select
                   name="priority"
@@ -585,13 +583,24 @@ export default async function TaskPage({
                   ))}
                 </select>
               </label>
-              <button
-                type="submit"
-                className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
-              >
-                حفظ
-              </button>
             </div>
+
+            <TaskSchedule
+              repeatKind={task.repeat_kind}
+              repeatEvery={task.repeat_every}
+              repeatUnit={task.repeat_unit}
+              remindAt={utcToCairoInput(task.remind_at)}
+              remindEvery={task.remind_every}
+              remindUnit={task.remind_unit}
+              hasAssignee={assignees.length > 0}
+            />
+
+            <button
+              type="submit"
+              className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+            >
+              حفظ
+            </button>
           </form>
 
           {canDelete && (
