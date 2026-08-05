@@ -653,6 +653,8 @@ export default async function OrderDetailsPage({
                   const s = shippingSettlement({
                     feesReal: real,
                     feesEstimate: order.bosta_shipping_cost,
+                    shipFeeReal: shipPart,
+                    bundleCovered: covered,
                     shippingPrice: order.shipping_price,
                     customerReceived: received,
                   });
@@ -663,7 +665,7 @@ export default async function OrderDetailsPage({
                   const detail = !real
                     ? "تقدير — الشحن نفسه محسوب على الباقة"
                     : covered
-                      ? `الشحن ${formatMoney(shipPart ?? 0)} دفعته الباقة — ده الباقي بعد خصمها`
+                      ? "رسوم بوسطة بعد ما الباقة دفعت الشحن"
                       : shipPart && shipPart > 0
                         ? `${formatMoney(shipPart)} شحن + ${formatMoney(
                             Math.round((real - shipPart) * 100) / 100
@@ -711,6 +713,25 @@ export default async function OrderDetailsPage({
                           </dd>
                         </div>
 
+                        {/* **نصيب الشحنة من الباقة** — الشحن اللي الباقة
+                            دفعته بدالك. من غيره الشحنة اللي الباقة غطّتها
+                            بتبان أرخص بمية جنيه من اللي ماغطّتهاش، وهي نفس
+                            الخدمة. والرقم بييجي من بوسطة لكل شحنة لوحدها،
+                            فمش فارقة إن الباقة بتتغيّر من شهر للتاني. */}
+                        {s.bundleShare > 0 && (
+                          <div className="flex items-start justify-between gap-4 px-3 py-2.5">
+                            <dt className="text-xs text-gray-600">
+                              نصيبها من الباقة
+                              <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-400">
+                                الشحن اللي الباقة دفعته بدالك
+                              </span>
+                            </dt>
+                            <dd className="shrink-0 text-xs font-medium text-gray-900">
+                              {formatMoney(s.bundleShare)}
+                            </dd>
+                          </div>
+                        )}
+
                         <div className="flex items-start justify-between gap-4 px-3 py-2.5">
                           <dt className="text-xs text-gray-600">
                             دفعه العميل
@@ -727,11 +748,15 @@ export default async function OrderDetailsPage({
                         </div>
                       </dl>
 
-                      {/* قسط الباقة الشهري مصروف لوحده — مايتحسبش هنا تاني */}
-                      <p className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-[10px] leading-relaxed text-gray-500">
-                        قسط الباقة الشهري مش داخل في الحسبة دي — بيتسجّل مصروف
-                        لوحده.
-                      </p>
+                      {/* **مهم**: الباقة مدفوعة كمصروف شهري بإيد عمر، فلو
+                          اتحسبت في الأرباح كمان تبقى مدفوعة مرتين */}
+                      {s.bundleShare > 0 && (
+                        <p className="border-t border-gray-100 bg-gray-50 px-3 py-2 text-[10px] leading-relaxed text-gray-500">
+                          نصيب الباقة هنا عشان تعرف الشحنة كلّفت كام فعلاً.
+                          والأرباح بتحسب <b>{formatMoney(s.cost)}</b> بس — قسط
+                          الباقة متسجّل مصروف لوحده، فمابيتحسبش مرتين.
+                        </p>
+                      )}
                     </div>
                   );
                 })()}
