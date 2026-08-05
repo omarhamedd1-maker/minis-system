@@ -6,7 +6,6 @@ import { can, requirePagePermission } from "@/lib/permissions";
 import {
   REPEAT_KINDS,
   TASK_PRIORITIES,
-  TASK_STATUSES,
   dueLabel,
   isOverdue,
   repeatLabel,
@@ -117,12 +116,11 @@ export default async function TaskPage({
     })
   );
 
+  const done = task.status === "done";
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="min-w-0 flex-1 text-lg font-bold text-gray-900">{task.title}</h1>
-        <BackLink href="/tasks" label="الرجوع للتاسكات" variant="exit" />
-      </div>
+    <div className="space-y-3">
+      <BackLink href="/tasks" label="الرجوع للتاسكات" variant="exit" />
 
       {actionError && (
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -130,67 +128,120 @@ export default async function TaskPage({
         </div>
       )}
 
-      {/* الحالة والميعاد والمسؤول */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-4 shadow-sm">
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
-          {badge.label}
-        </span>
-        {task.priority === "urgent" && task.status !== "done" && (
-          <span className="rounded bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">
-            عاجل
-          </span>
-        )}
-        {due && (
-          <span className={`text-xs ${late ? "font-medium text-red-600" : "text-gray-500"}`}>
-            {due}
-          </span>
-        )}
-        {assignees.length > 0 && (
-          <span className="text-xs text-gray-600">
-            على {assignees.map((a) => a.user_name).filter(Boolean).join("، ")}
-          </span>
-        )}
-        {repeatLabel(task.repeat_kind) && (
-          <span className="rounded bg-violet-50 px-2 py-0.5 text-xs text-violet-700">
-            بيتكرر {repeatLabel(task.repeat_kind)}
-          </span>
-        )}
-        {task.repeat_parent_id && (
-          <span className="text-[10px] text-gray-400">نسخة من تاسك متكرر</span>
-        )}
-        {task.order_id && (
-          <Link
-            href={`/orders/${task.order_id}`}
-            className="text-xs font-medium text-sky-700 underline"
-          >
-            افتح الأوردر
-          </Link>
-        )}
-
-        {canEdit && (
-          <div className="ms-auto flex flex-wrap gap-1.5">
-            {TASK_STATUSES.filter((s) => s.key !== task.status).map((s) => (
-              <form key={s.key} action={setTaskStatus}>
-                <input type="hidden" name="task_id" value={task.id} />
-                <input type="hidden" name="status" value={s.key} />
-                <input type="hidden" name="return_to" value={`/tasks/${task.id}`} />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+      {/* ===== الرأس: الدايرة والعنوان وكل حاجة عنه في مكان واحد =====
+          كان ٣ كروت منفصلة (حالة + تفاصيل + أزرار الحالة) فوق بعض، وكل
+          واحد بيقول تلت الحكاية. */}
+      <div className="rounded-xl bg-white p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          {canEdit ? (
+            <form action={setTaskStatus} className="shrink-0 pt-1">
+              <input type="hidden" name="task_id" value={task.id} />
+              <input type="hidden" name="status" value={done ? "open" : "done"} />
+              <input type="hidden" name="return_to" value={`/tasks/${task.id}`} />
+              <button
+                type="submit"
+                title={done ? "رجّعه مفتوح" : "علّم إنه خلص"}
+                aria-label={done ? "رجّعه مفتوح" : "علّم إنه خلص"}
+                className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
+                  done
+                    ? "border-green-600 bg-green-600 text-white"
+                    : "border-gray-300 text-transparent hover:border-green-600 hover:text-green-600"
+                }`}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-3.5 w-3.5"
                 >
-                  {s.label}
-                </button>
-              </form>
-            ))}
-          </div>
-        )}
-      </div>
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </button>
+            </form>
+          ) : (
+            <span
+              className={`mt-1 h-6 w-6 shrink-0 rounded-full border-2 ${
+                done ? "border-green-600 bg-green-600" : "border-gray-200"
+              }`}
+            />
+          )}
 
-      {task.body && (
-        <div className="rounded-xl bg-white p-4 text-sm whitespace-pre-wrap text-gray-700 shadow-sm">
-          {task.body}
+          <div className="min-w-0 flex-1">
+            <h1
+              className={`text-lg font-bold ${
+                done ? "text-gray-400 line-through" : "text-gray-900"
+              }`}
+            >
+              {task.title}
+            </h1>
+
+            {/* سطر واحد فيه كل اللي تعرفه عن التاسك */}
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+              {task.priority === "urgent" && !done && (
+                <span className="font-bold text-red-700">عاجل</span>
+              )}
+              {task.status === "doing" && (
+                <span className={`rounded-full px-2 py-0.5 ${badge.className}`}>
+                  {badge.label}
+                </span>
+              )}
+              {due && !done && (
+                <span className={late ? "font-medium text-red-600" : ""}>{due}</span>
+              )}
+              {assignees.length > 0 && (
+                <span>
+                  على {assignees.map((a) => a.user_name).filter(Boolean).join("، ")}
+                </span>
+              )}
+              {repeatLabel(task.repeat_kind) && (
+                <span className="text-violet-700">
+                  بيتكرر {repeatLabel(task.repeat_kind)}
+                </span>
+              )}
+              {task.order_id && (
+                <Link
+                  href={`/orders/${task.order_id}`}
+                  className="font-medium text-sky-700 underline"
+                >
+                  افتح الأوردر
+                </Link>
+              )}
+            </div>
+
+            {task.body && (
+              <p className="mt-2.5 text-sm whitespace-pre-wrap text-gray-700">
+                {task.body}
+              </p>
+            )}
+          </div>
+
+          {/* «شغال عليه» زرار واحد بيتبدّل — كانت كل الحالات معروضة كأزرار */}
+          {canEdit && !done && (
+            <form action={setTaskStatus} className="shrink-0">
+              <input type="hidden" name="task_id" value={task.id} />
+              <input
+                type="hidden"
+                name="status"
+                value={task.status === "doing" ? "open" : "doing"}
+              />
+              <input type="hidden" name="return_to" value={`/tasks/${task.id}`} />
+              <button
+                type="submit"
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                  task.status === "doing"
+                    ? "bg-sky-100 text-sky-800 hover:bg-sky-200"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {task.status === "doing" ? "وقّفته" : "شغال عليه"}
+              </button>
+            </form>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ===== الخطوات ===== */}
       <div className="rounded-xl bg-white p-4 shadow-sm">
@@ -297,10 +348,27 @@ export default async function TaskPage({
         )}
       </div>
 
-      {/* ===== المرفقات ===== */}
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-bold text-gray-900">المرفقات</h2>
-
+      {/* ===== المرفقات — مطوية، بتتفتح لما تحتاجها =====
+          كانت كارت مفتوح بخانة رفع ملفات وسطر شروط، وأغلب التاسكات مالهاش
+          مرفقات أصلاً — يعني مساحة شاشة بتتاخد عشان تقول «مفيش». */}
+      <details className="group rounded-xl bg-white shadow-sm" open={files.length > 0}>
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+          <h2 className="text-sm font-bold text-gray-900">
+            المرفقات{files.length > 0 ? ` (${files.length})` : ""}
+          </h2>
+        </summary>
+        <div className="px-4 pb-4">
         {files.length === 0 ? (
           <p className="text-xs text-gray-400">مفيش مرفقات</p>
         ) : (
@@ -363,7 +431,8 @@ export default async function TaskPage({
         <p className="mt-1 text-[10px] text-gray-400">
           صور وPDF بس، وأقصى حجم ٨ ميجا. الروابط موقّتة بساعة.
         </p>
-      </div>
+        </div>
+      </details>
 
       {/* ===== التعليقات ===== */}
       <div className="rounded-xl bg-white p-4 shadow-sm">
@@ -403,10 +472,29 @@ export default async function TaskPage({
         )}
       </div>
 
-      {/* ===== التعديل ===== */}
+      {/* ===== التعديل — مطوي =====
+          كان أطول كارت في الصفحة ومفتوح على طول: مربعات كل التيم، وعنوان،
+          وتفاصيل، وميعاد، وتكرار، وأولوية، وزرار مسح أحمر. وأنت بتفتح
+          التاسك عشان **تشتغل** عليه مش عشان تعدّله. */}
       {canEdit && (
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">تعديل</h2>
+        <details className="group rounded-xl bg-white shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+            <h2 className="text-sm font-bold text-gray-900">
+              تعديل{canAssign ? " وإسناد" : ""}
+            </h2>
+          </summary>
+          <div className="px-4 pb-4">
 
           {canAssign && (
             <form action={assignTask} className="mb-3 flex flex-wrap items-end gap-2">
@@ -517,7 +605,8 @@ export default async function TaskPage({
               </ConfirmButton>
             </form>
           )}
-        </div>
+          </div>
+        </details>
       )}
 
       <p className="text-[10px] text-gray-400">

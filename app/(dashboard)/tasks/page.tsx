@@ -20,14 +20,14 @@ type TaskRow = {
 };
 
 /**
- * الفلاتر اللي فوق — «اللي عليّا» الافتراضي لأنه أهم سؤال للموظف.
+ * خانتين بس — «اللي عليّا» الافتراضي لأنه أهم سؤال للموظف.
  *
- * «الشغال» كانت ملخبطة — ممكن تتقرا «الشخص الشغال» مش «الشغل اللي لسه
- * ماخلصش». عمر سأل عنها فاتغيّرت لجملة بتقول نفسها.
+ * **«لسه مخلصش» اتشالت**: من ساعة ما الخلصان نزل تحت سطر بيتفتح ويتقفل،
+ * بقت هي و«الكل» نفس المنظر بالظبط — نفس التاسكات بنفس الترتيب. خانة
+ * بتوَدّيك لنفس المكان بتخلّي اللي بيبص يشك إنه فاته حاجة.
  */
 const VIEWS = [
   { key: "mine", label: "اللي عليّا" },
-  { key: "open", label: "لسه مخلصش" },
   { key: "all", label: "الكل" },
 ] as const;
 
@@ -78,8 +78,7 @@ export default async function TasksPage({
     (t.task_assignees ?? []).some((a) => a.user_id === user.appUserId)
   );
 
-  const picked =
-    view === "mine" ? mine : view === "open" ? all.filter((t) => t.status !== "done") : all;
+  const picked = view === "mine" ? mine : all;
 
   /**
    * **اللي خلص بينزل تحت سطر بيتفتح ويتقفل** — زي سجل النشاط في المستخدمين.
@@ -87,17 +86,12 @@ export default async function TasksPage({
    * قبل كده كان بيتحط كمجموعة عادية في آخر اللوحة، فالموظف اللي خلّص ٤٠
    * تاسك بيلف شاشتين شغل خلصان عشان يوصل لآخر حاجة. اللوحة المفروض تجاوب
    * على «إيه اللي عليّا دلوقتي»، والخلصان مرجع بيتفتح لما تحتاجه.
-   *
-   * و«لسه مخلصش» مالهاش سطر — هي أصلاً بتقول في اسمها إنها بتخفي الخلصان.
    */
   const openTasks = picked.filter((t) => t.status !== "done");
   // الأحدث خلوصًا فوق — ده اللي بتدوّر عليه لما تفتح السطر
-  const doneTasks =
-    view === "open"
-      ? []
-      : picked
-          .filter((t) => t.status === "done")
-          .sort((a, b) => String(b.done_at ?? "").localeCompare(String(a.done_at ?? "")));
+  const doneTasks = picked
+    .filter((t) => t.status === "done")
+    .sort((a, b) => String(b.done_at ?? "").localeCompare(String(a.done_at ?? "")));
   const groups = groupTasks(openTasks, today);
   const shown = openTasks;
 
@@ -166,31 +160,43 @@ export default async function TasksPage({
         // **مقسّمة بعناوين مش قايمة واحدة طويلة** — القايمة الواحدة مابتقولش
         // لك تبدأ منين، والتقسيمة بتجاوب على "إيه اللي محتاج مني حاجة دلوقتي"
         groups.map((g) => (
-        <section key={g.key} className="space-y-2">
-          <div className="flex items-center gap-2 px-1">
-            <h2
-              className={`text-xs font-bold ${
-                g.tone === "bad"
-                  ? "text-red-700"
-                  : g.tone === "warn"
-                    ? "text-amber-700"
-                    : g.tone === "muted"
-                      ? "text-gray-400"
+          <section key={g.key} className="space-y-2">
+            {/* عنوان المجموعة: نقطة ملوّنة + الاسم + العدد. الخط الفاصل
+                اتشال — التاسكات نفسها كروت بيضا على رمادي، فالفصل باين */}
+            <div className="flex items-center gap-2 px-1">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  g.tone === "bad"
+                    ? "bg-red-500"
+                    : g.tone === "warn"
+                      ? "bg-amber-500"
+                      : g.tone === "muted"
+                        ? "bg-gray-300"
+                        : "bg-gray-400"
+                }`}
+              />
+              <h2
+                className={`text-xs font-bold ${
+                  g.tone === "bad"
+                    ? "text-red-700"
+                    : g.tone === "warn"
+                      ? "text-amber-700"
                       : "text-gray-700"
-              }`}
-            >
-              {g.label}
-            </h2>
-            <span className="text-[11px] text-gray-400">{g.items.length}</span>
-            <span className="h-px flex-1 bg-gray-200" />
-          </div>
+                }`}
+              >
+                {g.label}
+              </h2>
+              <span className="rounded-full bg-gray-200/70 px-1.5 text-[10px] font-medium text-gray-600">
+                {g.items.length}
+              </span>
+            </div>
 
-        <ul className="space-y-2">
-          {g.items.map((t) => (
-            <TaskLine key={t.id} t={t} today={today} canEdit={canEdit} view={view} />
-          ))}
-        </ul>
-        </section>
+            <ul className="space-y-1.5">
+              {g.items.map((t) => (
+                <TaskLine key={t.id} t={t} today={today} canEdit={canEdit} view={view} />
+              ))}
+            </ul>
+          </section>
         ))
       )}
 
@@ -249,32 +255,77 @@ function TaskLine({
   const steps = t.task_steps ?? [];
   const doneSteps = steps.filter((s) => s.done).length;
 
+  const done = t.status === "done";
+
   return (
     <li
       className={`rounded-xl bg-white p-3 shadow-sm ${
         late ? "border-r-4 border-red-400" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-2.5">
+        {/* **الدايرة على أول السطر زي أي برنامج تاسكات** — دوسة واحدة تقفل
+            التاسك، ودوسة على المقفول ترجّعه مفتوح. كانت زرار مربع في آخر
+            السطر شكله زي أي زرار تاني، فمحدش بيربطه بـ«خلصت». */}
+        {canEdit ? (
+          <form action={setTaskStatus} className="shrink-0 pt-0.5">
+            <input type="hidden" name="task_id" value={t.id} />
+            <input type="hidden" name="status" value={done ? "open" : "done"} />
+            <input type="hidden" name="return_to" value={`/tasks?view=${view}`} />
+            <button
+              type="submit"
+              title={done ? "رجّعه مفتوح" : "علّم إنه خلص"}
+              aria-label={done ? "رجّعه مفتوح" : "علّم إنه خلص"}
+              className={`group/tick flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
+                done
+                  ? "border-green-600 bg-green-600 text-white"
+                  : "border-gray-300 text-transparent hover:border-green-600 hover:text-green-600"
+              }`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={3.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-3 w-3"
+              >
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </button>
+          </form>
+        ) : (
+          <span
+            className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 ${
+              done ? "border-green-600 bg-green-600" : "border-gray-200"
+            }`}
+          />
+        )}
+
         <Link href={`/tasks/${t.id}`} className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            {t.priority === "urgent" && t.status !== "done" && (
+            {t.priority === "urgent" && !done && (
               <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
                 عاجل
               </span>
             )}
             <span
               className={`text-sm font-medium ${
-                t.status === "done" ? "text-gray-400 line-through" : "text-gray-900"
+                done ? "text-gray-400 line-through" : "text-gray-900"
               }`}
             >
               {t.title}
             </span>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
-            <span className={`rounded-full px-2 py-0.5 ${badge.className}`}>
-              {badge.label}
-            </span>
+            {/* **«مفتوح» مابيتكتبش** — الدايرة الفاضية بتقولها. اللافتة
+                بتبان لـ«شغال عليه» بس، وهي الحالة اللي فيها معلومة */}
+            {t.status === "doing" && (
+              <span className={`rounded-full px-2 py-0.5 ${badge.className}`}>
+                {badge.label}
+              </span>
+            )}
             {(t.task_assignees ?? []).length > 0 && (
               <span>
                 {(t.task_assignees ?? [])
@@ -283,7 +334,7 @@ function TaskLine({
                   .join("، ")}
               </span>
             )}
-            {due && (
+            {due && !done && (
               <span className={late ? "font-medium text-red-600" : ""}>{due}</span>
             )}
             {steps.length > 0 && (
@@ -294,32 +345,6 @@ function TaskLine({
             {t.order_id && <span className="text-sky-600">مربوط بأوردر</span>}
           </div>
         </Link>
-
-        {canEdit && t.status !== "done" && (
-          <form action={setTaskStatus} className="shrink-0">
-            <input type="hidden" name="task_id" value={t.id} />
-            <input type="hidden" name="status" value="done" />
-            <input type="hidden" name="return_to" value={`/tasks?view=${view}`} />
-            <button
-              type="submit"
-              title="علّم إنه خلص"
-              aria-label="علّم إنه خلص"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 hover:bg-green-100 hover:text-green-700"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
-              >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </button>
-          </form>
-        )}
       </div>
     </li>
   );

@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity";
@@ -8,11 +7,17 @@ import { requirePermission } from "@/lib/permissions";
 import { checkAnnouncement, composeAnnouncement } from "@/lib/push/announce";
 import { notifyPeople } from "@/lib/push/notify";
 
-function back(msg: string, kind: "error" | "sent" = "error"): never {
-  redirect(`/notify?${kind}=${encodeURIComponent(msg)}`);
-}
+/**
+ * نتيجة الإرسال بترجع للفورم نفسه — **مفيش تحويل لصفحة تانية**.
+ * الفورم جوّه قايمة الإشعارات المنسدلة، والتحويل كان هيقفلها ويوديك مكان
+ * تاني عشان تقرا سطر واحد.
+ */
+export type AnnounceState = { ok: boolean; message: string } | null;
 
-export async function sendAnnouncement(formData: FormData) {
+export async function sendAnnouncement(
+  _prev: AnnounceState,
+  formData: FormData
+): Promise<AnnounceState> {
   const me = await requirePermission("admin.notify");
 
   const draft = {
@@ -22,18 +27,21 @@ export async function sendAnnouncement(formData: FormData) {
   };
 
   const check = checkAnnouncement(draft);
-  if (!check.ok) back(check.error);
+  if (!check.ok) return { ok: false, message: check.error };
 
   const db = createAdminClient();
 
-  // مين اللي في البيزنس ده أصلاً — القايمة دي هي الحد الأقصى مهما جه من الفورم
+  // مين في البيزنس ده أصلاً — القايمة دي هي الحد الأقصى مهما جه من الفورم
   const { data: teamData } = await db
     .from("app_users")
     .select("auth_user_id, full_name")
     .eq("tenant_id", me.tenantId)
     .eq("active", true);
 
-  const team = (teamData ?? []) as { auth_user_id: string; full_name: string | null }[];
+  const team = (teamData ?? []) as {
+    auth_user_id: string;
+    full_name: string | null;
+  }[];
   const nameOf = new Map(team.map((u) => [u.auth_user_id, u.full_name]));
 
   const toEveryone = formData.get("audience") !== "some";
@@ -51,45 +59,52 @@ export async function sendAnnouncement(formData: FormData) {
 
   const targets = toEveryone ? team.map((u) => u.auth_user_id) : picked;
   if (targets.length === 0) {
-    back(
-      toEveryone
+    return {
+      ok: false,
+      message: toEveryone
         ? "مفيش حد في البيزنس يتبعتله"
-        : "اختار مين يوصله الإشعار الأول"
-    );
+        : "اختار مين يوصله الإشعار الأول",
+    };
   }
 
   const message = composeAnnouncement(draft);
 
-  // **الإرسال هنا بيوقف لو وقع** — عكس تنبيهات المزامنة. اللي كتب رسالة
-  // بإيده لازم يعرف وصلت ولا لأ، مش يمشي فاكر إنها وصلت.
+  // **بنستنى نتيجة الإرسال هنا** — عكس تنبيهات المزامنة اللي بتكمّل حتى لو
+  // الإشعار وقع. اللي كتب رسالة بإيده لازم يعرف وصلت ولا لأ.
   const result = await notifyPeople(db, me.tenantId, targets, message, {
-    url: "/tasks",
+    url: "/orders",
     // من غير تاج ثابت — كل إشعار مكتوب بإيد يستنى لوحده مايستبدلش اللي قبله
   });
 
   if (result.skipped === "no_keys") {
-    back("مفاتيح الإشعارات مش متظبطة — افتح الإعدادات وفعّلها الأول");
+    return {
+      ok: false,
+      message: "مفاتيح الإشعارات مش متظبطة — افتح الإعدادات وفعّلها الأول",
+    };
   }
 
   const who = toEveryone
     ? "الكل"
-    : picked.map((id) => nameOf.get(id)).filter(Boolean).join("، ");
+    : picked
+        .map((id) => nameOf.get(id))
+        .filter(Boolean)
+        .join("، ");
 
   await logActivity(
     me,
     "notify.send",
     `بعت إشعار «${draft.title.trim()}» لـ${who} — وصل ${result.sent} جهاز`
   );
-
-  revalidatePath("/notify");
+  revalidatePath("/users");
 
   if (result.sent === 0) {
-    back(
-      toEveryone
-        ? "محدش مفعّل الإشعارات على موبايله لسه — الرسالة ماوصلتش"
-        : `${who} مفعّلش الإشعارات على موبايله — الرسالة ماوصلتش`
-    );
+    return {
+      ok: false,
+      message: toEveryone
+        ? "محدش مفعّل الإشعارات على موبايله — الرسالة ماوصلتش"
+        : `${who} مفعّلش الإشعارات على موبايله — الرسالة ماوصلتش`,
+    };
   }
 
-  back(`اتبعت لـ${who} — وصل ${result.sent} جهاز`, "sent");
+  return { ok: true, message: `اتبعت لـ${who} — وصل ${result.sent} جهاز` };
 }

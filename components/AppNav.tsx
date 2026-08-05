@@ -20,7 +20,6 @@ const ITEMS: Item[] = [
   { href: "/suppliers", label: "الموردين", perm: "suppliers.view" },
   { href: "/expenses", label: "المصاريف", perm: "expenses.view" },
   { href: "/cash", label: "الخزنة", perm: "cash.view" },
-  { href: "/notify", label: "ابعت إشعار", perm: "admin.notify" },
   { href: "/users", label: "المستخدمون", perm: "admin.users" },
   { href: "/settings", label: "الإعدادات", perm: "admin.settings" },
   { href: "/platform", label: "البيزنسات", perm: "platform" },
@@ -40,8 +39,6 @@ function Icon({ href, className }: { href: string; className?: string }) {
     "/expenses": "M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6",
     "/cash":
       "M20 8H5a2 2 0 0 1 0-4h13v4zM3 6v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1M16.5 13h.01",
-    "/notify":
-      "M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12",
     "/users": "M12 3l8 3v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-3zM9 12l2 2 4-4",
     "/platform":
       "M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5M9 11h.01M15 11h.01",

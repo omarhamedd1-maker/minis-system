@@ -87,8 +87,16 @@ export function orderCarrierCost(o: {
 }
 
 export type ShippingSettlement = {
-  /** اللي بوسطة خدته فعلاً على الشحنة دي */
+  /** اللي بوسطة خصمته فعلاً على الشحنة دي (كاش خرج) */
   cost: number;
+  /**
+   * نصيب الشحنة من الباقة — الشحن اللي الباقة دفعته بدالك.
+   *
+   * **صفر لو الباقة ماغطّتش**، لأن الشحن ساعتها جوّه `cost` خلاص.
+   */
+  bundleShare: number;
+  /** التكلفة الكاملة = اللي خرج + اللي الباقة دفعته */
+  full: number;
   /** اللي العميل دفعه شحن — صفر لو ماستلمش */
   paidByCustomer: number;
   /** موجب = الشحن عليك · سالب = زيادة معاك · صفر = متعادل */
@@ -100,22 +108,33 @@ export type ShippingSettlement = {
 /**
  * تسوية شحن الأوردر الواحد: كلّفك كام، والعميل دفع كام، والفرق لصالح مين.
  *
- * **الباج اللي الدالة دي بتصلّحه** (شاشة الأوردر، ٦ أغسطس ٢٠٢٦): الصفحة
- * كانت بتطرح ٨٨ «دفعته الباقة» من الرقم الحقيقي — والرقم الحقيقي اللي
- * بوسطة بتقوله **خصم الباقة متطرح منه جوّه أصلاً** (`bundleCovered`).
- * فأوردر شحنه ٩٣ والباقة غطّته بيرجع بـ٣٤٫٢، والصفحة كانت تطرح ٨٨ تاني
- * وتطرح ٩٠ بتاع العميل وتقول **«بترجع لك ١٤٣٫٨»** — فلوس مالهاش وجود.
- * وفي الشحنة اللي الباقة ماغطّتهاش كان الطرح أسوأ: بيخترع ٨٨ محدش دفعها.
+ * **الباج الأول** (شاشة الأوردر، ٦ أغسطس ٢٠٢٦): الصفحة كانت بتطرح ٨٨
+ * «دفعته الباقة» من الرقم الحقيقي — والرقم الحقيقي اللي بوسطة بتقوله
+ * **خصم الباقة متطرح منه جوّه أصلاً** (`bundleCovered`). فأوردر شحنه ٩٣
+ * والباقة غطّته بيرجع بـ٣٤٫٢، والصفحة كانت تطرح ٨٨ تاني وتطرح ٩٠ بتاع
+ * العميل وتقول **«بترجع لك ١٤٣٫٨»** — فلوس مالهاش وجود.
  *
- * **ونصيب الباقة مش محسوب هنا بقصد**: قسطها الشهري بيتسجّل كمصروف في
- * شاشة المصاريف، فلو اتحسب على الأوردر كمان يبقى مدفوع مرتين.
+ * **والباج التاني اللي ظهر بعد التصليح**: الشحنة اللي الباقة غطّتها بتبان
+ * أرخص بمية جنيه من اللي ماغطّتهاش، مش لأنها أرخص فعلاً — لأن شحنها اتدفع
+ * من الباقة فاختفى من الحسبة. أوردر ١٠٧٤ (ماغطّاش) تكلفته ١٣٥٫٦٦ وأوردر
+ * الباقة غطّته تكلفته ٣٤٫٢ — نفس الخدمة تقريبًا.
  *
- * والتكلفة هي نفسها `orderCarrierCost` — عشان الشاشة ماتقولش رقم والأرباح
- * تتحسب برقم تاني.
+ * فبقينا نجمع نصيب الشحنة من الباقة (`bundleShare`) في **`full`**، وده
+ * اللي الشاشة بتحكم بيه. و**`cost` سابته زي ما هو** = `orderCarrierCost`،
+ * وهو اللي الأرباح بتتحسب بيه: قسط الباقة الشهري متسجّل مصروف بإيد عمر،
+ * فلو اتحسب على الأوردر كمان يبقى مدفوع مرتين.
  */
 export function shippingSettlement(input: {
   feesReal: number | null | undefined;
   feesEstimate: number | null | undefined;
+  /**
+   * الشحن اللي بوسطة كتبته على الشحنة دي (`bosta_ship_fee_real`).
+   * لو الباقة غطّته، ده نصيب الشحنة منها — والرقم بييجي من بوسطة نفسها
+   * لكل شحنة على حدة، فمش مهم إن الباقة بتتغيّر من شهر للتاني.
+   */
+  shipFeeReal: number | null | undefined;
+  /** الباقة غطّت الشحنة دي؟ (`bundleCovered`) */
+  bundleCovered: boolean;
   shippingPrice: number | null | undefined;
   /** العميل استلم فعلاً؟ من غير كده مافيش شحن اتحصّل منه */
   customerReceived: boolean;
@@ -124,16 +143,30 @@ export function shippingSettlement(input: {
     bosta_shipping_cost: input.feesEstimate ?? null,
     bosta_fees_real: input.feesReal ?? null,
   });
+
+  // **الباقة ماغطّتش؟ نصيبها صفر** — الشحن جوّه `cost` خلاص، وجمعه تاني
+  // بيحسبه مرتين
+  const bundleShare = input.bundleCovered
+    ? Math.max(0, Number(input.shipFeeReal ?? 0))
+    : 0;
+
+  const full = round2(cost + bundleShare);
   const paidByCustomer = input.customerReceived
     ? Math.max(0, Number(input.shippingPrice ?? 0))
     : 0;
 
   return {
     cost,
+    bundleShare,
+    full,
     paidByCustomer,
-    net: Math.round((cost - paidByCustomer) * 100) / 100,
+    net: round2(full - paidByCustomer),
     real: Number(input.feesReal ?? 0) > 0,
   };
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
 }
 
 export type StatExpense = { amount: number };
