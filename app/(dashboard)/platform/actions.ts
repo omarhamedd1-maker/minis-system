@@ -7,8 +7,11 @@ import { getSessionUser } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { checkNewTenant, createTenantWithOwner } from "@/lib/create-tenant";
 import { checkSlug } from "@/lib/tenant-slug";
+import { confirmMatches, deleteTenantCompletely } from "@/lib/delete-tenant";
 
-function back(msg: string, ok = false) {
+// `never` مقصودة عشان تايب سكريبت يعرف إن الكود بعدها مابيتنفذش —
+// من غيرها الفحوصات اللي قبلها مابتضيّقش الأنواع
+function back(msg: string, ok = false): never {
   redirect(`/platform?${ok ? "saved" : "error"}=` + encodeURIComponent(msg));
 }
 
@@ -121,4 +124,51 @@ export async function setTenantSlug(formData: FormData) {
   await logActivity(me, "tenant.slug", `غيّر الاسم المختصر لـ«${slug}»`);
   revalidatePath("/platform");
   back(`الاسم المختصر بقى «${slug}» — لينك الدخول /login/${slug}`, true);
+}
+
+/**
+ * حذف بيزنس بالكامل — **مافيش رجوع**.
+ *
+ * تلات حواجز قبل ما يتنفّذ:
+ *   ١. صاحب المنصة بس (زي كل حاجة في الشاشة دي)
+ *   ٢. **بيزنسك مايتمسحش** — لو مسحته مش هتقدر تدخل تاني
+ *   ٣. **الاسم مكتوب حرف بحرف** مش زرار «متأكد؟» — الزرار بيتداس بالغلط،
+ *      والكتابة بتخلّيك تبص على اللي هتمسحه فعلًا
+ */
+export async function deleteTenant(formData: FormData) {
+  const me = await requirePlatformAdmin();
+
+  const tenantId = String(formData.get("tenant_id") ?? "");
+  const typed = String(formData.get("confirm_name") ?? "");
+  if (!tenantId) back("مافيش بيزنس");
+
+  // مسح بيزنسك = قفل الباب وإنت جوّه
+  if (tenantId === me.tenantId) back("مينفعش تمسح بيزنسك إنت");
+
+  const db = createAdminClient();
+  const { data: tenant } = await db
+    .from("tenants")
+    .select("name")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  const name = (tenant as { name: string } | null)?.name;
+  if (!name) back("البيزنس ده مش موجود");
+
+  if (!confirmMatches(typed, name)) {
+    back(`اكتب اسم البيزنس «${name}» بالظبط عشان تأكّد المسح`);
+  }
+
+  const res = await deleteTenantCompletely(db, tenantId);
+  if (!res.ok) back(res.error ?? "المسح وقع");
+
+  const rows = res.counts.reduce((s, c) => s + c.rows, 0);
+  await logActivity(
+    me,
+    "tenant.delete",
+    `مسح بيزنس «${name}» — ${rows} صف و${res.users} حساب`
+  );
+
+  revalidatePath("/platform");
+  back(`اتمسح «${name}» — ${rows} صف و${res.users} حساب`, true);
 }
