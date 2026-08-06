@@ -7,6 +7,7 @@ import {
   setSubscriptionEnd,
   setTenantActive,
   setTenantSlug,
+  deleteTenant,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -163,6 +164,37 @@ export default async function PlatformPage({
                           {t.active ? "شغال" : "موقوف"}
                         </button>
                       </form>
+
+                      {/* **الحذف مقفول ومحتاج كتابة الاسم** — مش زرار
+                          بيتداس بالغلط. وبيزنسك مالوش زرار أصلًا */}
+                      {t.id !== me.tenantId && (
+                        <details className="mt-2">
+                          <summary className="cursor-pointer list-none text-[11px] text-gray-300 hover:text-red-600">
+                            حذف
+                          </summary>
+                          <form
+                            action={deleteTenant}
+                            className="mt-1.5 w-56 space-y-1.5 rounded-lg bg-red-50 p-2"
+                          >
+                            <input type="hidden" name="tenant_id" value={t.id} />
+                            <p className="text-[10px] leading-relaxed text-red-900">
+                              هيتمسح <b>{c.orders} أوردر</b> و<b>{c.users} حساب</b>{" "}
+                              وكل العملاء والمنتجات والمصاريف. <b>مافيش رجوع.</b>
+                            </p>
+                            <input
+                              name="confirm_name"
+                              placeholder={`اكتب: ${t.name}`}
+                              className="w-full rounded-lg border border-red-300 px-2 py-1 text-[11px] text-gray-900 focus:border-red-600 focus:outline-none"
+                            />
+                            <button
+                              type="submit"
+                              className="w-full rounded-lg bg-red-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-red-700"
+                            >
+                              امسح نهائي
+                            </button>
+                          </form>
+                        </details>
+                      )}
                     </td>
                   </tr>
                 );

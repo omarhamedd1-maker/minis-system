@@ -12,6 +12,8 @@
 import fs from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { createTenantWithOwner } from "../lib/create-tenant.ts";
+import { scopedEmail } from "../lib/tenant-email.ts";
+import { deleteTenantCompletely } from "../lib/delete-tenant.ts";
 
 const env = Object.fromEntries(
   fs.readFileSync("./.env.local", "utf8").split(/\r?\n/).filter((l) => l.includes("="))
@@ -28,6 +30,8 @@ const ok = (name, pass, detail = "") =>
   results.push({ الاختبار: name, النتيجة: pass ? "✅" : "❌", التفاصيل: detail });
 
 let tenantId, roleId, authUserId;
+// البيزنس التاني اللي بيتعمل بنفس الإيميل — بيتمسح في الآخر زي الأول
+let dupTenantId, dupUserId;
 
 try {
   // ===== نعمل البيزنس **بنفس الكود اللي بيشتغل فعلًا** =====
@@ -48,18 +52,30 @@ try {
     .from("roles").select("id").eq("tenant_id", tenantId).maybeSingle();
   roleId = roleRow?.id;
 
-  // ===== ٠) الإيميل المكرر بيترفض =====
+  // ===== ٠) **نفس الإيميل ينفع في بيزنس تاني** =====
+  //
+  // ده كان بيترفض قبل ٦ أغسطس، والفحص كان بيتأكد إنه بيترفض. اتغيّر بقصد:
+  // الإيميل بقى بيتخزّن مبوّب باسم المتجر (`omar+minis@…`)، فالموظف اللي
+  // شغّال في متجرين مايضطرش يعمل إيميل تاني.
+  //
+  // واللي بيتفحص هنا إن الاتنين بقوا **حسابين مختلفين فعلًا** — مش نفس
+  // الحساب اتربط ببيزنسين، ده كان هيكسر العزل من أوله.
   const dup = await createTenantWithOwner(admin, {
-    businessName: "بيزنس مكرر",
+    businessName: "بيزنس تاني بنفس الإيميل",
     ownerName: "حد تاني",
     email: EMAIL,
     password: PASSWORD,
   });
   ok(
-    "الإيميل المكرر بيترفض ومابيسيبش بيزنس معلّق",
-    !dup.ok && String(dup.error).includes("متسجّل"),
-    dup.ok ? "اتقبل!" : dup.error
+    "نفس الإيميل ينفع في بيزنس تاني",
+    dup.ok,
+    dup.ok ? `اتعمل بيزنس ${dup.slug}` : dup.error
   );
+  ok(
+    "والاتنين حسابين مختلفين مش حساب واحد",
+    dup.ok && dup.userId !== authUserId && dup.tenantId !== tenantId
+  );
+  if (dup.ok) dupTenantId = dup.tenantId, dupUserId = dup.userId;
 
   // ===== ١) صف المفاتيح اتعمل لوحده؟ =====
   const { data: c } = await admin.from("tenant_credentials").select("tenant_id").eq("tenant_id", tenantId).maybeSingle();
@@ -67,7 +83,11 @@ try {
 
   // ===== ٢) صاحب البيزنس يدخل =====
   const owner = createClient(URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { auth: { persistSession: false } });
-  const { error: signIn } = await owner.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
+  // **بالإيميل المبوّب** — ده اللي الحساب اتعمل بيه فعلًا
+  const { error: signIn } = await owner.auth.signInWithPassword({
+    email: scopedEmail(EMAIL, res.slug),
+    password: PASSWORD,
+  });
   ok("بيدخل بحسابه", !signIn, signIn?.message ?? "");
 
   // ===== ٣) بيشوف بيزنسه بس =====
@@ -113,15 +133,16 @@ try {
 } catch (e) {
   console.log("الاختبار وقع:", e.message);
 } finally {
-  // الترتيب مهم: الدور بيمنع مسح البيزنس (on delete restrict)
-  if (authUserId) {
-    await admin.from("app_users").delete().eq("auth_user_id", authUserId);
-    await admin.auth.admin.deleteUser(authUserId);
+  // **بنستخدم نفس دالة الحذف اللي الشاشة بتستخدمها** — كده لو فيها جدول
+  // منسي بيبان هنا كمان، بدل ما التنظيف يمشي بترتيب تاني ويداري العيب
+  for (const id of [tenantId, dupTenantId].filter(Boolean)) {
+    const res = await deleteTenantCompletely(admin, id);
+    if (!res.ok) console.log("⚠️ بيزنس تجريبي مااتمسحش:", res.error);
   }
-  if (roleId) await admin.from("roles").delete().eq("id", roleId);
-  if (tenantId) {
-    const { error } = await admin.from("tenants").delete().eq("id", tenantId);
-    if (error) console.log("⚠️ البيزنس التجريبي مااتمسحش:", error.message);
+  // احتياطي: لو الحساب فضل لأي سبب
+  for (const id of [authUserId, dupUserId].filter(Boolean)) {
+    await admin.auth.admin.deleteUser(id).catch(() => {});
   }
-  console.log("\nاتمسح البيزنس التجريبي.");
+  void roleId;
+  console.log("\nاتمسحت البيزنسات التجريبية.");
 }

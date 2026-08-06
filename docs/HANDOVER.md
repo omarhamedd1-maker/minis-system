@@ -111,6 +111,7 @@ npm install
 | `lib/tenant-slug.ts` | الاسم المختصر للمتجر: الاقتراح والفحص والمحجوز |
 | `lib/tenant-email.ts` | تبويب الإيميل باسم المتجر (`omar+minis@…`) |
 | `lib/tenant-lookup.ts` | إيجاد المتجر من اسمه المختصر قبل الدخول |
+| `lib/delete-tenant.ts` | حذف بيزنس بالكامل — الترتيب والعدّ قبل التنفيذ |
 | `lib/push/send.ts` | الإرسال، وشكل الإشعار حسب نوع الجهاز |
 | `lib/push/announce.ts` | الإشعار اللي حد بيكتبه بإيده: شكله وفحصه |
 
@@ -135,7 +136,8 @@ npm run build    # بناء
 
 ```bash
 node scripts/test-isolation.mjs    # ١٦ محاولة اختراق للعزل
-node scripts/test-new-tenant.mjs   # ١١ فحص لإنشاء بيزنس جديد
+node scripts/test-new-tenant.mjs   # ١٣ فحص لإنشاء بيزنس جديد
+node scripts/test-delete-tenant.mjs # ٧ فحص لحذف بيزنس (بيعمل بيزنس ويمسحه)
 ```
 
 ```bash
