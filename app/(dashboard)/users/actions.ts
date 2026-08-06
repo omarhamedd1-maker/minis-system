@@ -10,6 +10,28 @@ import {
   requirePermission,
   type PermissionKey,
 } from "@/lib/permissions";
+import { scopedEmail } from "@/lib/tenant-email";
+
+/**
+ * إيميل الدخول للمستخدم في البيزنس ده.
+ *
+ * **الإيميل بيتبوّب باسم المتجر** (`omar+minis@…`) عشان نفس الإيميل ينفع
+ * يبقى حسابين في متجرين — سوبابيز بيخلّي الإيميل فريد على المشروع كله.
+ * الأدمن بيكتب الإيميل العادي والتبويب بيحصل هنا.
+ *
+ * والبيزنس اللي لسه مالوش اسم مختصر (`sql/tenant-slug.sql` ماتشغّلش) بياخد
+ * الإيميل زي ما هو — يعني السلوك القديم بالظبط.
+ */
+async function loginEmail(tenantId: string, email: string): Promise<string> {
+  const { data } = await createAdminClient()
+    .from("tenants")
+    .select("slug")
+    .eq("id", tenantId)
+    .maybeSingle();
+
+  const slug = (data as { slug: string | null } | null)?.slug;
+  return slug ? scopedEmail(email, slug) : email.trim().toLowerCase();
+}
 
 // بناخد الصلاحيات من الفورم (checkboxes اسمها permissions) ونسيب بس المفاتيح المعروفة
 function readPermissions(formData: FormData): PermissionKey[] {
@@ -71,7 +93,7 @@ export async function createUser(formData: FormData) {
   const admin = createAdminClient();
 
   const { data: created, error: authError } = await admin.auth.admin.createUser({
-    email,
+    email: await loginEmail(me.tenantId, email),
     password,
     email_confirm: true,
   });
@@ -196,7 +218,7 @@ export async function setUserEmail(formData: FormData) {
 
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.updateUserById(authUserId, {
-    email,
+    email: await loginEmail(me.tenantId, email),
     email_confirm: true,
   });
   if (error) back("معرفناش نغير الإيميل: " + error.message, false);

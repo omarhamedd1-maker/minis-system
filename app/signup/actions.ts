@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkNewTenant, createTenantWithOwner } from "@/lib/create-tenant";
+import { scopedEmail } from "@/lib/tenant-email";
 
 function back(msg: string): never {
   redirect("/signup?error=" + encodeURIComponent(msg));
@@ -44,14 +45,19 @@ export async function signup(formData: FormData) {
 
   // دخول تلقائي. لو فشل لأي سبب، الحساب اتعمل خلاص فبنوديه لشاشة الدخول
   // بدل ما نقول له "فشل" وهو حسابه موجود.
+  //
+  // **بالإيميل المبوّب باسم متجره** — ده اللي الحساب اتعمل بيه، وهو اللي
+  // بيخلّي نفس الإيميل ينفع في متجر تاني بعدين.
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
+    // `slug` بيرجع فاضي لو عمود الاسم المختصر لسه ماتعملش — وساعتها
+    // الحساب اتعمل بالإيميل العادي
+    email: res.slug ? scopedEmail(email, res.slug) : email.trim().toLowerCase(),
     password,
   });
   if (error) {
     redirect(
-      "/login?error=" +
+      `${res.slug ? `/login/${res.slug}` : "/login"}?error=` +
         encodeURIComponent("حسابك اتعمل — سجّل دخولك بالإيميل والباسورد")
     );
   }

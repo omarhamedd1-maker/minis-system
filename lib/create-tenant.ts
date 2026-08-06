@@ -22,6 +22,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ALL_PERMISSION_KEYS } from "./permission-keys.ts";
+import { checkSlug, slugify } from "./tenant-slug.ts";
+import { scopedEmail } from "./tenant-email.ts";
 
 export type NewTenantInput = {
   businessName: string;
@@ -31,8 +33,53 @@ export type NewTenantInput = {
 };
 
 export type NewTenantResult =
-  | { ok: true; tenantId: string; userId: string }
+  | { ok: true; tenantId: string; userId: string; slug: string }
   | { ok: false; error: string };
+
+/**
+ * اسم مختصر مقترح لبيزنس جديد.
+ *
+ * **الاسم العربي مالوش ترجمة** (شوف `slugify`)، فبنرجع لاسم مؤقت واضح إنه
+ * مؤقت. صاحب المنصة بيغيّره من شاشة البيزنسات.
+ */
+export function suggestSlug(businessName: string, unique: string): string {
+  const base = slugify(businessName);
+  if (base && !checkSlug(base)) return base;
+  return `shop-${String(unique).replace(/-/g, "").slice(0, 6).toLowerCase()}`;
+}
+
+/**
+ * عمود الاسم المختصر موجود؟ (`sql/tenant-slug.sql` اتشغّل؟)
+ *
+ * ⚠️ **الفحص ده مش رفاهية.** من غيره، لو الملف ماتشغّلش:
+ *   • إدخال البيزنس بيقع على عمود مش موجود
+ *   • وأخطر: الإيميل بيتخزّن مبوّب (`omar+minis@…`) ومافيش صفحة
+ *     `/login/minis` أصلًا، فصاحب البيزنس مايقدرش يدخل بحسابه خالص
+ *
+ * فلو العمود مش موجود بنشتغل بالسلوك القديم بالظبط.
+ */
+async function slugSupported(db: SupabaseClient): Promise<boolean> {
+  try {
+    const { error } = await db.from("tenants").select("slug").limit(1);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/** بيدوّر على اسم فاضي: `minis` ← `minis-2` ← `minis-3` */
+async function freeSlug(db: SupabaseClient, wanted: string): Promise<string> {
+  for (let i = 1; i <= 20; i++) {
+    const candidate = i === 1 ? wanted : `${wanted}-${i}`;
+    const { data } = await db
+      .from("tenants")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!data) return candidate;
+  }
+  return `${wanted}-${Date.now().toString(36).slice(-4)}`;
+}
 
 /** أقل باسورد مقبول — نفس اللي شاشة البيزنسات ماشية عليه */
 export const MIN_PASSWORD = 8;
@@ -77,10 +124,18 @@ export async function createTenantWithOwner(
   const ownerName = input.ownerName.trim();
   const email = input.email.trim().toLowerCase();
 
+  // ٠) الاسم المختصر **قبل الحساب** — لأن إيميل الحساب بيتبوّب بيه، وده
+  // اللي بيخلّي نفس الإيميل ينفع في متجرين
+  const hasSlug = await slugSupported(db);
+  const slug = hasSlug
+    ? await freeSlug(db, suggestSlug(name, crypto.randomUUID()))
+    : "";
+  const authEmail = slug ? scopedEmail(email, slug) : email;
+
   // ١) الحساب الأول **بقصد**. الإيميل المكرر بيفشل هنا، ولو عملنا البيزنس
   // قبله كان هيفضل معلّق في قاعدة البيانات من غير صاحب.
   const { data: created, error: authError } = await db.auth.admin.createUser({
-    email,
+    email: authEmail,
     password: input.password,
     email_confirm: true,
   });
@@ -100,7 +155,7 @@ export async function createTenantWithOwner(
   // ٢) البيزنس
   const { data: tenant, error: tenantError } = await db
     .from("tenants")
-    .insert({ name })
+    .insert(slug ? { name, slug } : { name })
     .select("id")
     .single();
   if (tenantError || !tenant) {
@@ -138,5 +193,5 @@ export async function createTenantWithOwner(
     return { ok: false, error: "معرفناش نحفظ صلاحيات الحساب: " + userError.message };
   }
 
-  return { ok: true, tenantId: tenant.id, userId };
+  return { ok: true, tenantId: tenant.id, userId, slug };
 }
