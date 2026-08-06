@@ -6,6 +6,7 @@ import {
   requirePagePermission,
 } from "@/lib/permissions";
 import { UserEditor, type EditorUser } from "@/components/UserEditor";
+import { displayEmail } from "@/lib/tenant-email";
 import {
   createUser,
   deleteUser,
@@ -56,7 +57,7 @@ export default async function UsersPage({
 
   const admin = createAdminClient();
 
-  const [{ data: appUsers }, authList, { data: activityData }] =
+  const [{ data: appUsers }, authList, { data: activityData }, { data: tenant }] =
     await Promise.all([
       admin
         .from("app_users")
@@ -69,13 +70,18 @@ export default async function UsersPage({
         .order("created_at", { ascending: false })
         .limit(80)
         .overrideTypes<ActivityRow[]>(),
+      admin.from("tenants").select("slug").eq("id", me.tenantId).maybeSingle(),
     ]);
+
+  // **الإيميل مخزّن مبوّب باسم المتجر** (`omar+minis@…`) عشان نفس الإيميل
+  // ينفع في متجرين — بس اللي بيتعرض هو اللي المستخدم يعرفه
+  const slug = (tenant as { slug: string | null } | null)?.slug ?? "";
 
   const emailById = new Map<string, string | null>();
   const lastSignInById = new Map<string, string | null>();
   const createdById = new Map<string, string | null>();
   for (const u of authList.data?.users ?? []) {
-    emailById.set(u.id, u.email ?? null);
+    emailById.set(u.id, u.email ? displayEmail(u.email, slug) : null);
     lastSignInById.set(u.id, u.last_sign_in_at ?? null);
     createdById.set(u.id, u.created_at ?? null);
   }

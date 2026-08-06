@@ -6,6 +6,7 @@ import {
   createTenant,
   setSubscriptionEnd,
   setTenantActive,
+  setTenantSlug,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ const label = "text-xs text-gray-500";
 type Row = {
   id: string;
   name: string;
+  slug: string | null;
   active: boolean;
   subscription_ends_at: string | null;
   created_at: string;
@@ -36,7 +38,7 @@ export default async function PlatformPage({
   const db = createAdminClient();
   const { data: tenants } = await db
     .from("tenants")
-    .select("id, name, active, subscription_ends_at, created_at")
+    .select("id, name, slug, active, subscription_ends_at, created_at")
     .order("created_at")
     .overrideTypes<Row[]>();
 
@@ -99,6 +101,28 @@ export default async function PlatformPage({
                         من {formatDate(t.created_at)}
                         {t.id === me.tenantId && " · بيزنسك"}
                       </div>
+                      {/* الاسم المختصر = لينك دخول المتجر، وبيبقى الساب
+                          دومين بعدين. بيتغيّر من هنا بس */}
+                      <form
+                        action={setTenantSlug}
+                        className="mt-1.5 flex items-center gap-1"
+                      >
+                        <input type="hidden" name="tenant_id" value={t.id} />
+                        <span className="text-[11px] text-gray-400">/login/</span>
+                        <input
+                          name="slug"
+                          defaultValue={t.slug ?? ""}
+                          placeholder="minis"
+                          dir="ltr"
+                          className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-[11px] text-gray-900 focus:border-gray-900 focus:outline-none"
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-gray-100 px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-200"
+                        >
+                          حفظ
+                        </button>
+                      </form>
                     </td>
                     <td className="px-4 py-3 text-gray-700">{c.orders}</td>
                     <td className="px-4 py-3 text-gray-700">{c.users}</td>
