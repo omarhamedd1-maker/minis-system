@@ -1,3 +1,4 @@
+import { ltr } from "../format";
 // ==========================================================================
 // الاتصال بشوبيفاي — الملف الوحيد اللي يعرف عنوانها وشكل ردودها
 // --------------------------------------------------------------------------
@@ -79,7 +80,7 @@ export async function fetchAccessToken(
   const shop = normalizeShop(creds.shop);
   if (!isValidShop(shop)) {
     throw new ShopifyError(
-      "دومين المتجر مش مظبوط — لازم يبقى بالشكل ده: yourshop.myshopify.com",
+      `دومين المتجر مش مظبوط — لازم يبقى بالشكل ده: ${ltr("yourshop.myshopify.com")}`,
       400
     );
   }

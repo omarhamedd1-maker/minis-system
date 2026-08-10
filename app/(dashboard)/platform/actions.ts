@@ -1,5 +1,6 @@
 "use server";
 
+import { ltr } from "@/lib/format";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -130,12 +131,15 @@ export async function setTenantSlug(formData: FormData) {
     // **المكرر بيرجع رسالة مفهومة** — الفهرس بيرفضه وبوستجرس بيقول
     // كلام إنجليزي عن قيد فريد
     const taken = /duplicate|unique/i.test(error.message);
-    back(taken ? `«${slug}» متاخد لمتجر تاني` : "معرفناش نحفظ: " + error.message);
+    back(taken ? `«${ltr(slug)}» متاخد لمتجر تاني` : "معرفناش نحفظ: " + error.message);
   }
 
   await logActivity(me, "tenant.slug", `غيّر الاسم المختصر لـ«${slug}»`);
   revalidatePath("/platform");
-  back(`الاسم المختصر بقى «${slug}» — لينك الدخول /login/${slug}`, true);
+  back(
+    `الاسم المختصر بقى «${ltr(slug)}» — لينك الدخول ${ltr("/login/" + slug)}`,
+    true
+  );
 }
 
 /**

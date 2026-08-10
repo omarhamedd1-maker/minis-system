@@ -114,11 +114,22 @@ describe("خطة تسجيل الفلوس المقدمة", () => {
 });
 
 describe("وصف السطر اللي السيستم بيكتبه", () => {
+  // الرقم بيتلف بعلامتين عزل مالهمش شكل — عشان مايقفزش لآخر السطر جوّه
+  // الجملة العربي. بنشيلهم في المقارنة عشان الاختبار يقرا زي البني آدم.
+  const seen = (s: string) => s.replace(/[⁦⁩]/g, "");
+
   it("بيفرّق بين انستا والمقدم", () => {
-    expect(prepaidDescription(order({ paymentMethod: "instapay", orderNumber: "1409" })))
-      .toBe("انستا باي أوردر 1409");
-    expect(prepaidDescription(order({ paymentMethod: "cod", orderNumber: "1406" })))
-      .toBe("مقدم أوردر 1406");
+    expect(
+      seen(prepaidDescription(order({ paymentMethod: "instapay", orderNumber: "1409" })))
+    ).toBe("انستا باي أوردر 1409");
+    expect(
+      seen(prepaidDescription(order({ paymentMethod: "cod", orderNumber: "1406" })))
+    ).toBe("مقدم أوردر 1406");
+  });
+
+  it("**رقم الأوردر معزول** عشان مايتلخبطش في الجملة العربي", () => {
+    const out = prepaidDescription(order({ orderNumber: "1406" }));
+    expect(out).toContain("⁦1406⁩");
   });
 });
 
