@@ -15,6 +15,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { cairoToday } from "@/lib/format";
 import { generateRecurringTasks } from "@/lib/tasks-recur";
 import { runTaskReminders } from "@/lib/task-reminders-run";
+import { recordPrepaidCash } from "@/lib/prepaid-cash-run";
 import { activeTenantIds } from "@/lib/tenant-settings";
 
 export const dynamic = "force-dynamic";
