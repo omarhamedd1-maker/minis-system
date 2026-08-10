@@ -55,6 +55,14 @@ export default async function PlatformPage({
 
   const today = new Date().toISOString().slice(0, 10);
 
+  // **عنوان الموقع من البيئة مش مكتوب في الكود** — لما الدومين يتشترى
+  // اللينك يتغيّر لوحده من غير ما حد يفتكر يعدّل الصفحة دي
+  const base = process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, "")
+    : process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "";
+
   return (
     <div className="space-y-4">
       <div>
@@ -124,6 +132,20 @@ export default async function PlatformPage({
                           حفظ
                         </button>
                       </form>
+
+                      {/* **اللينك كامل** — ده اللي بيتبعت للتيم، فلازم يبقى
+                          جاهز للنسخ مش مقطّع بين خانة وكلمة */}
+                      {t.slug && (
+                        <a
+                          href={`/login/${t.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          dir="ltr"
+                          className="mt-1 block truncate text-[11px] text-sky-700 underline"
+                        >
+                          {`${base}/login/${t.slug}`}
+                        </a>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{c.orders}</td>
                     <td className="px-4 py-3 text-gray-700">{c.users}</td>

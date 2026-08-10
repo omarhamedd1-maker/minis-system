@@ -75,7 +75,10 @@ try {
     "والاتنين حسابين مختلفين مش حساب واحد",
     dup.ok && dup.userId !== authUserId && dup.tenantId !== tenantId
   );
-  if (dup.ok) dupTenantId = dup.tenantId, dupUserId = dup.userId;
+  if (dup.ok) {
+    dupTenantId = dup.tenantId;
+    dupUserId = dup.userId;
+  }
 
   // ===== ١) صف المفاتيح اتعمل لوحده؟ =====
   const { data: c } = await admin.from("tenant_credentials").select("tenant_id").eq("tenant_id", tenantId).maybeSingle();
