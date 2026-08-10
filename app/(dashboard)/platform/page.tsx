@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/permissions";
 import { formatDate } from "@/lib/format";
+import { CopyLink } from "@/components/CopyLink";
+import { SubmitOnce } from "@/components/SubmitOnce";
 import {
   createTenant,
   setSubscriptionEnd,
@@ -133,19 +136,20 @@ export default async function PlatformPage({
                         </button>
                       </form>
 
-                      {/* **اللينك كامل** — ده اللي بيتبعت للتيم، فلازم يبقى
-                          جاهز للنسخ مش مقطّع بين خانة وكلمة */}
+                      {/* **اللينك كامل بزرار نسخ** — ده اللي بيتبعت للتيم */}
                       {t.slug && (
-                        <a
+                        <CopyLink
+                          url={`${base}/login/${t.slug}`}
                           href={`/login/${t.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          dir="ltr"
-                          className="mt-1 block truncate text-[11px] text-sky-700 underline"
-                        >
-                          {`${base}/login/${t.slug}`}
-                        </a>
+                        />
                       )}
+
+                      <Link
+                        href={`/platform/${t.id}`}
+                        className="mt-1.5 inline-block text-[11px] font-medium text-sky-700 hover:underline"
+                      >
+                        بيانات البيزنس ←
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-700">{c.orders}</td>
                     <td className="px-4 py-3 text-gray-700">{c.users}</td>
@@ -272,12 +276,13 @@ export default async function PlatformPage({
           </div>
         </div>
 
-        <button
-          type="submit"
-          className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+        {/* بيتقفل وهو بيبعت — الدوستين السريعتين كانوا بيعملوا بيزنسين */}
+        <SubmitOnce
+          pendingLabel="بيتعمل…"
+          className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:bg-gray-300"
         >
           إنشاء البيزنس
-        </button>
+        </SubmitOnce>
       </form>
     </div>
   );

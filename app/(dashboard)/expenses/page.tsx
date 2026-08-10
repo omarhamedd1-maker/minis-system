@@ -94,6 +94,8 @@ export default async function ExpensesPage({
   const { data: supplierRows } = await createAdminClient()
     .from("suppliers")
     .select("id, name")
+    // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
+    .eq("tenant_id", user.tenantId)
     .order("name")
     .overrideTypes<{ id: string; name: string }[]>();
   const suppliers = supplierRows ?? [];

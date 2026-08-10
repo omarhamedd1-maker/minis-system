@@ -37,6 +37,7 @@ export async function GET(request: Request) {
   type Ok = {
     recur: { created: number; checked: number };
     remind: { sent: number; checked: number; silent: number };
+    prepaid: { added: number; adopted: number; alreadyDone: number; review: number };
   };
 
   try {
@@ -52,7 +53,17 @@ export async function GET(request: Request) {
           ? { created: 0, checked: 0 }
           : await generateRecurringTasks({ db, tenantId, today });
         const remind = await runTaskReminders({ db, tenantId, today, now, dry });
-        results[tenantId] = { recur, remind };
+
+        // الفلوس المقدمة وانستا — بتتسجّل في الخزنة بالمبلغ ورقم الأوردر
+        const p = await recordPrepaidCash({ db, tenantId, dry });
+        const prepaid = {
+          added: p.added,
+          adopted: p.adopted,
+          alreadyDone: p.alreadyDone,
+          review: p.review.length,
+        };
+
+        results[tenantId] = { recur, remind, prepaid };
       } catch (e) {
         // بيزنس وقع؟ الباقي يكمّل
         results[tenantId] = {

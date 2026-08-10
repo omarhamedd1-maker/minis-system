@@ -44,7 +44,19 @@ export async function createTenant(formData: FormData) {
   });
   if (problem) back(problem);
 
-  const res = await createTenantWithOwner(createAdminClient(), {
+  const db = createAdminClient();
+
+  // **الاسم المكرر بيترفض** — عمر داس على الزرار مرتين فاتعمل بيزنسين
+  // بنفس الاسم، والتاني اتمسح بإيده. البيزنسين بنفس الاسم شبه مستحيل
+  // يكونوا مقصودين، والرفض هنا أرخص من إنه يمسح ورا نفسه.
+  const { data: sameName } = await db
+    .from("tenants")
+    .select("id")
+    .eq("name", name)
+    .maybeSingle();
+  if (sameName) back(`فيه بيزنس اسمه «${name}» خلاص`);
+
+  const res = await createTenantWithOwner(db, {
     businessName: name,
     ownerName,
     email,

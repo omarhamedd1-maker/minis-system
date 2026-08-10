@@ -59,14 +59,19 @@ export default async function UsersPage({
 
   const [{ data: appUsers }, authList, { data: activityData }, { data: tenant }] =
     await Promise.all([
+      // ⚠️ **`tenant_id` إجباري مع مفتاح الأدمن.** المفتاح ده بيعدّي فوق
+      // قواعد المنع في قاعدة البيانات، فالفلتر هنا هو الحماية الوحيدة —
+      // من غيره الصفحة كانت بتعرض مستخدمين كل البيزنسات لبعض.
       admin
         .from("app_users")
         .select("auth_user_id, full_name, permissions, active, last_seen_at, roles(name)")
+        .eq("tenant_id", me.tenantId)
         .overrideTypes<AppUserRow[]>(),
       admin.auth.admin.listUsers({ perPage: 200 }),
       admin
         .from("activity_log")
         .select("id, actor_id, actor_name, action, summary, created_at")
+        .eq("tenant_id", me.tenantId)
         .order("created_at", { ascending: false })
         .limit(80)
         .overrideTypes<ActivityRow[]>(),
