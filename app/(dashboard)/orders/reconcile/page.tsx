@@ -9,8 +9,9 @@ import {
 } from "@/lib/format";
 import { BackLink } from "@/components/BackLink";
 import { LinkMissingShipments } from "@/components/LinkMissingShipments";
+import { BostaCoverage } from "@/components/BostaCoverage";
 import { requirePagePermission } from "@/lib/permissions";
-import { linkMissingShipments } from "./actions";
+import { checkBostaCoverage, linkMissingShipments } from "./actions";
 
 type Row = {
   id: string;
@@ -312,6 +313,9 @@ export default async function ReconcilePage() {
 
       {/* الصفحة كانت بتكشف بس — دي أول أداة بتصلّح */}
       <LinkMissingShipments action={linkMissingShipments} />
+
+      {/* «الأوردرات اللي في بوسطة موجودة عندنا ولا لأ» — طلب عمر ١٠ أغسطس */}
+      <BostaCoverage action={checkBostaCoverage} />
 
       {issues.length === 0 ? (
         <div className="rounded-xl bg-green-50 p-8 text-center text-sm text-green-800">
