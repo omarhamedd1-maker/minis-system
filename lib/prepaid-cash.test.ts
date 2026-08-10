@@ -169,3 +169,49 @@ describe("الحالة الملخبطة — سطر بنفس المبلغ برق�
     expect(p.needsReview).toHaveLength(0);
   });
 });
+
+describe("الأوردر اللي قبل بداية الخزنة", () => {
+  // **حصلت فعلًا**: أوردر ١٣٣٦ (انستا ١١٬٩٧٨) من ٨ يوليو اتسجّل،
+  // والخزنة بدأت ٣ أغسطس برصيد افتتاحي شامله — فالرصيد طلع أعلى
+  // بـ١١٬٩٧٨ من الحقيقة، وعمر شافها.
+  it("مابيتسجّلش — فلوسه في الرصيد الافتتاحي", () => {
+    const p = planPrepaidCash(
+      [order({ id: "x", orderNumber: "1336", amountPaid: 11978, orderDate: "2026-07-08" })],
+      [],
+      "2026-08-03"
+    );
+    expect(p.toAdd).toHaveLength(0);
+    expect(p.beforeCashStarted).toBe(1);
+  });
+
+  it("اللي بعد البداية بيتسجّل عادي", () => {
+    const p = planPrepaidCash(
+      [order({ id: "x", orderNumber: "1416", amountPaid: 300, orderDate: "2026-08-10" })],
+      [],
+      "2026-08-03"
+    );
+    expect(p.toAdd).toHaveLength(1);
+  });
+
+  // **نفس اليوم برضه بره** — الرصيد الافتتاحي صورة للفلوس لحظة كتابته،
+  // واللي في نفس اليوم جوّاه. أوردر ١٣٣٦ كان بنفس تاريخ الرصيد بالظبط.
+  it("نفس يوم البداية مابيتسجّلش", () => {
+    const p = planPrepaidCash(
+      [order({ id: "x", amountPaid: 500, orderDate: "2026-08-03" })],
+      [],
+      "2026-08-03"
+    );
+    expect(p.toAdd).toHaveLength(0);
+    expect(p.beforeCashStarted).toBe(1);
+  });
+
+  // الخزنة فاضية = مفيش رصيد افتتاحي = مفيش حاجة تتمنع
+  it("مفيش تاريخ بداية؟ كل حاجة بتتسجّل", () => {
+    const p = planPrepaidCash(
+      [order({ id: "x", amountPaid: 500, orderDate: "2020-01-01" })],
+      [],
+      null
+    );
+    expect(p.toAdd).toHaveLength(1);
+  });
+});

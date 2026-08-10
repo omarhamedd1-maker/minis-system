@@ -80,6 +80,8 @@ export type PrepaidPlan = {
   }[];
   /** متسجّل ومربوط خلاص — مفيش حاجة تتعمل */
   alreadyDone: number;
+  /** أقدم من أول حركة في الخزنة — فلوسه جوّه الرصيد الافتتاحي */
+  beforeCashStarted: number;
 };
 
 /** الأوردر ده فلوسه وصلت قبل التسليم؟ وبكام؟ */
@@ -96,13 +98,23 @@ export function prepaidAmount(o: PrepaidOrder): number {
  */
 export function planPrepaidCash(
   orders: PrepaidOrder[],
-  cash: CashRow[]
+  cash: CashRow[],
+  /**
+   * تاريخ أول حركة في الخزنة (الرصيد الافتتاحي).
+   *
+   * ⚠️ **الأوردر اللي قبله فلوسه جوّه الرصيد الافتتاحي خلاص** — تسجيله
+   * تاني معناه عدّه مرتين. حصلت فعلًا: أوردر ١٣٣٦ (انستا ١١٬٩٧٨) من ٨
+   * يوليو اتسجّل، والخزنة بدأت ٣ أغسطس برصيد افتتاحي شامله — فالرصيد
+   * طلع أعلى بـ١١٬٩٧٨ من الحقيقة.
+   */
+  cashStartsOn?: string | null
 ): PrepaidPlan {
   const plan: PrepaidPlan = {
     toAdd: [],
     toAdopt: [],
     needsReview: [],
     alreadyDone: 0,
+    beforeCashStarted: 0,
   };
 
   const linked = new Set(
@@ -111,6 +123,8 @@ export function planPrepaidCash(
   const incoming = cash.filter((c) => c.direction === "in");
   const takenRows = new Set<string>();
 
+  const startsOn = String(cashStartsOn ?? "").slice(0, 10);
+
   for (const o of orders) {
     const amount = prepaidAmount(o);
     if (amount <= 0) continue;
@@ -118,6 +132,16 @@ export function planPrepaidCash(
     // مربوط خلاص
     if (linked.has(o.id)) {
       plan.alreadyDone++;
+      continue;
+    }
+
+    // **الأوردر اللي قبل بداية الخزنة فلوسه في الرصيد الافتتاحي**
+    const day = String(o.orderDate ?? "").slice(0, 10);
+    // **أصغر من أو يساوي** — الرصيد الافتتاحي صورة للفلوس اللي في الإيد
+    // لحظة كتابته، فاللي في نفس اليوم جوّاه. أوردر ١٣٣٦ كان بنفس تاريخ
+    // الرصيد الافتتاحي بالظبط، و«أصغر من» لوحدها كانت هتعدّيه.
+    if (startsOn && day && day <= startsOn) {
+      plan.beforeCashStarted++;
       continue;
     }
 

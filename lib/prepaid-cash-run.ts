@@ -76,7 +76,7 @@ export async function recordPrepaidCash(opts: {
 
   const { data: cashRows } = await db
     .from("cash_transactions")
-    .select("id, direction, amount, description, related_order_id")
+    .select("id, direction, amount, description, related_order_id, transaction_date")
     .eq("tenant_id", tenantId)
     .limit(5000);
 
@@ -96,7 +96,15 @@ export async function recordPrepaidCash(opts: {
     relatedOrderId: c.related_order_id,
   }));
 
-  const plan = planPrepaidCash(orders, cash);
+  // **أقدم حركة في الخزنة = الرصيد الافتتاحي.** أي أوردر قبلها فلوسه
+  // جوّاه خلاص، وتسجيله تاني بيعدّه مرتين
+  const dates = ((cashRows ?? []) as { transaction_date: string | null }[])
+    .map((c) => String(c.transaction_date ?? "").slice(0, 10))
+    .filter(Boolean)
+    .sort();
+  const cashStartsOn = dates[0] ?? null;
+
+  const plan = planPrepaidCash(orders, cash, cashStartsOn);
   out.alreadyDone = plan.alreadyDone;
   out.review = plan.needsReview.map((r) => ({
     orderNumber: r.order.orderNumber,
