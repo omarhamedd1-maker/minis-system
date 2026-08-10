@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkNewTenant, createTenantWithOwner } from "@/lib/create-tenant";
 import { scopedEmail } from "@/lib/tenant-email";
+import { claimPendingInstall } from "@/lib/shopify/claim-install";
 
 function back(msg: string): never {
   redirect("/signup?error=" + encodeURIComponent(msg));
@@ -35,13 +36,23 @@ export async function signup(formData: FormData) {
   });
   if (problem) back(problem);
 
-  const res = await createTenantWithOwner(createAdminClient(), {
+  const db = createAdminClient();
+  const res = await createTenantWithOwner(db, {
     businessName,
     ownerName,
     email,
     password,
   });
   if (!res.ok) back(res.error);
+
+  // **التاجر اللي جايّ من شوبيفاي** — ركّب التطبيق قبل ما يعمل بيزنسه،
+  // والتوكن مستنّي على صف التركيب. دلوقتي بيتسلّم له.
+  const install = String(formData.get("install") ?? "").trim();
+  let linkedShop: string | null = null;
+  if (install) {
+    const claim = await claimPendingInstall(db, install, res.tenantId, res.userId);
+    if (claim.ok) linkedShop = claim.shop;
+  }
 
   // دخول تلقائي. لو فشل لأي سبب، الحساب اتعمل خلاص فبنوديه لشاشة الدخول
   // بدل ما نقول له "فشل" وهو حسابه موجود.
@@ -62,5 +73,12 @@ export async function signup(formData: FormData) {
     );
   }
 
-  redirect("/settings?saved=" + encodeURIComponent("أهلًا بيك! ابدأ اربط متجرك"));
+  redirect(
+    "/settings?saved=" +
+      encodeURIComponent(
+        linkedShop
+          ? `أهلًا بيك! متجرك ${linkedShop} اتربط خلاص`
+          : "أهلًا بيك! ابدأ اربط متجرك"
+      )
+  );
 }

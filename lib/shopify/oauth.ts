@@ -102,3 +102,50 @@ export function checkCallback(
   }
   return { ok: true, shop, code: params.code, state: params.state };
 }
+
+// ==========================================================================
+// التركيب اللي بيبدأ من شوبيفاي — للتطبيق العام
+// ==========================================================================
+
+export type InstallStart =
+  | { ok: true; shop: string; fromShopify: boolean }
+  | { ok: false; error: string };
+
+/**
+ * مين بدأ التركيب ده، وهل نثق فيه؟
+ *
+ * **حالتين مختلفتين تمامًا:**
+ *
+ *   ١. **جوّه السيستم** — واحد داخل بحسابه وكاتب دومين متجره. الثقة جاية
+ *      من جلسته، ومفيش توقيع أصلًا.
+ *
+ *   ٢. **من شوبيفاي** — التاجر دوس «تركيب» في متجره وشوبيفاي وجّهته
+ *      لعندنا. **مالوش حساب عندنا**، فالثقة لازم تيجي من **توقيع شوبيفاي**
+ *      على الباراميترات. ده بالظبط اللي كان ناقص وبيرد ٤٠١.
+ *
+ * ⚠️ **من غير جلسة ومن غير توقيع = رفض.** أي حد يقدر يفتح لينك فيه
+ * `?shop=` — التوقيع هو اللي بيثبت إن شوبيفاي هي اللي بعتته.
+ */
+export function checkInstallStart(
+  params: Record<string, string>,
+  clientSecret: string,
+  hasSession: boolean
+): InstallStart {
+  const shop = String(params.shop ?? "").trim().toLowerCase();
+  if (!shop) return { ok: false, error: "مفيش دومين متجر في الطلب" };
+
+  if (hasSession) return { ok: true, shop, fromShopify: false };
+
+  // مفيش جلسة؟ يبقى لازم توقيع شوبيفاي
+  if (!params.hmac) {
+    return {
+      ok: false,
+      error: "سجّل دخولك الأول عشان تربط متجرك",
+    };
+  }
+  if (!verifyHmac(params, clientSecret)) {
+    return { ok: false, error: "توقيع شوبيفاي مش مظبوط — الطلب ده مش منها" };
+  }
+
+  return { ok: true, shop, fromShopify: true };
+}

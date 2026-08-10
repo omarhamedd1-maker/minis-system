@@ -80,6 +80,26 @@ export async function GET(req: Request) {
     done(e instanceof Error ? e.message : "معرفناش نوصل لشوبيفاي");
   }
 
+  // **التاجر اللي جايّ من شوبيفاي مالوش بيزنس عندنا لسه.**
+  //
+  // مانقدرش نحفظ التوكن في `tenant_credentials` لأن مفيش بيزنس يتحفظ عليه.
+  // فبنحطه مستنّي على التركيب نفسه، ونوديه يعمل بيزنسه — وأول ما يخلص
+  // بيتسلّم التوكن (`claimPendingInstall`).
+  if (!install!.tenant_id) {
+    await db
+      .from("shopify_installs")
+      .update({
+        completed_at: new Date().toISOString(),
+        access_token: token,
+        shop,
+      })
+      .eq("state", state);
+
+    redirect(
+      `/signup?install=${encodeURIComponent(state)}&shop=${encodeURIComponent(shop)}`
+    );
+  }
+
   const { error: saveError } = await db
     .from("tenant_credentials")
     .update({

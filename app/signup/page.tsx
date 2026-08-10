@@ -8,9 +8,9 @@ const labelClass = "mb-1 block text-sm font-medium text-gray-700";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; install?: string; shop?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, install, shop } = await searchParams;
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-8">
@@ -28,7 +28,18 @@ export default async function SignupPage({
           </div>
         )}
 
+        {/* **التاجر جايّ من شوبيفاي** — ركّب التطبيق والتوكن مستنّي،
+            وأول ما يعمل بيزنسه بيتسلّم له. الرقم بيتمرّر مخفي عشان
+            مايضيعش لو الصفحة اتعملها تحديث. */}
+        {install && shop && (
+          <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
+            متجرك <b dir="ltr">{shop}</b> اتوافق عليه ✅ — اعمل بيزنسك دلوقتي
+            وهيتربط لوحده.
+          </p>
+        )}
+
         <form action={signup} className="space-y-4">
+          {install && <input type="hidden" name="install" value={install} />}
           <div>
             <label htmlFor="business_name" className={labelClass}>
               اسم البيزنس

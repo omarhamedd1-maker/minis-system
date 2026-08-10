@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   SHOPIFY_SCOPES,
   buildInstallUrl,
+  checkInstallStart,
   checkCallback,
   newState,
   verifyHmac,
@@ -120,5 +121,50 @@ describe("فحص الرد كامل", () => {
     const p = { shop: "d8rtv0-uq.myshopify.com", code: "c" };
     const r = checkCallback({ ...p, hmac: sign(p) }, SECRET);
     expect(r).toMatchObject({ ok: false });
+  });
+});
+
+describe("مين بدأ التركيب — للتطبيق العام", () => {
+  const SECRET = "shpss_secret";
+  const signed = (p: Record<string, string>) => {
+    const message = Object.keys(p).sort().map((k) => `${k}=${p[k]}`).join("&");
+    const hmac = crypto.createHmac("sha256", SECRET).update(message).digest("hex");
+    return { ...p, hmac };
+  };
+
+  it("واحد داخل بحسابه: بيعدّي من غير توقيع", () => {
+    const r = checkInstallStart({ shop: "x.myshopify.com" }, SECRET, true);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.fromShopify).toBe(false);
+  });
+
+  // **دي اللي كانت بترد ٤٠١** — التاجر جايّ من شوبيفاي ومالوش حساب عندنا،
+  // والمراجعة بترفض على ده
+  it("جايّ من شوبيفاي بتوقيع صح: بيعدّي من غير حساب", () => {
+    const r = checkInstallStart(
+      signed({ shop: "x.myshopify.com", timestamp: "123" }),
+      SECRET,
+      false
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.fromShopify).toBe(true);
+  });
+
+  it("من غير جلسة ومن غير توقيع: يترفض", () => {
+    const r = checkInstallStart({ shop: "x.myshopify.com" }, SECRET, false);
+    expect(r.ok).toBe(false);
+  });
+
+  it("توقيع مزوّر: يترفض", () => {
+    const r = checkInstallStart(
+      { shop: "x.myshopify.com", timestamp: "123", hmac: "غلط" },
+      SECRET,
+      false
+    );
+    expect(r.ok).toBe(false);
+  });
+
+  it("مفيش دومين: يترفض حتى مع جلسة", () => {
+    expect(checkInstallStart({}, SECRET, true).ok).toBe(false);
   });
 });

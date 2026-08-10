@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/permissions";
 import { callbackUrl, readShopifyApp } from "@/lib/shopify/app";
-import { buildInstallUrl, newState } from "@/lib/shopify/oauth";
+import { buildInstallUrl, checkInstallStart, newState } from "@/lib/shopify/oauth";
 import { isCustomDomain, isValidShop, normalizeShop } from "@/lib/shopify/client";
 
 /**
@@ -15,10 +15,11 @@ import { isCustomDomain, isValidShop, normalizeShop } from "@/lib/shopify/client
  */
 export async function GET(req: Request) {
   const user = await getSessionUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
 
   const { searchParams, origin } = new URL(req.url);
-  const shop = normalizeShop(searchParams.get("shop"));
+  const params: Record<string, string> = {};
+  searchParams.forEach((v, k) => (params[k] = v));
+  const shop = normalizeShop(params.shop);
 
   const back = (msg: string) =>
     redirect("/settings?error=" + encodeURIComponent(msg));
@@ -48,15 +49,26 @@ export async function GET(req: Request) {
     );
   }
 
+  // **مين بدأ التركيب؟** واحد داخل بحسابه، ولا تاجر جايّ من شوبيفاي
+  // ومالوش حساب عندنا. التانية دي كانت بترد ٤٠١ وبتوقف المراجعة.
+  const who = checkInstallStart(params, app!.clientSecret, Boolean(user));
+  if (!who.ok) back(who.error);
+
   const state = newState();
   const { error } = await db.from("shopify_installs").insert({
     state,
-    tenant_id: user.tenantId,
+    // **بلا بيزنس لو جايّ من شوبيفاي** — التاجر هيعمل بيزنسه بعد الموافقة
+    // وساعتها يتسلّم التوكن
+    tenant_id: user?.tenantId ?? null,
     shop,
-    started_by: user.authUserId,
+    started_by: user?.authUserId ?? null,
   });
   if (error) {
-    back("معرفناش نبدأ الربط: " + error.message);
+    back(
+      "معرفناش نبدأ الربط: " +
+        error.message +
+        " — لو الخانات لسه مااتعملتش شغّل sql/shopify-public-install.sql"
+    );
   }
 
   const url = buildInstallUrl({
