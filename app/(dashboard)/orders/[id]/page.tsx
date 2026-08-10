@@ -684,9 +684,56 @@ export default async function OrderDetailsPage({
                        يعرف «الشحن عليّا ولا لأ» الأول، والتفصيل لمّا يسأل
                        «ليه». والبنود مفصولة بخطوط ومتباعدة عشان ماتتلخبطش
                        في بعضها. */
-                    <div className="mt-2 overflow-hidden rounded-lg border border-gray-200">
+                    /* **مفيش جدول ولا خطوط** — عمر قال الشكل ده متداخل.
+                       رجعت لسطور بسيطة زي أول مرة، بس متباعدة وكل سطر
+                       شرحه تحته مش جنبه. */
+                    <div className="mt-2 space-y-2.5 rounded-lg bg-gray-50 p-3">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-xs text-gray-600">
+                          اللي بوسطة خدته
+                        </span>
+                        <span className="text-xs font-medium text-gray-900">
+                          {formatMoney(s.cost)}
+                        </span>
+                      </div>
+                      <p className="-mt-2 text-[10px] leading-relaxed text-gray-400">
+                        {detail}
+                      </p>
+
+                      {/* **نصيب الشحنة من الباقة** — من غيره الشحنة اللي
+                          الباقة غطّتها بتبان أرخص بمية جنيه من اللي
+                          ماغطّتهاش، وهي نفس الخدمة */}
+                      {s.bundleShare > 0 && (
+                        <>
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="text-xs text-gray-600">
+                              نصيبها من الباقة
+                            </span>
+                            <span className="text-xs font-medium text-gray-900">
+                              {formatMoney(s.bundleShare)}
+                            </span>
+                          </div>
+                          <p className="-mt-2 text-[10px] leading-relaxed text-gray-400">
+                            الشحن اللي الباقة دفعته بدالك
+                          </p>
+                        </>
+                      )}
+
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-xs text-gray-600">دفعه العميل</span>
+                        <span className="text-xs font-medium text-gray-700">
+                          − {formatMoney(s.paidByCustomer)}
+                        </span>
+                      </div>
+                      {!received && order.shipping_price > 0 && (
+                        <p className="-mt-2 text-[10px] leading-relaxed text-gray-400">
+                          ماستلمش، فشحن الأوردر ({formatMoney(order.shipping_price)})
+                          ماتحصّلش
+                        </p>
+                      )}
+
                       <div
-                        className={`flex items-center justify-between gap-3 px-3 py-2.5 ${tone.box}`}
+                        className={`flex items-baseline justify-between gap-3 rounded-lg px-2.5 py-2 ${tone.box}`}
                       >
                         <span className={`text-xs font-medium ${tone.label}`}>
                           {s.net === 0
@@ -695,58 +742,10 @@ export default async function OrderDetailsPage({
                               ? "زيادة معاك من الشحن"
                               : "الشحن عليك"}
                         </span>
-                        <span className={`text-base font-bold ${tone.value}`}>
+                        <span className={`text-sm font-bold ${tone.value}`}>
                           {formatMoney(Math.abs(s.net))}
                         </span>
                       </div>
-
-                      <dl className="divide-y divide-gray-100 bg-white">
-                        <div className="flex items-start justify-between gap-4 px-3 py-2.5">
-                          <dt className="text-xs text-gray-600">
-                            اللي بوسطة خدته
-                            <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-400">
-                              {detail}
-                            </span>
-                          </dt>
-                          <dd className="shrink-0 text-xs font-medium text-gray-900">
-                            {formatMoney(s.cost)}
-                          </dd>
-                        </div>
-
-                        {/* **نصيب الشحنة من الباقة** — الشحن اللي الباقة
-                            دفعته بدالك. من غيره الشحنة اللي الباقة غطّتها
-                            بتبان أرخص بمية جنيه من اللي ماغطّتهاش، وهي نفس
-                            الخدمة. والرقم بييجي من بوسطة لكل شحنة لوحدها،
-                            فمش فارقة إن الباقة بتتغيّر من شهر للتاني. */}
-                        {s.bundleShare > 0 && (
-                          <div className="flex items-start justify-between gap-4 px-3 py-2.5">
-                            <dt className="text-xs text-gray-600">
-                              نصيبها من الباقة
-                              <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-400">
-                                الشحن اللي الباقة دفعته بدالك
-                              </span>
-                            </dt>
-                            <dd className="shrink-0 text-xs font-medium text-gray-900">
-                              {formatMoney(s.bundleShare)}
-                            </dd>
-                          </div>
-                        )}
-
-                        <div className="flex items-start justify-between gap-4 px-3 py-2.5">
-                          <dt className="text-xs text-gray-600">
-                            دفعه العميل
-                            {!received && order.shipping_price > 0 && (
-                              <span className="mt-0.5 block text-[10px] leading-relaxed text-gray-400">
-                                ماستلمش، فشحن الأوردر (
-                                {formatMoney(order.shipping_price)}) ماتحصّلش
-                              </span>
-                            )}
-                          </dt>
-                          <dd className="shrink-0 text-xs font-medium text-gray-700">
-                            − {formatMoney(s.paidByCustomer)}
-                          </dd>
-                        </div>
-                      </dl>
 
                       {/* **ملحوظة للي بيقرا الكود مش للشاشة**: الأرباح
                           بتحسب `s.cost` بس مش `s.full` — قسط الباقة متسجّل

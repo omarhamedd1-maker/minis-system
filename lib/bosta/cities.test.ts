@@ -92,3 +92,73 @@ describe("مطابقة المنطقة", () => {
     expect(matchZone([], "أي عنوان")).toBeNull();
   });
 });
+
+// ==========================================================================
+// عناوين حقيقية وقفت شحنات فعلًا — ١٠ أغسطس ٢٠٢٦
+// --------------------------------------------------------------------------
+// **السبب كان واحد**: بوسطة بتقبل ٢٨ محافظة بس، والعنوان الجايّ من شوبيفاي
+// فيه اسم **المدينة** («طنطا») مش المحافظة («الغربية»). عمر كان بيبعتهم
+// بإيده من بوسطة كل مرة.
+// ==========================================================================
+
+const allCities: BostaCity[] = [
+  { _id: "cairo", nameAr: "القاهره", name: "Cairo" },
+  { _id: "giza", nameAr: "الجيزه", name: "Giza" },
+  { _id: "alex", nameAr: "الاسكندريه", name: "Alexandria" },
+  { _id: "gharbia", nameAr: "الغربيه", name: "Gharbia" },
+  { _id: "dakahlia", nameAr: "الدقهليه", name: "Dakahlia" },
+  { _id: "redsea", nameAr: "البحر الاحمر", name: "Red Sea" },
+  { _id: "southsinai", nameAr: "جنوب سيناء", name: "South Sinai" },
+  { _id: "suez", nameAr: "السويس", name: "Suez" },
+  { _id: "sharqia", nameAr: "الشرقيه", name: "Sharqia" },
+  { _id: "northcoast", nameAr: "الساحل الشمالي", name: "North Coast" },
+];
+
+describe("عناوين حقيقية كانت بتوقف الشحنة", () => {
+  const cases: [string, string, string][] = [
+    ["أوردر ١٣٨١", "طنطا ش المتوكل مع حسان برج المقصود الدور الخامس, متوكل مع حسان, طنطا", "gharbia"],
+    ["أوردر ١٤٠٩", "حي الجامعة ش عمر بن عبد العزيز ١٣ جانبي امام محل المتحدة, 5, Mansoura", "dakahlia"],
+    ["أوردر ١٤٠١", "Intercontinental, building 13-G, Unit 4, Hurghada", "redsea"],
+    ["أوردر ١٣٨٩", "Regents park compound, A114, 5th Settelment", "cairo"],
+  ];
+
+  for (const [name, address, expected] of cases) {
+    it(`${name} → ${expected}`, () => {
+      expect(matchCity(allCities, address)?._id).toBe(expected);
+    });
+  }
+});
+
+describe("مدن مصر اللي مش أسامي محافظات", () => {
+  const cases: [string, string][] = [
+    ["المحلة الكبرى، برج النور", "gharbia"],
+    ["ميت غمر شارع الجيش", "dakahlia"],
+    ["Sharm El Sheikh, Naama Bay", "southsinai"],
+    ["الزقازيق، ش سعد زغلول", "sharqia"],
+    ["العين السخنة، بورتو", "suez"],
+    ["سيدي عبد الرحمن، مراسي", "northcoast"],
+    ["El Gouna, Abu Tig Marina", "redsea"],
+  ];
+
+  for (const [address, expected] of cases) {
+    it(`«${address}» → ${expected}`, () => {
+      expect(matchCity(allCities, address)?._id).toBe(expected);
+    });
+  }
+
+  // **الأطول بيكسب** — «الساحل الشمالي» قبل «الساحل»
+  it("«الساحل الشمالي» مابتتلغبطش مع «الساحل»", () => {
+    expect(matchCity(allCities, "الساحل الشمالي سيدي كرير")?._id).toBe("northcoast");
+  });
+
+  // اسم المحافظة صريح في العنوان بيكسب على المنطقة
+  it("اسم المحافظة الصريح هو المرجع", () => {
+    expect(matchCity(allCities, "طنطا, الغربية")?._id).toBe("gharbia");
+  });
+
+  // **العنوان اللي مفيهوش مدينة خالص لازم يفضل يقف** — الشحنة تروح
+  // لمحافظة غلط أسوأ من إنها تقف وحد يبص عليها (أوردر ١٣٦٧)
+  it("العنوان اللي مالوش مدينة بيفضل واقف", () => {
+    expect(matchCity(allCities, "Ahmad yehya st., 26,11,1104, 1104")).toBe(null);
+  });
+});

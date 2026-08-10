@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
+  COMMENT_DOT_STATUSES,
   MANUAL_ONLY_BY_FLOW,
   ORDER_STATUS_OPTIONS,
   SHIPMENT_STATUSES,
@@ -565,13 +566,7 @@ export default async function OrdersPage({
                       orderNumber={order.order_number ?? ""}
                       comments={order.order_comments}
                       isAdmin={canComments}
-                      hideDot={[
-                        "packed",
-                        "shipped",
-                        "delivered",
-                        "returned",
-                        "cancelled",
-                      ].includes(order.order_status ?? "")}
+                      hideDot={!COMMENT_DOT_STATUSES.includes(order.order_status ?? "")}
                       addAction={addOrderComment}
                       deleteAction={deleteOrderComment}
                     />
@@ -760,13 +755,7 @@ export default async function OrdersPage({
                           orderNumber={order.order_number ?? ""}
                           comments={order.order_comments}
                           isAdmin={canComments}
-                          hideDot={[
-                            "packed",
-                            "shipped",
-                            "delivered",
-                            "returned",
-                            "cancelled",
-                          ].includes(order.order_status ?? "")}
+                          hideDot={!COMMENT_DOT_STATUSES.includes(order.order_status ?? "")}
                           addAction={addOrderComment}
                           deleteAction={deleteOrderComment}
                         />
