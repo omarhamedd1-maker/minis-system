@@ -32,9 +32,18 @@ export type BostaCashCycle = {
   cod_fees?: string | number | null;
   collection_fees?: string | number | null;
   opening_package_fees?: string | number | null;
+  /** رسم الاستعجال — بوسطة بتاخده على الشحنة السريعة */
+  expedite_fees?: string | number | null;
   vat?: string | number | null;
   rto_discount?: string | number | null;
   bundle_discount?: string | number | null;
+  /**
+   * اللي اتخصم من **رصيدك** عند بوسطة.
+   *
+   * ⚠️ **ده الرقم الحقيقي لما `bosta_fees` تبقى صفر** — شوف الشرح جوّه
+   * `realFees`.
+   */
+  bosta_credits_consumed?: string | number | null;
 };
 
 export type BostaWallet = {
@@ -50,6 +59,8 @@ export type RealFees = {
   cod: number;
   collection: number;
   opening: number;
+  /** رسم الاستعجال */
+  expedite: number;
   vat: number;
 };
 
@@ -71,17 +82,48 @@ export function realFees(wallet: BostaWallet): RealFees | null {
   const c = wallet?.cashCycle;
   if (!c) return null;
 
-  const total = num(c.bosta_fees);
+  const shipping = round2(num(c.shipping_fees));
+  const insurance = round2(num(c.insurance_fees));
+  const cod = round2(num(c.cod_fees));
+  const collection = round2(num(c.collection_fees));
+  const opening = round2(num(c.opening_package_fees));
+  const expedite = round2(num(c.expedite_fees));
+  const vat = round2(num(c.vat));
+
+  // **`bosta_fees` بتبقى صفر لما بوسطة تخصم من رصيدك بدل ما تخصم من
+  // التحصيل** — وساعتها الرقم الحقيقي في `bosta_credits_consumed`.
+  //
+  // ده كان بيرمي الشحنة كلها: `total <= 0` معناها «لسه ماخلصتش»، فالسيستم
+  // كان بيرجع للتقدير. **٣٩ شحنة** كانت كده في ١٠ أغسطس ٢٠٢٦، وكلها
+  // متسلّمة من شهور — يعني رقم مقدّر بدل رقم حقيقي متاح.
+  //
+  // والحسبة اتأكدت على الشحنات دي بالظبط، مثال أوردر ١١٢٩:
+  //   شحن ٨٨ − خصم باقة ٨٨ = ٠ · استعجال ١٢ · ضريبة ١٫٦٨ = **١٣٫٦٨**
+  //   وهو نفسه `bosta_credits_consumed`.
+  const charged = round2(num(c.bosta_fees));
+  const fromCredits = round2(num(c.bosta_credits_consumed));
+
+  // آخر ملجأ: نجمع البنود بنفسنا لو الرقمين الاتنين فاضيين
+  const bundle = round2(num(c.bundle_discount));
+  const summed = round2(
+    Math.max(0, shipping - bundle) + insurance + cod + collection + opening + expedite + vat
+  );
+
+  const total = charged > 0 ? charged : fromCredits > 0 ? fromCredits : summed;
+
+  // **لسه صفر بجد؟** يعني الشحنة ماخدتش رسوم خالص أو لسه ماقفلتش دورتها —
+  // بنفضل نستنى بدل ما نقفل على صفر
   if (total <= 0) return null;
 
   return {
-    total: round2(total),
-    shipping: round2(num(c.shipping_fees)),
-    insurance: round2(num(c.insurance_fees)),
-    cod: round2(num(c.cod_fees)),
-    collection: round2(num(c.collection_fees)),
-    opening: round2(num(c.opening_package_fees)),
-    vat: round2(num(c.vat)),
+    total,
+    shipping,
+    insurance,
+    cod,
+    collection,
+    opening,
+    expedite,
+    vat,
   };
 }
 
@@ -96,6 +138,7 @@ export function realFeesBreakdown(f: RealFees): { label: string; amount: number 
     ["عمولة التحصيل", f.cod],
     ["رسم التحصيل", f.collection],
     ["فتح الشحنة", f.opening],
+    ["استعجال", f.expedite],
     ["ضريبة", f.vat],
   ];
   return rows.filter(([, v]) => v > 0).map(([label, amount]) => ({ label, amount }));

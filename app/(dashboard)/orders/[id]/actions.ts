@@ -879,16 +879,44 @@ export async function linkBostaShipment(formData: FormData) {
   // نتأكد إن رقم التتبع ده مش مربوط بأوردر تاني
   const { data: other } = await supabase
     .from("orders")
-    .select("order_number")
+    .select("id, order_number, order_status")
     .eq("bosta_tracking", tracking)
     .neq("id", orderId)
     .maybeSingle();
-  if (other) {
-    redirect(
-      `/orders/${orderId}?error=` +
-        encodeURIComponent(
-          `رقم التتبع ده مربوط بأوردر تاني (${other.order_number}) — فكّه منه الأول`
-        )
+
+  const from = other as
+    | { id: string; order_number: string | null; order_status: string | null }
+    | null;
+
+  if (from) {
+    // **الأوردر الملغي بيسيب شحنته** — دي كانت حلقة مقفولة: العميل بيلغي،
+    // وإنت عايز تستخدم شحنته لأوردر تاني، والسيستم بيقول «فكّه من الأوردر
+    // الأول» ومفيش مكان تفكّه منه. الإلغاء نفسه هو الفك.
+    if (from.order_status !== "cancelled") {
+      redirect(
+        `/orders/${orderId}?error=` +
+          encodeURIComponent(
+            `رقم التتبع ده مربوط بأوردر ${from.order_number} — الغي الأوردر ده الأول وبعدين اربطه هنا`
+          )
+      );
+    }
+
+    const { error: freeErr } = await supabase
+      .from("orders")
+      .update({ bosta_tracking: null })
+      .eq("id", from.id);
+    if (freeErr) {
+      redirect(
+        `/orders/${orderId}?error=` +
+          encodeURIComponent("معرفناش نفك الشحنة من الأوردر الملغي")
+      );
+    }
+
+    await logActivity(
+      me,
+      "bosta.unlink",
+      `فكّ شحنة ${tracking} من أوردر ${from.order_number} الملغي`,
+      from.id
     );
   }
 
