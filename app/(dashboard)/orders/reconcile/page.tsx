@@ -85,7 +85,7 @@ type Issue = {
 };
 
 export default async function ReconcilePage() {
-  await requirePagePermission("finance.dashboard");
+  const me = await requirePagePermission("finance.dashboard");
   const admin = createAdminClient();
 
   const { data, error } = await admin
@@ -96,6 +96,8 @@ export default async function ReconcilePage() {
        customers(full_name, phone),
        order_items(quantity, sale_price_at_order, cost_price_at_order)`
     )
+    // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
+    .eq("tenant_id", me.tenantId)
     .order("order_date", { ascending: false })
     .limit(5000)
     .overrideTypes<Row[]>();

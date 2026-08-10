@@ -26,6 +26,8 @@ export default async function SuppliersPage({
   const { data, error } = await admin
     .from("suppliers")
     .select("id, name, phone, notes, supplier_transactions(kind, amount)")
+    // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
+    .eq("tenant_id", user.tenantId)
     .order("name")
     .overrideTypes<Supplier[]>();
 

@@ -39,22 +39,25 @@ export default async function ActivityPage({
 }: {
   searchParams: Promise<{ actor?: string; type?: string; limit?: string }>;
 }) {
-  await requirePagePermission("admin.users");
+  const me = await requirePagePermission("admin.users");
   const { actor, type, limit: rawLimit } = await searchParams;
   const limit = Math.min(Math.max(Number(rawLimit) || 100, 100), 2000);
   const typeValid = CATEGORIES.some((c) => c.value === type) ? type : undefined;
 
   const admin = createAdminClient();
 
-  // قايمة المستخدمين لفلتر "مين"
+  // ⚠️ **`tenant_id` إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع،
+  // فالفلتر هنا هو الحماية الوحيدة
   const { data: appUsers } = await admin
     .from("app_users")
     .select("auth_user_id, full_name")
+    .eq("tenant_id", me.tenantId)
     .overrideTypes<{ auth_user_id: string; full_name: string | null }[]>();
 
   let query = admin
     .from("activity_log")
     .select("id, actor_id, actor_name, action, summary, created_at")
+    .eq("tenant_id", me.tenantId)
     .order("created_at", { ascending: false })
     .limit(limit);
 

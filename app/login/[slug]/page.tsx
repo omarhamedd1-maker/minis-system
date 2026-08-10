@@ -1,4 +1,4 @@
-import Link from "next/link";
+
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { findTenantBySlug } from "@/lib/tenant-lookup";
@@ -90,18 +90,9 @@ export default async function StoreLoginPage({
           </button>
         </form>
 
-        {/* **باسوردك هنا غير باسوردك في أي متجر تاني** — الموظف اللي شغّال
-            في اتنين لازم يعرف ده قبل ما يجرّب الباسورد الغلط تلات مرات */}
-        <p className="mt-5 text-center text-xs text-gray-400">
-          دخولك هنا مستقل عن أي متجر تاني — نفس الإيميل ينفع بباسورد مختلف.
-        </p>
-
-        <p className="mt-3 text-center text-sm text-gray-500">
-          مش متجرك؟{" "}
-          <Link href="/login" className="font-medium text-gray-900 underline">
-            الدخول العام
-          </Link>
-        </p>
+        {/* **مفيش أي كلام زيادة تحت الفورم** — عمر شالهم: صفحة الدخول
+            بتاعت متجر تخصّ ناسه، واللي بيدخل منها عارف هو فين. وسطر
+            «الدخول العام» كان بيوديهم برّه متجرهم من غير سبب. */}
       </div>
     </div>
   );

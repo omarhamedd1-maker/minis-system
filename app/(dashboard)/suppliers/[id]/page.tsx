@@ -53,6 +53,8 @@ export default async function SupplierPage({
     admin
       .from("suppliers")
       .select("id, name, phone, notes")
+      // ⚠️ **tenant_id إجباري مع مفتاح الأدمن**
+      .eq("tenant_id", user.tenantId)
       .eq("id", id)
       .maybeSingle()
       .overrideTypes<{
@@ -67,6 +69,7 @@ export default async function SupplierPage({
         `id, kind, amount, description, txn_date, related_cash_id, related_expense_id,
          supplier_invoice_items(id, item_name, quantity, unit_cost)`
       )
+      .eq("tenant_id", user.tenantId)
       .eq("supplier_id", id)
       .order("txn_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -75,6 +78,7 @@ export default async function SupplierPage({
     admin
       .from("product_variants")
       .select("id, variant_name, sku, cost_price, products(name_ar, name)")
+      .eq("tenant_id", user.tenantId)
       .order("id")
       .limit(2000)
       .overrideTypes<
