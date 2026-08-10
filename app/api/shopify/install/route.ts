@@ -1,3 +1,4 @@
+import { ltr } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/permissions";
@@ -25,8 +26,8 @@ export async function GET(req: Request) {
   if (!isValidShop(shop)) {
     back(
       isCustomDomain(shop)
-        ? `"${shop}" ده دومين متجرك اللي العميل بيشوفه، وشوبيفاي بتطلب دومين الأدمن. هتلاقيه في لوحة شوبيفاي تحت الإعدادات ← الدومينات، وشكله كده: yourshop.myshopify.com`
-        : "اكتب اسم متجرك أو دومينه — مثلًا yourshop أو yourshop.myshopify.com"
+        ? `${ltr(shop)} ده دومين متجرك اللي العميل بيشوفه، وشوبيفاي بتطلب دومين الأدمن. هتلاقيه في لوحة شوبيفاي تحت الإعدادات ← الدومينات، وشكله كده: ${ltr("yourshop.myshopify.com")}`
+        : `اكتب اسم متجرك أو دومينه — مثلًا ${ltr("yourshop")} أو ${ltr("yourshop.myshopify.com")}`
     );
   }
 

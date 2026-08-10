@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lastMove } from "./format";
+import { lastMove, ltr } from "./format";
 
 describe("آخر حركة", () => {
   const now = new Date("2026-08-10T12:00:00Z");
@@ -79,5 +79,38 @@ describe("آخر حركة", () => {
         now
       ).days
     ).toBe(0);
+  });
+});
+
+describe("عزل الإنجليزي جوّه العربي", () => {
+  // **الجملة العربي اللي جوّاها دومين أو إيميل بتتلخبط** — النقطة والفاصلة
+  // بيقفزوا لمكان تاني. علامتين العزل بيقولوا للمتصفح إن الحتة دي وحدة واحدة
+  it("بيلف الحتة بعلامتين عزل", () => {
+    const out = ltr("yourshop.myshopify.com");
+    expect(out.startsWith("⁦")).toBe(true);
+    expect(out.endsWith("⁩")).toBe(true);
+    expect(out).toContain("yourshop.myshopify.com");
+  });
+
+  it("بيشيل المسافات من الأطراف", () => {
+    expect(ltr("  a@b.com  ")).toBe("⁦a@b.com⁩");
+  });
+
+  // الفاضي بيفضل فاضي — مانحطش علامات على لا حاجة
+  it("الفاضي بيرجع فاضي", () => {
+    expect(ltr("")).toBe("");
+    expect(ltr(null)).toBe("");
+    expect(ltr(undefined)).toBe("");
+    expect(ltr("   ")).toBe("");
+  });
+
+  it("بياخد أرقام كمان", () => {
+    expect(ltr(1406)).toBe("⁦1406⁩");
+  });
+
+  // الحرفين مالهمش شكل — الطول بيزيد ٢ بس والكلام زي ما هو
+  it("الكلام نفسه مابيتغيّرش", () => {
+    const s = "info@minis.com";
+    expect(ltr(s).replace(/[⁦⁩]/g, "")).toBe(s);
   });
 });

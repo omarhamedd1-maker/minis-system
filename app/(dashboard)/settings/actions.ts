@@ -1,5 +1,6 @@
 "use server";
 
+import { ltr } from "@/lib/format";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -78,7 +79,7 @@ export async function saveShopify(formData: FormData) {
   }
 
   if (!isValidShop(shop)) {
-    back("دومين المتجر لازم يبقى بالشكل ده: yourshop.myshopify.com");
+    back(`دومين المتجر لازم يبقى بالشكل ده: ${ltr("yourshop.myshopify.com")}`);
   }
   if (!clientId) back("اكتب Client ID بتاع التطبيق");
 
