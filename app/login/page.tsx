@@ -12,7 +12,7 @@ export default async function LoginPage({
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
         <h1 className="mb-1 text-center text-2xl font-bold tracking-wide text-gray-900">
-          MINIS
+          MINO
         </h1>
         <p className="mb-6 text-center text-sm text-gray-500">
           تسجيل الدخول لنظام التشغيل

@@ -6,14 +6,14 @@ export default function manifest(): MetadataRoute.Manifest {
     // كمان اللي بيبان تحت الأيقونة على الشاشة الرئيسية.
     //
     // كان "Minis System" فالسطر بيطلع `from Minis System` — طويل وبياخد
-    // سطر كامل من إشعار قصير. بقى "MINIS" فبيطلع `from MINIS`.
+    // سطر كامل من إشعار قصير. بقى "MINO" فبيطلع `from MINO`.
     //
     // ⚠️ **والسطر ده مايتشالش** — آبل بتفرضه على أي إشعار من موقع وبتحطه
     // بين العنوان والجسم، ومفيش أي إعداد يغيّر مكانه. أقصى اللي نقدر عليه
     // إن الاسم يبقى قصير.
-    name: "MINIS",
-    short_name: "MINIS",
-    description: "نظام إدارة تشغيل مينيز",
+    name: "MINO",
+    short_name: "MINO",
+    description: "نظام تشغيل للمتاجر",
     start_url: "/",
     display: "standalone",
     background_color: "#f9fafb",

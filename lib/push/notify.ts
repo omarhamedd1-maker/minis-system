@@ -31,7 +31,7 @@ const LEFT_MARK = "‎";
  * بيخلّي كل سطور الإشعار على الشمال.
  *
  * التليفون بيحدد اتجاه كل سطر لوحده من **أول حرف حقيقي فيه**: السطر اللي
- * بيبدأ بعربي بيروح يمين واللي بيبدأ بإنجليزي بيروح شمال. وسطر `from MINIS`
+ * بيبدأ بعربي بيروح يمين واللي بيبدأ بإنجليزي بيروح شمال. وسطر `from MINO`
  * بتاع آبل إنجليزي دايمًا وعلى الشمال دايمًا — فالإشعار كان بيطلع مقسوم.
  *
  * العلامة دي بتتحط قبل كل سطر فبتخلّيه شمال زي سطر آبل، والكلمات العربي
@@ -48,7 +48,7 @@ export function forceLeft(text: string): string {
 /** أول سطر = عنوان الإشعار، والباقي = جسمه */
 function splitTitle(text: string): { title: string; body: string } {
   const lines = plainText(text).split("\n");
-  const title = (lines.shift() ?? "مينيز").trim();
+  const title = (lines.shift() ?? "مينو").trim();
   return {
     title: forceLeft(title),
     body: forceLeft(lines.join("\n").trim()),

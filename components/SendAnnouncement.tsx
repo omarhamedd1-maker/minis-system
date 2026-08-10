@@ -161,7 +161,7 @@ export function SendAnnouncement({
         <div className="rounded-lg bg-gray-900 p-2">
           <div className="rounded-md bg-white/95 p-2">
             <div className="mb-0.5 text-[9px] font-medium text-gray-400">
-              from MINIS
+              from MINO
             </div>
             {preview
               .replace(/<[^>]+>/g, "")

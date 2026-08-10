@@ -96,7 +96,7 @@ export default async function DashboardLayout({
       {/* هيدر التليفون — اللوجو + الإشعارات + ترحيب باسم المستخدم */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 md:hidden">
         <span className="text-lg font-bold tracking-wide text-gray-900">
-          MINIS
+          MINO
         </span>
         <div className="flex min-w-0 items-center gap-1">
           <span className="truncate text-sm text-gray-500">
