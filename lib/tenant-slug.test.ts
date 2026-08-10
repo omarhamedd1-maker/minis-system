@@ -66,6 +66,12 @@ describe("فحص الاسم المختصر", () => {
     expect(RESERVED_SLUGS).toContain("settings");
   });
 
+  // **كان محجوز بالغلط** — «مينيز» اسم متجر عمر نفسه، وأول اسم حاول
+  // يحطه اترفض. اسم المنتج مكانه الدومين الرئيسي مش ساب دومين متجر
+  it("«minis» مش محجوز — ده اسم متجر", () => {
+    expect(checkSlug("minis")).toBe(null);
+  });
+
   it("الفاضي بيترفض", () => {
     expect(checkSlug("")).toBeTruthy();
     expect(checkSlug("   ")).toBeTruthy();

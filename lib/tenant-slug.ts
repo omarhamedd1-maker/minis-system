@@ -32,8 +32,12 @@ export const RESERVED_SLUGS = [
   "www", "mail", "smtp", "imap", "ftp", "ns", "cdn", "static", "assets",
   // أسامي عامة تلخبط
   "admin", "app", "dashboard", "support", "help", "status", "billing",
-  "account", "auth", "new", "test", "demo", "minis",
+  "account", "auth", "new", "test", "demo",
 ];
+
+// ⚠️ **`minis` مش محجوز** — كان محجوز أول ما القايمة اتكتبت على أساس إنه
+// اسم المنتج، وده كان غلط: «مينيز» اسم متجر عمر نفسه وأول اسم المفروض
+// يبقى متاح. اسم المنتج مكانه الدومين الرئيسي مش ساب دومين متجر.
 
 /**
  * بيحوّل اسم البيزنس لاسم مختصر مقترح.
