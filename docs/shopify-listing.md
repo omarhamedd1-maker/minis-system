@@ -12,11 +12,16 @@
 
 ⚠️ **لازم يبدأ باسم البراند.**
 
+**الاسم المتسجّل فعلًا:**
+
 ```
-Minis — Orders & Shipping
+Mino - Store Operations
 ```
 
-`25` حرف ✅
+`23` حرف ✅
+
+⚠️ **الشرطة عادية `-` مش طويلة `—`.** شوبيفاي بترفض الطويلة، وده اتأكد
+بالتجربة: الاسم اللي كانت قابلاه قبل كده اترفض لما اتكتب بشرطة طويلة.
 
 ---
 
@@ -38,7 +43,7 @@ Run orders, shipping and profit in one place. Built for Egyptian stores.
 وصف اللي بيعمله بس.
 
 ```
-Minis brings your Shopify orders, shipping and money into one screen.
+Mino brings your Shopify orders, shipping and money into one screen.
 
 Orders sync automatically. Send a shipment to Bosta in one click, print
 the waybill, and track every status change without leaving the app.
@@ -50,7 +55,7 @@ are tracked alongside.
 Built in Arabic for Egyptian stores, with team accounts and permissions.
 ```
 
-`454` حرف ✅
+`453` حرف ✅
 
 ---
 
@@ -110,7 +115,7 @@ Arabic interface with team accounts and per-user permissions
 |---|---|
 | `read_products` | To match order line items to products and show cost and stock. |
 | `read_orders` | To import orders and the shipping address needed to create a shipment. |
-| `write_orders` | To keep quantities in sync when the merchant edits an order in Minis. |
+| `write_orders` | To keep quantities in sync when the merchant edits an order in Mino. |
 | `write_order_edits` | To apply those edits through the order editing API. |
 
 ⚠️ **والصلاحيات لازم تكون في `Scopes` مش `Optional scopes`** — دي غلطة
@@ -130,3 +135,21 @@ Arabic interface with team accounts and per-user permissions
 
 ⚠️ **خطوة ١ مالهاش رجوع** — شوبيفاي كاتبة كده بالنص:
 "You can't change the distribution method after you select it."
+
+**✅ خطوات ١ لـ٣ اتعملوا (١١ أغسطس).** فاضل ٤ و٥.
+
+---
+
+## ١٠. ⛔ قبل المراجعة، التطبيق مايتركّبش على متجر برّا حسابنا
+
+اختيار **Public** بيفتح باب التقديم بس — **مابيخليش التطبيق متاح**. لحد ما
+شوبيفاي توافق وتنشره، هو متاح لمتاجر **نفس الحساب** بس.
+
+**فمتجر عميل زي ٢ سِك مش هيعرف يركّب دلوقتي مهما عملت.** ودي مش مشكلة في
+الكود ولا في الإعدادات — كلها اتفحصت واحدة واحدة.
+
+المصدر:
+<https://help.shopify.com/en/partners/help-support/faq/unpublished-app-deprecation>
+
+**لو عايز عميل معيّن يشتغل قبل الموافقة**: تطبيق تاني بتوزيع **Custom**
+على دومين متجره، وتبعتله اللينك. مالوش مراجعة، ومابندخلش حسابه.
