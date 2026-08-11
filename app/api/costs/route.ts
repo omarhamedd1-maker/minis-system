@@ -22,9 +22,12 @@ export async function GET(request: Request) {
   const onlyMissing = new URL(request.url).searchParams.get("missing") === "1";
   const db = createAdminClient();
 
+  // ⚠️ **الفلتر ده مش زيادة.** المفتاح ده بيعدّي على الـRLS، ومن غيره الملف
+  // بينزّل تكاليف وأسعار **كل البيزنسات** لأي حد معاه صلاحية المنتجات.
   const { data, error } = await db
     .from("product_variants")
     .select("id, variant_name, sku, sale_price, cost_price, products(name, name_ar)")
+    .eq("tenant_id", me.tenantId)
     .overrideTypes<
       {
         id: string;
