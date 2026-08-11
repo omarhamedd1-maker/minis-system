@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { scopedEmail } from "@/lib/tenant-email";
 import { findTenantBySlug, tenantOfAuthUser } from "@/lib/tenant-lookup";
+import { rememberStore } from "@/lib/store-cookie";
 
 function back(slug: string, msg: string): never {
   redirect(`/login/${encodeURIComponent(slug)}?error=${encodeURIComponent(msg)}`);
@@ -40,7 +41,11 @@ export async function loginToStore(formData: FormData) {
     password,
   });
 
-  if (!scoped.error) redirect("/");
+  if (!scoped.error) {
+    // الجهاز يفتكر متجره — عشان لما الجلسة تخلص يرجع لباب فيه اسمه
+    await rememberStore(tenant.slug);
+    redirect("/");
+  }
 
   // ٢) الشكل القديم — حساب اتعمل قبل ما التبويب يبقى موجود
   const plain = await supabase.auth.signInWithPassword({
@@ -57,5 +62,6 @@ export async function loginToStore(formData: FormData) {
     back(slug, "الحساب ده مش في المتجر ده");
   }
 
+  await rememberStore(tenant.slug);
   redirect("/");
 }

@@ -2,28 +2,18 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { readRememberedStore } from "@/lib/store-cookie";
 
-export async function login(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  if (!email || !password) {
-    redirect("/login?error=" + encodeURIComponent("من فضلك اكتب الإيميل والباسورد"));
-  }
-
-  const supabase = await createClient();
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    redirect("/login?error=" + encodeURIComponent("الإيميل أو الباسورد غلط"));
-  }
-
-  redirect("/");
-}
-
+/**
+ * الخروج بيرجّعك لباب متجرك، مش لصفحة عامة.
+ *
+ * كوكي المتجر بتفضل بقصد — هي مش جلسة، هي بس اسم المتجر عشان الرجوع
+ * يبقى لباب فيه اسمك.
+ */
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+
+  const slug = await readRememberedStore();
+  redirect(slug ? `/login/${slug}` : "/login");
 }
