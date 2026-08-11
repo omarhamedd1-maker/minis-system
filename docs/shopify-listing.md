@@ -43,7 +43,7 @@ Run orders, shipping and profit in one place. Built for Egyptian stores.
 وصف اللي بيعمله بس.
 
 ```
-Minis brings your Shopify orders, shipping and money into one screen.
+Mino brings your Shopify orders, shipping and money into one screen.
 
 Orders sync automatically. Send a shipment to Bosta in one click, print
 the waybill, and track every status change without leaving the app.
@@ -55,7 +55,7 @@ are tracked alongside.
 Built in Arabic for Egyptian stores, with team accounts and permissions.
 ```
 
-`454` حرف ✅
+`453` حرف ✅
 
 ---
 
@@ -115,7 +115,7 @@ Arabic interface with team accounts and per-user permissions
 |---|---|
 | `read_products` | To match order line items to products and show cost and stock. |
 | `read_orders` | To import orders and the shipping address needed to create a shipment. |
-| `write_orders` | To keep quantities in sync when the merchant edits an order in Minis. |
+| `write_orders` | To keep quantities in sync when the merchant edits an order in Mino. |
 | `write_order_edits` | To apply those edits through the order editing API. |
 
 ⚠️ **والصلاحيات لازم تكون في `Scopes` مش `Optional scopes`** — دي غلطة
