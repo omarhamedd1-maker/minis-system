@@ -9,6 +9,7 @@ import {
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { DayPicker } from "@/components/DayPicker";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
+import { Stat, StatGrid } from "@/components/ui/Stat";
 import { computeHeadline } from "@/lib/dashboard-stats";
 import { can, requirePagePermission } from "@/lib/permissions";
 
@@ -576,61 +577,43 @@ export default async function StatsPage({
           from={rangeFrom}
           to={rangeTo}
         />
-        {/* 5 كروت نِسَب — صف واحد كامل على الكمبيوتر */}
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">نسبة التسليم</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-emerald-600">
+        {/* نِسَب التشغيل — نفس الشبكة والقواعد بتاعت كروت الفلوس */}
+        <div className="mt-4">
+          <StatGrid>
+            <Stat
+              label="نسبة التسليم"
+              tone="in"
+              hint={`${deliveredCount} من ${periodOrders.length} أوردر · متوسط التوصيل ${
+                avgDeliveryDays === null
+                  ? "—"
+                  : avgDeliveryDays < 1
+                    ? "أقل من يوم"
+                    : avgDeliveryDays.toFixed(1) + " يوم"
+              }`}
+            >
               {deliveryRate}%
-            </p>
-            <p className="text-xs text-gray-400">
-              {deliveredCount} من {periodOrders.length} أوردر
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">نسبة الإلغاء والمرتجع</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-orange-600">
+            </Stat>
+            <Stat
+              label="نسبة الإلغاء والمرتجع"
+              tone="warn"
+              hint={`${excludedOrders.length} من ${periodOrders.length} أوردر`}
+            >
               {cancelRate}%
-            </p>
-            <p className="text-xs text-gray-400">
-              {excludedOrders.length} من {periodOrders.length} أوردر
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">العملاء المكررين</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-sky-600">
+            </Stat>
+            <Stat
+              label="العملاء المكررين"
+              hint={`${repeatCustomers} من ${totalCustomers} عميل اشتروا أكتر من مرة`}
+            >
               {repeatRate}%
-            </p>
-            <p className="text-xs text-gray-400">
-              {repeatCustomers} من {totalCustomers} عميل اشتروا أكتر من مرة
-            </p>
-          </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">فرص ضايعة (ملغي ومرتجع)</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-red-600">
+            </Stat>
+            <Stat
+              label="فرص ضايعة (ملغي ومرتجع)"
+              tone="out"
+              hint={`${excludedOrders.length} أوردر ضاعوا`}
+            >
               {formatMoney(lostValue)}
-            </p>
-            <p className="text-xs text-gray-400">
-              {excludedOrders.length} أوردر ضاعوا
-            </p>
-          </div>
-          <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
-            <p className="text-sm text-gray-500">متوسط زمن التوصيل</p>
-            {avgDeliveryDays === null ? (
-              <p className="mt-1 text-sm text-gray-400">
-                لسه مفيش تسليمات كفاية نحسب منها
-              </p>
-            ) : (
-              <p className="mt-1 text-xl font-bold sm:text-2xl text-gray-900">
-                {avgDeliveryDays < 1
-                  ? "أقل من يوم"
-                  : `${avgDeliveryDays.toFixed(1)} يوم`}
-              </p>
-            )}
-            <p className="text-xs text-gray-400">
-              من يوم الأوردر ليوم التسليم ({deliveryDurations.length} أوردر)
-            </p>
-          </div>
+            </Stat>
+          </StatGrid>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
