@@ -66,6 +66,7 @@ export async function linkMissingShipments(
   const { data: taken } = await db
     .from("orders")
     .select("bosta_tracking")
+    .eq("tenant_id", me.tenantId)
     .not("bosta_tracking", "is", null)
     .overrideTypes<{ bosta_tracking: string }[]>();
 
@@ -177,9 +178,12 @@ export async function checkBostaCoverage(): Promise<CoverageReport> {
     };
   }
 
+  // ⚠️ فحص التغطية بيقارن شحنات بوسطة بتاعت البيزنس ده بأوردراته هو.
+  // من غير الفلتر أوردر بيزنس تاني ممكن يتطابق ويتعرض باسمه ورقمه.
   const { data: rows, error } = await db
     .from("orders")
     .select("id, order_number, order_status, bosta_tracking, customers(phone)")
+    .eq("tenant_id", me.tenantId)
     .limit(5000)
     .overrideTypes<
       {

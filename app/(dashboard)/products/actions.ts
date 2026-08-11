@@ -385,9 +385,12 @@ export async function uploadCostFile(
   if (!text.trim()) return { ok: false, error: "الملف فاضي" };
 
   const db = createAdminClient();
+  // بيزنس صاحب الملف بس — من غير الفلتر ده الأسماء بتتطابق مع منتجات بيزنس
+  // تاني، والتكلفة ممكن تتكتب في المكان الغلط
   const { data, error } = await db
     .from("product_variants")
     .select("id, variant_name, cost_price, products(name, name_ar)")
+    .eq("tenant_id", me.tenantId)
     .overrideTypes<
       {
         id: string;

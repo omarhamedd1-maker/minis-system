@@ -260,9 +260,13 @@ export default async function OrderDetailsPage({
   const byText = `summary.like.%${order.order_number}%`;
   let orderLog: LogRow[] = [];
   {
+    // ⚠️ **الفلتر لازم هنا بالذات.** المطابقة بتتم بنص رقم الأوردر، وأرقام
+    // الأوردرات مش فريدة بين البيزنسات — أوردر ١٤١٦ عند بيزنس تاني كان
+    // هيطلّع سطور سجله في صفحة أوردرنا.
     const both = await logDb
       .from("activity_log")
       .select("actor_name, action, summary, created_at")
+      .eq("tenant_id", user.tenantId)
       .or(order.order_number ? `order_id.eq.${id},${byText}` : `order_id.eq.${id}`)
       .order("created_at", { ascending: true })
       .limit(60)
@@ -272,6 +276,7 @@ export default async function OrderDetailsPage({
       const textOnly = await logDb
         .from("activity_log")
         .select("actor_name, action, summary, created_at")
+        .eq("tenant_id", user.tenantId)
         .like("summary", `%${order.order_number}%`)
         .order("created_at", { ascending: true })
         .limit(60)
