@@ -11,6 +11,7 @@ import {
   type StatExpense,
 } from "@/lib/dashboard-stats";
 import { CountUp } from "./CountUp";
+import { Stat, StatGrid } from "./ui/Stat";
 
 /**
  * ⚠️ **`bosta_fees_real` لازم يفضل هنا.**
@@ -108,116 +109,42 @@ export function LiveMoneyCards({
   const base = intro ? 0 : undefined;
   const key = intro ? "i" : "d";
 
+  const up = (v: number, fmt: (n: number) => string) => (
+    <CountUp key={key} baseline={base} value={v} format={fmt} />
+  );
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      {/* على الشاشة الكبيرة: المبيعات وصافي الربح كروت كبيرة، والباقي بيتقسّم 4 في الصف */}
-      <Card label="المبيعات" className="col-span-2" hero>
-        <span className="text-gray-900">
-          <CountUp key={key} baseline={base} value={s.sales} format={money} />
-        </span>
-      </Card>
-      <Card label="عدد الأوردرات">
-        <span className="text-gray-900">
-          <CountUp
-            key={key}
-            baseline={base}
-            value={s.orderCount}
-            format={plain}
-          />
-        </span>
-      </Card>
-      <Card label="المصاريف">
-        <span className="text-red-600">
-          <CountUp
-            key={key}
-            baseline={base}
-            value={s.expensesTotal}
-            format={money}
-          />
-        </span>
-      </Card>
-      <Card label="أرباح المنتجات">
-        <span className="text-green-600">
-          <CountUp key={key} baseline={base} value={s.profit} format={money} />
-        </span>
-      </Card>
-      <Card label="صافي الربح" className="lg:col-span-2" hero>
-        <span className={s.netProfit >= 0 ? "text-green-600" : "text-red-600"}>
-          <CountUp
-            key={key}
-            baseline={base}
-            value={s.netProfit}
-            format={money}
-          />
-        </span>
-      </Card>
-      <Card label="تحصيل بوسطة (المسلّمة)">
-        <span className="text-emerald-600">
-          <CountUp key={key} baseline={base} value={s.cod} format={money} />
-        </span>
-      </Card>
-      <Card label="متوسط قيمة الأوردر">
-        <span className="text-gray-900">
-          <CountUp key={key} baseline={base} value={s.avgOrder} format={money} />
-        </span>
-      </Card>
-      <Card
+    <StatGrid>
+      {/* الصف الأول: التلاتة اللي بتبص عليهم الأول */}
+      <Stat label="المبيعات" span={4} size="hero">{up(s.sales, money)}</Stat>
+      <Stat label="صافي الربح" span={4} size="hero" tone={s.netProfit >= 0 ? "in" : "out"}>
+        {up(s.netProfit, money)}
+      </Stat>
+      <Stat label="عدد الأوردرات" span={4} size="hero">{up(s.orderCount, plain)}</Stat>
+
+      {/* الصف التاني: تفصيل الفلوس */}
+      <Stat label="أرباح المنتجات" tone="in">{up(s.profit, money)}</Stat>
+      <Stat label="المصاريف" tone="out">{up(s.expensesTotal, money)}</Stat>
+      <Stat label="تحصيل بوسطة (المسلّمة)" tone="in">{up(s.cod, money)}</Stat>
+      <Stat label="متوسط قيمة الأوردر">{up(s.avgOrder, money)}</Stat>
+
+      {/* الصف التالت: الشحن — اللي دخل واللي خرج */}
+      <Stat
         label="شحن محصّل من العملاء"
         hint={`اللي العميل دفعه في ${s.shippedCount} أوردر اتشحن`}
+        span={6}
+        tone="in"
       >
-        <span className="text-green-600">
-          <CountUp
-            key={key}
-            baseline={base}
-            value={s.shippingRevenue}
-            format={money}
-          />
-        </span>
-      </Card>
-      <Card
+        {up(s.shippingRevenue, money)}
+      </Stat>
+      <Stat
         label="شحن دفعته من جيبك"
-        hint="رسوم بوسطة ناقص اللي العميل دفعه — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
-        className="lg:col-span-2"
+        hint="رسوم بوسطة ناقص اللي العميل دفعه — بيتخصم من صافي الربح"
+        span={6}
+        tone="out"
       >
-        <span className="text-red-600">
-          <CountUp
-            key={key}
-            baseline={base}
-            value={s.netShipping}
-            format={money}
-          />
-        </span>
-      </Card>
-    </div>
-  );
-}
-
-function Card({
-  label,
-  hint,
-  children,
-  hero = false,
-  className = "",
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-  hero?: boolean;
-  className?: string;
-}) {
-  return (
-    <div
-      className={`rounded-xl bg-white p-4 shadow-sm sm:p-5 ${className}`}
-    >
-      <p className="text-xs text-gray-500 sm:text-sm">{label}</p>
-      <p
-        className={`mt-1 text-xl font-bold sm:text-2xl ${
-          hero ? "lg:text-4xl" : ""
-        }`}
-      >
-        {children}
-      </p>
-      {hint && <p className="text-[11px] text-gray-400 sm:text-xs">{hint}</p>}
-    </div>
+        {up(s.netShipping, money)}
+      </Stat>
+    </StatGrid>
   );
 }
