@@ -2,24 +2,35 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { findTenantByNameOrSlug } from "@/lib/tenant-lookup";
 
-export async function login(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-
-  if (!email || !password) {
-    redirect("/login?error=" + encodeURIComponent("من فضلك اكتب الإيميل والباسورد"));
+/**
+ * الصفحة دي **مابقتش باب دخول** — بتسأل عن المتجر بس وبتوديك على بابه.
+ *
+ * قبل كده كانت بتاخد إيميل وباسورد من غير ما تسأل عن المتجر أصلًا، فنفس
+ * الصفحة كانت بتفتح لأي بيزنس. ومكانتش تسريب داتا — كل واحد بيروح لبيزنسه
+ * من `app_users` — **بس كانت بتتخطّى الفحص اللي في `/login/<المتجر>`**:
+ * هناك الحساب اللي مش من المتجر بيترفض، وهنا كان بيعدّي.
+ *
+ * وده كمان بيكسر اللي بنبيعه للعميل: إن متجره ليه بابه واسمه عليه.
+ */
+export async function goToStore(formData: FormData) {
+  const typed = String(formData.get("store") ?? "").trim();
+  if (!typed) {
+    redirect("/login?error=" + encodeURIComponent("اكتب اسم متجرك"));
   }
 
-  const supabase = await createClient();
+  const tenant = await findTenantByNameOrSlug(createAdminClient(), typed);
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    redirect("/login?error=" + encodeURIComponent("الإيميل أو الباسورد غلط"));
+  if (!tenant) {
+    redirect(
+      "/login?error=" +
+        encodeURIComponent("مالقيناش متجر بالاسم ده — راجع الرابط اللي وصلك")
+    );
   }
 
-  redirect("/");
+  redirect(`/login/${tenant.slug}`);
 }
 
 export async function logout() {

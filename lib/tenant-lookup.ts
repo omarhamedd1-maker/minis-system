@@ -35,6 +35,49 @@ export async function findTenantBySlug(
   }
 }
 
+/**
+ * بيلاقي المتجر من أي حاجة المستخدم يكتبها في صفحة `/login`.
+ *
+ * **الاسم المختصر لوحده مايكفيش.** اللي بيكتب اسم متجره زي ما هو شايفه
+ * (`مينيز` أو `Mino Demo Store`) مكانش بيوصل: `slugify` بيرجّع فاضي مع
+ * العربي خالص، و`Mino Demo Store` بيطلّع `mino-demo-store` والاسم المختصر
+ * `demo` — فالاتنين كانوا بيقعوا على «مالقيناش متجر».
+ *
+ * فبنجرّب بالترتيب: الاسم المختصر زي ما اتكتب، وبعدين مصنوع من الكلام،
+ * وآخر حاجة الاسم المعروض نفسه من غير حساسية لحالة الحروف.
+ */
+export async function findTenantByNameOrSlug(
+  db: SupabaseClient,
+  typed: string
+): Promise<PublicTenant | null> {
+  const t = String(typed ?? "").trim();
+  if (!t) return null;
+
+  const bySlug = await findTenantBySlug(db, t.toLowerCase());
+  if (bySlug) return bySlug;
+
+  const { slugify } = await import("./tenant-slug.ts");
+  const made = slugify(t);
+  if (made) {
+    const bySlugified = await findTenantBySlug(db, made);
+    if (bySlugified) return bySlugified;
+  }
+
+  try {
+    const { data, error } = await db
+      .from("tenants")
+      .select("id, name, slug")
+      .ilike("name", t)
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return null;
+    // المتجر اللي لسه مالوش اسم مختصر مالوش صفحة دخول أصلًا
+    return (data as PublicTenant).slug ? (data as PublicTenant) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** البيزنس بتاع مستخدم — بنستخدمه بعد الدخول عشان نتأكد إنه في متجره */
 export async function tenantOfAuthUser(
   db: SupabaseClient,

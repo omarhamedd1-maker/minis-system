@@ -1,6 +1,13 @@
 import Link from "next/link";
-import { login } from "./actions";
+import { goToStore } from "./actions";
 
+/**
+ * **مافيش دخول من هنا.** الصفحة دي بتسأل عن المتجر وبتوديك على بابه
+ * (`/login/<المتجر>`) — وهناك بس بيتكتب الإيميل والباسورد.
+ *
+ * السبب في `actions.ts`: الباب العام كان بيتخطّى فحص «الحساب ده من المتجر
+ * ده؟»، وكان بيخلّي كل المتاجر تدخل من نفس الصفحة بنفس الاسم.
+ */
 export default async function LoginPage({
   searchParams,
 }: {
@@ -15,7 +22,7 @@ export default async function LoginPage({
           MINO
         </h1>
         <p className="mb-6 text-center text-sm text-gray-500">
-          تسجيل الدخول لنظام التشغيل
+          اكتب اسم متجرك عشان نوديك لصفحة دخوله
         </p>
 
         {error && (
@@ -24,40 +31,23 @@ export default async function LoginPage({
           </div>
         )}
 
-        <form action={login} className="space-y-4">
+        <form action={goToStore} className="space-y-4">
           <div>
             <label
-              htmlFor="email"
+              htmlFor="store"
               className="mb-1 block text-sm font-medium text-gray-700"
             >
-              الإيميل
+              اسم المتجر
             </label>
             <input
-              id="email"
-              name="email"
-              type="email"
+              id="store"
+              name="store"
+              type="text"
               required
-              autoComplete="email"
+              autoFocus
+              autoComplete="organization"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-gray-700"
-            >
-              الباسورد
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
-              placeholder="••••••••"
+              placeholder="اسم متجرك أو الاسم المختصر"
             />
           </div>
 
@@ -65,7 +55,7 @@ export default async function LoginPage({
             type="submit"
             className="w-full rounded-lg bg-gray-900 px-4 py-2 font-medium text-white transition hover:bg-gray-800"
           >
-            دخول
+            كمّل
           </button>
         </form>
 
