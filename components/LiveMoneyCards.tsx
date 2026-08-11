@@ -12,8 +12,19 @@ import {
 } from "@/lib/dashboard-stats";
 import { CountUp } from "./CountUp";
 
+/**
+ * ⚠️ **`bosta_fees_real` لازم يفضل هنا.**
+ *
+ * `orderCarrierCost` بتاخد الرسوم الحقيقية لو موجودة، وبترجع للتقدير القديم
+ * (`bosta_shipping_cost`) لو مش موجودة. والعمود ده كان ناقص من الاستعلام ده،
+ * فالسيرفر كان بيرسم الأرقام بالرسوم الحقيقية، وأول ما الكروت تحدّث نفسها من
+ * المتصفح كانت بتستبدلها بالتقدير من غير ما حد ياخد باله.
+ *
+ * وده كان مستخبي في مينيز لأن التقدير القديم متسجّل على أوردراتها؛ بان في
+ * بيزنس التقدير فيه صفر — الكروت طلعت صفر رغم إن الرسوم الحقيقية موجودة.
+ */
 const ORDER_SELECT =
-  "order_status, order_date, delivered_at, discount, shipping_price, bosta_shipping_cost, bosta_cod, bosta_collected, order_items(quantity, sale_price_at_order, cost_price_at_order)";
+  "order_status, order_date, delivered_at, discount, shipping_price, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, order_items(quantity, sale_price_at_order, cost_price_at_order)";
 
 export function LiveMoneyCards({
   initial,
