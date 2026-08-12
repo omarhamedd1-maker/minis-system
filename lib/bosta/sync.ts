@@ -414,12 +414,26 @@ export async function runBostaSync(opts: {
 
     // الحالة النهائية بتستنى البضاعة توصلنا فعلًا
     const arrived = returnArrived(best);
-    const wanted = arrived ? "returned_after_delivery" : "returning";
+
+    // ⚠️ **المرتجع الجاري مايحوّلش الأوردر لـ«في الطريق ليك».**
+    //
+    // `returning` معناها في قاموس السيستم: **ماتسلّمتش وراجعة لنا**. لكن
+    // المرتجع بعد التسليم عكس ده بالظبط — العميل استلم ودفع وبعدين رجّع.
+    //
+    // أوردر ١٢٢٧ كان الدليل: بوسطة قايلة `Delivered` وحصّلت ٢٬٣٨٩ جنيه،
+    // والسيستم كاتب «في الطريق ليك» — يعني بيقول العميلة مااستلمتش وهي
+    // استلمت من ٤ شهور. والنتيجة إن الأوردر كان بيتحسب في **نسبة الرجوع**
+    // وفي **قيمة البضاعة الراجعة** وهو لسه ماوصلش.
+    //
+    // فالأوردر بيفضل زي ما هو، و`return_tracking` لوحده بيقول إن فيه مرتجع
+    // في السكة — وصفحة الأوردر بتعرضه. والحالة بتتغيّر لما البضاعة توصل.
     const changes: Record<string, unknown> = {};
     if (order.return_tracking !== tracking && tracking) {
       changes.return_tracking = tracking;
     }
-    if (order.order_status !== wanted) changes.order_status = wanted;
+    if (arrived && order.order_status !== "returned_after_delivery") {
+      changes.order_status = "returned_after_delivery";
+    }
 
     if (Object.keys(changes).length === 0) continue;
 
@@ -429,7 +443,7 @@ export async function runBostaSync(opts: {
       reasons: [
         arrived
           ? `المرتجع وصلك — الحالة بقت مرتجع بعد التسليم (شحنة ${tracking})`
-          : `العميل عمل مرتجع — الحالة بقت في الطريق ليك (شحنة ${tracking})`,
+          : `العميل عمل مرتجع وهو في السكة (شحنة ${tracking}) — الحالة زي ما هي لحد ما يوصل`,
       ],
     });
 
