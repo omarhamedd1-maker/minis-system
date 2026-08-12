@@ -75,7 +75,7 @@ export async function GET(request: Request) {
         // وده بيلف على كل بيزنس بمفاتيحه هو، ومن غير ما نلمس إعدادات
         // الويب هوكس عند شوبيفاي. الاستيراد بيمنع التكرار برقم الأوردر،
         // فتشغيله كل ربع ساعة مالوش ضرر.
-        let shopify: { orders: number; customers: number } | null = null;
+        let shopify: Ok["shopify"] = null;
         try {
           const r = await runOrderImport({ db, tenantId, dry });
           if (r.ok && r.added) shopify = r.added;
