@@ -128,11 +128,12 @@ describe("شكل الإشعارات", () => {
       arrived: false,
     });
     const lines = msg.split("\n").filter((l) => l.trim());
-    expect(lines).toHaveLength(4);
+    expect(lines).toHaveLength(3);
     // والتواريخ اتشالت من السبب عشان مايلفّش لسطرين
     expect(msg).toContain("العميل رفض يستلم");
     expect(msg).not.toContain("اتجدولت");
-    expect(lines[3]).toBe("كلّمه قبل ما الشحنة ترجع المخزن");
+    // **مفيش سطر بيقول اعمل إيه** — اتشال بطلب عمر
+    expect(msg).not.toContain("كلّمه");
   });
 
   it.each(withCustomer)("«%s»: مفيش رقم شحنة", (_name, msg) => {
@@ -164,7 +165,7 @@ describe("شكل الإشعارات", () => {
       waiting: true,
     });
     expect(address).toContain("العنوان غلط");
-    expect(address).toContain("صحّح العنوان");
+    expect(address).not.toContain("صحّح العنوان");
 
     // نفس الحالة بسبب تاني = كلام تاني خالص
     const noAnswer = failedDeliveryMessage({
@@ -177,6 +178,8 @@ describe("شكل الإشعارات", () => {
     });
     expect(noAnswer).toContain("العميل مش بيرد");
     expect(noAnswer).not.toContain("صحّح العنوان");
+    // الرسالتين مختلفتين بالسبب لوحده من غير أي نصيحة
+    expect(noAnswer).not.toBe(address);
   });
 
   it("المزامنة الواقفة مالهاش عميل — وبتفضل زي ما هي", () => {
