@@ -14,8 +14,11 @@ type Item = { href: string; label: string; perm: string };
 const ITEMS: Item[] = [
   { href: "/", label: "الداشبورد", perm: "finance.dashboard" },
   { href: "/orders", label: "الأوردرات", perm: "orders.view" },
+  { href: "/orders/health", label: "صحة التشغيل", perm: "finance.dashboard" },
+  { href: "/orders/carts", label: "سلات متروكة", perm: "orders.view" },
   { href: "/tasks", label: "التاسكات", perm: "tasks.view" },
   { href: "/customers", label: "العملاء", perm: "customers.view" },
+  { href: "/customers/segments", label: "شرايح العملاء", perm: "customers.view" },
   { href: "/products", label: "المنتجات", perm: "products.view" },
   { href: "/suppliers", label: "الموردين", perm: "suppliers.view" },
   { href: "/expenses", label: "المصاريف", perm: "expenses.view" },
@@ -32,6 +35,11 @@ function Icon({ href, className }: { href: string; className?: string }) {
     "/orders": "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM4 7.5 12 12l8-4.5M12 12v9",
     "/tasks": "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 14l2 2 4-4",
     "/customers": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
+    "/orders/health": "M3 12h4l2-6 3 12 2.5-7 1.5 3h5",
+    "/orders/carts":
+      "M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM17 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
+    "/customers/segments":
+      "M12 3a9 9 0 1 0 9 9h-9V3zM14.5 3.5A7.5 7.5 0 0 1 20.5 9.5h-6v-6z",
     "/products":
       "M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3zM6 6h.008v.008H6V6z",
     "/suppliers":
@@ -84,8 +92,21 @@ export function AppNav({
       ? isPlatformAdmin
       : isAdmin || permissions.includes(i.perm)
   );
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  /**
+   * **الأطول بيكسب.** `/orders` و`/orders/health` الاتنين بيطابقوا وإنت في
+   * صحة التشغيل، فمن غير الشرط ده الاتنين بيتلوّنوا مع بعض والقايمة بتكدب
+   * عليك إنت فين.
+   */
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    if (!pathname.startsWith(href)) return false;
+    return !allowed.some(
+      (o) =>
+        o.href !== href &&
+        o.href.length > href.length &&
+        pathname.startsWith(o.href)
+    );
+  };
 
   // التليفون: الثابتة في البار السفلي، والباقي في "المزيد".
   // التاسكات بعد الخزنة وقبل "المزيد" — عمر طلبها كده بالنص.
