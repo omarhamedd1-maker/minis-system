@@ -196,7 +196,21 @@ async function withDetailedState(
   fetchImpl?: typeof fetch
 ): Promise<BostaRawDelivery> {
   const code = d.state?.code;
-  if (typeof code === "number" && FINISHED_CODES.includes(code)) return d;
+  if (typeof code === "number" && FINISHED_CODES.includes(code)) {
+    // ⚠️ **كود ٤٦ اسمه غلط في القايمة.** بوسطة بترجّع `Delivered` في نتيجة
+    // البحث وبترجّع `Returned to business` في التفاصيل — لنفس الشحنة.
+    //
+    // وإحنا بنتخطّى جلب التفاصيل للشحنة اللي خلصت (توفير نداءات)، فكنّا
+    // بنخزّن `Delivered` على أوردر راجع. النتيجة إن صفحة الأوردر تقول
+    // «حالة بوسطة: Delivered» على بضاعة راجعة في المخزن.
+    //
+    // اتصلّح على ٣٧ أوردر في مينيز (١٢ أغسطس). والكود ٤٦ مالوش أي معنى
+    // تاني، فالتسمية هنا مضمونة من غير نداء زيادة.
+    if (code === 46) {
+      return { ...d, state: { ...(d.state ?? {}), value: "Returned to business" } };
+    }
+    return d;
+  }
 
   const tracking = d.trackingNumber ? String(d.trackingNumber) : "";
   if (!tracking) return d;
