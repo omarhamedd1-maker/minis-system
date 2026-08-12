@@ -247,6 +247,14 @@ export default async function OrdersPage({
           <span className="text-sm text-gray-500">{orders.length} أوردر</span>
           {/* زرار "مطابقة" اتشال — الصفحة نفسها لسه موجودة على
               /orders/reconcile لو احتجتها، بس مش بتاخد مكان في الشاشة */}
+          {/* السلات المتروكة — عملاء وصلوا للدفع وسابوا. لينك مش زرار
+              عشان دي مكالمة لشوبيفاي بتاخد وقت، فبتتجاب لما تدخل الصفحة */}
+          <Link
+            href="/orders/carts"
+            className="rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          >
+            سلات متروكة
+          </Link>
           {canCreate && <ImportShopifyOrders action={importShopifyOrders} />}
           {canCreate && (
             <Link
