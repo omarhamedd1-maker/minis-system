@@ -19,6 +19,13 @@ import { execSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 /** جداول مش متقسّمة على البيزنسات أصلاً — مالهاش عمود `tenant_id` */
+/**
+ * ⚠️ **`app_users` في `lib/permissions.ts` استثناء واحد مقصود**: بيحدّث
+ * `last_seen_at` بـ`auth_user_id` بتاع الجلسة نفسها — يعني مربوط بالشخص
+ * اللي داخل مش برقم صف بيتبعت من برّه. مافيش حاجة يقدر يوصلها بغير حسابه.
+ */
+const ALLOWED = new Set(["lib/permissions.ts"]);
+
 const GLOBAL_TABLES = new Set([
   "push_config",
   "shopify_app",
@@ -80,12 +87,25 @@ function unfilteredAdminReads(): Hit[] {
       if (!holder || !table) continue;
       if (holder !== "createAdminClient()" && !adminVars.has(holder)) continue;
       if (GLOBAL_TABLES.has(table)) continue;
+      if (ALLOWED.has(file)) continue;
 
       const chain = lines.slice(i, i + 18).join("\n");
       const end = chain.search(/;\s*$/m);
       const scope = end > 0 ? chain.slice(0, end) : chain;
 
       if (/tenant_id/.test(scope)) continue;
+
+      // **الكتابة قاعدتها أتقل من القراءة.** التعديل أو الحذف المفلتر
+      // بـ`id` لوحده معناه إن حد من بيزنس يبعت رقم صف من بيزنس تاني
+      // ويغيّره — والمفتاح ده بيعدّي على الـRLS.
+      //
+      // اتلقى **٨٩ موضع** كده (١٢ أغسطس)، منهم واحد بيمسح أوردر كامل
+      // بمخزونه وحركاته. القراءة المكشوفة وحشة، والكتابة المكشوفة أوحش.
+      if (/\.(update|delete)\(/.test(scope)) {
+        hits.push({ file, line: i + 1, table });
+        continue;
+      }
+
       if (/\.eq\(|\.in\(|\.match\(|\.or\(/.test(scope)) continue;
       if (/\.insert\(|\.upsert\(/.test(scope)) continue;
 

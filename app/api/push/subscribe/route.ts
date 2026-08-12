@@ -90,9 +90,12 @@ export async function DELETE(req: Request) {
     return Response.json({ ok: false, error: "مفيش جهاز" }, { status: 400 });
   }
 
+  // الجهاز بتاع بيزنس المستخدم بس — العنوان لوحده كفاية عمليًا لأنه فريد،
+  // بس الفلتر بيمنع إن حد يشيل جهاز من بيزنس تاني لو عرف عنوانه
   await createAdminClient()
     .from("push_subscriptions")
     .delete()
+    .eq("tenant_id", user.tenantId)
     .eq("endpoint", endpoint);
 
   return Response.json({ ok: true });

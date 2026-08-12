@@ -9,7 +9,7 @@ import { cairoToday } from "@/lib/format";
 const MAX_ITEMS = 5;
 
 export async function createOrder(formData: FormData) {
-  await requirePermission("orders.create");
+  const me = await requirePermission("orders.create");
   const customerId = String(formData.get("customer_id") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
@@ -139,6 +139,7 @@ export async function createOrder(formData: FormData) {
       await supabase
         .from("product_variants")
         .update({ quantity_on_hand: variant.quantity_on_hand - item.quantity })
+        .eq("tenant_id", me.tenantId)
         .eq("id", item.variantId);
     }
   }

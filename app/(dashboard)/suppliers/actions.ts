@@ -50,7 +50,13 @@ function readInvoiceItems(formData: FormData): InvoiceItem[] {
 }
 
 // بتزوّد (sign=1) أو بترجّع (sign=-1) كميات البنود في المخزون
-async function applyStock(items: InvoiceItem[], sign: 1 | -1, reason: string) {
+async function applyStock(
+  items: InvoiceItem[],
+  sign: 1 | -1,
+  reason: string,
+  /** بيزنس اللي بيعدّل — المخزون بيتفلتر بيه كمان مش بالـid بس */
+  tenantId: string
+) {
   const admin = createAdminClient();
   for (const item of items) {
     if (!item.variant_id) continue;
@@ -58,6 +64,7 @@ async function applyStock(items: InvoiceItem[], sign: 1 | -1, reason: string) {
     const { data: variant } = await admin
       .from("product_variants")
       .select("quantity_on_hand")
+      .eq("tenant_id", tenantId)
       .eq("id", item.variant_id)
       .maybeSingle()
       .overrideTypes<{ quantity_on_hand: number }>();
@@ -70,7 +77,11 @@ async function applyStock(items: InvoiceItem[], sign: 1 | -1, reason: string) {
     // سعر الشرا الجديد هو التكلفة الحقيقية للمنتج من دلوقتي
     if (sign === 1 && item.unit_cost > 0) patch.cost_price = item.unit_cost;
 
-    await admin.from("product_variants").update(patch).eq("id", item.variant_id);
+    await admin
+      .from("product_variants")
+      .update(patch)
+      .eq("tenant_id", tenantId)
+      .eq("id", item.variant_id);
     await admin.from("stock_movements").insert({
       variant_id: item.variant_id,
       change_quantity: change,
@@ -113,6 +124,7 @@ export async function updateSupplier(formData: FormData) {
   const { error } = await admin
     .from("suppliers")
     .update({ name, phone: phone || null, notes: notes || null })
+    .eq("tenant_id", me.tenantId)
     .eq("id", id);
 
   if (error) fail(`/suppliers/${id}`, "معرفناش نعدل المورد: " + error.message);
@@ -140,12 +152,12 @@ export async function deleteSupplier(formData: FormData) {
     .map((t) => t.related_cash_id)
     .filter((v): v is string => Boolean(v));
   if (cashIds.length > 0) {
-    await admin.from("cash_transactions").delete().in("id", cashIds);
+    await admin.from("cash_transactions").delete().eq("tenant_id", me.tenantId).in("id", cashIds);
   }
 
-  await admin.from("supplier_transactions").delete().eq("supplier_id", id);
+  await admin.from("supplier_transactions").delete().eq("tenant_id", me.tenantId).eq("supplier_id", id);
 
-  const { error } = await admin.from("suppliers").delete().eq("id", id);
+  const { error } = await admin.from("suppliers").delete().eq("tenant_id", me.tenantId).eq("id", id);
   if (error) fail(`/suppliers/${id}`, "معرفناش نمسح المورد: " + error.message);
 
   await logActivity(me, "supplier.delete", "مسح مورد وكل حركاته");
@@ -235,7 +247,7 @@ export async function addSupplierTransaction(formData: FormData) {
         .single();
 
       if (cashError || !cash) {
-        await admin.from("expenses").delete().eq("id", expense.id);
+        await admin.from("expenses").delete().eq("tenant_id", me.tenantId).eq("id", expense.id);
         fail(back, "معرفناش نخصم الدفعة من الخزنة: " + (cashError?.message ?? ""));
       }
       cashId = cash.id;
@@ -261,8 +273,8 @@ export async function addSupplierTransaction(formData: FormData) {
 
   if (error || !txn) {
     // لو الحركة فشلت بعد ما لمسنا الخزنة أو المصاريف، نرجّع اللي عملناه
-    if (cashId) await admin.from("cash_transactions").delete().eq("id", cashId);
-    if (expenseId) await admin.from("expenses").delete().eq("id", expenseId);
+    if (cashId) await admin.from("cash_transactions").delete().eq("tenant_id", me.tenantId).eq("id", cashId);
+    if (expenseId) await admin.from("expenses").delete().eq("tenant_id", me.tenantId).eq("id", expenseId);
     fail(back, "معرفناش نسجل الحركة: " + (error?.message ?? ""));
   }
 
@@ -272,14 +284,14 @@ export async function addSupplierTransaction(formData: FormData) {
       .insert(items.map((i) => ({ ...i, transaction_id: txn.id })));
 
     if (itemsError) {
-      await admin.from("supplier_transactions").delete().eq("id", txn.id);
-      if (cashId) await admin.from("cash_transactions").delete().eq("id", cashId);
-      if (expenseId) await admin.from("expenses").delete().eq("id", expenseId);
+      await admin.from("supplier_transactions").delete().eq("tenant_id", me.tenantId).eq("id", txn.id);
+      if (cashId) await admin.from("cash_transactions").delete().eq("tenant_id", me.tenantId).eq("id", cashId);
+      if (expenseId) await admin.from("expenses").delete().eq("tenant_id", me.tenantId).eq("id", expenseId);
       fail(back, "معرفناش نسجل بنود الفاتورة: " + itemsError.message);
     }
 
     // البضاعة دخلت المخزن: بنزوّد الكمية ونحدّث تكلفة المنتج بسعر الشرا الجديد
-    if (stockApplied) await applyStock(items, 1, "شراء من مورد");
+    if (stockApplied) await applyStock(items, 1, "شراء من مورد", me.tenantId);
   }
 
   await logActivity(
@@ -321,22 +333,24 @@ export async function deleteSupplierTransaction(formData: FormData) {
 
   // بنرجّع كل أثر الحركة: المخزون، المصروف، حركة الخزنة
   if (txn?.stock_applied && txn.supplier_invoice_items?.length) {
-    await applyStock(txn.supplier_invoice_items, -1, "إلغاء فاتورة مورد");
+    await applyStock(txn.supplier_invoice_items, -1, "إلغاء فاتورة مورد", me.tenantId);
   }
   if (txn?.related_cash_id) {
-    await admin.from("cash_transactions").delete().eq("id", txn.related_cash_id);
+    await admin.from("cash_transactions").delete().eq("tenant_id", me.tenantId).eq("id", txn.related_cash_id);
   }
   if (txn?.related_expense_id) {
     await admin
       .from("cash_transactions")
       .delete()
+      .eq("tenant_id", me.tenantId)
       .eq("related_expense_id", txn.related_expense_id);
-    await admin.from("expenses").delete().eq("id", txn.related_expense_id);
+    await admin.from("expenses").delete().eq("tenant_id", me.tenantId).eq("id", txn.related_expense_id);
   }
 
   const { error } = await admin
     .from("supplier_transactions")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .eq("id", id);
 
   if (error) fail(back, "معرفناش نمسح الحركة: " + error.message);

@@ -44,23 +44,34 @@ export async function deleteProduct(formData: FormData) {
 
   // نمسح حركات المخزون ثم الأشكال ثم المنتج
   if (variantIds.length > 0) {
-    await supabase.from("stock_movements").delete().in("variant_id", variantIds);
+    await supabase
+      .from("stock_movements")
+      .delete()
+      .eq("tenant_id", me.tenantId)
+      .in("variant_id", variantIds);
     await supabase
       .from("variant_cost_components")
       .delete()
+      .eq("tenant_id", me.tenantId)
       .in("variant_id", variantIds);
-    await supabase.from("product_variants").delete().eq("product_id", productId);
+    await supabase
+      .from("product_variants")
+      .delete()
+      .eq("tenant_id", me.tenantId)
+      .eq("product_id", productId);
   }
 
   const { data: prod } = await supabase
     .from("products")
     .select("name_ar, name")
+    .eq("tenant_id", me.tenantId)
     .eq("id", productId)
     .maybeSingle();
 
   const { error } = await supabase
     .from("products")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .eq("id", productId);
 
   if (error) {
@@ -109,6 +120,7 @@ export async function saveStock(formData: FormData) {
   const { error: updateError, count } = await supabase
     .from("product_variants")
     .update({ quantity_on_hand: quantity }, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", variantId);
 
   if (updateError || count === 0) {
@@ -163,6 +175,7 @@ export async function saveSalePrice(formData: FormData) {
   const { error, count } = await supabase
     .from("product_variants")
     .update({ sale_price: salePrice }, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", variantId);
 
   if (error || count === 0) {
@@ -180,7 +193,7 @@ export async function saveSalePrice(formData: FormData) {
 }
 
 export async function saveProductName(formData: FormData) {
-  await requirePermission("products.edit");
+  const me = await requirePermission("products.edit");
   const productId = String(formData.get("product_id") ?? "");
   const nameAr = String(formData.get("name_ar") ?? "").trim();
   const returnTo = `/products/${productId}`;
@@ -194,6 +207,7 @@ export async function saveProductName(formData: FormData) {
   const { error, count } = await supabase
     .from("products")
     .update({ name_ar: nameAr || null }, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", productId);
 
   if (error || count === 0) {
@@ -210,7 +224,7 @@ export async function saveProductName(formData: FormData) {
 }
 
 export async function saveSku(formData: FormData) {
-  await requirePermission("products.edit");
+  const me = await requirePermission("products.edit");
   const variantId = String(formData.get("variant_id") ?? "");
   const productId = String(formData.get("product_id") ?? "");
   const sku = String(formData.get("sku") ?? "").trim();
@@ -225,6 +239,7 @@ export async function saveSku(formData: FormData) {
   const { error, count } = await supabase
     .from("product_variants")
     .update({ sku: sku || null }, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", variantId);
 
   if (error || count === 0) {
@@ -292,6 +307,7 @@ export async function saveCostComponents(formData: FormData) {
   const { error: costError } = await supabase
     .from("product_variants")
     .update({ cost_price: total })
+    .eq("tenant_id", me.tenantId)
     .eq("id", variantId);
 
   if (costError) {
@@ -307,6 +323,7 @@ export async function saveCostComponents(formData: FormData) {
     const { error: backfillError } = await supabase
       .from("order_items")
       .update({ cost_price_at_order: total })
+      .eq("tenant_id", me.tenantId)
       .eq("variant_id", variantId)
       .eq("cost_price_at_order", 0);
 
@@ -422,6 +439,7 @@ export async function uploadCostFile(
     const { error: upErr } = await db
       .from("product_variants")
       .update({ cost_price: u.to })
+      .eq("tenant_id", me.tenantId)
       .eq("id", u.variantId);
     if (!upErr) applied++;
   }
