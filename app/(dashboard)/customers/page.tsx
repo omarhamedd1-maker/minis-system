@@ -150,6 +150,13 @@ export default async function CustomersPage({
         <h1 className="text-xl font-bold text-gray-900">العملاء</h1>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-gray-500">{rows.length} عميل</span>
+          {/* الشرايح — «مين يستاهل معاملة مختلفة» بدل رقم واحد */}
+          <Link
+            href="/customers/segments"
+            className="rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          >
+            الشرايح
+          </Link>
           <form action="/customers" className="flex items-center gap-1">
             {sort !== "total" && (
               <input type="hidden" name="sort" value={sort} />
