@@ -39,8 +39,18 @@ export async function GET(request: Request) {
     recur: { created: number; checked: number };
     remind: { sent: number; checked: number; silent: number };
     prepaid: { added: number; adopted: number; alreadyDone: number; review: number };
-    /** `null` = البيزنس ده مش مربوط بشوبيفاي، أو الجلب وقع */
-    shopify: { orders: number; customers: number } | null;
+    /**
+     * نتيجة استيراد أوردرات شوبيفاي للبيزنس ده.
+     *
+     * في الوضع الجاف بيرجّع **اللي كان هيتعمل** (`dry: true`)، ولو اتخطّى
+     * بيرجّع **السبب**. الاتنين دول مش رفاهية: النسخة الأولى كانت بترجّع
+     * `null` في كل الحالات — مربوط أو مش مربوط أو وقع — فقعدت أدوّر في
+     * حاجة سليمة وأنا فاكر إنها بايظة.
+     */
+    shopify:
+      | { orders: number; customers: number; dry?: boolean }
+      | { skipped: string }
+      | null;
   };
 
   try {
@@ -79,8 +89,23 @@ export async function GET(request: Request) {
         try {
           const r = await runOrderImport({ db, tenantId, dry });
           if (r.ok && r.added) shopify = r.added;
-        } catch {
-          // البيزنس ده مش مربوط أو شوبيفاي وقعت — الباقي يكمّل
+          else if (r.ok) {
+            // الوضع الجاف مابيملاش `added` — بنقول اللي كان هيتعمل
+            const newCustomers = r.plan.toImport.filter(
+              (x) => !x.customerId
+            ).length;
+            shopify = {
+              orders: r.plan.toImport.length,
+              customers: newCustomers,
+              dry: true,
+            };
+          } else {
+            shopify = { skipped: r.error };
+          }
+        } catch (e) {
+          // ⚠️ **السبب لازم يبان.** الكاتش الصامت كان بيخلّي النتيجة `null`
+          // من غير ما حد يعرف البيزنس مش مربوط ولا الجلب وقع.
+          shopify = { skipped: e instanceof Error ? e.message : "الجلب وقع" };
         }
 
         results[tenantId] = { recur, remind, prepaid, shopify };
