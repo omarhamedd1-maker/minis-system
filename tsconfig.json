@@ -34,5 +34,8 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "supabase-edge-functions"]
+  // `supabase/functions` دوال Deno مش نكست — فيها `Deno.env` ومكتبات من
+  // روابط، فمافيش فايدة من فحصها بإعدادات المشروع ده وبتقع بأخطاء وهمية.
+  // هي نسخة من اللي شغّال في الإنتاج للتاريخ والرجوع بس (شوف الـREADME جواها).
+  "exclude": ["node_modules", "supabase-edge-functions", "supabase/functions"]
 }
