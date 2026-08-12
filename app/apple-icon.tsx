@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-// أيقونة الآيفون (تظهر على الشاشة الرئيسية): خلفية سودا وحرف M رفيع رمادي فاتح
+// أيقونة الآيفون (تظهر على الشاشة الرئيسية): خلفية سودا وحرف G رفيع رمادي فاتح
 export default function AppleIcon() {
   return new ImageResponse(
     (
@@ -20,7 +20,7 @@ export default function AppleIcon() {
           fontWeight: 100,
         }}
       >
-        M
+        G
       </div>
     ),
     { ...size }

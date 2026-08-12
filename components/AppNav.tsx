@@ -127,7 +127,7 @@ export function AppNav({
         <div className="flex h-14 items-center gap-2 border-b border-gray-100 px-3">
           {expanded && (
             <span className="text-lg font-bold tracking-wide text-gray-900">
-              MINO
+              Gridpoint
             </span>
           )}
           <button
