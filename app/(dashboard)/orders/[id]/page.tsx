@@ -30,6 +30,12 @@ import { isDeadShipment } from "@/lib/bosta/order-status";
 import { exceptionAdvice } from "@/lib/bosta/exception";
 import { bundleCovered } from "@/lib/bosta/real-fees";
 import { refundDue } from "@/lib/refund";
+import {
+  historySegments,
+  orderCountWord,
+  riskBadge,
+  summarizeCustomerHistory,
+} from "@/lib/customer-history";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -152,6 +158,25 @@ export default async function OrderDetailsPage({
       </div>
     );
   }
+
+  // تاريخ العميل — بيرجّع كتير ولا لأ. اللي بيأكّد الأوردر لازم يشوفه قبل
+  // ما يمسك التليفون، لأن الشحنة اللي بتروح وترجع بتتحسب رسومها الاتجاهين.
+  //
+  // **الأوردر ده نفسه بيتشال** — إحنا بنتكلم عن اللي قبله. لو دخل في العد
+  // هيبقى الكلام ملخبط ("طلب أوردرين" وهو قدامك واحد منهم).
+  const { data: historyRows } = order?.customers?.id
+    ? await supabase
+        .from("orders")
+        .select("order_status")
+        .eq("customer_id", order.customers.id)
+        .neq("id", id)
+        .overrideTypes<{ order_status: string | null }[]>()
+    : { data: [] };
+  const history = summarizeCustomerHistory(
+    (historyRows ?? []).map((r) => r.order_status)
+  );
+  const historyBadge = riskBadge(history.risk);
+  const historyParts = historySegments(history);
 
   // قايمة المنتجات لفورم إضافة منتج (لمن يقدر يعدّل البنود)
   const { data: variantsData } = canItems
@@ -576,7 +601,25 @@ export default async function OrderDetailsPage({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">بيانات العميل</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-gray-900">بيانات العميل</h2>
+              {/*
+                **مابنحكمش على حد من غير أساس.** الشارة مابتظهرش غير لما يبقى
+                عنده أوردرين خلصوا على الأقل — قبل كده الجملة تحت بتقول اللي
+                نعرفه من غير ما نلزقله وصف.
+              */}
+              {history.total === 0 ? (
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                  أول أوردر ليه
+                </span>
+              ) : history.risk !== "new" ? (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${historyBadge.className}`}
+                >
+                  {historyBadge.label}
+                </span>
+              ) : null}
+            </div>
             {order.customers?.id && (
               <Link
                 href={`/customers/${order.customers.id}`}
@@ -619,6 +662,42 @@ export default async function OrderDetailsPage({
               <dt className="text-gray-500">تاريخ الأوردر</dt>
               <dd className="text-gray-900">{formatDate(order.order_date)}</dd>
             </div>
+
+            {/*
+              تاريخه معانا — سطر في نفس الجدول، مش صندوق. الصندوق بيتعمل
+              لما تكون فيه حسبة ليها نتيجة (زي مصاريف الشحن تحت)، وده عدّ
+              مش حسبة.
+            */}
+            {history.total > 0 && (
+              <div className="flex justify-between gap-4">
+                <dt className="shrink-0 text-gray-500">طلباته قبل كده</dt>
+                <dd className="text-left">
+                  <span className="text-gray-900">
+                    {orderCountWord(history.total)}
+                  </span>
+                  {historyParts.length > 0 && (
+                    <span className="block text-[11px] text-gray-400">
+                      {historyParts.map((part, i) => (
+                        <span key={part.text}>
+                          {i > 0 && " · "}
+                          <span
+                            className={
+                              part.highlight
+                                ? history.risk === "bad"
+                                  ? "font-medium text-red-600"
+                                  : "font-medium text-amber-600"
+                                : undefined
+                            }
+                          >
+                            {part.text}
+                          </span>
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
 
