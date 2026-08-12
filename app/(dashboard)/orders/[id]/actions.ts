@@ -1,5 +1,7 @@
 "use server";
 
+import { isReturnReason, returnReasonLabel } from "@/lib/return-reasons";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -1536,4 +1538,50 @@ export async function createExchangeShipment(formData: FormData) {
           encodeURIComponent("اتعملت شحنة التبديل — بوسطة هتوصّل الجديد وتاخد القديم")
       : `/orders/${orderId}?error=` + encodeURIComponent(message)
   );
+}
+
+/**
+ * سبب رجوع الشحنة.
+ *
+ * ⚠️ **بيتفلتر بالبيزنس كمان مش بالـ`id` بس.** المفتاح ده بيعدّي على
+ * الـRLS، فالتعديل بـ`id` لوحده معناه إن حد من بيزنس يقدر يبعت رقم أوردر
+ * من بيزنس تاني ويعدّله. أكشنات قديمة كتير في الملف ده لسه بتعمل كده —
+ * متسجّل في `docs/NEXT.md`.
+ */
+export async function updateReturnReason(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  const reason = String(formData.get("return_reason") ?? "").trim();
+
+  if (!orderId) redirect("/orders");
+
+  // القايمة مقفولة — أي حاجة برّاها بتترفض بدل ما تتخزّن وتلوّث الإحصائية
+  if (reason && !isReturnReason(reason)) {
+    redirect(
+      `/orders/${orderId}?error=` + encodeURIComponent("السبب ده مش في القايمة")
+    );
+  }
+
+  const supabase = createAdminClient();
+  const { error, count } = await supabase
+    .from("orders")
+    .update({ return_reason: reason || null }, { count: "exact" })
+    .eq("id", orderId)
+    .eq("tenant_id", me.tenantId);
+
+  if (error || count === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ سبب الرجوع")
+    );
+  }
+
+  await logActivity(
+    me,
+    "order.return_reason",
+    `سجّل سبب رجوع أوردر ${await orderNo(supabase, orderId)}: ${returnReasonLabel(reason)}`,
+    orderId
+  );
+  revalidatePath(`/orders/${orderId}`);
+  redirect(`/orders/${orderId}?saved=1`);
 }

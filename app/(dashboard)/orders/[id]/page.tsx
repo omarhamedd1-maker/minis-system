@@ -30,6 +30,7 @@ import { isDeadShipment } from "@/lib/bosta/order-status";
 import { exceptionAdvice } from "@/lib/bosta/exception";
 import { bundleCovered } from "@/lib/bosta/real-fees";
 import { refundDue } from "@/lib/refund";
+import { RETURNED_STATUSES, RETURN_REASONS } from "@/lib/return-reasons";
 import {
   historySegments,
   orderCountWord,
@@ -53,6 +54,7 @@ import {
   updateOrderItem,
   updateOrderStatus,
   updateShippingPrice,
+  updateReturnReason,
   confirmRefund,
   undoRefund,
 } from "./actions";
@@ -82,6 +84,7 @@ type OrderDetails = {
   bosta_shipping_cost: number;
   delivered_at: string | null;
   return_note: string | null;
+  return_reason: string | null;
   return_tracking: string | null;
   payment_method: string | null;
   amount_paid: number | null;
@@ -115,6 +118,7 @@ export default async function OrderDetailsPage({
   const { error: actionError, saved } = await searchParams;
   const user = await requirePagePermission("orders.view");
   const canItems = can(user, "orders.items");
+  const canStatus = can(user, "orders.status");
   const canArchive = can(user, "orders.archive");
   const canDelete = can(user, "orders.delete");
   const canLink = can(user, "ship.link");
@@ -142,7 +146,7 @@ export default async function OrderDetailsPage({
       `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        bosta_created_at, refunded_at, refunded_amount, cash_received_at,
-       delivered_at, return_note, return_tracking, payment_method, amount_paid,
+       delivered_at, return_note, return_reason, return_tracking, payment_method, amount_paid,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
          product_variants(variant_name, products(name)))`
@@ -1056,6 +1060,38 @@ export default async function OrderDetailsPage({
             />
           )}
 
+        {/* سبب الرجوع — بيظهر بس لو الشحنة رجعت فعلاً.
+            الرقم لوحده (نسبة رجوع ١٧٪) مابيقولش تعمل إيه، والسبب هو اللي
+            بيقول: عنوان مش واضح غير عميل مش بيرد غير غيّر رأيه. */}
+        {RETURNED_STATUSES.includes(order.order_status ?? "") && canStatus && (
+          <div className="mt-4 rounded-xl bg-white p-4 shadow-sm sm:p-5">
+            <p className="text-sm font-medium text-gray-900">رجع ليه؟</p>
+            <p className="mt-1 text-xs text-gray-500">
+              السبب بيخلّي سؤال «بنخسر ليه» له إجابة بالأرقام بدل تخمين.
+            </p>
+            <form action={updateReturnReason} className="mt-3 flex flex-wrap items-center gap-2">
+              <input type="hidden" name="order_id" value={order.id} />
+              <select
+                name="return_reason"
+                defaultValue={order.return_reason ?? ""}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              >
+                <option value="">— اختار السبب —</option>
+                {RETURN_REASONS.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+              >
+                حفظ
+              </button>
+            </form>
+          </div>
+        )}
         {/* التبديل — نفس شرط المرتجع: الأوردر لازم يكون اتسلّم */}
         {order.order_status === "delivered" && isAdmin && canSend && (
           <div className="mt-4">
