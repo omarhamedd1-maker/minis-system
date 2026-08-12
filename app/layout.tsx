@@ -15,7 +15,7 @@ const lexend = Lexend({
 });
 
 export const metadata: Metadata = {
-  title: "مينو",
+  title: "Gridpoint",
   description: "نظام تشغيل للمتاجر",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     // **ده اللي الآيفون بيكتبه تحت الإشعار** — اسم التطبيق زي ما هو متسجّل
     // على الشاشة الرئيسية. كان "Minis System" فكل إشعار بيجي وتحته السطر ده.
     // (وعلى أندرويد الاسم بيتاخد من `manifest.ts`، والاتنين بقوا بالعربي.)
-    title: "مينو",
+    title: "Gridpoint",
     statusBarStyle: "default",
   },
 };

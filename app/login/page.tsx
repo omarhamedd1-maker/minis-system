@@ -28,7 +28,7 @@ export default async function LoginPage({
     <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-sm">
         <h1 className="mb-1 text-2xl font-bold tracking-wide text-gray-900">
-          MINO
+          Gridpoint
         </h1>
         <p className="mb-6 text-sm text-gray-500">نظام تشغيل المتاجر</p>
 

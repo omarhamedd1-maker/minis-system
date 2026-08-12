@@ -9,16 +9,33 @@ import {
   useStoredFlag,
 } from "@/lib/use-stored-flag";
 
-type Item = { href: string; label: string; perm: string };
+type Leaf = { href: string; label: string; perm: string };
+type Item = Leaf & {
+  /** صفحات جوّه البند — بتظهر منسدلة تحته */
+  children?: Leaf[];
+};
+/** بعد الفلترة الأبناء بيبقوا موجودين أو undefined — النوع ده بيعبّر عن ده */
+type Allowed = Leaf & { children: Leaf[] | undefined };
 
 const ITEMS: Item[] = [
   { href: "/", label: "الداشبورد", perm: "finance.dashboard" },
-  { href: "/orders", label: "الأوردرات", perm: "orders.view" },
-  { href: "/orders/health", label: "صحة التشغيل", perm: "finance.dashboard" },
-  { href: "/orders/carts", label: "سلات متروكة", perm: "orders.view" },
+  {
+    href: "/orders",
+    label: "الأوردرات",
+    perm: "orders.view",
+    children: [
+      { href: "/orders/carts", label: "سلات متروكة", perm: "orders.view" },
+    ],
+  },
   { href: "/tasks", label: "التاسكات", perm: "tasks.view" },
-  { href: "/customers", label: "العملاء", perm: "customers.view" },
-  { href: "/customers/segments", label: "شرايح العملاء", perm: "customers.view" },
+  {
+    href: "/customers",
+    label: "العملاء",
+    perm: "customers.view",
+    children: [
+      { href: "/customers/segments", label: "الشرايح", perm: "customers.view" },
+    ],
+  },
   { href: "/products", label: "المنتجات", perm: "products.view" },
   { href: "/suppliers", label: "الموردين", perm: "suppliers.view" },
   { href: "/expenses", label: "المصاريف", perm: "expenses.view" },
@@ -87,11 +104,12 @@ export function AppNav({
     notifyStoredFlagChanged();
   }
 
-  const allowed = ITEMS.filter((i) =>
-    i.perm === "platform"
-      ? isPlatformAdmin
-      : isAdmin || permissions.includes(i.perm)
-  );
+  const may = (perm: string) =>
+    perm === "platform" ? isPlatformAdmin : isAdmin || permissions.includes(perm);
+  const allowed = ITEMS.filter((i) => may(i.perm)).map((i) => ({
+    ...i,
+    children: i.children?.filter((c) => may(c.perm)),
+  }));
   /**
    * **الأطول بيكسب.** `/orders` و`/orders/health` الاتنين بيطابقوا وإنت في
    * صحة التشغيل، فمن غير الشرط ده الاتنين بيتلوّنوا مع بعض والقايمة بتكدب
@@ -113,7 +131,7 @@ export function AppNav({
   const PRIMARY_HREFS = ["/", "/orders", "/expenses", "/cash", "/tasks"];
   const primary = PRIMARY_HREFS.map((h) =>
     allowed.find((i) => i.href === h)
-  ).filter((i): i is Item => Boolean(i));
+  ).filter((i): i is Allowed => Boolean(i));
   const overflow = allowed.filter((i) => !PRIMARY_HREFS.includes(i.href));
 
   return (
@@ -127,7 +145,7 @@ export function AppNav({
         <div className="flex h-14 items-center gap-2 border-b border-gray-100 px-3">
           {expanded && (
             <span className="text-lg font-bold tracking-wide text-gray-900">
-              MINO
+              Gridpoint
             </span>
           )}
           <button
@@ -153,24 +171,51 @@ export function AppNav({
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
           {allowed.map((i) => {
             const active = isActive(i.href);
+            // **الأبناء بيبانوا لما تكون جوّه المجموعة بس.** القايمة اللي
+            // كل حاجة فيها مفتوحة على طول بتبقى طويلة ومالهاش معنى.
+            const inGroup = i.href !== "/" && pathname.startsWith(i.href);
+            const kids = expanded && inGroup ? (i.children ?? []) : [];
             return (
-              <Link
-                key={i.href}
-                href={i.href}
-                title={i.label}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
-                  active
-                    ? "bg-gray-900 text-white"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                } ${expanded ? "" : "justify-center"}`}
-              >
-                <Icon href={i.href} className="h-5 w-5 shrink-0" />
-                {expanded && (
-                  <span className="whitespace-nowrap text-sm font-medium">
-                    {i.label}
-                  </span>
-                )}
-              </Link>
+              <div key={i.href}>
+                <Link
+                  href={i.href}
+                  title={i.label}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
+                    active
+                      ? "bg-gray-900 text-white"
+                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                  } ${expanded ? "" : "justify-center"}`}
+                >
+                  <Icon href={i.href} className="h-5 w-5 shrink-0" />
+                  {expanded && (
+                    <span className="whitespace-nowrap text-sm font-medium">
+                      {i.label}
+                    </span>
+                  )}
+                </Link>
+
+                {kids.map((c) => {
+                  const on = pathname.startsWith(c.href);
+                  return (
+                    <Link
+                      key={c.href}
+                      href={c.href}
+                      className={`mt-1 flex items-center gap-2 rounded-lg py-1.5 pe-3 ps-9 text-sm ${
+                        on
+                          ? "bg-gray-100 font-medium text-gray-900"
+                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                          on ? "bg-gray-900" : "bg-gray-300"
+                        }`}
+                      />
+                      <span className="whitespace-nowrap">{c.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>

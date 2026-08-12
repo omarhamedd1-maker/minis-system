@@ -3,7 +3,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 512, height: 512 };
 export const contentType = "image/png";
 
-// أيقونة البرنامج (المتصفح): دايرة سودا وفيها حرف M رفيع باللون الرمادي الفاتح بتاعنا
+// أيقونة البرنامج (المتصفح): دايرة سودا وفيها حرف G رفيع باللون الرمادي الفاتح بتاعنا
 export default function Icon() {
   return new ImageResponse(
     (
@@ -21,7 +21,7 @@ export default function Icon() {
           fontWeight: 100,
         }}
       >
-        M
+        G
       </div>
     ),
     { ...size }

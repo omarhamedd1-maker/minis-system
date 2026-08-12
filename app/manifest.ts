@@ -6,13 +6,13 @@ export default function manifest(): MetadataRoute.Manifest {
     // كمان اللي بيبان تحت الأيقونة على الشاشة الرئيسية.
     //
     // كان "Minis System" فالسطر بيطلع `from Minis System` — طويل وبياخد
-    // سطر كامل من إشعار قصير. بقى "MINO" فبيطلع `from MINO`.
+    // سطر كامل من إشعار قصير. بقى "Gridpoint" فبيطلع `from Gridpoint`.
     //
     // ⚠️ **والسطر ده مايتشالش** — آبل بتفرضه على أي إشعار من موقع وبتحطه
     // بين العنوان والجسم، ومفيش أي إعداد يغيّر مكانه. أقصى اللي نقدر عليه
     // إن الاسم يبقى قصير.
-    name: "MINO",
-    short_name: "MINO",
+    name: "Gridpoint",
+    short_name: "Gridpoint",
     description: "نظام تشغيل للمتاجر",
     start_url: "/",
     display: "standalone",
