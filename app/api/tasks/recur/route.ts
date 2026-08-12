@@ -17,6 +17,7 @@ import { generateRecurringTasks } from "@/lib/tasks-recur";
 import { runTaskReminders } from "@/lib/task-reminders-run";
 import { recordPrepaidCash } from "@/lib/prepaid-cash-run";
 import { activeTenantIds } from "@/lib/tenant-settings";
+import { runOrderImport } from "@/lib/shopify/orders";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -38,6 +39,8 @@ export async function GET(request: Request) {
     recur: { created: number; checked: number };
     remind: { sent: number; checked: number; silent: number };
     prepaid: { added: number; adopted: number; alreadyDone: number; review: number };
+    /** `null` = البيزنس ده مش مربوط بشوبيفاي، أو الجلب وقع */
+    shopify: { orders: number; customers: number } | null;
   };
 
   try {
@@ -63,7 +66,24 @@ export async function GET(request: Request) {
           review: p.review.length,
         };
 
-        results[tenantId] = { recur, remind, prepaid };
+        // ⚠️ **استيراد أوردرات شوبيفاي — ده اللي بيخلّي أي بيزنس يشتغل.**
+        //
+        // استقبال الأوردر الجديد كان في دوال سوبابيز، وهي مربوطة بمتجر
+        // واحد (`SHOPIFY_SHOP` متغيّر بيئة واحد للمشروع كله). يعني أي
+        // بيزنس تاني بيربط شوبيفاي، أوردراته ماكانتش هتوصل خالص.
+        //
+        // وده بيلف على كل بيزنس بمفاتيحه هو، ومن غير ما نلمس إعدادات
+        // الويب هوكس عند شوبيفاي. الاستيراد بيمنع التكرار برقم الأوردر،
+        // فتشغيله كل ربع ساعة مالوش ضرر.
+        let shopify: { orders: number; customers: number } | null = null;
+        try {
+          const r = await runOrderImport({ db, tenantId, dry });
+          if (r.ok && r.added) shopify = r.added;
+        } catch {
+          // البيزنس ده مش مربوط أو شوبيفاي وقعت — الباقي يكمّل
+        }
+
+        results[tenantId] = { recur, remind, prepaid, shopify };
       } catch (e) {
         // بيزنس وقع؟ الباقي يكمّل
         results[tenantId] = {
