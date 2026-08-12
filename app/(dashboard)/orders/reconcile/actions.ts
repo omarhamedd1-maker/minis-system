@@ -99,6 +99,7 @@ export async function linkMissingShipments(
     const { error: upErr, count } = await db
       .from("orders")
       .update({ bosta_tracking: link.tracking }, { count: "exact" })
+      .eq("tenant_id", me.tenantId)
       .eq("id", link.orderId)
       .is("bosta_tracking", null);
     if (!upErr && count === 1) linked++;

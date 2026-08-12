@@ -210,7 +210,7 @@ export async function updateTask(formData: FormData) {
   }
 
   if (Object.keys(patch).length > 0) {
-    const { error } = await db.from("tasks").update(patch).eq("id", taskId);
+    const { error } = await db.from("tasks").update(patch).eq("tenant_id", me.tenantId).eq("id", taskId);
     if (error) back(taskId, "معرفناش نحفظ: " + error.message);
     await logActivity(me, "task.edit", `عدّل تاسك ${title || taskId}`);
   }
@@ -234,6 +234,7 @@ export async function setTaskStatus(formData: FormData) {
       done_at: done ? new Date().toISOString() : null,
       done_by: done ? (me.fullName ?? me.email ?? null) : null,
     })
+    .eq("tenant_id", me.tenantId)
     .eq("id", taskId);
 
   if (error) back(taskId, "معرفناش نغيّر الحالة: " + error.message);
@@ -269,7 +270,7 @@ export async function assignTask(formData: FormData) {
   );
 
   // بنمسح ونكتب من جديد — أبسط من الحسبة، والقايمة صغيرة
-  await db.from("task_assignees").delete().eq("task_id", taskId);
+  await db.from("task_assignees").delete().eq("tenant_id", me.tenantId).eq("task_id", taskId);
   if (people.length > 0) {
     const { error } = await db.from("task_assignees").insert(
       people.map((p) => ({ ...p, task_id: taskId, tenant_id: me.tenantId }))
@@ -334,13 +335,14 @@ export async function toggleStep(formData: FormData) {
     .maybeSingle();
 
   const next = !((data as { done: boolean } | null)?.done ?? false);
-  await db.from("task_steps").update({ done: next }).eq("id", stepId);
+  await db.from("task_steps").update({ done: next }).eq("tenant_id", me.tenantId).eq("id", stepId);
 
   // **كل الخطوات خلصت؟ التاسك يقفل لوحده.** ده أكتر حاجة بتتنسى — الموظف
   // بيعلّم آخر خطوة والتاسك يفضل مفتوح في اللوحة.
   const { data: all } = await db
     .from("task_steps")
     .select("done")
+    .eq("tenant_id", me.tenantId)
     .eq("task_id", taskId);
   const steps = (all ?? []) as { done: boolean }[];
 
@@ -352,6 +354,7 @@ export async function toggleStep(formData: FormData) {
         done_at: new Date().toISOString(),
         done_by: me.fullName ?? me.email ?? null,
       })
+      .eq("tenant_id", me.tenantId)
       .eq("id", taskId);
   }
 
@@ -360,11 +363,11 @@ export async function toggleStep(formData: FormData) {
 }
 
 export async function deleteStep(formData: FormData) {
-  await requirePermission("tasks.edit");
+  const me = await requirePermission("tasks.edit");
   const taskId = String(formData.get("task_id") ?? "");
   const stepId = String(formData.get("step_id") ?? "");
   if (taskId && stepId) {
-    await createAdminClient().from("task_steps").delete().eq("id", stepId);
+    await createAdminClient().from("task_steps").delete().eq("tenant_id", me.tenantId).eq("id", stepId);
   }
   revalidatePath(`/tasks/${taskId}`);
   redirect(`/tasks/${taskId}`);
@@ -395,7 +398,7 @@ export async function deleteTask(formData: FormData) {
 
   const db = createAdminClient();
   const { data } = await db.from("tasks").select("title").eq("id", taskId).maybeSingle();
-  const { error } = await db.from("tasks").delete().eq("id", taskId);
+  const { error } = await db.from("tasks").delete().eq("tenant_id", me.tenantId).eq("id", taskId);
   if (error) back(taskId, "معرفناش نمسح التاسك: " + error.message);
 
   await logActivity(
@@ -443,6 +446,7 @@ export async function uploadTaskFile(formData: FormData) {
   const { error } = await db
     .from("tasks")
     .update({ attachments: [...current, { path, name: file.name }] })
+    .eq("tenant_id", me.tenantId)
     .eq("id", taskId);
   if (error) back(taskId, "الملف اترفع بس معرفناش نسجّله: " + error.message);
 
@@ -451,7 +455,7 @@ export async function uploadTaskFile(formData: FormData) {
 }
 
 export async function deleteTaskFile(formData: FormData) {
-  await requirePermission("tasks.edit");
+  const me = await requirePermission("tasks.edit");
   const taskId = String(formData.get("task_id") ?? "");
   const path = String(formData.get("path") ?? "");
   if (!taskId || !path) back(taskId);
@@ -473,6 +477,7 @@ export async function deleteTaskFile(formData: FormData) {
   await db
     .from("tasks")
     .update({ attachments: current.filter((f) => f.path !== path) })
+    .eq("tenant_id", me.tenantId)
     .eq("id", taskId);
 
   revalidatePath(`/tasks/${taskId}`);

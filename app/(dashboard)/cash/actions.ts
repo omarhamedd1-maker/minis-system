@@ -41,6 +41,7 @@ export async function updateCashTransaction(formData: FormData) {
       },
       { count: "exact" }
     )
+    .eq("tenant_id", me.tenantId)
     .eq("id", id)
     .eq("source_type", "manual");
 
@@ -67,6 +68,7 @@ export async function deleteCashTransaction(formData: FormData) {
   const { error, count } = await supabase
     .from("cash_transactions")
     .delete({ count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", id)
     .eq("source_type", "manual");
 

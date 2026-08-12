@@ -40,6 +40,7 @@ export async function updateExpense(formData: FormData) {
       },
       { count: "exact" }
     )
+    .eq("tenant_id", me.tenantId)
     .eq("id", id);
 
   if (updateError || count === 0) {
@@ -52,6 +53,7 @@ export async function updateExpense(formData: FormData) {
   const { error: cashError } = await supabase
     .from("cash_transactions")
     .update({ amount, transaction_date: expenseDate })
+    .eq("tenant_id", me.tenantId)
     .eq("related_expense_id", id);
 
   if (cashError) {
@@ -71,6 +73,7 @@ export async function updateExpense(formData: FormData) {
       txn_date: expenseDate,
       description: description || category,
     })
+    .eq("tenant_id", me.tenantId)
     .eq("related_expense_id", id);
 
   await logActivity(me, "expense.edit", `عدّل مصروف ${category} (${amount})`);
@@ -91,12 +94,14 @@ export async function deleteExpense(formData: FormData) {
   await supabase
     .from("supplier_transactions")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .eq("related_expense_id", id);
 
   // نمسح حركة الخزنة المرتبطة الأول عشان مفيش حركة تفضل من غير مصروف
   const { error: cashError } = await supabase
     .from("cash_transactions")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .eq("related_expense_id", id);
 
   if (cashError) {
@@ -109,6 +114,7 @@ export async function deleteExpense(formData: FormData) {
   const { error: deleteError, count } = await supabase
     .from("expenses")
     .delete({ count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", id);
 
   if (deleteError || count === 0) {
@@ -176,7 +182,7 @@ export async function addExpense(formData: FormData) {
       });
 
     if (txnError) {
-      await supabase.from("expenses").delete().eq("id", expense.id);
+      await supabase.from("expenses").delete().eq("tenant_id", me.tenantId).eq("id", expense.id);
       redirect(
         "/expenses?error=" +
           encodeURIComponent(

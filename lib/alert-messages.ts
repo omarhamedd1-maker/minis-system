@@ -72,13 +72,11 @@ export function failedDeliveryMessage(a: FailedDeliveryAlert): string {
   // والتفاصيل كاملة في شاشة الأوردر
   const reason = shortReason(a.reason);
   if (reason) lines.push(reason);
-  lines.push(
-    a.waiting
-      ? exceptionAdvice(a.reason).hint
-      : a.arrived
-        ? "البضاعة رجعت — راجع المخزون والفلوس"
-        : "كلّمه قبل ما الشحنة ترجع المخزن"
-  );
+
+  // ⚠️ **مفيش سطر بيقول «اعمل إيه».** كان فيه واحد («كلّمه قبل ما الشحنة
+  // ترجع المخزن» · «راجع المخزون والفلوس») واتشال بطلب عمر: هو صاحب
+  // المتجر وعارف شغله، والنصيحة كانت بتاكل سطر من المعلومة — وشاشة قفل
+  // الآيفون بتعرض ٤ سطور بس.
   return lines.join("\n");
 }
 

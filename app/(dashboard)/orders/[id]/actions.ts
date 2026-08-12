@@ -1,5 +1,7 @@
 "use server";
 
+import { isReturnReason, returnReasonLabel } from "@/lib/return-reasons";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -140,7 +142,9 @@ async function adjustStock(
   variantId: string | null,
   change: number,
   orderId: string,
-  reason: string
+  reason: string,
+  /** بيزنس اللي بيعدّل — المخزون بيتفلتر بيه كمان مش بالـid بس */
+  tenantId: string
 ) {
   if (!variantId || change === 0) return;
   const { data: v } = await supabase
@@ -152,6 +156,7 @@ async function adjustStock(
   await supabase
     .from("product_variants")
     .update({ quantity_on_hand: v.quantity_on_hand + change })
+    .eq("tenant_id", tenantId)
     .eq("id", variantId);
   await supabase.from("stock_movements").insert({
     variant_id: variantId,
@@ -206,6 +211,7 @@ export async function addOrderItem(formData: FormData) {
     ? await supabase
         .from("order_items")
         .update({ quantity: existingItem.quantity + quantity })
+        .eq("tenant_id", me.tenantId)
         .eq("id", existingItem.id)
     : await supabase.from("order_items").insert({
         order_id: orderId,
@@ -223,7 +229,7 @@ export async function addOrderItem(formData: FormData) {
   }
 
   // خصم من المخزون
-  await adjustStock(supabase, variantId, -quantity, orderId, "إضافة منتج لأوردر");
+  await adjustStock(supabase, variantId, -quantity, orderId, "إضافة منتج لأوردر", me.tenantId);
 
   await pushOrderToShopify(orderId);
   await logActivity(me, "order.items", `أضاف منتج لأوردر ${await orderNo(supabase, orderId)}`, orderId);
@@ -256,6 +262,7 @@ export async function deleteOrderItem(formData: FormData) {
   const { error, count } = await supabase
     .from("order_items")
     .delete({ count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", itemId)
     .eq("order_id", orderId);
 
@@ -273,7 +280,8 @@ export async function deleteOrderItem(formData: FormData) {
       item.variant_id,
       item.quantity,
       orderId,
-      "مسح منتج من أوردر"
+      "مسح منتج من أوردر",
+      me.tenantId
     );
   }
 
@@ -323,6 +331,7 @@ export async function updateOrderItem(formData: FormData) {
       { quantity, sale_price_at_order: salePrice },
       { count: "exact" }
     )
+    .eq("tenant_id", me.tenantId)
     .eq("id", itemId)
     .eq("order_id", orderId);
 
@@ -341,7 +350,8 @@ export async function updateOrderItem(formData: FormData) {
       oldItem.variant_id,
       -delta,
       orderId,
-      "تعديل كمية بند في أوردر"
+      "تعديل كمية بند في أوردر",
+      me.tenantId
     );
   }
 
@@ -388,6 +398,7 @@ export async function updateDiscount(formData: FormData) {
   const { error, count } = await supabase
     .from("orders")
     .update({ discount }, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error || count === 0) {
@@ -416,7 +427,7 @@ export async function updateOrderStatusInline(formData: FormData) {
   if (!orderId || !isValidStatus) return;
 
   const me = await getSessionUser();
-  if (!can(me, "orders.status")) return;
+  if (!me || !can(me, "orders.status")) return;
 
   const supabase = createAdminClient();
   const updateData: {
@@ -428,7 +439,11 @@ export async function updateOrderStatusInline(formData: FormData) {
     delivered_at: status === "delivered" ? new Date().toISOString() : null,
     cancelled_at: status === "cancelled" ? new Date().toISOString() : null,
   };
-  await supabase.from("orders").update(updateData).eq("id", orderId);
+  await supabase
+    .from("orders")
+    .update(updateData)
+    .eq("tenant_id", me.tenantId)
+    .eq("id", orderId);
 
   await logActivity(
     me,
@@ -454,7 +469,7 @@ export async function bulkUpdateStatus(
   }
 
   const me = await getSessionUser();
-  if (!can(me, "orders.status")) {
+  if (!me || !can(me, "orders.status")) {
     return { ok: false, error: "مالكش صلاحية تغيير حالة الأوردرات" };
   }
 
@@ -473,6 +488,7 @@ export async function bulkUpdateStatus(
   const { error } = await supabase
     .from("orders")
     .update(update)
+    .eq("tenant_id", me.tenantId)
     .in("id", orderIds);
 
   if (error) {
@@ -539,7 +555,7 @@ export async function addOrderComment(formData: FormData) {
 }
 
 export async function deleteOrderComment(formData: FormData) {
-  await requirePermission("orders.comments");
+  const me = await requirePermission("orders.comments");
   const commentId = String(formData.get("comment_id") ?? "");
   if (!commentId) {
     redirect("/orders");
@@ -550,6 +566,7 @@ export async function deleteOrderComment(formData: FormData) {
   const { error, count } = await supabase
     .from("order_comments")
     .delete({ count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", commentId);
 
   if (error || count === 0) {
@@ -580,6 +597,7 @@ export async function updateShippingPrice(formData: FormData) {
   const { error, count } = await supabase
     .from("orders")
     .update({ shipping_price: shippingPrice }, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error || count === 0) {
@@ -596,7 +614,7 @@ export async function updateShippingPrice(formData: FormData) {
 }
 
 export async function toggleOrderArchive(formData: FormData) {
-  await requirePermission("orders.archive");
+  const me = await requirePermission("orders.archive");
   const orderId = String(formData.get("order_id") ?? "");
   const archive = formData.get("archive") === "1";
   if (!orderId) {
@@ -608,6 +626,7 @@ export async function toggleOrderArchive(formData: FormData) {
   const { error, count } = await supabase
     .from("orders")
     .update({ archived: archive }, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error || count === 0) {
@@ -625,13 +644,17 @@ export async function toggleOrderArchive(formData: FormData) {
 // المسح الفعلي للأوردر (بيرجّع المخزون). بيرجّع نتيجة من غير تحويل — عشان يتنادى
 // من المسح المباشر (أدمن) ومن الموافقة على طلب المسح.
 async function performOrderDeletion(
-  orderId: string
+  orderId: string,
+  /** بيزنس اللي بيمسح — كل حذف هنا بيتفلتر بيه كمان مش بالـid بس */
+  tenantId: string
 ): Promise<{ ok: boolean; error?: string; orderNumber?: string }> {
+  const me = { tenantId };
   const supabase = createAdminClient();
 
   const { data: order, error: fetchError } = await supabase
     .from("orders")
     .select("order_number, order_items(variant_id, quantity)")
+    .eq("tenant_id", tenantId)
     .eq("id", orderId)
     .maybeSingle()
     .overrideTypes<{
@@ -665,6 +688,7 @@ async function performOrderDeletion(
       const { error: stockError } = await supabase
         .from("product_variants")
         .update({ quantity_on_hand: variant.quantity_on_hand + item.quantity })
+        .eq("tenant_id", me.tenantId)
         .eq("id", item.variant_id);
       if (stockError) return fail("المخزون", stockError.message);
       const { error: movementError } = await supabase
@@ -681,12 +705,14 @@ async function performOrderDeletion(
   const { error: unlinkError } = await supabase
     .from("stock_movements")
     .update({ related_order_id: null })
+    .eq("tenant_id", me.tenantId)
     .eq("related_order_id", orderId);
   if (unlinkError) return fail("سجل المخزون", unlinkError.message);
 
   const { error: cashError } = await supabase
     .from("cash_transactions")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .eq("related_order_id", orderId);
   if (cashError) return fail("الخزنة", cashError.message);
 
@@ -696,18 +722,21 @@ async function performOrderDeletion(
   const { error: shipmentsError } = await supabase
     .from("shipments")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .eq("order_id", orderId);
   if (shipmentsError) return fail("الشحنات", shipmentsError.message);
 
   const { error: itemsError } = await supabase
     .from("order_items")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .eq("order_id", orderId);
   if (itemsError) return fail("بنود الأوردر", itemsError.message);
 
   const { error: orderError, count } = await supabase
     .from("orders")
     .delete({ count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
   if (orderError || count === 0) {
     return fail("الأوردر", orderError?.message ?? "اتأكد إن عندك صلاحية");
@@ -727,7 +756,7 @@ export async function deleteOrder(formData: FormData) {
 
   // الأدمن بيمسح على طول
   if (me.isAdmin) {
-    const result = await performOrderDeletion(orderId);
+    const result = await performOrderDeletion(orderId, me.tenantId);
     if (!result.ok) {
       redirect(`/orders/${orderId}?error=` + encodeURIComponent(result.error ?? "خطأ"));
     }
@@ -803,7 +832,7 @@ export async function approveDeletion(formData: FormData) {
     redirect("/orders?error=" + encodeURIComponent("الطلب مش موجود أو اتقفل خلاص"));
   }
 
-  const result = await performOrderDeletion(reqRow!.order_id);
+  const result = await performOrderDeletion(reqRow!.order_id, me.tenantId);
   if (!result.ok) {
     redirect("/orders?error=" + encodeURIComponent(result.error ?? "خطأ"));
   }
@@ -815,6 +844,7 @@ export async function approveDeletion(formData: FormData) {
       resolved_by: me.fullName ?? me.email ?? "أدمن",
       resolved_at: new Date().toISOString(),
     })
+    .eq("tenant_id", me.tenantId)
     .eq("id", requestId);
 
   await logActivity(
@@ -849,6 +879,7 @@ export async function rejectDeletion(formData: FormData) {
       resolved_by: me.fullName ?? me.email ?? "أدمن",
       resolved_at: new Date().toISOString(),
     })
+    .eq("tenant_id", me.tenantId)
     .eq("id", requestId)
     .eq("status", "pending");
 
@@ -904,6 +935,7 @@ export async function linkBostaShipment(formData: FormData) {
     const { error: freeErr } = await supabase
       .from("orders")
       .update({ bosta_tracking: null })
+      .eq("tenant_id", me.tenantId)
       .eq("id", from.id);
     if (freeErr) {
       redirect(
@@ -927,6 +959,7 @@ export async function linkBostaShipment(formData: FormData) {
       { bosta_tracking: tracking, order_status: "shipped", cancelled_at: null },
       { count: "exact" }
     )
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error || count === 0) {
@@ -983,6 +1016,7 @@ export async function updateOrderStatus(formData: FormData) {
   const { error, count } = await supabase
     .from("orders")
     .update(updateData, { count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error || count === 0) {
@@ -1129,6 +1163,7 @@ export async function createReturnShipment(formData: FormData) {
     await supabase
       .from("orders")
       .update({ order_status: "returning" })
+      .eq("tenant_id", me.tenantId)
       .eq("id", orderId);
 
     await logActivity(
@@ -1186,6 +1221,7 @@ export async function saveReturnedItems(formData: FormData) {
     await supabase
       .from("order_items")
       .update({ returned_quantity: qty })
+      .eq("tenant_id", me.tenantId)
       .eq("id", item.id);
 
     // الفرق يرجع للمخزون (أو يتخصم لو قلّلنا الكمية الراجعة)
@@ -1194,7 +1230,8 @@ export async function saveReturnedItems(formData: FormData) {
       item.variant_id,
       qty - was,
       orderId,
-      "مرتجع بعد التسليم"
+      "مرتجع بعد التسليم",
+      me.tenantId
     );
     totalReturned += qty;
   }
@@ -1202,6 +1239,7 @@ export async function saveReturnedItems(formData: FormData) {
   const { error } = await supabase
     .from("orders")
     .update({ return_note: tracking || null })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error) {
@@ -1233,6 +1271,7 @@ export async function saveReturnNote(formData: FormData) {
   const { error } = await supabase
     .from("orders")
     .update({ return_note: note || null })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error) {
@@ -1274,6 +1313,7 @@ export async function updatePayment(formData: FormData) {
   const { error } = await supabase
     .from("orders")
     .update({ payment_method: method, amount_paid: amountPaid })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error) {
@@ -1321,6 +1361,7 @@ export async function confirmRefund(formData: FormData) {
       refunded_at: new Date().toISOString(),
       refunded_amount: amount,
     })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error) {
@@ -1353,6 +1394,7 @@ export async function undoRefund(formData: FormData) {
   await supabase
     .from("orders")
     .update({ refunded_at: null, refunded_amount: null, refund_reminded_day: null })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   await logActivity(
@@ -1381,6 +1423,7 @@ export async function confirmCashReceived(formData: FormData) {
   const { error } = await supabase
     .from("orders")
     .update({ cash_received_at: new Date().toISOString() })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   if (error) {
@@ -1413,6 +1456,7 @@ export async function undoCashReceived(formData: FormData) {
   await supabase
     .from("orders")
     .update({ cash_received_at: null })
+    .eq("tenant_id", me.tenantId)
     .eq("id", orderId);
 
   await logActivity(
@@ -1449,6 +1493,7 @@ export async function bulkConfirmCashReceived(
   const { error } = await supabase
     .from("orders")
     .update({ cash_received_at: new Date().toISOString() })
+    .eq("tenant_id", me.tenantId)
     .in("id", ids)
     .is("cash_received_at", null);
 
@@ -1536,4 +1581,50 @@ export async function createExchangeShipment(formData: FormData) {
           encodeURIComponent("اتعملت شحنة التبديل — بوسطة هتوصّل الجديد وتاخد القديم")
       : `/orders/${orderId}?error=` + encodeURIComponent(message)
   );
+}
+
+/**
+ * سبب رجوع الشحنة.
+ *
+ * ⚠️ **بيتفلتر بالبيزنس كمان مش بالـ`id` بس.** المفتاح ده بيعدّي على
+ * الـRLS، فالتعديل بـ`id` لوحده معناه إن حد من بيزنس يقدر يبعت رقم أوردر
+ * من بيزنس تاني ويعدّله. أكشنات قديمة كتير في الملف ده لسه بتعمل كده —
+ * متسجّل في `docs/NEXT.md`.
+ */
+export async function updateReturnReason(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  const reason = String(formData.get("return_reason") ?? "").trim();
+
+  if (!orderId) redirect("/orders");
+
+  // القايمة مقفولة — أي حاجة برّاها بتترفض بدل ما تتخزّن وتلوّث الإحصائية
+  if (reason && !isReturnReason(reason)) {
+    redirect(
+      `/orders/${orderId}?error=` + encodeURIComponent("السبب ده مش في القايمة")
+    );
+  }
+
+  const supabase = createAdminClient();
+  const { error, count } = await supabase
+    .from("orders")
+    .update({ return_reason: reason || null }, { count: "exact" })
+    .eq("id", orderId)
+    .eq("tenant_id", me.tenantId);
+
+  if (error || count === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ سبب الرجوع")
+    );
+  }
+
+  await logActivity(
+    me,
+    "order.return_reason",
+    `سجّل سبب رجوع أوردر ${await orderNo(supabase, orderId)}: ${returnReasonLabel(reason)}`,
+    orderId
+  );
+  revalidatePath(`/orders/${orderId}`);
+  redirect(`/orders/${orderId}?saved=1`);
 }

@@ -139,6 +139,7 @@ export async function updateUserPermissions(formData: FormData) {
   const { error } = await admin
     .from("app_users")
     .update({ permissions })
+    .eq("tenant_id", me.tenantId)
     .eq("auth_user_id", authUserId);
   if (error) back("معرفناش نحفظ الصلاحيات: " + error.message, false);
 
@@ -168,6 +169,7 @@ export async function updateUserProfile(formData: FormData) {
   const { error } = await admin
     .from("app_users")
     .update({ full_name: fullName, active })
+    .eq("tenant_id", me.tenantId)
     .eq("auth_user_id", authUserId);
   if (error) back("معرفناش نحفظ البيانات: " + error.message, false);
 
@@ -196,6 +198,7 @@ export async function lockUserNow(formData: FormData) {
   const { error } = await admin
     .from("app_users")
     .update({ active: false })
+    .eq("tenant_id", me.tenantId)
     .eq("auth_user_id", authUserId);
   if (error) back("معرفناش نقفل الحساب: " + error.message, false);
 
@@ -276,7 +279,7 @@ export async function deleteUser(formData: FormData) {
     back("مينفعش تمسح أدمن", false);
   }
 
-  await admin.from("app_users").delete().eq("auth_user_id", authUserId);
+  await admin.from("app_users").delete().eq("tenant_id", me.tenantId).eq("auth_user_id", authUserId);
   const { error } = await admin.auth.admin.deleteUser(authUserId);
   if (error) back("معرفناش نمسح اليوزر: " + error.message, false);
 

@@ -29,6 +29,7 @@ export async function updateCustomerAddress(formData: FormData) {
       apartment: get("apartment"),
       landmark: get("landmark"),
     })
+    .eq("tenant_id", me.tenantId)
     .eq("id", id);
 
   if (error) {
@@ -76,6 +77,7 @@ export async function mergeCustomers(formData: FormData) {
   const { error: moveErr } = await supabase
     .from("orders")
     .update({ customer_id: keepId })
+    .eq("tenant_id", me.tenantId)
     .in("customer_id", dropIds);
   if (moveErr) {
     redirect(
@@ -101,6 +103,7 @@ export async function mergeCustomers(formData: FormData) {
           phone: keep?.phone || donor.phone,
           address: keep?.address || donor.address,
         })
+        .eq("tenant_id", me.tenantId)
         .eq("id", keepId);
     }
   }
@@ -108,6 +111,7 @@ export async function mergeCustomers(formData: FormData) {
   const { error: delErr } = await supabase
     .from("customers")
     .delete()
+    .eq("tenant_id", me.tenantId)
     .in("id", dropIds);
   if (delErr) {
     redirect(
@@ -153,6 +157,7 @@ export async function updateCustomer(formData: FormData) {
       },
       { count: "exact" }
     )
+    .eq("tenant_id", me.tenantId)
     .eq("id", id);
 
   if (error || count === 0) {
@@ -196,6 +201,7 @@ export async function deleteCustomer(formData: FormData) {
   const { error, count } = await supabase
     .from("customers")
     .delete({ count: "exact" })
+    .eq("tenant_id", me.tenantId)
     .eq("id", id);
 
   if (error || count === 0) {
