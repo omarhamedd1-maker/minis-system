@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ImportShopifyOrders } from "@/components/ImportShopifyOrders";
+import { importShopifyOrders } from "../orders/actions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePagePermission } from "@/lib/permissions";
 import {
@@ -104,11 +106,16 @@ export default async function SettingsPage({
             <span className="text-sm text-gray-900" dir="ltr">
               {creds?.shopify_shop}
             </span>
-            <form action={disconnectShopify}>
-              <button type="submit" className="text-xs text-gray-400 underline">
-                افصل
-              </button>
-            </form>
+            <div className="flex items-center gap-3">
+              {/* الجلب مكانه هنا مش في شاشة الأوردرات — ده إعداد ربط
+                  بيتعمل مرة كل فترة، مش شغل يومي */}
+              <ImportShopifyOrders action={importShopifyOrders} />
+              <form action={disconnectShopify}>
+                <button type="submit" className="text-xs text-gray-400 underline">
+                  افصل
+                </button>
+              </form>
+            </div>
           </div>
         ) : (
           <>
