@@ -67,6 +67,26 @@ describe("أرقام كل عميل", () => {
     expect(s[0].prepaid).toBe(2);
   });
 
+  it("**الطريقة اللي مش في القايمة بتتحسب كاش**", () => {
+    // الفحص القديم كان `!== "cod"`، فأي قيمة غريبة كانت بتعدّي دفع مقدم.
+    // بيزنس اتكتبت فيه الخانة بالمسمّى العربي فطلعوا **كلهم** في الشريحة.
+    const s = statsByCustomer(
+      [
+        ord({ payment_method: "كاش عند الاستلام" }),
+        ord({ payment_method: "مدفوع مقدماً" }),
+        ord({ payment_method: "" }),
+        ord({ payment_method: null }),
+      ],
+      TODAY
+    );
+    expect(s[0].prepaid).toBe(0);
+  });
+
+  it("الطريقة المعروفة بتعدّي حتى لو حواليها مسافات", () => {
+    const s = statsByCustomer([ord({ payment_method: " visa " })], TODAY);
+    expect(s[0].prepaid).toBe(1);
+  });
+
   it("آخر أوردر وعمره", () => {
     const s = statsByCustomer(
       [ord({ order_date: "2026-05-01" }), ord({ order_date: "2026-08-02" })],

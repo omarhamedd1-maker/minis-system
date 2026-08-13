@@ -13,6 +13,8 @@
 // ⚠️ **الأوردر الملغي مايحسبش عميل.** لو دخل، اللي طلب ولغى بيبان زبون.
 // ==========================================================================
 
+import { isPrepaidMethod } from "./format";
+
 /** الأوردر اللي بيتحسب: خرج فعلاً أو اتسلّم — الملغي لأ */
 const COUNTED = [
   "confirmed",
@@ -93,11 +95,9 @@ export function statsByCustomer(
     cur.orders++;
     cur.spend += total(o);
     if (RETURNED.includes(o.order_status ?? "")) cur.returned++;
-    // مدفوع مقدم: الطريقة مش كاش، أو دفع جزء قبل الشحن
-    if (
-      (o.payment_method && o.payment_method !== "cod") ||
-      Number(o.amount_paid ?? 0) > 0
-    ) {
+    // مدفوع مقدم: طريقة دفع **معروفة** مش كاش، أو دفع جزء قبل الشحن.
+    // القيمة المجهولة بتتحسب كاش — اقرا `isPrepaidMethod` والسبب معاها.
+    if (isPrepaidMethod(o.payment_method) || Number(o.amount_paid ?? 0) > 0) {
       cur.prepaid++;
     }
     if (o.order_date && (!cur.lastOrder || o.order_date > cur.lastOrder)) {

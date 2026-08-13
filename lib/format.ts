@@ -110,6 +110,26 @@ export function paymentMethodLabel(value: string | null) {
   );
 }
 
+/**
+ * الطرق اللي معناها **الفلوس وصلت قبل ما الشحنة تتحرّك**.
+ *
+ * ⚠️ **القايمة مقفولة عن قصد، والمجهول بيتحسب كاش.** الفحص القديم كان
+ * `!== "cod"` — أي قيمة غريبة في الخانة كانت بتعدّي كأنها دفع مقدم.
+ * وده مش غلط ساكت: شريحة «بيدفع مقدم» بتقول للتاجر **«دول مفيش خطر رجوع
+ * معاهم»**، فبيبعت لهم أغلى منتج عنده على أساس فلوسه مضمونة.
+ *
+ * وحصل بالفعل: بيزنس اتكتبت فيه الخانة **بالمسمّى العربي** بدل المفتاح
+ * (`"كاش عند الاستلام"` مش `"cod"`)، فطلع **كل عملاءه** في الشريحة —
+ * ١٨٢ من ١٨٢.
+ *
+ * الغلط في اتجاه الكاش أرخص: أسوأ حاجة إن عميل بيدفع مقدم مايبانش.
+ */
+const PREPAID_METHODS = new Set(["instapay", "visa"]);
+
+export function isPrepaidMethod(value: string | null | undefined): boolean {
+  return PREPAID_METHODS.has(String(value ?? "").trim());
+}
+
 export const ORDER_STATUS_OPTIONS = Object.entries(ORDER_STATUS_LABELS).map(
   ([value, { label }]) => ({ value, label })
 );
