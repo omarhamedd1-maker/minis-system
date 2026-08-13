@@ -112,8 +112,19 @@ export type SessionUser = {
   isPlatformAdmin: boolean;
 };
 
-/** بيزنس مينيز — بيتستخدم كقيمة احتياطية لو الخانة فاضية لأي سبب */
-const FALLBACK_TENANT = "00000000-0000-0000-0000-000000000001";
+// ⚠️ **مافيش بيزنس احتياطي.**
+//
+// كانت هنا قيمة ثابتة (بيزنس مينيز) بتتحط لو الخانة فاضية «لأي سبب».
+// والسبب الوحيد اللي بيخلّيها فاضية هو إن المستخدم **مالوش صف في
+// `app_users`** أصلاً — يعني حساب مش مسجّل في السيستم. وساعتها كان بياخد
+// جلسة على **بيزنس عمر**.
+//
+// وده مش فرض نظري: `disable_signup` عند سوبابيز = `false`، يعني أي حد
+// معاه المفتاح العام (وهو ظاهر في المتصفح) يقدر يعمل حساب. التأكيد
+// بالإيميل بيوقّف الأتوماتيك، مش الشخص اللي عنده إيميل شغّال.
+//
+// وكان بيعدّي حارس اللوحة كمان، لأن `active` كانت بتترجع `true` تلقائيًا
+// لما مفيش صف.
 
 // بيقرأ المستخدم الحالي مرة واحدة: بياناته من app_users + هل هو أدمن.
 // بيرجّع null لو مفيش جلسة.
@@ -160,16 +171,26 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     }
   }
 
+  // **مالوش صف في `app_users`؟ يبقى مالوش جلسة.**
+  //
+  // ده حساب سوبابيز موجود بس مش مسجّل في السيستم. القديم كان بيبني له
+  // جلسة على بيزنس مينيز بـ`active: true`، فكان بيعدّي حارس اللوحة ويشوف
+  // القشرة وهي بتقرا بيانات عمر.
+  //
+  // والمستخدم السليم عمره ما بيقع هنا: `createTenantWithOwner` بتعمل صف
+  // `app_users` مع الحساب في نفس العملية، ولو فشلت بتمسح الحساب نفسه.
+  if (!appUser || !appUser.tenant_id) return null;
+
   return {
     authUserId: user.id,
-    appUserId: appUser?.id ?? null,
+    appUserId: appUser.id,
     email: user.email ?? null,
-    fullName: appUser?.full_name ?? null,
+    fullName: appUser.full_name ?? null,
     isAdmin: Boolean(isAdmin),
-    permissions: (appUser?.permissions ?? []) as PermissionKey[],
-    active: appUser?.active ?? true,
-    tenantId: appUser?.tenant_id ?? FALLBACK_TENANT,
-    isPlatformAdmin: Boolean(appUser?.is_platform_admin),
+    permissions: (appUser.permissions ?? []) as PermissionKey[],
+    active: appUser.active ?? true,
+    tenantId: appUser.tenant_id,
+    isPlatformAdmin: Boolean(appUser.is_platform_admin),
   };
 }
 
