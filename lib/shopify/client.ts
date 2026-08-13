@@ -170,10 +170,36 @@ export async function testShopifyConnection(
 ): Promise<{ ok: true; shop: ShopInfo } | { ok: false; error: string }> {
   try {
     const token = await fetchAccessToken(creds, fetchImpl);
+    return await testShopifyToken(creds.shop, token, fetchImpl);
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "معرفناش نوصل لشوبيفاي",
+    };
+  }
+}
+
+/**
+ * نفس الاختبار بس **بتوكن جاهز** بدل ما نطلّع واحد.
+ *
+ * ⚠️ **ده الطريق الوحيد اللي بيشتغل مع تطبيق متعمول جوّه المتجر**
+ * (`Settings ← Apps ← Develop apps`). التطبيق ده بيدّيك
+ * **Admin API access token** (`shpat_…`) على طول، و`API key`/`API secret`
+ * بتوعه **مابيطلّعوش توكن** بـ`client_credentials` — شوبيفاي بترد ٤٠٠
+ * من غير أي سبب في الرد، فالرسالة بتطلع «كود ٤٠٠» ومحدش يعرف ليه.
+ *
+ * و`client_credentials` ده لتطبيقات لوحة المطوّرين، مش لتطبيقات المتجر.
+ */
+export async function testShopifyToken(
+  shop: string,
+  token: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<{ ok: true; shop: ShopInfo } | { ok: false; error: string }> {
+  try {
     const data = await shopifyGraphQL<{
       shop: { name: string; myshopifyDomain: string; currencyCode: string };
     }>(
-      creds.shop,
+      shop,
       token,
       `{ shop { name myshopifyDomain currencyCode } }`,
       undefined,

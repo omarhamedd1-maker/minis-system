@@ -182,11 +182,19 @@ export default async function SettingsPage({
                     <span dir="ltr" className="text-gray-900">
                       API credentials
                     </span>{" "}
-                    انسخ <span dir="ltr">API key</span> و
-                    <span dir="ltr"> API secret key</span> وحطهم تحت
+                    انسخ{" "}
+                    <span dir="ltr" className="text-gray-900">
+                      Admin API access token
+                    </span>{" "}
+                    — بيبدأ بـ<span dir="ltr">shpat_</span> وبيتعرض{" "}
+                    <b>مرة واحدة بس</b>
                   </li>
                 </ol>
 
+                {/* ⚠️ **التوكن مش المفتاح والسر.** تطبيق المتجر بيدّي توكن
+                    جاهز، و`API key`/`API secret` بتوعه مابيطلّعوش توكن —
+                    شوبيفاي بترد ٤٠٠ من غير سبب. وخانات المفتاح والسر باقية
+                    تحت للتطبيقات المتعمولة من لوحة المطوّرين. */}
                 <form action={saveShopify} className="mt-3 space-y-2">
                   <input
                     name="shopify_shop"
@@ -197,17 +205,9 @@ export default async function SettingsPage({
                     required
                   />
                   <input
-                    name="shopify_client_id"
-                    placeholder="API key"
-                    className={input}
-                    dir="ltr"
-                    autoComplete="off"
-                    required
-                  />
-                  <input
-                    name="shopify_client_secret"
+                    name="shopify_token"
                     type="password"
-                    placeholder="API secret key"
+                    placeholder="shpat_… (Admin API access token)"
                     className={input}
                     dir="ltr"
                     autoComplete="off"
@@ -216,8 +216,31 @@ export default async function SettingsPage({
                     type="submit"
                     className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
                   >
-                    اربط بالمفاتيح
+                    اربط بالتوكن
                   </button>
+
+                  <details className="pt-1">
+                    <summary className="cursor-pointer text-[10px] text-gray-400">
+                      تطبيق من لوحة المطوّرين بدل تطبيق المتجر؟
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <input
+                        name="shopify_client_id"
+                        placeholder="API key"
+                        className={input}
+                        dir="ltr"
+                        autoComplete="off"
+                      />
+                      <input
+                        name="shopify_client_secret"
+                        type="password"
+                        placeholder="API secret key"
+                        className={input}
+                        dir="ltr"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </details>
                 </form>
 
                 {/* بنجرّب الاتصال قبل ما نحفظ — فالرد بيقول شغّال ولا لأ

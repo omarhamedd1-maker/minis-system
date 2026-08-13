@@ -11,6 +11,7 @@ import {
   isValidShop,
   normalizeShop,
   testShopifyConnection,
+  testShopifyToken,
 } from "@/lib/shopify/client";
 import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { readShopifyApp } from "@/lib/shopify/app";
@@ -81,6 +82,37 @@ export async function saveShopify(formData: FormData) {
   if (!isValidShop(shop)) {
     back(`دومين المتجر لازم يبقى بالشكل ده: ${ltr("yourshop.myshopify.com")}`);
   }
+
+  // ⚠️⚠️ **التوكن الجاهز هو الطريق الصح لتطبيق متعمول جوّه المتجر.**
+  //
+  // التطبيق اللي بيتعمل من `Settings ← Apps ← Develop apps` بيدّيك
+  // **Admin API access token** (`shpat_…`) على طول. و`API key`/`API secret`
+  // بتوعه **مابيطلّعوش توكن**: شوبيفاي بترد ٤٠٠ من غير سبب في الرد،
+  // فالرسالة كانت بتطلع «شوبيفاي ردّت بكود ٤٠٠» ومحدش يعرف ليه.
+  //
+  // وكان فيه غلط تاني أعمق: حتى لو التبادل نجح، الحفظ كان بيكتب
+  // `client_id`/`client_secret` بس — والاستيراد بيقرا `shopify_access_token`
+  // وبس. يعني الربط كان بيتقال عنه نجح والاستيراد يقول «مش مربوط».
+  const tokenInput = String(formData.get("shopify_token") ?? "").trim();
+  if (tokenInput) {
+    const test = await testShopifyToken(shop, tokenInput);
+    if (!test.ok) back("الاتصال مارضيش يشتغل: " + test.error);
+
+    const { error } = await db
+      .from("tenant_credentials")
+      .update({
+        shopify_shop: shop,
+        shopify_access_token: tokenInput,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", me.tenantId);
+    if (error) back("معرفناش نحفظ: " + error.message);
+
+    await logActivity(me, "settings.shopify", `ربط متجر ${test.shop.name}`);
+    revalidatePath("/settings");
+    back(`اتربط متجر ${test.shop.name}`, true);
+  }
+
   if (!clientId) back("اكتب Client ID بتاع التطبيق");
 
   // السر بيتعرض كنقط، فلو سابه فاضي معناها "سيبه زي ما هو"

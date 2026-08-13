@@ -6,6 +6,7 @@ import {
   isValidShop,
   normalizeShop,
   testShopifyConnection,
+  testShopifyToken,
 } from "./client";
 
 const CREDS = {
@@ -168,6 +169,36 @@ describe("جرّب الاتصال", () => {
       throw new Error("timeout");
     });
     const r = await testShopifyConnection(CREDS, f as unknown as typeof fetch);
+    expect(r).toMatchObject({ ok: false, error: "timeout" });
+  });
+});
+
+describe("الربط بتوكن جاهز", () => {
+  // تطبيق المتجر (`Develop apps`) بيدّي `shpat_…` على طول. و`API key`
+  // و`API secret` بتوعه **مابيطلّعوش توكن** — شوبيفاي بترد ٤٠٠ من غير
+  // سبب في الرد، فالرسالة كانت بتطلع «كود ٤٠٠» ومحدش يعرف ليه.
+  it("**بينادي GraphQL على طول من غير تبادل توكن**", async () => {
+    const urls: string[] = [];
+    const f = vi.fn(async (u: string) => {
+      urls.push(String(u));
+      return reply(200, { data: { shop: { name: "٢ سِك", myshopifyDomain: "s.myshopify.com", currencyCode: "EGP" } } });
+    });
+    const r = await testShopifyToken("s.myshopify.com", "shpat_x", f as unknown as typeof fetch);
+    expect(r).toMatchObject({ ok: true });
+    // نداء واحد بس — مافيش `/admin/oauth/access_token`
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(urls[0]).toContain("/graphql.json");
+  });
+
+  it("التوكن الغلط بيرجّع سبب مفهوم مش كود", async () => {
+    const f = vi.fn(async () => reply(401, { errors: "Invalid API key or access token" }));
+    const r = await testShopifyToken("s.myshopify.com", "shpat_bad", f as unknown as typeof fetch);
+    expect(r).toMatchObject({ ok: false });
+  });
+
+  it("الشبكة وقعت = مابيرميش برّه", async () => {
+    const f = vi.fn(async () => { throw new Error("timeout"); });
+    const r = await testShopifyToken("s.myshopify.com", "shpat_x", f as unknown as typeof fetch);
     expect(r).toMatchObject({ ok: false, error: "timeout" });
   });
 });
