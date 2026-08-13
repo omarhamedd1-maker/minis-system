@@ -99,17 +99,27 @@ export async function loadBostaCities(
 
 export async function runBostaCreate(opts: {
   db: SupabaseClient;
+  /**
+   * البيزنس صاحب الأوردر.
+   *
+   * ⚠️ **لازم.** `db` بمفتاح الأدمن، و`orderId` جاي من الشاشة —
+   * يعني مستخدم في بيزنس كان يقدر يبعت رقم أوردر بيزنس تاني ويعملّه
+   * شحنة أو مرتجع. `requirePermission` بتتأكد إن **ليه صلاحية**، مش إن
+   * **الأوردر بتاعه**.
+   */
+  tenantId: string;
   orderId: string;
   dry?: boolean;
   fetchImpl?: typeof fetch;
   /** لو الدفعة جابت المدن قبل كده، بنعدّي الجلب */
   cities?: BostaCity[] | null;
 }): Promise<CreateResult> {
-  const { db, orderId, dry = false, fetchImpl } = opts;
+  const { db, orderId, tenantId, dry = false, fetchImpl } = opts;
 
   const { data, error } = await db
     .from("orders")
     .select(ORDER_FIELDS)
+    .eq("tenant_id", tenantId)
     .eq("id", orderId)
     .maybeSingle();
 
@@ -257,6 +267,7 @@ export async function runBostaCreate(opts: {
       bosta_created_at: new Date().toISOString(),
       bosta_stale_alerted_day: null,
     })
+    .eq("tenant_id", tenantId)
     .eq("id", orderId);
 
   return {
@@ -321,16 +332,26 @@ export type ReturnResult =
 
 export async function runBostaReturn(opts: {
   db: SupabaseClient;
+  /**
+   * البيزنس صاحب الأوردر.
+   *
+   * ⚠️ **لازم.** `db` بمفتاح الأدمن، و`orderId` جاي من الشاشة —
+   * يعني مستخدم في بيزنس كان يقدر يبعت رقم أوردر بيزنس تاني ويعملّه
+   * شحنة أو مرتجع. `requirePermission` بتتأكد إن **ليه صلاحية**، مش إن
+   * **الأوردر بتاعه**.
+   */
+  tenantId: string;
   orderId: string;
   dry?: boolean;
   fetchImpl?: typeof fetch;
   cities?: BostaCity[] | null;
 }): Promise<ReturnResult> {
-  const { db, orderId, dry = false, fetchImpl } = opts;
+  const { db, orderId, tenantId, dry = false, fetchImpl } = opts;
 
   const { data, error } = await db
     .from("orders")
     .select(RETURN_FIELDS)
+    .eq("tenant_id", tenantId)
     .eq("id", orderId)
     .maybeSingle();
 
@@ -427,6 +448,7 @@ export async function runBostaReturn(opts: {
   const { error: updateError } = await db
     .from("orders")
     .update({ return_tracking: tracking })
+    .eq("tenant_id", tenantId)
     .eq("id", orderId);
 
   return {
@@ -477,6 +499,15 @@ export type ExchangeResult =
 
 export async function runBostaExchange(opts: {
   db: SupabaseClient;
+  /**
+   * البيزنس صاحب الأوردر.
+   *
+   * ⚠️ **لازم.** `db` بمفتاح الأدمن، و`orderId` جاي من الشاشة —
+   * يعني مستخدم في بيزنس كان يقدر يبعت رقم أوردر بيزنس تاني ويعملّه
+   * شحنة أو مرتجع. `requirePermission` بتتأكد إن **ليه صلاحية**، مش إن
+   * **الأوردر بتاعه**.
+   */
+  tenantId: string;
   orderId: string;
   /** الرايح للعميل */
   outgoing: ExchangeLine[];
@@ -488,11 +519,12 @@ export async function runBostaExchange(opts: {
   fetchImpl?: typeof fetch;
   cities?: BostaCity[] | null;
 }): Promise<ExchangeResult> {
-  const { db, orderId, outgoing, incoming, cod, dry = false, fetchImpl } = opts;
+  const { db, orderId, outgoing, incoming, cod, tenantId, dry = false, fetchImpl } = opts;
 
   const { data, error } = await db
     .from("orders")
     .select(EXCHANGE_FIELDS)
+    .eq("tenant_id", tenantId)
     .eq("id", orderId)
     .maybeSingle();
 
@@ -593,6 +625,7 @@ export async function runBostaExchange(opts: {
       exchange_tracking: tracking,
       exchange_note: `رايح: ${s.outDescription} — راجع: ${s.inDescription}`,
     })
+    .eq("tenant_id", tenantId)
     .eq("id", orderId);
 
   return {

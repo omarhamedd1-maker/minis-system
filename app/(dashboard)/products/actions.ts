@@ -375,6 +375,7 @@ export async function importShopifyProducts(
       `جلب من شوبيفاي: ${res.added.products} منتج و${res.added.variants} شكل`
     );
     await recordImportRun(createAdminClient(), {
+      tenantId: me.tenantId,
       kind: "products",
       summary: `${res.added.products} منتج و${res.added.variants} شكل`,
       actorName: me.fullName ?? me.email ?? null,
@@ -452,6 +453,7 @@ export async function uploadCostFile(
     await logActivity(me, "products.costs", `حدّث تكلفة ${applied} شكل من ملف`);
     // التراجع هنا مش مسح — ده رجوع كل تكلفة لقيمتها اللي كانت قبل الملف
     await recordImportRun(db, {
+      tenantId: me.tenantId,
       kind: "costs",
       summary: `تكلفة ${applied} شكل`,
       actorName: me.fullName ?? me.email ?? null,

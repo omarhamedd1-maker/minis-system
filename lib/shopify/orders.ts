@@ -188,23 +188,37 @@ export async function runOrderImport(opts: {
     };
   }
 
+  // ⚠️⚠️ **الفلتر على البيزنس هنا هو اللي بيخلّي الاستيراد صح — مش رفاهية.**
+  //
+  // مفتاح الأدمن بيعدّي على الـRLS، فمن غيره التلات قوايم دي بترجّع صفوف
+  // **كل البيزنسات**. والنتيجة تلات أعطال في نفس الوقت:
+  //
+  //   ١. **أوردر العميل الجديد بيتخطّى.** المقارنة برقم الأوردر، ورقم زي
+  //      «١٠٠١» موجود عند كذا بيزنس — فالاستيراد بيقول «ده عندي خلاص»
+  //      ويعدّيه. العميل يشوف أوردراته ناقصة ومحدش يعرف ليه.
+  //   ٢. **العميل بيتربط بعميل بيزنس تاني** — المطابقة بالتليفون، والتليفون
+  //      مش فريد بين البيزنسات.
+  //   ٣. **بند الأوردر بياخد منتج بيزنس تاني** بتكلفته هو، فالأرباح تغلط.
   const [{ data: ourOrders }, { data: ourCustomers }, { data: ourVariants }] =
     await Promise.all([
       db
         .from("orders")
         .select("shopify_order_id, order_number")
+        .eq("tenant_id", tenantId)
         .overrideTypes<
           { shopify_order_id: string | null; order_number: string | null }[]
         >(),
       db
         .from("customers")
         .select("id, shopify_customer_id, phone")
+        .eq("tenant_id", tenantId)
         .overrideTypes<
           { id: string; shopify_customer_id: string | null; phone: string | null }[]
         >(),
       db
         .from("product_variants")
         .select("id, shopify_variant_id, cost_price")
+        .eq("tenant_id", tenantId)
         .overrideTypes<
           { id: string; shopify_variant_id: string | null; cost_price: number }[]
         >(),
@@ -258,6 +272,13 @@ export async function runOrderImport(opts: {
         const { data: newCustomer } = await db
           .from("customers")
           .insert({
+            // ⚠️ **الخانة دي مش زيادة.** `db` هنا بمفتاح الأدمن وبيعدّي على
+            // الـRLS، والقيمة الافتراضية في الداتابيز بتقرا المستخدم الداخل
+            // — ومفيش مستخدم. فبترجّع **مينيز**.
+            //
+            // والمسار ده بالذات اتعمل عشان **أي بيزنس جديد** يشتغل، فكان
+            // هيسحب متجر العميل كله جوّه بيزنس عمر.
+            tenant_id: tenantId,
             shopify_customer_id: o.customer?.shopifyCustomerId ?? null,
             full_name: o.customer?.fullName ?? "بدون اسم",
             phone: o.customer?.phone ?? null,
@@ -278,6 +299,7 @@ export async function runOrderImport(opts: {
     const { data: newOrder, error: orderError } = await db
       .from("orders")
       .insert({
+        tenant_id: tenantId,
         shopify_order_id: o.shopifyOrderId,
         order_number: o.orderNumber,
         customer_id: customerId,
@@ -299,6 +321,7 @@ export async function runOrderImport(opts: {
       const variant = variantByShopifyId.get(String(line.shopifyVariantId));
       if (!variant) continue;
       await db.from("order_items").insert({
+        tenant_id: tenantId,
         order_id: newOrder.id,
         variant_id: variant.id,
         quantity: line.quantity,

@@ -73,10 +73,20 @@ export async function recordImportRun(
     summary: string;
     actorName: string | null;
     payload: ImportPayload;
+    /**
+     * البيزنس صاحب الاستيراد.
+     *
+     * ⚠️ **لازم يتبعت.** `db` هنا بمفتاح الأدمن، والقيمة الافتراضية في
+     * الداتابيز بتقرا المستخدم الداخل — ومفيش مستخدم مع المفتاح ده،
+     * فبترجّع **مينيز**. يعني سجل استيراد أي بيزنس تاني كان بينزل عند عمر،
+     * **والتراجع بيبقى متاح للناس الغلط**.
+     */
+    tenantId: string;
   }
 ): Promise<void> {
   try {
     await db.from("import_runs").insert({
+      tenant_id: run.tenantId,
       kind: run.kind,
       summary: run.summary,
       actor_name: run.actorName,
@@ -89,12 +99,15 @@ export async function recordImportRun(
 
 export async function listImportRuns(
   db: SupabaseClient,
+  /** البيزنس — من غيره الشاشة بتعرض عمليات بيزنسات تانية */
+  tenantId: string,
   limit = 20
 ): Promise<ImportRun[]> {
   try {
     const { data, error } = await db
       .from("import_runs")
       .select("id, kind, summary, actor_name, payload, created_at, undone_at, undone_by")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(limit)
       .overrideTypes<ImportRun[]>();
@@ -120,12 +133,21 @@ export type UndoResult =
  */
 export async function undoImportRun(
   db: SupabaseClient,
+  /**
+   * البيزنس صاحب العملية.
+   *
+   * ⚠️⚠️ **ده أخطر مكان في الملف.** التراجع **بيمسح** أوردرات وعملاء
+   * ومنتجات وحركات مخزون. و`runId` جاي من الشاشة — يعني من غير الفلتر ده،
+   * مستخدم في بيزنس كان يقدر يبعت رقم عملية بيزنس تاني **ويمسح بضاعته**.
+   */
+  tenantId: string,
   runId: string,
   actorName: string
 ): Promise<UndoResult> {
   const { data: run, error } = await db
     .from("import_runs")
     .select("id, payload, undone_at")
+    .eq("tenant_id", tenantId)
     .eq("id", runId)
     .maybeSingle()
     .overrideTypes<{ id: string; payload: ImportPayload; undone_at: string | null }>();
@@ -139,11 +161,20 @@ export async function undoImportRun(
 
   // ١) الأوردرات: بنودها الأول
   if (p.orders?.length) {
-    await db.from("order_items").delete().in("order_id", p.orders);
-    await db.from("cash_transactions").delete().in("related_order_id", p.orders);
+    await db
+      .from("order_items")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .in("order_id", p.orders);
+    await db
+      .from("cash_transactions")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .in("related_order_id", p.orders);
     const { count } = await db
       .from("orders")
       .delete({ count: "exact" })
+      .eq("tenant_id", tenantId)
       .in("id", p.orders);
     removed += count ?? 0;
   }
@@ -153,11 +184,13 @@ export async function undoImportRun(
     const { count: still } = await db
       .from("orders")
       .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
       .eq("customer_id", customerId);
     if ((still ?? 0) === 0) {
       const { count } = await db
         .from("customers")
         .delete({ count: "exact" })
+        .eq("tenant_id", tenantId)
         .eq("id", customerId);
       removed += count ?? 0;
     }
@@ -169,16 +202,22 @@ export async function undoImportRun(
     const { data: theirVariants } = await db
       .from("product_variants")
       .select("id")
+      .eq("tenant_id", tenantId)
       .in("product_id", p.products)
       .overrideTypes<{ id: string }[]>();
     for (const v of theirVariants ?? []) variantIds.push(v.id);
   }
 
   if (variantIds.length > 0) {
-    await db.from("stock_movements").delete().in("variant_id", variantIds);
+    await db
+      .from("stock_movements")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .in("variant_id", variantIds);
     const { count } = await db
       .from("product_variants")
       .delete({ count: "exact" })
+      .eq("tenant_id", tenantId)
       .in("id", variantIds);
     removed += count ?? 0;
   }
@@ -187,6 +226,7 @@ export async function undoImportRun(
     const { count } = await db
       .from("products")
       .delete({ count: "exact" })
+      .eq("tenant_id", tenantId)
       .in("id", p.products);
     removed += count ?? 0;
   }
@@ -196,6 +236,7 @@ export async function undoImportRun(
     const { count } = await db
       .from("orders")
       .update({ bosta_tracking: null }, { count: "exact" })
+      .eq("tenant_id", tenantId)
       .eq("id", t.orderId);
     removed += count ?? 0;
   }
@@ -205,6 +246,7 @@ export async function undoImportRun(
     const { count } = await db
       .from("product_variants")
       .update({ cost_price: c.previous }, { count: "exact" })
+      .eq("tenant_id", tenantId)
       .eq("id", c.variantId);
     removed += count ?? 0;
   }
@@ -212,6 +254,7 @@ export async function undoImportRun(
   await db
     .from("import_runs")
     .update({ undone_at: new Date().toISOString(), undone_by: actorName })
+    .eq("tenant_id", tenantId)
     .eq("id", runId);
 
   return { ok: true, removed };

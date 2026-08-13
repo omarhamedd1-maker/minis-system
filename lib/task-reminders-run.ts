@@ -147,6 +147,7 @@ export async function runTaskReminders(opts: {
         remind_count: Number(row.remind_count ?? 0) + 1,
         remind_last_at: now.toISOString(),
       })
+      .eq("tenant_id", tenantId)
       .eq("id", row.id);
 
     out.sent++;

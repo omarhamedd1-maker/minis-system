@@ -108,7 +108,11 @@ export async function generateRecurringTasks(opts: {
 
     // **الأصل بيتحرّك لميعاده الجديد** عشان المرة الجاية تتحسب منه.
     // من غير ده كل تشغيل هيحسب من نفس التاريخ القديم.
-    await db.from("tasks").update({ due_on: due }).eq("id", p.id);
+    await db
+      .from("tasks")
+      .update({ due_on: due })
+      .eq("tenant_id", tenantId)
+      .eq("id", p.id);
     out.created++;
   }
 

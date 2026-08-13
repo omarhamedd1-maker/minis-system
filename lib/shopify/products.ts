@@ -145,9 +145,12 @@ export async function runProductImport(opts: {
   }
 
   const [{ data: ourProducts }, { data: ourVariants }] = await Promise.all([
+    // ⚠️ **الفلتر لازم**: من غيره المقارنة بتتم على منتجات كل البيزنسات،
+    // فمنتج العميل الجديد بيتخطّى «لأنه موجود» وهو موجود عند حد تاني.
     db
       .from("products")
       .select("id, shopify_product_id, name_ar, name")
+      .eq("tenant_id", tenantId)
       .overrideTypes<
         {
           id: string;
@@ -159,6 +162,7 @@ export async function runProductImport(opts: {
     db
       .from("product_variants")
       .select("id, product_id, shopify_variant_id, variant_name, sale_price, cost_price")
+      .eq("tenant_id", tenantId)
       .overrideTypes<
         {
           id: string;
@@ -203,7 +207,13 @@ export async function runProductImport(opts: {
   for (const p of plan.newProducts) {
     const { data: created, error } = await db
       .from("products")
-      .insert({ shopify_product_id: p.productId, name: p.title })
+      // ⚠️ **رقم البيزنس مش زيادة** — `db` بمفتاح الأدمن، والقيمة
+      // الافتراضية في الداتابيز بترجّع **مينيز** لما مفيش مستخدم داخل.
+      .insert({
+        tenant_id: tenantId,
+        shopify_product_id: p.productId,
+        name: p.title,
+      })
       .select("id")
       .maybeSingle();
 
@@ -213,6 +223,7 @@ export async function runProductImport(opts: {
 
     for (const v of p.variants) {
       const { error: vErr } = await db.from("product_variants").insert({
+        tenant_id: tenantId,
         product_id: created.id,
         shopify_variant_id: v.variantId,
         variant_name: v.title,
@@ -232,6 +243,7 @@ export async function runProductImport(opts: {
     const { data: made, error } = await db
       .from("product_variants")
       .insert({
+        tenant_id: tenantId,
         product_id: nv.ourProductId,
         shopify_variant_id: nv.variant.variantId,
         variant_name: nv.variant.title,
