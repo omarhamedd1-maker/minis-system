@@ -136,6 +136,9 @@ export async function saveStock(formData: FormData) {
     const { error: movementError } = await supabase
       .from("stock_movements")
       .insert({
+        // ⚠️ **مش زيادة** — مفتاح الأدمن مالوش مستخدم، والقيمة الافتراضية
+        // في الداتابيز بترجّع **مينيز**. اقرا `sql/tenants-02-auto-fill.sql`.
+        tenant_id: me.tenantId,
         variant_id: variantId,
         change_quantity: quantityDelta,
         reason: "تعديل يدوي",
@@ -287,6 +290,7 @@ export async function saveCostComponents(formData: FormData) {
     .from("variant_cost_components")
     .upsert(
       amounts.map((item) => ({
+        tenant_id: me.tenantId,
         variant_id: variantId,
         component: item.component,
         amount: item.amount,

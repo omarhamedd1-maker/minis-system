@@ -83,6 +83,9 @@ async function applyStock(
       .eq("tenant_id", tenantId)
       .eq("id", item.variant_id);
     await admin.from("stock_movements").insert({
+      // ⚠️ **مش زيادة** — من غيرها الداتابيز بتحط `current_tenant_id()`
+      // واللي بترجّع **مينيز** مع مفتاح الأدمن (مالوش مستخدم داخل).
+      tenant_id: tenantId,
       variant_id: item.variant_id,
       change_quantity: change,
       reason,
@@ -100,6 +103,7 @@ export async function addSupplier(formData: FormData) {
 
   const admin = createAdminClient();
   const { error } = await admin.from("suppliers").insert({
+    tenant_id: me.tenantId,
     name,
     phone: phone || null,
     notes: notes || null,
@@ -219,6 +223,7 @@ export async function addSupplierTransaction(formData: FormData) {
     const { data: expense, error: expenseError } = await admin
       .from("expenses")
       .insert({
+        tenant_id: me.tenantId,
         category,
         description: supplierLabel,
         amount: finalAmount,
@@ -237,6 +242,7 @@ export async function addSupplierTransaction(formData: FormData) {
       const { data: cash, error: cashError } = await admin
         .from("cash_transactions")
         .insert({
+          tenant_id: me.tenantId,
           direction: "out",
           amount: finalAmount,
           source_type: "expense",
@@ -259,6 +265,7 @@ export async function addSupplierTransaction(formData: FormData) {
   const { data: txn, error } = await admin
     .from("supplier_transactions")
     .insert({
+      tenant_id: me.tenantId,
       supplier_id: supplierId,
       kind,
       amount: finalAmount,
@@ -281,7 +288,13 @@ export async function addSupplierTransaction(formData: FormData) {
   if (items.length > 0 && kind === "purchase") {
     const { error: itemsError } = await admin
       .from("supplier_invoice_items")
-      .insert(items.map((i) => ({ ...i, transaction_id: txn.id })));
+      .insert(
+        items.map((i) => ({
+          ...i,
+          tenant_id: me.tenantId,
+          transaction_id: txn.id,
+        }))
+      );
 
     if (itemsError) {
       await admin.from("supplier_transactions").delete().eq("tenant_id", me.tenantId).eq("id", txn.id);

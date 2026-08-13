@@ -116,6 +116,13 @@ export async function GET(req: Request) {
     .update({ completed_at: new Date().toISOString(), shop })
     .eq("state", state);
 
-  await logActivity(null, "settings.shopify", `ربط متجر شوبيفاي ${shop}`);
+  // مافيش مستخدم داخل هنا — البيزنس بيتبعت صريح، وإلا السطر مايتسجّلش
+  await logActivity(
+    null,
+    "settings.shopify",
+    `ربط متجر شوبيفاي ${shop}`,
+    null,
+    install!.tenant_id
+  );
   done(`تمام — اتربط متجر ${shop}`, true);
 }
