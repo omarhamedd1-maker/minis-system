@@ -1063,7 +1063,7 @@ export async function sendOrderToBosta(formData: FormData) {
   let ok = false;
   let message = "معرفناش نبعت الشحنة لبوسطة";
   try {
-    const res = await runBostaCreate({ db: createAdminClient(), orderId });
+    const res = await runBostaCreate({ db: createAdminClient(), tenantId: me.tenantId, orderId });
     if (res.ok) ok = true;
     else message = res.error;
   } catch (e) {
@@ -1107,8 +1107,11 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   }
 
   const db = createAdminClient();
+  // ملحوظة: بنمسك رقم البيزنس في متغير لأن `sendOne` جوّه دالة، و`me`
+  // بيرجع "ممكن يكون فاضي" جوّه القفل
+  const tenantId = me.tenantId;
   // المدن مرة واحدة للدفعة كلها بدل مرة لكل أوردر
-  const cities = await loadBostaCities(db, me.tenantId);
+  const cities = await loadBostaCities(db, tenantId);
 
   let sent = 0;
   let skipped = 0;
@@ -1117,7 +1120,7 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
 
   async function sendOne(id: string) {
     try {
-      const res = await runBostaCreate({ db, orderId: id, cities });
+      const res = await runBostaCreate({ db, tenantId, orderId: id, cities });
       if (!res.ok) {
         failed++;
         failMsgs.push(res.error);
@@ -1156,7 +1159,7 @@ export async function createReturnShipment(formData: FormData) {
   let message = "معرفناش نعمل شحنة المرتجع";
   const supabase = createAdminClient();
   try {
-    const res = await runBostaReturn({ db: supabase, orderId });
+    const res = await runBostaReturn({ db: supabase, tenantId: me.tenantId, orderId });
     if (res.ok) ok = true;
     else message = res.error;
   } catch (e) {
@@ -1562,6 +1565,7 @@ export async function createExchangeShipment(formData: FormData) {
   try {
     const res = await runBostaExchange({
       db: supabase,
+      tenantId: me.tenantId,
       orderId,
       outgoing,
       incoming,

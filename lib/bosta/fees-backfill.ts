@@ -128,6 +128,7 @@ export async function backfillRealFees(opts: {
         await db
           .from("orders")
           .update({ bosta_fees_at: now.toISOString() })
+          .eq("tenant_id", tenantId)
           .eq("id", row.id);
         continue;
       }
@@ -138,6 +139,7 @@ export async function backfillRealFees(opts: {
           bosta_ship_fee_real: fees.shipping,
           bosta_fees_at: now.toISOString(),
         })
+        .eq("tenant_id", tenantId)
         .eq("id", row.id);
       if (!error) out.saved++;
     } catch {

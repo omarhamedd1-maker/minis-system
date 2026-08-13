@@ -37,13 +37,28 @@ const GLOBAL_TABLES = new Set([
 type Hit = { file: string; line: number; table: string };
 
 function unfilteredAdminReads(): Hit[] {
-  const files = execSync('grep -rl "createAdminClient" app lib components', {
-    encoding: "utf8",
-  })
+  // ⚠️ **مش بس اللي بيعمل المفتاح جواه.**
+  //
+  // النسخة الأولى كانت بتدوّر على `createAdminClient` في الملف نفسه — يعني
+  // أي ملف بياخد العميل **كمعامل** كان خارج نظر الحارس تمامًا. وده مكان
+  // أخطر شغل في السيستم: مزامنة بوسطة، واستيراد شوبيفاي، وسجل الاستيراد —
+  // كلهم بياخدوا `db: SupabaseClient` من اللي بيناديهم.
+  //
+  // وطلع فيهم فعلًا **٨ كتابات** من غير رقم بيزنس (١٣ أغسطس)، منها استيراد
+  // متجر عميل جديد بالكامل — عملاءه ومنتجاته وأوردراته — جوّه بيزنس عمر.
+  const files = execSync(
+    'grep -rlE "createAdminClient|SupabaseClient" app lib components',
+    { encoding: "utf8" }
+  )
     .trim()
     .split("\n")
     .map((f) => f.trim())
-    .filter((f) => f && !f.endsWith("supabase/admin.ts"));
+    .filter(
+      (f) =>
+        f &&
+        !f.endsWith("supabase/admin.ts") &&
+        !f.includes(".test.")
+    );
 
   const hits: Hit[] = [];
 
@@ -58,7 +73,11 @@ function unfilteredAdminReads(): Hit[] {
         /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?createAdminClient\(\)/
       );
       if (m) adminVars.add(m[1]);
+      // والعميل اللي بييجي كمعامل — ده اللي كان بيفلت
+      const p = l.match(/([A-Za-z_$][\w$]*)\s*:\s*SupabaseClient/);
+      if (p) adminVars.add(p[1]);
     }
+    if (adminVars.size === 0) continue;
 
     for (let i = 0; i < lines.length; i++) {
       const inline = lines[i].match(
@@ -89,9 +108,38 @@ function unfilteredAdminReads(): Hit[] {
       if (GLOBAL_TABLES.has(table)) continue;
       if (ALLOWED.has(file)) continue;
 
-      const chain = lines.slice(i, i + 18).join("\n");
+      // ⚠️ **السلسلة بتنتهي عند الاستعلام اللي بعدها، مش عند أول `;`.**
+      //
+      // الاستعلامات اللي جوّه `Promise.all([...])` بتنتهي كلها بـ`;` واحد في
+      // الآخر. فالحارس كان بياخد التلاتة ككتلة واحدة، ويلاقي `tenant_id` في
+      // واحد فيهم، ويسكت عن التانيين. اتجرّب بالعكس: شيلنا الفلتر من قراية
+      // الأوردرات في استيراد شوبيفاي **والاختبار عدّى** — وده كان هيسيب
+      // أخطر قراية في السيستم من غير حارس.
+      const stop = lines
+        .slice(i + 1, i + 18)
+        .findIndex((l) => /\.from\(\s*["'`]/.test(l));
+      const chain = lines
+        .slice(i, stop === -1 ? i + 18 : i + 1 + stop)
+        .join("\n");
       const end = chain.search(/;\s*$/m);
-      const scope = end > 0 ? chain.slice(0, end) : chain;
+      let scope = end > 0 ? chain.slice(0, end) : chain;
+
+      // **الاستعلام ممكن يتخزّن في متغير** ويتستعمل بعد كام سطر:
+      //
+      //     const log = db.from("activity_log");
+      //     await log.insert(row);
+      //
+      // من غير المتابعة دي، الحارس بيشوف السطر الأول بس — ومايشوفش الصف
+      // اللي فيه رقم البيزنس، فبيبلّغ عن حاجة سليمة.
+      const held = lines[i].match(/(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=/);
+      if (held) {
+        const uses = lines
+          .slice(i + 1, i + 24)
+          .filter((l) => new RegExp("\\b" + held[1] + "\\.").test(l));
+        // والصف نفسه بيتبني فوق غالبًا
+        scope += "\n" + lines.slice(Math.max(0, i - 14), i).join("\n");
+        scope += "\n" + uses.join("\n");
+      }
 
       if (/tenant_id/.test(scope)) continue;
 

@@ -188,7 +188,7 @@ export async function createTenantWithOwner(
   if (userError) {
     await db.auth.admin.deleteUser(userId);
     // الدور قبل البيزنس — `roles.tenant_id` بـ`on delete restrict`
-    await db.from("roles").delete().eq("id", role.id);
+    await db.from("roles").delete().eq("tenant_id", tenant.id).eq("id", role.id);
     await db.from("tenants").delete().eq("id", tenant.id);
     return { ok: false, error: "معرفناش نحفظ صلاحيات الحساب: " + userError.message };
   }

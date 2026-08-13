@@ -52,7 +52,7 @@ export default async function SettingsPage({
       .maybeSingle(),
   ]);
 
-  const importRuns = (await listImportRuns(db)).map((run) => ({
+  const importRuns = (await listImportRuns(db, me.tenantId)).map((run) => ({
     id: run.id,
     kind: run.kind,
     summary: run.summary,

@@ -112,6 +112,7 @@ export async function linkMissingShipments(
       `ربط ${linked} شحنة ضايعة بأوردراتها من صفحة المطابقة`
     );
     await recordImportRun(db, {
+      tenantId: me.tenantId,
       kind: "shipments",
       summary: `${linked} شحنة اتربطت`,
       actorName: me.fullName ?? me.email ?? null,

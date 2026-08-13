@@ -129,6 +129,7 @@ export async function recordPrepaidCash(opts: {
     const { error: e } = await db
       .from("cash_transactions")
       .update({ related_order_id: order.id })
+      .eq("tenant_id", tenantId)
       .eq("id", cashId);
     if (!e) out.adopted++;
   }

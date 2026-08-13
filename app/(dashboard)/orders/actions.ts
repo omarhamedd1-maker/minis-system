@@ -27,6 +27,7 @@ export async function importShopifyOrders(
     const summary = `${res.added.orders} أوردر و${res.added.customers} عميل`;
     await logActivity(me, "orders.import", `جلب من شوبيفاي: ${summary}`);
     await recordImportRun(createAdminClient(), {
+      tenantId: me.tenantId,
       kind: "orders",
       summary,
       actorName: me.fullName ?? me.email ?? null,
@@ -46,6 +47,7 @@ export async function undoImport(
   const me = await requirePermission("orders.create");
   const res = await undoImportRun(
     createAdminClient(),
+    me.tenantId,
     runId,
     me.fullName ?? me.email ?? "غير معروف"
   );

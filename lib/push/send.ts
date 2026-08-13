@@ -32,6 +32,7 @@ export async function ensurePushKeys(
     const { data } = await db
       .from("push_config")
       .select("vapid_public, vapid_private")
+      // `push_config` جدول عام — صف واحد للمشروع كله، مالوش بيزنس
       .eq("id", 1)
       .maybeSingle();
 
@@ -193,6 +194,7 @@ export async function sendPush(
       await db
         .from("push_subscriptions")
         .update({ last_ok_at: new Date().toISOString(), failures: 0 })
+        .eq("tenant_id", tenantId)
         .eq("id", d.id);
     } catch (e) {
       const status = (e as { statusCode?: number })?.statusCode;
@@ -200,12 +202,17 @@ export async function sendPush(
       const failures = d.failures + 1;
 
       if (gone || failures >= MAX_FAILURES) {
-        await db.from("push_subscriptions").delete().eq("id", d.id);
+        await db
+          .from("push_subscriptions")
+          .delete()
+          .eq("tenant_id", tenantId)
+          .eq("id", d.id);
         removed++;
       } else {
         await db
           .from("push_subscriptions")
           .update({ failures })
+          .eq("tenant_id", tenantId)
           .eq("id", d.id);
       }
     }

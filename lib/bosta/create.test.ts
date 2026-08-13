@@ -51,21 +51,36 @@ function fakeDb(o: DbOpts = {}): SupabaseClient {
   const creds =
     o.creds === undefined ? { tenant_id: "t1", bosta_api_key: "KEY" } : o.creds;
 
-  const readOnce = (data: unknown) => ({
-    select: () => ({ eq: () => ({ maybeSingle: async () => ({ data, error: null }) }) }),
-  });
+  // ⚠️ **`eq` بترجّع نفسها.** الاستعلامات بقت بتفلتر بالبيزنس **وبالـid**
+  // (`.eq("tenant_id", …).eq("id", …)`)، والنسخة القديمة كانت بترجّع
+  // `maybeSingle` على طول — فالتانية كانت بتوقع `eq is not a function`.
+  const readOnce = (data: unknown) => {
+    const chain = {
+      eq: () => chain,
+      maybeSingle: async () => ({ data, error: null }),
+    };
+    return { select: () => chain };
+  };
 
   return {
     from(table: string) {
       if (table === "orders") {
         return {
           ...readOnce(order),
-          update: (patch: Record<string, unknown>) => ({
-            eq: async () => {
+          update: (patch: Record<string, unknown>) => {
+            const done = async () => {
               o.onUpdate?.(patch);
               return { error: o.updateError ?? null };
-            },
-          }),
+            };
+            // نفس الحكاية: `.eq("tenant_id", …).eq("id", …)` — الأولى
+            // بترجّع السلسلة، والتانية هي اللي بتنفّذ
+            const chain = {
+              eq: () => chain,
+              then: (...a: Parameters<Promise<unknown>["then"]>) =>
+                done().then(...(a as [never, never])),
+            };
+            return chain;
+          },
         };
       }
       if (table === "tenant_credentials") return readOnce(creds);
@@ -126,6 +141,7 @@ describe("إرسال شحنة", () => {
     const { f, calls } = fakeFetch([created("2237843281")]);
 
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ onUpdate: (p) => patches.push(p) }),
       orderId: "o1",
       fetchImpl: f,
@@ -158,6 +174,7 @@ describe("إرسال شحنة", () => {
     // حسبت عمولة تحصيل ورسم تحويل على فلوس مالهاش لازمة تتحصّل
     const { f, calls } = fakeFetch([created("999")]);
     await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ order: { ...ORDER, amount_paid: 1090 } }),
       orderId: "o1",
       fetchImpl: f,
@@ -168,6 +185,7 @@ describe("إرسال شحنة", () => {
   it("المدفوع جزئيًا بيروح بالباقي بس", async () => {
     const { f, calls } = fakeFetch([created("998")]);
     await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ order: { ...ORDER, amount_paid: 500 } }),
       orderId: "o1",
       fetchImpl: f,
@@ -178,6 +196,7 @@ describe("إرسال شحنة", () => {
   it("بيستخدم مفتاح البيزنس صاحب الأوردر مش مفتاح واحد للكل", async () => {
     const { f, calls } = fakeFetch([created("1")]);
     await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ creds: { tenant_id: "t1", bosta_api_key: "key-of-tenant-1" } }),
       orderId: "o1",
       fetchImpl: f,
@@ -188,6 +207,7 @@ describe("إرسال شحنة", () => {
   it("مفتاح متلزوق غلط بيدّي رسالة مفهومة مش خطأ تقني", async () => {
     const { f } = fakeFetch([created("1")]);
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ creds: { tenant_id: "t1", bosta_api_key: "مفتاح بالعربي" } }),
       orderId: "o1",
       fetchImpl: f,
@@ -202,7 +222,7 @@ describe("إرسال شحنة", () => {
       created("999"),
     ]);
 
-    const res = await runBostaCreate({ db: fakeDb(), orderId: "o1", fetchImpl: f });
+    const res = await runBostaCreate({ db: fakeDb(), tenantId: "t1", orderId: "o1", fetchImpl: f });
 
     expect(res).toMatchObject({ ok: true, tracking: "999", usedVariant: "city-only" });
     expect(calls).toHaveLength(3); // مدن + محاولتين
@@ -210,7 +230,7 @@ describe("إرسال شحنة", () => {
 
   it("بيرجّع سبب الرفض لو كل الأشكال فشلت", async () => {
     const { f } = fakeFetch([rejected("العنوان ناقص")]);
-    const res = await runBostaCreate({ db: fakeDb(), orderId: "o1", fetchImpl: f });
+    const res = await runBostaCreate({ db: fakeDb(), tenantId: "t1", orderId: "o1", fetchImpl: f });
     expect(res).toMatchObject({ ok: false, error: "العنوان ناقص" });
     if (!res.ok) expect(res.attempts).toHaveLength(3);
   });
@@ -220,6 +240,7 @@ describe("الحالات اللي بتوقف الإرسال", () => {
   it("أوردر عليه شحنة لسه نافعة مابيتبعتش تاني", async () => {
     const { f, calls } = fakeFetch([created("1")]);
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ order: { ...ORDER, bosta_tracking: "5555" } }),
       orderId: "o1",
       fetchImpl: f,
@@ -240,6 +261,7 @@ describe("الحالات اللي بتوقف الإرسال", () => {
     });
 
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({
         order: { ...ORDER, bosta_tracking: "5555" },
         onUpdate: (p) => patches.push(p),
@@ -256,6 +278,7 @@ describe("الحالات اللي بتوقف الإرسال", () => {
     // الأأمن: أحسن ما نبعت شحنتين لنفس العميل
     const { f } = fakeFetch([created("1")], null);
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ order: { ...ORDER, bosta_tracking: "5555" } }),
       orderId: "o1",
       fetchImpl: f,
@@ -266,6 +289,7 @@ describe("الحالات اللي بتوقف الإرسال", () => {
   it("بيزنس مش مربوط ببوسطة", async () => {
     const { f } = fakeFetch([created("1")]);
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ creds: { tenant_id: "t1", bosta_api_key: null } }),
       orderId: "o1",
       fetchImpl: f,
@@ -277,6 +301,7 @@ describe("الحالات اللي بتوقف الإرسال", () => {
   it("أوردر مش موجود", async () => {
     const { f } = fakeFetch([created("1")]);
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ order: null }),
       orderId: "مش-موجود",
       fetchImpl: f,
@@ -287,6 +312,7 @@ describe("الحالات اللي بتوقف الإرسال", () => {
   it("عنوان مايتعرفش منه المدينة مابيتبعتش", async () => {
     const { f, calls } = fakeFetch([created("1")]);
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({
         order: {
           ...ORDER,
@@ -308,6 +334,7 @@ describe("وضع التجربة", () => {
     const { f, calls } = fakeFetch([created("1")]);
 
     const res = await runBostaCreate({
+      tenantId: "t1",
       db: fakeDb({ onUpdate: (p) => patches.push(p) }),
       orderId: "o1",
       dry: true,
@@ -357,6 +384,7 @@ describe("شحنة المرتجع", () => {
     const { f, calls } = fakeFetch([created("7777777777")]);
 
     const res = await runBostaReturn({
+      tenantId: "t1",
       db: fakeDb({ order: RETURN_ORDER, onUpdate: (p) => patches.push(p) }),
       orderId: "o2",
       fetchImpl: f,
@@ -383,6 +411,7 @@ describe("شحنة المرتجع", () => {
   it("بتبعت العنوان في pickupAddress بشكل city مش cityId", async () => {
     const { f, calls } = fakeFetch([created("1")]);
     await runBostaReturn({
+      tenantId: "t1",
       db: fakeDb({ order: RETURN_ORDER }),
       orderId: "o2",
       fetchImpl: f,
@@ -399,6 +428,7 @@ describe("شحنة المرتجع", () => {
   it("مافيش حاجة متعلّم إنها راجعة = مانعملش شحنة", async () => {
     const { f, calls } = fakeFetch([created("1")]);
     const res = await runBostaReturn({
+      tenantId: "t1",
       db: fakeDb({
         order: {
           ...RETURN_ORDER,
@@ -419,6 +449,7 @@ describe("شحنة المرتجع", () => {
   it("أوردر عليه مرتجع أصلاً مابيتعملش تاني", async () => {
     const { f } = fakeFetch([created("1")]);
     const res = await runBostaReturn({
+      tenantId: "t1",
       db: fakeDb({ order: { ...RETURN_ORDER, return_tracking: "999" } }),
       orderId: "o2",
       fetchImpl: f,
@@ -430,6 +461,7 @@ describe("شحنة المرتجع", () => {
   it("بيجرّب cityId لو بوسطة رفضت city", async () => {
     const { f, calls } = fakeFetch([rejected("bad address"), created("555")]);
     const res = await runBostaReturn({
+      tenantId: "t1",
       db: fakeDb({ order: RETURN_ORDER }),
       orderId: "o2",
       fetchImpl: f,
@@ -442,6 +474,7 @@ describe("شحنة المرتجع", () => {
     const patches: Record<string, unknown>[] = [];
     const { f, calls } = fakeFetch([created("1")]);
     const res = await runBostaReturn({
+      tenantId: "t1",
       db: fakeDb({ order: RETURN_ORDER, onUpdate: (p) => patches.push(p) }),
       orderId: "o2",
       dry: true,

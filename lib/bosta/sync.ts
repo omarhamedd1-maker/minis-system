@@ -138,12 +138,19 @@ const FINISHED_CODES = [45, 46];
  */
 async function logStatusChange(
   db: SupabaseClient,
+  /**
+   * ⚠️ **لازم يتبعت.** `db` بمفتاح الأدمن، والقيمة الافتراضية في الداتابيز
+   * بتقرا المستخدم الداخل — ومفيش مستخدم. فبترجّع **مينيز**، والمزامنة دي
+   * بتلف على **كل البيزنسات**: يعني سجل كل واحد كان بينزل عند عمر.
+   */
+  tenantId: string,
   orderNumber: string | number | null,
   from: string | null,
   to: string,
   orderId?: string
 ) {
   const row = {
+    tenant_id: tenantId,
     actor_id: null,
     actor_name: "المزامنة مع بوسطة",
     action: "order.status",
@@ -167,9 +174,12 @@ async function logStatusChange(
 /** سطر سجل من المزامنة — بيفشل بهدوء ويجرّب من غير order_id لو الخانة ناقصة */
 async function logActivityRow(
   db: SupabaseClient,
+  /** نفس سبب `logStatusChange` — من غيره السطر بينزل عند مينيز */
+  tenantId: string,
   entry: { action: string; summary: string; orderId?: string }
 ) {
   const row = {
+    tenant_id: tenantId,
     actor_id: null,
     actor_name: "المزامنة مع بوسطة",
     action: entry.action,
@@ -465,6 +475,7 @@ export async function runBostaSync(opts: {
       const { error: retErr } = await db
         .from("orders")
         .update(changes)
+        .eq("tenant_id", tenantId)
         .eq("id", order.id);
       if (retErr) {
         summary.errors.push(
@@ -473,6 +484,7 @@ export async function runBostaSync(opts: {
       } else if (typeof changes.order_status === "string") {
         await logStatusChange(
           db,
+          tenantId,
           order.order_number,
           order.order_status,
           changes.order_status,
@@ -605,8 +617,9 @@ export async function runBostaSync(opts: {
         await db
           .from("orders")
           .update({ cod_alerted_diff: c.diff })
+          .eq("tenant_id", tenantId)
           .eq("id", row.id);
-        await logActivityRow(db, {
+        await logActivityRow(db, tenantId, {
           action: "bosta.cod_diff",
           summary: `فرق تحصيل أوردر ${row.order_number ?? ""}: عندنا ${ourCod} وبوسطة ${merged.latest.cod}`,
           orderId: row.id,
@@ -630,6 +643,7 @@ export async function runBostaSync(opts: {
       const { error: updateError } = await db
         .from("orders")
         .update(decision.changes)
+        .eq("tenant_id", tenantId)
         .eq("id", row.id);
       if (updateError) {
         summary.errors.push(`أوردر ${row.order_number}: ${updateError.message}`);
@@ -639,7 +653,7 @@ export async function runBostaSync(opts: {
         // "بين الفروع" ← "خرجت للتسليم" كلهم عندنا "مع المندوب". فلو سجّلنا
         // حالتنا بس، الرحلة بتضيع. بنسجّل الاتنين — بوسطة الأول لأنها الأدق.
         if (typeof decision.changes.bosta_state === "string") {
-          await logActivityRow(db, {
+          await logActivityRow(db, tenantId, {
             action: "bosta.state",
             summary: `شحنة أوردر ${row.order_number ?? ""} عند بوسطة: ${
               decision.changes.bosta_state
@@ -654,7 +668,7 @@ export async function runBostaSync(opts: {
             : null;
 
         if (to) {
-          await logStatusChange(db, row.order_number, row.order_status, to, row.id);
+          await logStatusChange(db, tenantId, row.order_number, row.order_status, to, row.id);
         }
 
         // ===== أهم تنبيه في السيستم: العميل مستلمش =====
@@ -764,9 +778,10 @@ export async function runBostaSync(opts: {
       await db
         .from("orders")
         .update({ bosta_stale_alerted_day: stale.milestone })
+        .eq("tenant_id", tenantId)
         .eq("id", w.id);
 
-      await logActivityRow(db, {
+      await logActivityRow(db, tenantId, {
         action: "bosta.stale",
         summary: `شحنة أوردر ${w.order_number ?? ""} قاعدة ${stale.days} يوم من غير بيك اب (مرحلة ${stale.milestone})`,
         orderId: w.id,
@@ -830,6 +845,7 @@ export async function runBostaSync(opts: {
       await db
         .from("orders")
         .update({ refund_reminded_day: due.milestone })
+        .eq("tenant_id", tenantId)
         .eq("id", o.id);
     }
 
@@ -908,6 +924,7 @@ export async function runBostaSync(opts: {
         await db
           .from("orders")
           .update({ new_reminded_day: x.day })
+          .eq("tenant_id", tenantId)
           .eq("id", x.order.id);
       }
     }
