@@ -105,6 +105,10 @@ export async function addCashTransaction(formData: FormData) {
   const supabase = createAdminClient();
 
   const { error } = await supabase.from("cash_transactions").insert({
+    // ⚠️ **مش زيادة** — مفتاح الأدمن مالوش مستخدم داخل، والقيمة الافتراضية
+    // في الداتابيز بترجّع **مينيز**. يعني خزنة أي بيزنس تاني كانت بتتخلط
+    // بخزنة عمر. اقرا `sql/tenants-02-auto-fill.sql`.
+    tenant_id: me.tenantId,
     direction,
     amount,
     source_type: "manual",

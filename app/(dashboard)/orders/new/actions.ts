@@ -58,6 +58,11 @@ export async function createOrder(formData: FormData) {
     const { data: customer, error: customerError } = await supabase
       .from("customers")
       .insert({
+        // ⚠️ **الخانة دي مش زيادة.** المفتاح ده مالوش مستخدم داخل، فلو
+        // سبناها الداتابيز بتحط `current_tenant_id()` — واللي بترجّع
+        // **مينيز** لما مفيش `auth.uid()`. يعني عميل أي بيزنس تاني كان
+        // بينزل في بيزنس عمر.
+        tenant_id: me.tenantId,
         shopify_customer_id: `manual-${crypto.randomUUID()}`,
         full_name: fullName,
         phone: phone || null,
@@ -84,6 +89,7 @@ export async function createOrder(formData: FormData) {
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
+      tenant_id: me.tenantId,
       shopify_order_id: `manual-${crypto.randomUUID()}`,
       order_number: finalOrderNumber,
       customer_id: finalCustomerId,
@@ -114,6 +120,7 @@ export async function createOrder(formData: FormData) {
     if (!variant) continue;
 
     const { error: itemError } = await supabase.from("order_items").insert({
+      tenant_id: me.tenantId,
       order_id: order.id,
       variant_id: item.variantId,
       quantity: item.quantity,
@@ -130,6 +137,7 @@ export async function createOrder(formData: FormData) {
 
     if (!skipStock) {
       await supabase.from("stock_movements").insert({
+        tenant_id: me.tenantId,
         variant_id: item.variantId,
         change_quantity: -item.quantity,
         reason: "أوردر يدوي",

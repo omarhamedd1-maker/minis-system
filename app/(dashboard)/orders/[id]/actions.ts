@@ -159,6 +159,10 @@ async function adjustStock(
     .eq("tenant_id", tenantId)
     .eq("id", variantId);
   await supabase.from("stock_movements").insert({
+    // ⚠️ **مش زيادة.** مفتاح الأدمن مالوش مستخدم داخل، فلو الخانة فاضية
+    // الداتابيز بتحط `current_tenant_id()` — وبترجّع **مينيز** لما مفيش
+    // `auth.uid()`. يعني حركة مخزون أي بيزنس تاني كانت بتنزل عند عمر.
+    tenant_id: tenantId,
     variant_id: variantId,
     change_quantity: change,
     reason,
@@ -214,6 +218,7 @@ export async function addOrderItem(formData: FormData) {
         .eq("tenant_id", me.tenantId)
         .eq("id", existingItem.id)
     : await supabase.from("order_items").insert({
+        tenant_id: me.tenantId,
         order_id: orderId,
         variant_id: variantId,
         quantity,
@@ -535,6 +540,7 @@ export async function addOrderComment(formData: FormData) {
 
   if (!recent?.length) {
     const { error } = await supabase.from("order_comments").insert({
+      tenant_id: me.tenantId,
       order_id: orderId,
       author_name: authorName,
       body,
@@ -694,6 +700,7 @@ async function performOrderDeletion(
       const { error: movementError } = await supabase
         .from("stock_movements")
         .insert({
+          tenant_id: me.tenantId,
           variant_id: item.variant_id,
           change_quantity: item.quantity,
           reason: `مسح أوردر ${orderNumber}`.trim(),
@@ -787,6 +794,7 @@ export async function deleteOrder(formData: FormData) {
   }
 
   const { error: reqError } = await supabase.from("deletion_requests").insert({
+    tenant_id: me.tenantId,
     order_id: orderId,
     order_number: order?.order_number ?? null,
     requested_by_id: me.authUserId,

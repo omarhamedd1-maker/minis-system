@@ -149,6 +149,9 @@ export async function addExpense(formData: FormData) {
   const { data: expense, error: expenseError } = await supabase
     .from("expenses")
     .insert({
+      // ⚠️ **مش زيادة** — من غيرها المصروف بينزل عند **مينيز**، لأن مفتاح
+      // الأدمن مالوش مستخدم والقيمة الافتراضية بترجّع بيزنس عمر.
+      tenant_id: me.tenantId,
       category,
       description: description || null,
       amount,
@@ -173,6 +176,7 @@ export async function addExpense(formData: FormData) {
     const { error: txnError } = await supabase
       .from("supplier_transactions")
       .insert({
+        tenant_id: me.tenantId,
         supplier_id: supplierId,
         kind: "payment",
         amount,
@@ -193,6 +197,7 @@ export async function addExpense(formData: FormData) {
   }
 
   const { error: cashError } = await supabase.from("cash_transactions").insert({
+    tenant_id: me.tenantId,
     direction: "out",
     amount,
     source_type: "expense",
