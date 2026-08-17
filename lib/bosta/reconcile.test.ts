@@ -319,3 +319,44 @@ describe("رقم الأوردر من مرجع الشحنة", () => {
     ).toBe("1400");
   });
 });
+
+describe("بوسطة بتصفّر التحصيل بعد التسوية", () => {
+  // اتأكد من سجل بوسطة نفسها (١٧ أغسطس ٢٠٢٦): أوردر ١٤١٩ اتعمل بتحصيل
+  // ٢٠٣٧ في نفس ثانية ما سيستمنا عمل الشحنة، والفلوس اتحصّلت.
+  // ومع كده رد بوسطة بعدين بيقول `cod: 0` — والمزامنة كانت بتمسح رقمنا.
+  it("**الصفر من بوسطة مايمسحش رقمنا**", () => {
+    const d = decideSync(
+      { ...deliveredShipment, cod: 0 },
+      syncedOrder({ bosta_cod: 2037 }),
+      NOW
+    );
+    expect(d.changes.bosta_cod).toBeUndefined();
+  });
+
+  it("بس الشحنة الميتة صفرها صح — دي فعلًا مش هتحصّل", () => {
+    const d = decideSync(
+      { ...deliveredShipment, cod: 0, state: { value: "Terminated", code: 48 } },
+      syncedOrder({ bosta_cod: 2037 }),
+      NOW
+    );
+    expect(d.changes.bosta_cod).toBe(0);
+  });
+
+  it("ورقم أكبر من بوسطة بيتاخد عادي", () => {
+    const d = decideSync(
+      { ...deliveredShipment, cod: 4000 },
+      syncedOrder({ bosta_cod: 2037 }),
+      NOW
+    );
+    expect(d.changes.bosta_cod).toBe(4000);
+  });
+
+  it("والأوردر اللي عندنا صفر بياخد رقم بوسطة", () => {
+    const d = decideSync(
+      { ...deliveredShipment, cod: 2037 },
+      syncedOrder({ bosta_cod: 0 }),
+      NOW
+    );
+    expect(d.changes.bosta_cod).toBe(2037);
+  });
+});
