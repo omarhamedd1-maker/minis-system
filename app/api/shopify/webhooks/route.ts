@@ -62,6 +62,37 @@ export async function POST(req: Request) {
     secret
   );
 
+  const topicHeader = String(req.headers.get("x-shopify-topic") ?? "")
+    .trim()
+    .toLowerCase();
+
+  // ⚠️⚠️ **الأوردر الجديد جرس مش رسالة.**
+  //
+  // إحنا **مابناخدش ولا حرف من جسم الطلب ده**. كل اللي بيعمله إنه يقول
+  // «فيه حاجة جديدة»، وبعدين إحنا بنروح نجيب الأوردرات من شوبيفاي
+  // **بتوكننا إحنا**. يعني حد يزوّر الطلب أقصى اللي يعمله إنه يخلّينا
+  // نسأل شوبيفاي سؤال — مايقدرش يحقن أوردر ولا يغيّر رقم.
+  //
+  // وده بيحل مشكلة حقيقية: ويب هوك التطبيق اللي جوّه المتجر موقّع بسر
+  // التطبيق ده، وإحنا مامعناش السر ده. لو طلبنا توقيع مطابق، الأوردر
+  // مايوصلش وقت ما يحصل ونستنى اللفة ربع ساعة.
+  //
+  // **والموضوعات الإجبارية بتفضل بتطلب توقيع صح وبترجّع ٤٠١** — دي اللي
+  // شوبيفاي بتختبرها في المراجعة، ودي اللي فيها داتا بنعمل عليها حاجة.
+  if (topicHeader === "orders/create") {
+    const tid = cred?.tenant_id ?? null;
+    if (tid) {
+      after(async () => {
+        try {
+          await runOrderImport({ db: createAdminClient(), tenantId: tid });
+        } catch {
+          // اللفة الدورية هتلقطه — الويب هوك مش الطريق الوحيد
+        }
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   if (!decision.ok) {
     return NextResponse.json({ ok: decision.status === 200 }, {
       status: decision.status,
