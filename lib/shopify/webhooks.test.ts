@@ -72,9 +72,28 @@ describe("القرار", () => {
   // **٢٠٠ مش رفض** — شوبيفاي بتعيد المحاولة على أي رد غير ٢٠٠، فالرفض
   // هيخلّيها تفضل تحاول على حاجة إحنا مش مهتمين بيها
   it("موضوع مش بنرد عليه بيرجع ٢٠٠", () => {
-    const d = decideWebhook(req({ topic: "orders/create" }), SECRET);
+    const d = decideWebhook(req({ topic: "products/update" }), SECRET);
     expect(d.ok).toBe(false);
     if (!d.ok) expect(d.status).toBe(200);
+  });
+
+  // ⚠️ **الاختبار ده كان بيحرس العكس** — كان بيتأكد إن `orders/create`
+  // **مش** بنرد عليه، وده كان صح وقتها لأن الأوردر كان بيروح لدالة
+  // سوبابيز. الدالة دي بقت ترفض بـ٥٠٠ بعد ما قفلنا القيمة الافتراضية
+  // لرقم البيزنس، فالأوردر بقى يستنى اللفة الدورية (ربع ساعة).
+  it("**الأوردر الجديد بقى بيعدّي** — ده اللي بيخلّيه يوصل في ثواني", () => {
+    const d = decideWebhook(req({ topic: "orders/create" }), SECRET);
+    expect(d.ok).toBe(true);
+    if (d.ok) expect(d.topic).toBe("orders/create");
+  });
+
+  it("وبرضه لازم توقيع صح — الموضوع الجديد مش باب مفتوح", () => {
+    const d = decideWebhook(
+      req({ topic: "orders/create", signature: sign(BODY, "secret-تاني") }),
+      SECRET
+    );
+    expect(d.ok).toBe(false);
+    if (!d.ok) expect(d.status).toBe(401);
   });
 
   it("الموضوعات التلاتة الإجبارية موجودة", () => {
