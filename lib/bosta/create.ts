@@ -255,20 +255,42 @@ export async function runBostaCreate(opts: {
   // مكتوب عليه "الشحنة دي ماتت" بعد ما تبعت له شحنة جديدة سليمة — لأن
   // `bosta_state` بيفضل "Archived" لحد ما المزامنة تعدّي بعد ١٥ دقيقة.
   // وعدّاد الشحنة الواقفة بيبدأ من الأول برضه — الشحنة الجديدة عمرها صفر.
-  const { error: updateError } = await db
-    .from("orders")
-    .update({
-      bosta_tracking: tracking,
-      order_status: "ready",
-      cancelled_at: null,
-      bosta_state: null,
-      bosta_exception: null,
-      bosta_cod: s.cod,
-      bosta_created_at: new Date().toISOString(),
-      bosta_stale_alerted_day: null,
-    })
-    .eq("tenant_id", tenantId)
-    .eq("id", orderId);
+  const patch = {
+    bosta_tracking: tracking,
+    order_status: "ready",
+    cancelled_at: null,
+    bosta_state: null,
+    bosta_exception: null,
+    bosta_cod: s.cod,
+    bosta_created_at: new Date().toISOString(),
+    bosta_stale_alerted_day: null,
+  };
+
+  // ⚠️ **رقمنا بيتحفظ لوحده.** `bosta_cod` بتتكتب فوقها من المزامنة كل ربع
+  // ساعة بالرقم اللي بوسطة بترجّعه — فلو بوسطة رجّعت صفر، الرقم اللي
+  // بعتناه بيتمسح ومفيش حاجة تفتكره.
+  //
+  // حصل ده مع أوردرين (١٤١٩ و١٤١٥) وماعرفناش نجاوب على سؤال بسيط:
+  // الشحنة اتبعتت بكام؟ الخانة دي بتحفظ الإجابة.
+  //
+  // والكتابة بتجرّب من غيرها لو `sql/cod-sent.sql` لسه ماتشغّلش — الشحنة
+  // اتعملت خلاص عند بوسطة، فمينفعش رقم التتبع يضيع عشان خانة ناقصة.
+  let updateError: { message: string } | null = null;
+  {
+    const first = await db
+      .from("orders")
+      .update({ ...patch, bosta_cod_sent: s.cod })
+      .eq("tenant_id", tenantId)
+      .eq("id", orderId);
+    if (first.error) {
+      const retry = await db
+        .from("orders")
+        .update(patch)
+        .eq("tenant_id", tenantId)
+        .eq("id", orderId);
+      updateError = retry.error;
+    }
+  }
 
   return {
     ok: true,
