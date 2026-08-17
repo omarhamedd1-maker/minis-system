@@ -1128,6 +1128,16 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
         skipped++;
       } else {
         sent++;
+        // ⚠️ **كل أوردر بيتسجّل باسمه.** السطر الجماعي تحت بيتكتب من غير
+        // رقم أوردر، فتاريخ الأوردر مابيقولش إن شحنته اتعملت امتى — وده
+        // عطّل تفتيش حقيقي: كنا بندوّر على أوردرين تحصيلهم طلع صفر،
+        // وسجلهم كان بيبدأ من «بوسطة استلمت» من غير أي أثر للإرسال.
+        await logActivity(
+          me,
+          "bosta.send",
+          `بعت أوردر لبوسطة كشحنة${"tracking" in res ? ` (${res.tracking})` : ""}`,
+          id
+        );
       }
     } catch (e) {
       failed++;
