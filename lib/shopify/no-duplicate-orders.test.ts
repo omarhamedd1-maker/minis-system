@@ -85,3 +85,34 @@ describe("الأوردر مايتضافش مرتين", () => {
     expect(second.alreadyHere).toBe(1);
   });
 });
+
+describe("الأوردر الملغي بيتجاب", () => {
+  // شوبيفاي بترجّع `currentQuantity: 0` لكل بنود الأوردر الملغي — نفس
+  // القيمة اللي معناها «البند اتشال». والفلتر القديم كان بيعامل الاتنين
+  // بالمثل، فالملغي يطلع «من غير بنود» ويتخطّى.
+  //
+  // النتيجة: **نسبة الإلغاء عند أي عميل جديد بتبان صفر وهي مش صفر**.
+  // ٢ سِك عندهم ١٦ أوردر ملغي وماوصلش ولا واحد (١٧ أغسطس ٢٠٢٦).
+  it("**الملغي ليه بنود وبيتحسب**", () => {
+    const plan = planOrderImport(
+      [order({ orderNumber: "5005", shopifyOrderId: "9005", cancelled: true })],
+      [],
+      [],
+      KNOWN
+    );
+    expect(plan.noLines).toHaveLength(0);
+    expect(plan.toImport).toHaveLength(1);
+    expect(plan.toImport[0]?.status).toBe("cancelled");
+  });
+
+  it("والأوردر من غير بنود فعلًا لسه بيتوقف", () => {
+    const plan = planOrderImport(
+      [order({ orderNumber: "5006", shopifyOrderId: "9006", lines: [] })],
+      [],
+      [],
+      KNOWN
+    );
+    expect(plan.noLines).toEqual(["5006"]);
+    expect(plan.toImport).toHaveLength(0);
+  });
+});

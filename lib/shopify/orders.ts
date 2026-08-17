@@ -67,6 +67,8 @@ type RawOrder = {
     nodes?: {
       title?: string | null;
       currentQuantity?: number | null;
+      /** الكمية الأصلية — الأوردر الملغي كميته الحالية صفر ودي هي الصح */
+      quantity?: number | null;
       variant?: { legacyResourceId?: string | null } | null;
       discountedUnitPriceSet?: { shopMoney?: { amount?: string } } | null;
     }[];
@@ -127,16 +129,32 @@ export async function fetchShopifyOrders(
           address: joinAddress(o.shippingAddress),
         },
         lines: (o.lineItems?.nodes ?? [])
-          // البند اللي اتشال من الأوردر كميته الحالية صفر — مش بند
-          .filter((l) => Number(l.currentQuantity ?? 0) > 0)
           .map((l) => ({
             shopifyVariantId: l.variant?.legacyResourceId
               ? String(l.variant.legacyResourceId)
               : null,
             title: String(l.title ?? "").trim() || "بند بدون اسم",
-            quantity: Number(l.currentQuantity ?? 0),
+            // ⚠️⚠️ **الأوردر الملغي كمياته الحالية صفر — والأصلية هي الصح.**
+            //
+            // `currentQuantity` بتنزل صفر لسببين مختلفين تمامًا: البند
+            // اتشال من الأوردر، **أو الأوردر كله اتلغى**. والفلتر القديم
+            // كان بيعامل الاتنين بالمثل، فالأوردر الملغي بيطلع «من غير
+            // بنود» ويتخطّى بالكامل.
+            //
+            // النتيجة إن **نسبة الإلغاء عند أي عميل جديد بتبان صفر** وهي
+            // مش صفر — ٢ سِك عندهم ١٦ أوردر ملغي وماوصلش ولا واحد (١٧
+            // أغسطس). ومينيز مابانتش عندها لأن أوردراتها القديمة جت من
+            // مسار تاني.
+            //
+            // فالملغي بياخد كميته الأصلية، وغير الملغي يفضل على الحالية.
+            quantity: Number(
+              o.cancelledAt
+                ? (l.currentQuantity || l.quantity) ?? 0
+                : l.currentQuantity ?? 0
+            ),
             unitPrice: Number(l.discountedUnitPriceSet?.shopMoney?.amount ?? 0),
-          })),
+          }))
+          .filter((l) => l.quantity > 0),
       });
     }
 
