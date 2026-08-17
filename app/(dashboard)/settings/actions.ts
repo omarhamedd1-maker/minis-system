@@ -8,6 +8,7 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { testConnection } from "@/lib/bosta/client";
 import {
+  fetchAccessToken,
   isValidShop,
   normalizeShop,
   testShopifyConnection,
@@ -123,12 +124,28 @@ export async function saveShopify(formData: FormData) {
   const result = await testShopifyConnection({ shop, clientId, clientSecret });
   if (!result.ok) back("الاتصال مارضيش يشتغل: " + result.error);
 
+  // ⚠️⚠️ **التوكن لازم يتحفظ، مش المفاتيح بس.**
+  //
+  // كل كود الاستيراد بيقرا `shopify_access_token` وبس (`orders.ts` ·
+  // `products.ts` · `order-push.ts`). والنسخة القديمة كانت بتحفظ المفتاح
+  // والسر وخلاص — فالشاشة تقول «اتصلنا بمتجرك» وشارة الحالة تفضل «لسه»،
+  // والاستيراد الدوري يقول «البيزنس ده لسه مربطش متجر شوبيفاي».
+  //
+  // مسار محدش عدّى منه لآخره: الربط بيبان ناجح والأوردرات ماتيجيش.
+  let token: string | null = null;
+  try {
+    token = await fetchAccessToken({ shop, clientId, clientSecret });
+  } catch {
+    // الاتصال نجح فوق، فالفشل هنا نادر — بنكمّل ونحفظ المفاتيح على الأقل
+  }
+
   const { error } = await db
     .from("tenant_credentials")
     .update({
       shopify_shop: shop,
       shopify_client_id: clientId,
       shopify_client_secret: clientSecret,
+      ...(token ? { shopify_access_token: token } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("tenant_id", me.tenantId);
