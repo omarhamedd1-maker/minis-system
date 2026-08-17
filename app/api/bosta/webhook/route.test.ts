@@ -1,0 +1,108 @@
+// ==========================================================================
+// اختبار مسار ويب هوك بوسطة
+// --------------------------------------------------------------------------
+// **اللي بيتحرس هنا حاجة واحدة مهمة**: البيزنس بيطلع من **رقم التتبع**، مش
+// من أي حاجة في جسم الطلب.
+//
+// الدالة القديمة في سوبابيز كانت بتلاقي الأوردر برقمه (`order_number`) من
+// غير فلتر بيزنس — و**مينيز و٢ سِك بينهم ١٤٠ رقم مشترك**. يعني شحنة عند
+// بيزنس كانت بتحرّك أوردر عند بيزنس تاني. الاختبار ده بيمنع رجوع الفكرة
+// دي: لو حد بدّل البحث لرقم الأوردر، الحالة الأولى هتقع.
+// ==========================================================================
+
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const sync = vi.fn();
+let row: { tenant_id: string } | null = null;
+let asked: { table: string; column: string; value: unknown } | null = null;
+
+vi.mock("@/lib/bosta/sync", () => ({
+  runBostaSync: (...a: unknown[]) => sync(...a),
+  BostaNotLinked: class extends Error {},
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from: (table: string) => ({
+      select: () => ({
+        eq: (column: string, value: unknown) => ({
+          maybeSingle: async () => {
+            asked = { table, column, value };
+            return { data: row };
+          },
+        }),
+      }),
+    }),
+  }),
+}));
+
+// **`after` بينفّذ على طول هنا** — إحنا عايزين نشوف المزامنة اتندهت ولا لأ
+vi.mock("next/server", async () => {
+  const real = await vi.importActual<typeof import("next/server")>("next/server");
+  return { ...real, after: (fn: () => unknown) => fn() };
+});
+
+const KEY = "مفتاح-تجربة";
+const URL_OK = `https://x/api/bosta/webhook?key=${encodeURIComponent(KEY)}`;
+
+function post(url: string, body: unknown) {
+  return new Request(url, { method: "POST", body: JSON.stringify(body) });
+}
+
+describe("ويب هوك بوسطة", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    sync.mockReset();
+    row = null;
+    asked = null;
+    process.env.BOSTA_WEBHOOK_KEY = KEY;
+  });
+
+  async function POST(req: Request) {
+    return (await import("./route")).POST(req);
+  }
+
+  it("**بيدوّر برقم التتبع** — مش برقم الأوردر", async () => {
+    row = { tenant_id: "t-2sec" };
+    await POST(post(URL_OK, { trackingNumber: "77778888", businessReference: "1355" }));
+
+    expect(asked).toEqual({
+      table: "orders",
+      column: "bosta_tracking",
+      value: "77778888",
+    });
+    expect(sync).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: "t-2sec" })
+    );
+  });
+
+  it("شحنة مش عندنا؟ **مافيش مزامنة** — والرد ٢٠٠ عشان بوسطة ماتعيدش", async () => {
+    row = null;
+    const res = await POST(post(URL_OK, { trackingNumber: "لا-أحد" }));
+
+    expect(res.status).toBe(200);
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it("مفتاح غلط؟ ٤٠١ ومافيش أي قراءة", async () => {
+    const res = await POST(post("https://x/api/bosta/webhook?key=غلط", {}));
+
+    expect(res.status).toBe(401);
+    expect(asked).toBeNull();
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it("مفيش رقم تتبع؟ ٢٠٠ من غير مزامنة — الإعادة مش هتخلق رقم", async () => {
+    const res = await POST(post(URL_OK, { businessReference: "1355" }));
+
+    expect(res.status).toBe(200);
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it("رقم التتبع بييجي جوه `delivery` كمان", async () => {
+    row = { tenant_id: "t-minis" };
+    await POST(post(URL_OK, { delivery: { trackingNumber: "12341234" } }));
+
+    expect(asked?.value).toBe("12341234");
+  });
+});
