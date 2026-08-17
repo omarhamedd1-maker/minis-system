@@ -90,14 +90,22 @@ export async function GET(request: Request) {
           const r = await runOrderImport({ db, tenantId, dry });
           if (r.ok && r.added) shopify = r.added;
           else if (r.ok) {
-            // الوضع الجاف مابيملاش `added` — بنقول اللي كان هيتعمل
+            // ⚠️ **`dry` هنا معناها «الأرقام دي مش اللي اتعمل».**
+            //
+            // `added` بيتملا لما فيه حاجة اتضافت فعلًا. لو فاضي، ده إما
+            // وضع تجربة **أو مافيش جديد يتضاف** — والاتنين بيرجّعوا نفس
+            // الشكل. والنسخة القديمة كانت بتقول `dry: true` في الحالتين،
+            // فالتشغيل الحقيقي اللي مالقاش جديد كان بيبان كأنه تجربة.
+            //
+            // ده ضيّع وقت فعلًا (١٧ أغسطس): كنت بستنى استيراد يشتغل
+            // وبشوف `dry: true` فافتكرت إن التشغيل نفسه غلط.
             const newCustomers = r.plan.toImport.filter(
               (x) => !x.customerId
             ).length;
             shopify = {
               orders: r.plan.toImport.length,
               customers: newCustomers,
-              dry: true,
+              ...(dry ? { dry: true } : {}),
             };
           } else {
             shopify = { skipped: r.error };
