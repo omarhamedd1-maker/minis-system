@@ -39,6 +39,7 @@ const ORDERS_QUERY = `query($cursor: String, $size: Int!) {
         nodes {
           title
           currentQuantity
+          quantity
           variant { legacyResourceId }
           discountedUnitPriceSet { shopMoney { amount } }
         }
