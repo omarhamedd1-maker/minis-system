@@ -11,10 +11,11 @@
 // وتعيد المحاولة، فأي شغل تقيل هنا بيتحوّل لطوفان نداءات.
 // ==========================================================================
 
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { decideWebhook } from "@/lib/shopify/webhooks";
+import { runOrderImport } from "@/lib/shopify/orders";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +23,32 @@ export async function POST(req: Request) {
   const rawBody = await req.text();
 
   const db = createAdminClient();
+
+  // ⚠️ **البيزنس بيتحدّد قبل التحقق، والتحقق بسرّه هو.**
+  //
+  // التطبيق العام سرّه واحد، لكن البيزنس اللي مركّب **تطبيق جوّه متجره**
+  // ويب هوكه موقّع بسر التطبيق ده هو — فالتحقق بسر التطبيق العام بيفشل
+  // ويرجّع ٤٠١ على ويب هوك سليم.
+  //
+  // ومفيش خطر في إننا نقرا الدومين قبل التحقق: الدومين بيختار **المفتاح**
+  // بس، والتوقيع لسه هو اللي بيفتح الباب. مفتاح غلط = توقيع مش مطابق = رفض.
+  const shopHeader = String(req.headers.get("x-shopify-shop-domain") ?? "")
+    .trim()
+    .toLowerCase();
+
+  const { data: credRow } = await db
+    .from("tenant_credentials")
+    .select("tenant_id, shopify_webhook_secret")
+    .eq("shopify_shop", shopHeader)
+    .maybeSingle();
+  const cred = credRow as
+    | { tenant_id: string; shopify_webhook_secret: string | null }
+    | null;
+
   const app = await readShopifyApp(db);
-  if (!app) {
-    // التطبيق مش مظبّط عندنا — مانقدرش نتحقق من التوقيع أصلًا
+  const secret = cred?.shopify_webhook_secret || app?.clientSecret || "";
+  if (!secret) {
+    // مفيش سر لا للبيزنس ولا للتطبيق — مانقدرش نتحقق أصلًا
     return NextResponse.json({ error: "التطبيق مش مظبّط" }, { status: 401 });
   }
 
@@ -35,7 +59,7 @@ export async function POST(req: Request) {
       signature: req.headers.get("x-shopify-hmac-sha256"),
       rawBody,
     },
-    app.clientSecret
+    secret
   );
 
   if (!decision.ok) {
@@ -45,15 +69,30 @@ export async function POST(req: Request) {
   }
 
   const { topic, shop } = decision;
+  const tenantId = cred?.tenant_id ?? null;
+
+  // ===== الأوردر الجديد =====
+  //
+  // **الرد بيروح فورًا والاستيراد بيكمّل في الخلفية.** شوبيفاي بتستنى ٥
+  // ثواني وبعدين بتعتبره فشل وتعيد المحاولة — وجلب الأوردرات أطول من كده.
+  //
+  // وبننادي **نفس دالة الاستيراد الدورية** مش مسار جديد: هي بتمنع التكرار
+  // برقم الأوردر (`lib/shopify/no-duplicate-orders.test.ts`)، فالويب هوك
+  // واللفة يشتغلوا مع بعض من غير أوردر مزدوج.
+  if (topic === "orders/create") {
+    if (tenantId) {
+      after(async () => {
+        try {
+          await runOrderImport({ db: createAdminClient(), tenantId });
+        } catch {
+          // اللفة الدورية هتلقطه بعد ربع ساعة — الويب هوك مش الطريق الوحيد
+        }
+      });
+    }
+    return NextResponse.json({ ok: true });
+  }
 
   try {
-    // البيزنس صاحب المتجر ده
-    const { data } = await db
-      .from("tenant_credentials")
-      .select("tenant_id")
-      .eq("shopify_shop", shop)
-      .maybeSingle();
-    const tenantId = (data as { tenant_id: string } | null)?.tenant_id ?? null;
 
     if (topic === "app/uninstalled" || topic === "shop/redact") {
       // **بنمسح مفاتيح الربط بس — مش داتا البيزنس.**
