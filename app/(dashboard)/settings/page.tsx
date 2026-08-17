@@ -153,6 +153,18 @@ export default async function SettingsPage({
               </summary>
 
               <div className="border-t border-gray-100 p-3">
+                {/* ⚠️ **شوبيفاي شالت الطريقة دي من متاجر كتير.**
+                    متجر ٢ سِك (١٧ أغسطس) صفحة `Develop apps` فيه بتقول
+                    «اعمل تطبيقاتك في Dev Dashboard» ومفيهاش زرار إنشاء
+                    خالص. فالتعليمات دي بتبعت الناس تدوّر على حاجة مش
+                    موجودة — والقسم اللي تحت هو اللي بيشتغل معاهم. */}
+                <p className="mb-3 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] leading-5 text-amber-800">
+                  <b>لو متجرك مالوش الخيار ده:</b> شوبيفاي نقلت إنشاء
+                  التطبيقات للوحة المطوّرين. ساعتها التطبيق بيدّيك{" "}
+                  <span dir="ltr">Client ID</span> و
+                  <span dir="ltr"> Secret</span> بدل التوكن — استخدم القسم
+                  اللي تحت خالص.
+                </p>
                 <ol className="space-y-2 text-xs text-gray-700">
                   <li>
                     <b>١.</b> من لوحة متجرك:{" "}
@@ -219,9 +231,16 @@ export default async function SettingsPage({
                     اربط بالتوكن
                   </button>
 
-                  <details className="pt-1">
-                    <summary className="cursor-pointer text-[10px] text-gray-400">
-                      تطبيق من لوحة المطوّرين بدل تطبيق المتجر؟
+                  {/* ⚠️ **ده مش قسم نادر، ده اللي بيشتغل مع المتاجر
+                      الجديدة.** كان مكتوب بخط رمادي صغير كأنه استثناء،
+                      فعمر فتح الخانة الغلط وحط السر مكان التوكن. */}
+                  <details className="rounded-lg border border-gray-200 p-2">
+                    <summary className="cursor-pointer text-xs font-medium text-gray-700">
+                      تطبيقك من لوحة المطوّرين؟ اضغط هنا
+                      <span className="mt-0.5 block text-[10px] font-normal text-gray-500">
+                        ساعتها معاك <span dir="ltr">Client ID</span> و
+                        <span dir="ltr"> Secret</span> — مش توكن
+                      </span>
                     </summary>
                     <div className="mt-2 space-y-2">
                       <input
