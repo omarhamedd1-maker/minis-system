@@ -44,9 +44,29 @@ describe("مقارنة التحصيل", () => {
     }
   });
 
-  it("بوسطة مفيهاش تحصيل = مانقارنش", () => {
-    expect(check({ bosta: 0 })).toMatchObject({ skip: "no_bosta_value" });
+  it("بوسطة مفيهاش تحصيل خالص = مانقارنش", () => {
+    // `null` معناها الشحنة لسه ماتعملتش، أو مرتجع بوسطة مابتقوليش تحصيله
     expect(check({ bosta: null })).toMatchObject({ skip: "no_bosta_value" });
+    expect(check({ bosta: undefined })).toMatchObject({ skip: "no_bosta_value" });
+  });
+
+  it("⚠️ **بوسطة بتقول صفر وإحنا مستنيين فلوس = تنبيه**", () => {
+    // الشرط كان `bosta <= 0` فكان بيبلع أخطر حالة: بوسطة هتسلّم الشحنة
+    // وماتحصّلش ولا جنيه، وإحنا ساكتين.
+    //
+    // الفحص على الداتا الحقيقية لقى **٢٧ أوردر اتسلّموا** تحصيلهم صفر
+    // ومحدش دفع مقدم — بإجمالي ٦٣٬٦٩٧ ج، ولا واحد طلّع تنبيه.
+    const r = check({ ours: 2037, bosta: 0, orderStatus: "shipped" });
+    expect(r.alert).toBe(true);
+    expect(r.diff).toBe(-2037);
+  });
+
+  it("والمدفوع مقدم بالكامل مايطلّعش تنبيه كاذب", () => {
+    // تحصيلنا صفر لأن العميل دفع، وبوسطة صفر — الاتنين متفقين
+    expect(check({ ours: 0, bosta: 0, orderStatus: "shipped" })).toMatchObject({
+      alert: false,
+      skip: "matches",
+    });
   });
 
   it("نفس الفرق مابينبّهش تاني — المزامنة كل ١٥ دقيقة", () => {
@@ -105,5 +125,31 @@ describe("رسالة الفرق", () => {
       fixable: true,
     });
     expect(m).toContain("تجاهل");
+  });
+});
+
+describe("رسالة الصفر", () => {
+  it("بتقول إن بوسطة مش هتحصّل حاجة، مش «التحصيل مختلف»", () => {
+    const m = codMismatchMessage({
+      orderNumber: 1419,
+      customerName: "أمينة فتحي",
+      ours: 2037,
+      bosta: 0,
+      fixable: true,
+    });
+    expect(m).toContain("مش هتحصّل حاجة");
+    expect(m).toContain("2037");
+    expect(m).not.toContain("التحصيل مختلف");
+  });
+
+  it("والفرق العادي رسالته زي ما هي", () => {
+    const m = codMismatchMessage({
+      orderNumber: 1248,
+      customerName: null,
+      ours: 4089,
+      bosta: 790,
+      fixable: true,
+    });
+    expect(m).toContain("التحصيل مختلف");
   });
 });
