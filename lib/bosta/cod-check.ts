@@ -44,7 +44,18 @@ export function checkCod(input: {
 }): CodCheck {
   const { orderStatus, ours, bosta, codUpdateBlocked, alertedAmount } = input;
 
-  if (typeof bosta !== "number" || bosta <= 0) {
+  // ⚠️⚠️ **الصفر مش «مفيش قيمة» — الصفر معناه «متحصّلش حاجة».**
+  //
+  // الشرط ده كان `bosta <= 0`، فكان بيبلع **أخطر حالة ممكنة**: بوسطة
+  // هتسلّم الشحنة وماتحصّلش ولا جنيه، وإحنا ساكتين.
+  //
+  // الفحص لقى **٢٧ أوردر اتسلّموا فعلًا** تحصيلهم عند بوسطة صفر ومحدش
+  // دفع مقدم — بإجمالي **٦٣٬٦٩٧ ج**. ولا واحد فيهم طلّع تنبيه.
+  //
+  // دلوقتي: **مفيش قيمة** (`null`) بنسكت — دي شحنة لسه ماتعملتش أو مرتجع
+  // بوسطة مابتقوليش تحصيله. **صفر صريح** بيعدّي للفحص عادي، وبيطلّع تنبيه
+  // لو إحنا مستنيين فلوس.
+  if (typeof bosta !== "number") {
     return { diff: 0, alert: false, fixable: false, skip: "no_bosta_value" };
   }
 
@@ -78,6 +89,23 @@ export function codMismatchMessage(a: {
   bosta: number;
   fixable: boolean;
 }): string {
+  // ⚠️ **الصفر ليه رسالة مختلفة** — «التحصيل مختلف» بتقلّل الحكاية.
+  // بوسطة بصفر معناها الشحنة هتوصل والمندوب **مش هياخد ولا جنيه**.
+  if (a.bosta === 0) {
+    const lines = alertHead(
+      "🚨",
+      `أوردر ${a.orderNumber ?? "—"} بوسطة مش هتحصّل حاجة`,
+      a.customerName
+    );
+    lines.push(`الشحنة عند بوسطة تحصيلها <b>صفر</b>، والأوردر <b>${a.ours}</b>`);
+    lines.push(
+      a.fixable
+        ? "لسه ينفع يتعدّل"
+        : "المندوب ماشي بيها — الفلوس دي مش هتتحصّل"
+    );
+    return lines.join("\n");
+  }
+
   const lines = alertHead(
     "💰",
     `أوردر ${a.orderNumber ?? "—"} التحصيل مختلف`,
