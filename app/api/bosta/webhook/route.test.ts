@@ -14,6 +14,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sync = vi.fn();
 let row: { tenant_id: string } | null = null;
+/** مفتاح بيزنس مقبول — غير المفتاح المشترك */
+let tenantToken: string | null = null;
 let asked: { table: string; column: string; value: unknown } | null = null;
 
 vi.mock("@/lib/bosta/sync", () => ({
@@ -27,6 +29,16 @@ vi.mock("@/lib/supabase/admin", () => ({
       select: () => ({
         eq: (column: string, value: unknown) => ({
           maybeSingle: async () => {
+            // البحث عن مفتاح البيزنس جدول تاني — مابيتسجّلش في `asked`
+            // عشان الاختبارات تفضل بتراقب البحث عن الأوردر
+            if (table === "tenant_credentials") {
+              return {
+                data:
+                  tenantToken && value === tenantToken
+                    ? { tenant_id: "t-token" }
+                    : null,
+              };
+            }
             asked = { table, column, value };
             return { data: row };
           },
@@ -55,6 +67,7 @@ describe("ويب هوك بوسطة", () => {
     sync.mockReset();
     row = null;
     asked = null;
+    tenantToken = null;
     process.env.BOSTA_WEBHOOK_KEY = KEY;
   });
 
@@ -84,11 +97,47 @@ describe("ويب هوك بوسطة", () => {
     expect(sync).not.toHaveBeenCalled();
   });
 
-  it("مفتاح غلط؟ ٤٠١ ومافيش أي قراءة", async () => {
+  it("مفتاح غلط؟ ٤٠١ ومافيش بحث عن أوردر", async () => {
     const res = await POST(post("https://x/api/bosta/webhook?key=غلط", {}));
 
     expect(res.status).toBe(401);
     expect(asked).toBeNull();
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it("**مفتاح البيزنس بيعدّي زي المشترك**", async () => {
+    tenantToken = "مفتاح-بيزنس";
+    row = { tenant_id: "t-2sec" };
+    const res = await POST(
+      post(
+        `https://x/api/bosta/webhook?key=${encodeURIComponent(tenantToken)}`,
+        { trackingNumber: "77778888" }
+      )
+    );
+
+    expect(res.status).toBe(200);
+    // ⚠️ **البيزنس بييجي من رقم التتبع مش من المفتاح** — المفتاح بوّاب بس
+    expect(sync).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: "t-2sec" })
+    );
+  });
+
+  it("مفتاح بيزنس تاني مش مسجّل؟ ٤٠١", async () => {
+    tenantToken = "مفتاح-بيزنس";
+    const res = await POST(
+      post("https://x/api/bosta/webhook?key=مفتاح-مش-موجود", {
+        trackingNumber: "77778888",
+      })
+    );
+
+    expect(res.status).toBe(401);
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it("مفيش مفتاح خالص؟ ٤٠١ من غير ما نسأل الداتابيز", async () => {
+    const res = await POST(post("https://x/api/bosta/webhook", {}));
+
+    expect(res.status).toBe(401);
     expect(sync).not.toHaveBeenCalled();
   });
 

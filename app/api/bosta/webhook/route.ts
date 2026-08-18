@@ -40,10 +40,34 @@ function readTracking(payload: unknown): string {
 
 export async function POST(req: Request) {
   const url = new URL(req.url);
+  const key = url.searchParams.get("key") ?? "";
 
-  // نفس حماية الدالة القديمة — مفتاح في الرابط
-  const guard = process.env.BOSTA_WEBHOOK_KEY || process.env.SYNC_KEY;
-  if (!guard || url.searchParams.get("key") !== guard) {
+  // ⚠️ **مفتاحين مقبولين، والفرق بينهم مهم:**
+  //
+  //   `BOSTA_WEBHOOK_KEY` — **سرّ واحد للمشروع كله**، في أسرار سوبابيز.
+  //     مينيز مظبوطة عليه من زمان، فبيفضل مقبول عشان مايقعش حاجة.
+  //     عيبه إنه مايتعرضش على الشاشة: أول ما نوريه لعميل، **كل عميل
+  //     بيشوف مفتاح كل العملاء**، ولو اتسرّب من واحد التغيير بيقع على الكل.
+  //
+  //   `bosta_webhook_token` — **مفتاح البيزنس نفسه**، السيستم بيولّده مع
+  //     الربط والشاشة بتوري كل واحد رابطه هو. ده اللي بيخلّي الربط خطوة
+  //     واحدة (انسخ والزق) من غير ما حد يدخل سوبابيز.
+  //
+  // المفتاح هنا **مش بيحدد البيزنس** — البيزنس بيطلع من رقم التتبع تحت.
+  // ده بوّاب بس: بيمنع أي حد يخلّينا نشتغل من غير سبب.
+  const shared = process.env.BOSTA_WEBHOOK_KEY || process.env.SYNC_KEY;
+  const db = createAdminClient();
+
+  let allowed = Boolean(shared) && key === shared;
+  if (!allowed && key) {
+    const { data } = await db
+      .from("tenant_credentials")
+      .select("tenant_id")
+      .eq("bosta_webhook_token", key)
+      .maybeSingle();
+    allowed = Boolean(data);
+  }
+  if (!allowed) {
     return NextResponse.json({ error: "غير مصرّح" }, { status: 401 });
   }
 
@@ -60,8 +84,6 @@ export async function POST(req: Request) {
     // مالوش رقم تتبع مش هيبقى ليه رقم تتبع مهما اتعاد
     return NextResponse.json({ ok: true, skipped: "مفيش رقم تتبع" });
   }
-
-  const db = createAdminClient();
 
   // البيزنس بيطلع من الصف نفسه — مش من أي حاجة في الطلب
   const { data } = await db

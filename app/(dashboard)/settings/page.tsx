@@ -13,6 +13,7 @@ import { EnablePush } from "@/components/EnablePush";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { headers } from "next/headers";
 import { ImportHistory } from "@/components/ImportHistory";
+import { CopyLink } from "@/components/CopyLink";
 import { describeUndo, listImportRuns } from "@/lib/import-runs";
 import { undoImport } from "../orders/actions";
 
@@ -47,7 +48,9 @@ export default async function SettingsPage({
     db.from("tenants").select("name").eq("id", me.tenantId).maybeSingle(),
     db
       .from("tenant_credentials")
-      .select("bosta_api_key, shopify_shop, shopify_access_token")
+      .select(
+        "bosta_api_key, bosta_webhook_token, shopify_shop, shopify_access_token"
+      )
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
@@ -67,6 +70,18 @@ export default async function SettingsPage({
   }));
 
   const hasBosta = Boolean(creds?.bosta_api_key);
+  /**
+   * رابط ويب هوك بوسطة بتاع البيزنس ده.
+   *
+   * ⚠️ **المفتاح اللي فيه بتاع البيزنس لوحده** — مش `BOSTA_WEBHOOK_KEY`
+   * المشترك. لو عرضنا المشترك هنا، كل عميل هيشوف مفتاح كل العملاء.
+   *
+   * فاضي؟ يعني البيزنس اتربط ببوسطة قبل ما الخانة دي تتعمل — أول حفظ
+   * لمفتاح بوسطة بيولّد المفتاح.
+   */
+  const bostaToken =
+    (creds as { bosta_webhook_token?: string | null } | null)
+      ?.bosta_webhook_token ?? null;
   const hasShopify = Boolean(creds?.shopify_access_token && creds?.shopify_shop);
   const app = await readShopifyApp(db);
   const appReady = Boolean(app);
@@ -75,6 +90,10 @@ export default async function SettingsPage({
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ??
     `https://${h.get("host") ?? "minis-system.vercel.app"}`;
+
+  const bostaHook = bostaToken
+    ? `${origin}/api/bosta/webhook?key=${bostaToken}`
+    : null;
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -296,6 +315,31 @@ export default async function SettingsPage({
             {hasBosta ? "غيّر" : "اربط"}
           </button>
         </form>
+
+        {/*
+          رابط الويب هوك جاهز للنسخ.
+
+          ⚠️ **من غيره الربط كان محتاج خطوة برّه السيستم**: حد يدخل أسرار
+          سوبابيز ويطلّع `BOSTA_WEBHOOK_KEY` ويلزقه في الرابط بإيده.
+
+          والسرّ ده **واحد للمشروع كله**، فعرضه هنا كان معناه إن كل عميل
+          يشوف مفتاح كل العملاء — ولو اتسرّب من واحد، تغييره بيقع على الكل.
+          عشان كده اللي بيتعرض هنا **مفتاح البيزنس نفسه**، بيتولّد مع الربط.
+
+          والمفتاح ده جرس مش تصريح كتابة: اللي بيرنّ مايقدرش يغيّر حالة
+          شحنة، إحنا بنروح نجيبها من بوسطة بمفتاح البيزنس.
+        */}
+        {hasBosta && bostaHook && (
+          <div className="mt-4 border-t border-gray-100 pt-3">
+            <p className="text-xs font-medium text-gray-700">
+              رابط الويب هوك — الزقه في إعدادات بوسطة
+            </p>
+            <p className="mt-0.5 text-[11px] text-gray-400">
+              من غيره حالة الشحنة بتتحدّث كل ربع ساعة بدل ثواني
+            </p>
+            <CopyLink url={bostaHook} />
+          </div>
+        )}
       </div>
 
       {/* ===== إشعارات الموبايل ===== */}

@@ -18,6 +18,7 @@ import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { registerShopifyWebhooks } from "@/lib/shopify/register-webhooks";
 import { headers } from "next/headers";
+import { randomUUID } from "node:crypto";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
 // مابيتنفذش، فمانحتاجش else في كل مكان
@@ -38,11 +39,33 @@ export async function saveBostaKey(formData: FormData) {
     back("المفتاح مارضيش يشتغل: " + (result.error ?? "بوسطة رفضته"));
   }
 
-  const { error } = await createAdminClient()
+  const db = createAdminClient();
+
+  // ⚠️ **مفتاح الويب هوك بيتولّد هنا مرة واحدة ومابيتغيّرش.**
+  //
+  // من غيره، ربط بوسطة كان بيحتاج خطوة برّه السيستم: حد يدخل أسرار
+  // سوبابيز ويطلّع `BOSTA_WEBHOOK_KEY` ويلزقه في الرابط. والسرّ ده واحد
+  // للمشروع كله، فعرضه على الشاشة معناه إن **كل عميل يشوف مفتاح كل
+  // العملاء** — ولو اتسرّب من واحد، تغييره بيقع على الكل.
+  //
+  // المفتاح ده بتاع البيزنس لوحده، فالشاشة تقدر توري الرابط كامل جاهز
+  // للنسخ. **وتوليده مرة واحدة مقصود**: لو اتغيّر مع كل حفظ، الرابط
+  // المحطوط عند بوسطة يبوظ في صمت وأول ما تحصل مشكلة محدش يعرف ليه.
+  const { data: existing } = await db
+    .from("tenant_credentials")
+    .select("bosta_webhook_token")
+    .eq("tenant_id", me.tenantId)
+    .maybeSingle();
+  const hasToken = Boolean(
+    (existing as { bosta_webhook_token: string | null } | null)?.bosta_webhook_token
+  );
+
+  const { error } = await db
     .from("tenant_credentials")
     .update({
       bosta_api_key: key,
       bosta_pickup_address_id: pickup || null,
+      ...(hasToken ? {} : { bosta_webhook_token: randomUUID().replace(/-/g, "") }),
       updated_at: new Date().toISOString(),
     })
     .eq("tenant_id", me.tenantId);
