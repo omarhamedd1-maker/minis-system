@@ -33,6 +33,13 @@ export type ShopifyOrderIn = {
   orderNumber: string;
   createdAt: string | null;
   cancelled: boolean;
+  /**
+   * تاريخ الإلغاء عند شوبيفاي.
+   *
+   * ⚠️ **مش تفصيلة**: لو كتبنا تاريخ النهاردة، إلغاء حصل في يونيو بيتحسب
+   * في أغسطس — وتقارير الشهرين يكدبوا.
+   */
+  cancelledAt?: string | null;
   fulfilled: boolean;
   discount: number;
   shipping: number;
@@ -49,6 +56,10 @@ export type OurOrderKey = {
   shopifyOrderId: string | null;
   /** رقم الأوردر عندنا — لازم نقارن بيه كمان، اقرا `haveOrder` تحت */
   orderNumber: string | number | null;
+  /** لازمين لمزامنة الإلغاء — اقرا `toCancel` تحت */
+  id?: string;
+  orderStatus?: string | null;
+  bostaTracking?: string | null;
 };
 export type OurCustomerKey = {
   id: string;
@@ -78,6 +89,30 @@ export type OrderImportPlan = {
   }[];
   /** موجود عندنا خلاص */
   alreadyHere: number;
+  /**
+   * ⚠️ **أوردرات اتلغت عند شوبيفاي بعد ما دخلت عندنا.**
+   *
+   * الاستيراد كان **بيضيف بس**: الأوردر اللي دخل مرة مايتلمسش تاني. يعني
+   * العميل يلغي أوردره عند شوبيفاي وإحنا نفضل حاسبينه إيراد للأبد.
+   *
+   * ودي مش نظرية — **اتلقى ٦ أوردرات في مينيز بإجمالي ١١٬٩١٥ ج** مكتوب
+   * عندهم «اتسلّم» وهم ملغيين من العميل عند شوبيفاي، **ومحصلش ليهم شحن
+   * أصلًا** (مفيش رقم تتبع). اتفحص ١٨ أغسطس ٢٠٢٦.
+   */
+  toCancel: {
+    id: string;
+    orderNumber: string;
+    was: string;
+    /** تاريخ الإلغاء عند شوبيفاي — بيتكتب زي ما هو */
+    at: string | null;
+  }[];
+  /**
+   * الملغي عند شوبيفاي **بس عندنا ليه شحنة بوسطة** — مابنلمسهوش.
+   *
+   * الشحنة حقيقية وعليها تحصيل ورسوم عند بوسطة. تحويلها لـ«ملغي» من ورا
+   * الشاشة بيبوّظ حساب بوسطة. القرار ده لواحد يشوفه بعينه.
+   */
+  cancelledButShipped: { orderNumber: string; was: string; tracking: string }[];
   /** فيه بند منتجه مش عندنا — لازم يجيب المنتجات الأول */
   missingProducts: {
     orderNumber: string;
@@ -135,6 +170,8 @@ export function planOrderImport(
   const plan: OrderImportPlan = {
     toImport: [],
     alreadyHere: 0,
+    toCancel: [],
+    cancelledButShipped: [],
     missingProducts: [],
     noLines: [],
     newCustomers: 0,
@@ -146,14 +183,28 @@ export function planOrderImport(
   // الحقيقي. لو قارنّا برقم شوبيفاي بس، الأوردر ده هيبان "مش موجود" ونجيبه
   // تاني — ويبقى عندك أوردرين رقمهم ١٠٧٢، وإيراد مضاعف.
   const haveOrder = new Set<string>();
+  /** الصف نفسه — عشان الإلغاء يعرف يوصل له */
+  const ourByKey = new Map<string, OurOrderKey>();
   for (const o of ourOrders) {
     const sid = String(o.shopifyOrderId ?? "");
     if (sid && !sid.startsWith("manual-") && !sid.startsWith("import-")) {
       haveOrder.add(sid);
+      ourByKey.set(sid, o);
     }
     const num = String(o.orderNumber ?? "").trim();
-    if (num) haveOrder.add(`num:${num}`);
+    if (num) {
+      haveOrder.add(`num:${num}`);
+      if (!ourByKey.has(`num:${num}`)) ourByKey.set(`num:${num}`, o);
+    }
   }
+
+  /**
+   * حالات إحنا اللي حطيناها بإيدنا — الاستيراد مايتخطاهاش.
+   *
+   * `returned_after_delivery` بالذات: الأوردر اتسلّم فعلًا وبعدين رجع،
+   * وده قرار موظف مالوش علاقة بإلغاء شوبيفاي.
+   */
+  const LOCKED = new Set(["cancelled", "returned_after_delivery"]);
 
   const customerByShopifyId = new Map<string, string>();
   const customerByPhone = new Map<string, string>();
@@ -174,6 +225,29 @@ export function planOrderImport(
       haveOrder.has(`num:${o.orderNumber}`)
     ) {
       plan.alreadyHere++;
+
+      // ⚠️ **الموجود عندنا مابيتحدّثش — إلا الإلغاء.** اقرا `toCancel` فوق.
+      const mine =
+        ourByKey.get(String(o.shopifyOrderId)) ??
+        ourByKey.get(`num:${o.orderNumber}`);
+      const was = String(mine?.orderStatus ?? "");
+      if (o.cancelled && mine?.id && was && !LOCKED.has(was)) {
+        const tracking = String(mine.bostaTracking ?? "").trim();
+        if (tracking) {
+          plan.cancelledButShipped.push({
+            orderNumber: o.orderNumber,
+            was,
+            tracking,
+          });
+        } else {
+          plan.toCancel.push({
+            id: mine.id,
+            orderNumber: o.orderNumber,
+            was,
+            at: o.cancelledAt ?? null,
+          });
+        }
+      }
       continue;
     }
 

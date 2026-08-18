@@ -115,6 +115,7 @@ export async function fetchShopifyOrders(
         orderNumber: String(o.name ?? "").replace("#", "").trim(),
         createdAt: o.createdAt ?? null,
         cancelled: Boolean(o.cancelledAt),
+        cancelledAt: o.cancelledAt ?? null,
         fulfilled: String(o.displayFulfillmentStatus ?? "") === "FULFILLED",
         discount: Number(o.currentTotalDiscountsSet?.shopMoney?.amount ?? 0),
         shipping: Number(o.totalShippingPriceSet?.shopMoney?.amount ?? 0),
@@ -174,6 +175,8 @@ export type OrderImportResult =
       added?: { orders: number; customers: number };
       /** اللي اتعمل فعلًا — بيتسجّل في `import_runs` عشان التراجع */
       undo?: { orders: string[]; customers: string[] };
+      /** أوردرات اتلغت عند شوبيفاي واتقفلت عندنا في اللفة دي */
+      cancelled?: number;
     }
   | { ok: false; error: string };
 
@@ -222,10 +225,16 @@ export async function runOrderImport(opts: {
     await Promise.all([
       db
         .from("orders")
-        .select("shopify_order_id, order_number")
+        .select("id, shopify_order_id, order_number, order_status, bosta_tracking")
         .eq("tenant_id", tenantId)
         .overrideTypes<
-          { shopify_order_id: string | null; order_number: string | null }[]
+          {
+            id: string;
+            shopify_order_id: string | null;
+            order_number: string | null;
+            order_status: string | null;
+            bosta_tracking: string | null;
+          }[]
         >(),
       db
         .from("customers")
@@ -258,6 +267,9 @@ export async function runOrderImport(opts: {
     (ourOrders ?? []).map((o) => ({
       shopifyOrderId: o.shopify_order_id,
       orderNumber: o.order_number,
+      id: o.id,
+      orderStatus: o.order_status,
+      bostaTracking: o.bosta_tracking,
     })),
     (ourCustomers ?? []).map((c) => ({
       id: c.id,
@@ -267,7 +279,33 @@ export async function runOrderImport(opts: {
     new Set(variantByShopifyId.keys())
   );
 
-  if (dry || plan.toImport.length === 0) return { ok: true, dry, plan };
+  if (dry) return { ok: true, dry, plan };
+
+  // ⚠️⚠️ **الإلغاء لازم يتنفّذ قبل الخروج المبكر تحت.**
+  //
+  // السطر اللي بعده بيخرج لما مافيش أوردر جديد — **وده الحالة الغالبة**،
+  // لأن الاستيراد بيشتغل كل ربع ساعة والجديد بييجي مرة كل كام ساعة. لو
+  // الإلغاء اتحط بعده، كان هيتنفّذ في اللفات النادرة اللي فيها أوردر جديد
+  // بس — يعني إلغاء يقعد ساعات مستني أوردر جديد يعدّيه.
+  let cancelled = 0;
+  for (const c of plan.toCancel) {
+    const { error } = await db
+      .from("orders")
+      .update({
+        order_status: "cancelled",
+        // تاريخ شوبيفاي مش تاريخ اللفة — إلغاء يونيو مايتحسبش في أغسطس
+        cancelled_at: c.at ?? new Date().toISOString(),
+        // الأوردر الملغي مااتسلّمش
+        delivered_at: null,
+      })
+      .eq("id", c.id)
+      .eq("tenant_id", tenantId);
+    if (!error) cancelled++;
+  }
+
+  if (plan.toImport.length === 0) {
+    return { ok: true, dry, plan, ...(cancelled ? { cancelled } : {}) };
+  }
 
   let addedOrders = 0;
   let addedCustomers = 0;
@@ -358,5 +396,6 @@ export async function runOrderImport(opts: {
     plan,
     added: { orders: addedOrders, customers: addedCustomers },
     undo: { orders: madeOrders, customers: madeCustomers },
+    ...(cancelled ? { cancelled } : {}),
   };
 }
