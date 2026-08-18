@@ -18,6 +18,7 @@ import { runTaskReminders } from "@/lib/task-reminders-run";
 import { recordPrepaidCash } from "@/lib/prepaid-cash-run";
 import { activeTenantIds } from "@/lib/tenant-settings";
 import { runOrderImport } from "@/lib/shopify/orders";
+import { runProductImport } from "@/lib/shopify/products";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -98,6 +99,21 @@ export async function GET(request: Request) {
         // فتشغيله كل ربع ساعة مالوش ضرر.
         let shopify: Ok["shopify"] = null;
         try {
+          // ⚠️⚠️ **المنتجات الأول — الترتيب ده مش تفصيلة.**
+          //
+          // الاستيراد **بيوقف الأوردر اللي منتجاته مش عندنا بقصد** (بند من
+          // غير منتج = إجمالي غلط، وده أوحش من إن الأوردر ماييجيش). يعني
+          // أول تشغيل لبيزنس جديد كان بيرجّع **صفر** — والسبب إن المنتجات
+          // لسه مااتجابتش، مش إن فيه عطل.
+          //
+          // ودي كانت خطوة على المستخدم يعرفها بنفسه: «هات المنتجات الأول».
+          // اتسجّلت في سجل عيوب التركيب (`docs/ONBOARDING.md`) لما ٢ سِك
+          // اتركّب (١٧ أغسطس) — أول جلب رجّع صفر ووقفنا ندوّر في حاجة سليمة.
+          //
+          // **والتشغيل ده مالوش ضرر**: الجلب بيقارن برقم المنتج عند شوبيفاي
+          // ومابيكرّرش، فاللفة اللي مالقتش جديد مابتكتبش حاجة.
+          await runProductImport({ db, tenantId, dry });
+
           const r = await runOrderImport({ db, tenantId, dry });
 
           // **الإلغاء بيتقال في الحالتين** — سواء فيه أوردر جديد أو لأ.
