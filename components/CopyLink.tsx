@@ -8,7 +8,7 @@ import { useState } from "react";
  * **اللينك ده بيتبعت للتيم**، فالنسخ بضغطة أهم من إنه يبان كامل — التحديد
  * بالإيد على التليفون بياخد نص دقيقة وبيجيب معاه مسافة زيادة.
  */
-export function CopyLink({ url, href }: { url: string; href: string }) {
+export function CopyLink({ url, href }: { url: string; href?: string }) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -23,16 +23,31 @@ export function CopyLink({ url, href }: { url: string; href: string }) {
 
   return (
     <div className="mt-1.5 flex items-center gap-1 rounded-lg bg-gray-50 px-2 py-1">
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        dir="ltr"
-        className="min-w-0 flex-1 truncate text-[11px] text-gray-600 hover:text-sky-700 hover:underline"
-        title={url}
-      >
-        {url}
-      </a>
+      {/*
+        **من غير `href` بيبقى نص مش لينك.** فيه روابط مالهاش لازمة تتفتح —
+        زي رابط الويب هوك: هو بيستقبل `POST` بس، فالضغط عليه بيفتح صفحة
+        خطأ ٤٠٥ وبيخلّي اللي ضغط يفتكر إن فيه حاجة بايظة.
+      */}
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          dir="ltr"
+          className="min-w-0 flex-1 truncate text-[11px] text-gray-600 hover:text-sky-700 hover:underline"
+          title={url}
+        >
+          {url}
+        </a>
+      ) : (
+        <span
+          dir="ltr"
+          className="min-w-0 flex-1 truncate text-[11px] text-gray-600"
+          title={url}
+        >
+          {url}
+        </span>
+      )}
       <button
         type="button"
         onClick={copy}
