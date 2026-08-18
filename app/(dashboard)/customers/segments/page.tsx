@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatMoney } from "@/lib/format";
 import { requirePagePermission } from "@/lib/permissions";
 import {
@@ -21,7 +21,18 @@ export const dynamic = "force-dynamic";
  */
 export default async function SegmentsPage() {
   const me = await requirePagePermission("customers.view");
-  const db = createAdminClient();
+
+  // ⚠️ **اتصال محمي بالـRLS، مش مفتاح الأدمن** (بند ٢.٦).
+  //
+  // مفتاح الأدمن بيعدّي فوق قواعد المنع، فالفلتر على البيزنس بيبقى علينا
+  // نفتكره. الاتصال ده بيمشي بجلسة المستخدم فالداتابيز نفسها بترفض.
+  // **والفلتر سايبينه** — حزام وحمّالة.
+  //
+  // ⚠️ **والجدولين المتداخلين هنا مثبتين**: `orders` وجوّاها `order_items`
+  // بتتقرا بنفس الشكل في شاشة الأوردرات الشغّالة، و`customers` في شاشة
+  // العملاء. الجدول اللي سياسته ناقصة **بيرجع فاضي من غير خطأ** — يعني
+  // الشاشة تبان شغّالة وأرقامها أصفار، فمابنحوّلش غير المثبت.
+  const db = await createClient();
 
   const [{ data: orders }, { data: people }] = await Promise.all([
     db
