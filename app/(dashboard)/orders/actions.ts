@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { runOrderImport, type OrderImportResult } from "@/lib/shopify/orders";
+import { runProductImport } from "@/lib/shopify/products";
 import { recordImportRun, undoImportRun } from "@/lib/import-runs";
 
 /**
@@ -17,6 +18,26 @@ export async function importShopifyOrders(
   dry: boolean
 ): Promise<OrderImportResult> {
   const me = await requirePermission("orders.create");
+
+  // ⚠️⚠️ **المنتجات الأول — وده اللي بيمنع «صفر» غامضة.**
+  //
+  // الاستيراد **بيوقف الأوردر اللي منتجاته مش عندنا بقصد** (بند من غير
+  // منتج = إجمالي غلط). يعني الزرار ده على بيزنس جديد كان بيرجّع صفر،
+  // والسبب إن المنتجات لسه مااتجابتش مش إن فيه عطل.
+  //
+  // اللفة الدورية بقت تعمل كده (`app/api/tasks/recur`)، **بس الزرار لأ** —
+  // واللي بيدوس بإيده هو أول واحد بيقع في الفخ. اتسجّل في سجل عيوب
+  // التركيب (`docs/ONBOARDING.md`) من تركيب ٢ سِك.
+  //
+  // **والتجربة الجافة مابتجيبش منتجات** — `dry` معناها «مش هتكتب حاجة».
+  if (!dry) {
+    try {
+      await runProductImport({ db: createAdminClient(), tenantId: me.tenantId });
+    } catch {
+      // جلب المنتجات وقع؟ الأوردرات تكمّل — اللي منتجه ناقص هيتقال لوحده
+    }
+  }
+
   const res = await runOrderImport({
     db: createAdminClient(),
     tenantId: me.tenantId,

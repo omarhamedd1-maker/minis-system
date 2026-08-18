@@ -47,6 +47,25 @@ export type ShipmentInput = {
   city: BostaCity | null;
   zone: BostaZone | null;
   pickupAddressId?: string | null;
+  /**
+   * ⚠️⚠️ **الرابط اللي بوسطة هترنّ عليه لما حالة الشحنة دي تتغيّر.**
+   *
+   * ده بيلغي أهم خطوة يدوية في تركيب أي عميل جديد. من غيره لازم صاحب
+   * المتجر يفتح لوحة بوسطة وينسخ رابط ويلزقه بإيده — وده كان متسجّل في سجل
+   * عيوب التركيب على إنه **مالوش حل**، لأن بوسطة مافيهاش مسار API لتسجيل
+   * ويب هوك على مستوى الحساب (كل المسارات المحتملة بترد `Cannot POST`،
+   * اتفحصت `GET` و`POST` ١٨ أغسطس ٢٠٢٦).
+   *
+   * **بس توثيقهم بيقول إن الشحنة نفسها بتقبل `webhookUrl`** وقت إنشائها.
+   * فبدل رابط واحد للحساب، كل شحنة بتشيل رابطها معاها.
+   *
+   * وده أحسن من رابط الحساب: الرابط فيه **مفتاح البيزنس**، فبوسطة بترنّ
+   * على عنوان البيزنس صاحب الشحنة مباشرة.
+   *
+   * ⚠️ **ومابيغطّيش الشحنة اللي اتعملت من لوحة بوسطة بإيد** — دي بترجع
+   * للمزامنة الدورية كل ربع ساعة، أو لرابط الحساب لو اتحط.
+   */
+  webhookUrl?: string | null;
 };
 
 export type PayloadVariant = {
@@ -209,6 +228,8 @@ export function buildShipment(input: ShipmentInput): BuildResult {
     businessReference: String(input.orderNumber ?? ""),
     allowToOpenPackage: true,
     ...(input.pickupAddressId ? { pickupAddressId: input.pickupAddressId } : {}),
+    // اقرا `webhookUrl` في `ShipmentInput` — دي بتلغي خطوة يدوية في التركيب
+    ...(input.webhookUrl ? { webhookUrl: input.webhookUrl } : {}),
   };
 
   const extras = { firstLine: addressLine, ...addressExtras(cust) };
@@ -266,6 +287,8 @@ export type ReturnInput = {
   returning: { returnedQuantity: number; productName: string | null }[];
   customer: ShipmentCustomer | null;
   city: BostaCity | null;
+  /** نفس اللي في `ShipmentInput` — اقرا الشرح هناك */
+  webhookUrl?: string | null;
 };
 
 export type BuiltReturn = {
@@ -308,6 +331,8 @@ export type ExchangeInput = {
   city: BostaCity | null;
   zone: BostaZone | null;
   pickupAddressId?: string | null;
+  /** نفس اللي في `ShipmentInput` — اقرا الشرح هناك */
+  webhookUrl?: string | null;
 };
 
 export type BuiltExchange = {
@@ -403,6 +428,7 @@ export function buildExchangeShipment(
       ? { originalTrackingNumber: String(input.originalTracking) }
       : {}),
     ...(input.pickupAddressId ? { pickupAddressId: input.pickupAddressId } : {}),
+    ...(input.webhookUrl ? { webhookUrl: input.webhookUrl } : {}),
   };
 
   const extras = { firstLine: addressLine, ...addressExtras(cust) };
@@ -482,6 +508,7 @@ export function buildReturnShipment(input: ReturnInput): BuildReturnResult {
     // الفلوس إحنا اللي نرجّعها للعميل — الشحنة بصفر تحصيل
     cod: 0,
     businessReference: `RET-${input.orderNumber ?? ""}`,
+    ...(input.webhookUrl ? { webhookUrl: input.webhookUrl } : {}),
     notes: `مرتجع أوردر ${input.orderNumber ?? ""}${
       input.originalTracking ? ` (شحنة أصلية ${input.originalTracking})` : ""
     }`.trim(),

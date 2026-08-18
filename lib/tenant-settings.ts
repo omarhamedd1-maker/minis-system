@@ -13,6 +13,8 @@ export const MINIS_TENANT = "00000000-0000-0000-0000-000000000001";
 export type TenantCredentials = {
   bostaApiKey: string | null;
   bostaPickupAddressId: string | null;
+  /** مفتاح ويب هوك البيزنس — بيتحط في رابط كل شحنة، اقرا `bostaWebhookUrl` */
+  bostaWebhookToken: string | null;
   shopifyShop: string | null;
   shopifyAccessToken: string | null;
   shopifyWebhookSecret: string | null;
@@ -43,6 +45,7 @@ export async function loadTenantCredentials(
   return {
     bostaApiKey: data?.bosta_api_key ?? null,
     bostaPickupAddressId: data?.bosta_pickup_address_id ?? null,
+    bostaWebhookToken: data?.bosta_webhook_token ?? null,
     shopifyShop: data?.shopify_shop ?? null,
     shopifyAccessToken: data?.shopify_access_token ?? null,
     shopifyWebhookSecret: data?.shopify_webhook_secret ?? null,
@@ -62,4 +65,23 @@ export async function activeTenantIds(db: SupabaseClient): Promise<string[]> {
 
   if (error) throw new Error("معرفناش نقرا البيزنسات: " + error.message);
   return (data ?? []).map((t) => t.id as string);
+}
+
+/**
+ * رابط ويب هوك بوسطة بتاع البيزنس.
+ *
+ * ⚠️ **بيتبعت مع كل شحنة بنعملها** (`webhookUrl` في طلب الإنشاء)، فبوسطة
+ * بترنّ على عنوان البيزنس صاحب الشحنة من غير ما حد يظبّط حاجة في لوحتهم.
+ * ده بيلغي أهم خطوة يدوية في تركيب أي عميل جديد.
+ *
+ * **الدومين من `NEXT_PUBLIC_SITE_URL`** — ومن غيره بنرجع لدومين فيرسل.
+ * ⚠️ مابنستخدمش `headers()` هنا بقصد: الدالة دي بتتنادى من مسارات وخلفية
+ * مالهاش طلب أصلاً، والرابط ده **بيتخزّن عند بوسطة** فلازم يبقى ثابت مش
+ * متغيّر حسب اللي فتح الصفحة.
+ */
+export function bostaWebhookUrl(token: string | null | undefined): string | null {
+  if (!token) return null;
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://minis-system.vercel.app";
+  return `${origin.replace(/\/+$/, "")}/api/bosta/webhook?key=${token}`;
 }
