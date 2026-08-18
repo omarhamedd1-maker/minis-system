@@ -16,6 +16,8 @@ import {
 } from "@/lib/shopify/client";
 import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { readShopifyApp } from "@/lib/shopify/app";
+import { registerShopifyWebhooks } from "@/lib/shopify/register-webhooks";
+import { headers } from "next/headers";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
 // مابيتنفذش، فمانحتاجش else في كل مكان
@@ -159,8 +161,31 @@ export async function saveShopify(formData: FormData) {
   }
 
   await logActivity(me, "settings.shopify", `ربط متجر شوبيفاي ${result.shop.name}`);
+
+  // ⚠️⚠️ **من غير ده الأوردر بيستنى ربع ساعة.**
+  //
+  // الويب هوك بتاع مينيز و٢ سِك اتسجّل **بالإيد** (١٧ أغسطس)، وماكانش فيه
+  // كود بيعمله. يعني أي بيزنس جديد كان بيربط متجره والأوردرات تيجي باللفة
+  // الدورية بس — بيشتغل، بس بطيء، ومحدش يعرف ليه.
+  //
+  // **والفشل هنا مش فشل في الربط** — اللفة الدورية شبكة الأمان، فالرسالة
+  // بتقول إيه اللي حصل من غير ما تخوّف.
+  let hooks = "";
+  if (token) {
+    const r = await registerShopifyWebhooks({
+      shop,
+      token,
+      callbackUrl: `https://${
+        (await headers()).get("host") ?? "minis-system.vercel.app"
+      }/api/shopify/webhooks`,
+    });
+    if (r.created.length > 0) hooks = " · والأوردر الجديد هييجي فورًا";
+    else if (r.alreadyOk.length > 0) hooks = " · الأوردر الفوري شغّال خلاص";
+    else if (r.failed.length > 0) hooks = " · الأوردر هييجي كل ربع ساعة";
+  }
+
   revalidatePath("/settings");
-  back(`تمام — اتصلنا بمتجر "${result.shop.name}" واتحفظ`, true);
+  back(`تمام — اتصلنا بمتجر "${result.shop.name}" واتحفظ${hooks}`, true);
 }
 
 /** بيجرّب المفاتيح المحفوظة من غير ما يغيّر حاجة */
