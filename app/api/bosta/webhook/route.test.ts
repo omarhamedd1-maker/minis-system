@@ -23,30 +23,46 @@ vi.mock("@/lib/bosta/sync", () => ({
   BostaNotLinked: class extends Error {},
 }));
 
-vi.mock("@/lib/supabase/admin", () => ({
-  createAdminClient: () => ({
-    from: (table: string) => ({
-      select: () => ({
-        eq: (column: string, value: unknown) => ({
-          maybeSingle: async () => {
-            // البحث عن مفتاح البيزنس جدول تاني — مابيتسجّلش في `asked`
-            // عشان الاختبارات تفضل بتراقب البحث عن الأوردر
-            if (table === "tenant_credentials") {
-              return {
-                data:
-                  tenantToken && value === tenantToken
-                    ? { tenant_id: "t-token" }
-                    : null,
-              };
-            }
-            asked = { table, column, value };
-            return { data: row };
-          },
-        }),
-      }),
+/** آخر مزامنة اتسجّلت للبيزنس — بتتقرا من `sync_runs` عشان المهلة */
+let lastRunAt: string | null = null;
+
+vi.mock("@/lib/bosta/sync-runs", () => ({ recordSyncRun: vi.fn() }));
+
+vi.mock("@/lib/supabase/admin", () => {
+  // `sync_runs` بتتقرا بسلسلة أطول (`order` و`limit`)، فالموك بيرجّع
+  // نفسه لأي دالة وسط والقراية بتحصل في `maybeSingle`
+  const chain = (table: string, column: string, value: unknown) => {
+    const self: Record<string, unknown> = {};
+    const same = () => self;
+    self.select = same;
+    self.eq = (c: string, v: unknown) =>
+      table === "sync_runs" ? self : chain(table, c, v);
+    self.order = same;
+    self.limit = same;
+    self.maybeSingle = async () => {
+      if (table === "sync_runs") {
+        return { data: lastRunAt ? { created_at: lastRunAt } : null };
+      }
+      // مفتاح البيزنس جدول تاني — مابيتسجّلش في `asked` عشان الاختبارات
+      // تفضل بتراقب البحث عن الأوردر
+      if (table === "tenant_credentials") {
+        return {
+          data:
+            tenantToken && value === tenantToken ? { tenant_id: "t-token" } : null,
+        };
+      }
+      asked = { table, column, value };
+      return { data: row };
+    };
+    return self;
+  };
+
+  return {
+    createAdminClient: () => ({
+      from: (table: string) => chain(table, "", undefined),
     }),
-  }),
-}));
+  };
+});
 
 // **`after` بينفّذ على طول هنا** — إحنا عايزين نشوف المزامنة اتندهت ولا لأ
 vi.mock("next/server", async () => {
@@ -68,6 +84,7 @@ describe("ويب هوك بوسطة", () => {
     row = null;
     asked = null;
     tenantToken = null;
+    lastRunAt = null;
     process.env.BOSTA_WEBHOOK_KEY = KEY;
   });
 
@@ -153,5 +170,53 @@ describe("ويب هوك بوسطة", () => {
     await POST(post(URL_OK, { delivery: { trackingNumber: "12341234" } }));
 
     expect(asked?.value).toBe("12341234");
+  });
+});
+
+// ==========================================================================
+// المهلة — عشان الرشقة ماتشغّلش عشر مزامنات كاملة
+// --------------------------------------------------------------------------
+// بعد ما بقينا بنبعت `webhookUrl` مع كل شحنة، بوسطة بترنّ على كل تغيير في
+// كل شحنة. وكل رنّة كانت بتشغّل مزامنة **كاملة** (كل شحنات البيزنس).
+// ==========================================================================
+
+describe("مهلة المزامنة في المسار", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    sync.mockReset();
+    row = { tenant_id: "t-2sec" };
+    asked = null;
+    tenantToken = null;
+    lastRunAt = null;
+    process.env.BOSTA_WEBHOOK_KEY = KEY;
+  });
+
+  async function ring() {
+    return (await import("./route")).POST(
+      post(URL_OK, { trackingNumber: "77778888" })
+    );
+  }
+
+  it("**اتزامن من ثواني؟ مابنزامنش تاني**", async () => {
+    lastRunAt = new Date(Date.now() - 5_000).toISOString();
+    const res = await ring();
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ skipped: "اتزامن من شوية" });
+    expect(sync).not.toHaveBeenCalled();
+  });
+
+  it("عدّت المهلة؟ بنزامن", async () => {
+    lastRunAt = new Date(Date.now() - 120_000).toISOString();
+    await ring();
+
+    expect(sync).toHaveBeenCalledTimes(1);
+  });
+
+  it("**مافيش مزامنة اتسجّلت قبل كده؟ بنزامن** — مش بنسكت", async () => {
+    lastRunAt = null;
+    await ring();
+
+    expect(sync).toHaveBeenCalledTimes(1);
   });
 });

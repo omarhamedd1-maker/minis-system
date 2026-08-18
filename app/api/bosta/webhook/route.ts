@@ -25,6 +25,8 @@
 import { NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BostaNotLinked, runBostaSync } from "@/lib/bosta/sync";
+import { recordSyncRun } from "@/lib/bosta/sync-runs";
+import { shouldSyncNow } from "@/lib/bosta/sync-cooldown";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -98,10 +100,52 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, skipped: "الشحنة مش عندنا" });
   }
 
+  // ⚠️⚠️ **مهلة دقيقة بين المزامنات** — اقرا `lib/bosta/sync-cooldown.ts`.
+  //
+  // كل رنّة بتشغّل مزامنة **كاملة** (كل شحنات البيزنس من بوسطة). وبعد ما
+  // بقينا بنبعت `webhookUrl` مع كل شحنة، بوسطة بترنّ على كل تغيير في كل
+  // شحنة — يعني يوم عادي بقى عشرات المزامنات الكاملة على نفس الداتا.
+  const { data: lastRun } = await db
+    .from("sync_runs")
+    .select("created_at")
+    .eq("tenant_id", tenantId)
+    .eq("dry", false)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const decision = shouldSyncNow(
+    (lastRun as { created_at: string } | null)?.created_at ?? null
+  );
+  if (!decision.run) {
+    return NextResponse.json({
+      ok: true,
+      skipped: "اتزامن من شوية",
+      waitMs: decision.waitMs,
+    });
+  }
+
   // **الرد بيروح فورًا** — المزامنة أطول من صبر بوسطة
   after(async () => {
+    const startedAt = Date.now();
+    const admin = createAdminClient();
     try {
-      await runBostaSync({ db: createAdminClient(), tenantId });
+      const summary = await runBostaSync({ db: admin, tenantId });
+      // ⚠️ **التسجيل مش رفاهية**: المهلة فوق بتقرا من الجدول ده، ومن غير
+      // التسجيل كل رنّة هتلاقي «مافيش مزامنة» وتشتغل — يعني المهلة تبقى
+      // موجودة في الكود وميتة في الواقع. وبيخلّي الجرس نفسه يبان شغّال.
+      await recordSyncRun(admin, {
+        tenantId,
+        source: "bosta-webhook",
+        ok: summary.errors.length === 0,
+        dry: false,
+        fetched: summary.fetched,
+        matched: summary.matched,
+        changed: summary.changed,
+        unmatched: summary.unmatched,
+        errors: summary.errors,
+        durationMs: Date.now() - startedAt,
+      });
     } catch (e) {
       // البيزنس شال مفتاح بوسطة؟ اللفة الدورية هتتعامل معاها
       if (!(e instanceof BostaNotLinked)) {
