@@ -316,3 +316,88 @@ describe("دفعة كاملة", () => {
     expect(plan.missingProducts).toHaveLength(1);
   });
 });
+
+// ==========================================================================
+// مزامنة الإلغاء — الأوردر اللي اتلغى عند شوبيفاي بعد ما دخل عندنا
+// --------------------------------------------------------------------------
+// الاستيراد كان **بيضيف بس**، فالإلغاء ماكانش بيوصل خالص. اتلقى ٦ أوردرات
+// في مينيز بإجمالي ١١٬٩١٥ ج مكتوب عندهم «اتسلّم» وهم ملغيين من العميل عند
+// شوبيفاي ومحصلش ليهم شحن (١٨ أغسطس ٢٠٢٦).
+// ==========================================================================
+
+const here = (over: Partial<Parameters<typeof planOrderImport>[1][number]> = {}) => ({
+  shopifyOrderId: "S1",
+  orderNumber: "1001",
+  id: "row-1",
+  orderStatus: "delivered",
+  bostaTracking: null,
+  ...over,
+});
+
+describe("الإلغاء من شوبيفاي", () => {
+  it("الملغي عند شوبيفاي واللي مالوش شحنة **بيتقفل عندنا**", () => {
+    const plan = planOrderImport(
+      [order({ cancelled: true, cancelledAt: "2026-07-02T10:00:00Z" })],
+      [here()],
+      [],
+      KNOWN
+    );
+    // **تاريخ شوبيفاي بيتنقل زي ما هو** — مش تاريخ اللفة
+    expect(plan.toCancel).toEqual([
+      { id: "row-1", orderNumber: "1001", was: "delivered", at: "2026-07-02T10:00:00Z" },
+    ]);
+    expect(plan.cancelledButShipped).toHaveLength(0);
+  });
+
+  it("**اللي ليه شحنة بوسطة مابيتلمسش** — بيتعرض للمراجعة بس", () => {
+    const plan = planOrderImport(
+      [order({ cancelled: true })],
+      [here({ bostaTracking: "77778888" })],
+      [],
+      KNOWN
+    );
+    expect(plan.toCancel).toHaveLength(0);
+    expect(plan.cancelledButShipped).toEqual([
+      { orderNumber: "1001", was: "delivered", tracking: "77778888" },
+    ]);
+  });
+
+  it("الملغي عندنا خلاص مابيتكررش", () => {
+    const plan = planOrderImport(
+      [order({ cancelled: true })],
+      [here({ orderStatus: "cancelled" })],
+      [],
+      KNOWN
+    );
+    expect(plan.toCancel).toHaveLength(0);
+  });
+
+  it("**`returned_after_delivery` محمي** — ده قرار موظف مش إلغاء شوبيفاي", () => {
+    const plan = planOrderImport(
+      [order({ cancelled: true })],
+      [here({ orderStatus: "returned_after_delivery" })],
+      [],
+      KNOWN
+    );
+    expect(plan.toCancel).toHaveLength(0);
+    expect(plan.cancelledButShipped).toHaveLength(0);
+  });
+
+  it("مش ملغي عند شوبيفاي؟ مافيش حاجة تتعمل", () => {
+    const plan = planOrderImport([order()], [here()], [], KNOWN);
+    expect(plan.toCancel).toHaveLength(0);
+    expect(plan.alreadyHere).toBe(1);
+  });
+
+  it("بيوصل للصف حتى لما المطابقة بالرقم مش بمعرّف شوبيفاي", () => {
+    const plan = planOrderImport(
+      [order({ shopifyOrderId: "S9", orderNumber: "1001", cancelled: true })],
+      [here({ shopifyOrderId: "import-1001", orderNumber: "1001", id: "row-9" })],
+      [],
+      KNOWN
+    );
+    expect(plan.toCancel).toEqual([
+      { id: "row-9", orderNumber: "1001", was: "delivered", at: null },
+    ]);
+  });
+});

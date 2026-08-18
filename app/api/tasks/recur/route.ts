@@ -48,7 +48,18 @@ export async function GET(request: Request) {
      * حاجة سليمة وأنا فاكر إنها بايظة.
      */
     shopify:
-      | { orders: number; customers: number; dry?: boolean }
+      | {
+          orders: number;
+          customers: number;
+          dry?: boolean;
+          /** أوردرات اتلغت عند شوبيفاي واتقفلت عندنا */
+          cancelled?: number;
+          /**
+           * ملغي عند شوبيفاي **بس ليه شحنة بوسطة** — مااتلمسش عن قصد.
+           * الأرقام دي محتاجة عين، والشحنة عليها فلوس ورسوم عند بوسطة.
+           */
+          cancelledButShipped?: string[];
+        }
       | { skipped: string }
       | null;
   };
@@ -88,7 +99,22 @@ export async function GET(request: Request) {
         let shopify: Ok["shopify"] = null;
         try {
           const r = await runOrderImport({ db, tenantId, dry });
-          if (r.ok && r.added) shopify = r.added;
+
+          // **الإلغاء بيتقال في الحالتين** — سواء فيه أوردر جديد أو لأ.
+          // في التجربة الجافة بيوري اللي **كان** هيتقفل.
+          const review = r.ok
+            ? r.plan.cancelledButShipped.map((x) => x.orderNumber)
+            : [];
+          const cancelInfo = r.ok
+            ? {
+                ...((dry ? r.plan.toCancel.length : (r.cancelled ?? 0))
+                  ? { cancelled: dry ? r.plan.toCancel.length : (r.cancelled ?? 0) }
+                  : {}),
+                ...(review.length ? { cancelledButShipped: review } : {}),
+              }
+            : {};
+
+          if (r.ok && r.added) shopify = { ...r.added, ...cancelInfo };
           else if (r.ok) {
             // ⚠️ **`dry` هنا معناها «الأرقام دي مش اللي اتعمل».**
             //
@@ -106,6 +132,7 @@ export async function GET(request: Request) {
               orders: r.plan.toImport.length,
               customers: newCustomers,
               ...(dry ? { dry: true } : {}),
+              ...cancelInfo,
             };
           } else {
             shopify = { skipped: r.error };
