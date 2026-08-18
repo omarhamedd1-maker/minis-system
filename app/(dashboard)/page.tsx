@@ -10,6 +10,7 @@ import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { DayPicker } from "@/components/DayPicker";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
+import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
 import { can, requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
@@ -225,6 +226,13 @@ export default async function StatsPage({
     expensesResult.data,
     periodStart,
     periodEnd
+  );
+
+  // الأرباح مبنية على تكلفة ناقصة؟ اقرا `lib/zero-cost.ts`
+  const costNote = zeroCostMessage(
+    zeroCostNote(
+      allOrders.filter((o) => o.order_status === "delivered")
+    )
   );
   const deliveredCount = periodOrders.filter(
     (o) => o.order_status === "delivered"
@@ -576,6 +584,22 @@ export default async function StatsPage({
           from={rangeFrom}
           to={rangeTo}
         />
+
+        {/*
+          ⚠️ **الربح = سعر البيع − التكلفة.** لو التكلفة صفر، الربح بيطلع
+          **مساوي للمبيعات** والكارت بيعرضه كأنه ربح حقيقي.
+
+          ودي مش حالة نادرة: **شوبيفاي مافيهاش تكلفة**، فأي بيزنس جديد
+          بيدخل بكل تكاليفه صفر. ٢ سِك دلوقتي **١٣١ من ١٣١** أوردر متسلّم
+          بتكلفة صفر — يعني «ربح ٨٥٬٨٠٩ ج» هو المبيعات نفسها (١٨ أغسطس).
+
+          **مابنغيّرش الرقم** — إحنا مانعرفش التكلفة. بنقول إنه مش ربح.
+        */}
+        {costNote && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+            {costNote}
+          </p>
+        )}
         {/* 5 كروت نِسَب — صف واحد كامل على الكمبيوتر */}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
           <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
