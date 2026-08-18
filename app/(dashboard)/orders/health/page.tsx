@@ -25,7 +25,7 @@ export default async function HealthPage() {
     );
   }
 
-  const { rates, lead, aging, reasons } = r;
+  const { rates, lead, aging, reasons, drift } = r;
 
   return (
     <div className="space-y-4">
@@ -104,6 +104,61 @@ export default async function HealthPage() {
           </>
         )}
       </div>
+
+      {/*
+        أوردرات إجماليها مختلف عن شوبيفاي.
+
+        ⚠️ **مابنزامنهاش تلقائي بقصد.** اتفحصت ٤ أوردرات حقيقية والحكم كان
+        اللي بوسطة حصّلته: في تلاتة شوبيفاي كانت الصح، وفي واحد **إحنا**
+        الصح وشوبيفاي هي القديمة. فالنسخ منها أوتوماتيك كان هيبوّظ أوردر
+        سليم. القسم ده بيوري الفرق وبس.
+      */}
+      {drift !== null && drift.length > 0 && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">
+              إجمالي مختلف عن شوبيفاي
+            </h2>
+            <span className="text-xs text-gray-500">{drift.length} أوردر</span>
+          </div>
+          <p className="mt-1 text-xs text-gray-400">
+            الأوردر اللي اتعدّل عند شوبيفاي بعد ما دخل هنا — التعديل
+            مابيوصلش. واللي بوسطة حصّلته هو اللي بيقول مين الصح.
+          </p>
+
+          <div className="mt-3 space-y-2">
+            {drift.slice(0, 15).map((d) => (
+              <div
+                key={d.orderNumber}
+                className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-gray-50 pb-2 last:border-0"
+              >
+                <span className="text-sm text-gray-900">#{d.orderNumber}</span>
+                <span className="text-xs tabular-nums text-gray-500">
+                  عندنا {formatMoney(d.ours)} · شوبيفاي{" "}
+                  {formatMoney(d.shopify)}
+                  {d.collected !== null && (
+                    <> · اتحصّل {formatMoney(d.collected)}</>
+                  )}
+                </span>
+                <span className="w-full text-[11px] text-gray-400">
+                  {d.matches === "ours"
+                    ? "الفلوس اللي اتحصّلت مطابقة لرقمنا — شوبيفاي هي القديمة"
+                    : d.matches === "shopify"
+                      ? "الفلوس اللي اتحصّلت مطابقة لشوبيفاي — رقمنا هو الغلط"
+                      : d.matches === "neither"
+                        ? "الفلوس اللي اتحصّلت مش مطابقة لا لرقمنا ولا لشوبيفاي"
+                        : "الشحنة لسه مااتحصّلتش، فمفيش حكم"}
+                </span>
+              </div>
+            ))}
+          </div>
+          {drift.length > 15 && (
+            <p className="mt-2 text-xs text-gray-400">
+              وفيه {drift.length - 15} كمان — دول أكبرهم فرقًا.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* أسباب الرجوع — واللي مااتسجّلش بيتعرض لوحده */}
       <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">

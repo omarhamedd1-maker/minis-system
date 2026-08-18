@@ -41,7 +41,7 @@ const ORDERS_QUERY = `query($cursor: String, $size: Int!) {
           currentQuantity
           quantity
           variant { legacyResourceId }
-          discountedUnitPriceSet { shopMoney { amount } }
+          originalUnitPriceSet { shopMoney { amount } }
         }
       }
     }
@@ -71,7 +71,7 @@ type RawOrder = {
       /** الكمية الأصلية — الأوردر الملغي كميته الحالية صفر ودي هي الصح */
       quantity?: number | null;
       variant?: { legacyResourceId?: string | null } | null;
-      discountedUnitPriceSet?: { shopMoney?: { amount?: string } } | null;
+      originalUnitPriceSet?: { shopMoney?: { amount?: string } } | null;
     }[];
   } | null;
 };
@@ -154,7 +154,23 @@ export async function fetchShopifyOrders(
                 ? (l.currentQuantity || l.quantity) ?? 0
                 : l.currentQuantity ?? 0
             ),
-            unitPrice: Number(l.discountedUnitPriceSet?.shopMoney?.amount ?? 0),
+            // ⚠️⚠️ **السعر قبل الخصم بقصد — `originalUnitPriceSet`.**
+            //
+            // كان `discountedUnitPriceSet` (السعر **بعد** الخصم)، والخصم
+            // بيتخزّن كمان لوحده في `orders.discount`. والحساب عندنا:
+            //
+            //     بنود − خصم + شحن
+            //
+            // فالخصم كان بيتخصم **مرتين**: مرة جوّه سعر البند ومرة في
+            // المعادلة. والأرباح كمان بتخصمه (`dashboard-stats.ts`)، فالإيراد
+            // والربح الاتنين كانوا ناقصين بقيمة الخصم.
+            //
+            // ودي اتلقت على أوردر حقيقي (١٨ أغسطس): ٢ سِك رقم ١٣٢٣ —
+            // عندنا ٥٧٩ وعند شوبيفاي ٨٢٨.٥، والفرق ٢٤٩.٥ هو الخصم بالظبط.
+            //
+            // **و`currentTotalDiscountsSet` بتشمل خصم البند وخصم الأوردر مع
+            // بعض**، فالسعر الأصلي ناقص الخصم الكلي مافيهوش تكرار.
+            unitPrice: Number(l.originalUnitPriceSet?.shopMoney?.amount ?? 0),
           }))
           .filter((l) => l.quantity > 0),
       });
