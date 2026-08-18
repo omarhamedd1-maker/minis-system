@@ -176,6 +176,10 @@ export default async function OrdersPage({
         await createAdminClient()
           .from("deletion_requests")
           .select("id, order_number, requested_by_name, created_at")
+          // ⚠️ **بمفتاح الأدمن، فالفلتر على البيزنس لازم بإيدنا** — من غيره
+          // أدمن بيزنس بيشوف طلبات حذف بيزنس تاني (بأرقام أوردراتهم
+          // وأسماء موظفيهم)
+          .eq("tenant_id", user.tenantId)
           .eq("status", "pending")
           .order("created_at", { ascending: false })
           .overrideTypes<

@@ -77,7 +77,19 @@ function unfilteredAdminReads(): Hit[] {
       const p = l.match(/([A-Za-z_$][\w$]*)\s*:\s*SupabaseClient/);
       if (p) adminVars.add(p[1]);
     }
-    if (adminVars.size === 0) continue;
+    // ⚠️⚠️ **الملف اللي بينده `createAdminClient()` مباشرة كان بيتخطّى كله.**
+    //
+    // الشرط كان «مافيش متغير شايل مفتاح الأدمن؟ عدّي الملف». والشكل ده:
+    //
+    //     await createAdminClient()
+    //       .from("deletion_requests")
+    //       .eq("status", "pending")
+    //
+    // مافيهوش متغير خالص، فالملف كان بره الفحص من أصله. اتكشف بالسبوتاج
+    // (١٨ أغسطس): شيلت فلتر البيزنس من `orders/page.tsx` **والاختبار عدّى**.
+    const usesAdmin =
+      adminVars.size > 0 || lines.some((l) => l.includes("createAdminClient()"));
+    if (!usesAdmin) continue;
 
     for (let i = 0; i < lines.length; i++) {
       const inline = lines[i].match(
@@ -172,7 +184,33 @@ function unfilteredAdminReads(): Hit[] {
         continue;
       }
 
-      if (/\.eq\(|\.in\(|\.match\(|\.or\(/.test(scope)) continue;
+      // ⚠️⚠️ **مش أي فلتر بيكفي — لازم يكون على معرّف فريد.**
+      //
+      // القاعدة القديمة كانت «فيه `.eq` يبقى تمام»، وده سمح بقرايات زي:
+      //
+      //     .from("orders").in("order_status", …).is("bosta_tracking", null)
+      //     .from("deletion_requests").eq("status", "pending")
+      //
+      // الفلاتر دي **مابتحددش بيزنس**، فمفتاح الأدمن بيرجّع صفوف كل
+      // البيزنسات. اتلقى تلات مواضع كده (١٨ أغسطس)، أخطرهم شاشة ربط
+      // الشحنات الناقصة: كانت بتعرض أوردرات كل البيزنسات، **وبتربطها بشحنة
+      // من حساب بوسطة بتاع اللي فاتح الشاشة** — يعني رسوم وتحصيل بيزنس
+      // بيتجرّوا على بيزنس تاني.
+      //
+      // **الفلتر بمعرّف فريد آمن**: `id` وأي `*_id` قيمته UUID مالهاش تخمين،
+      // فالصف اللي بيرجع هو صف صاحبه. أما `status` و`order_status`
+      // و`action` و`archived` فبتوصف حالة مش ملكية.
+      const filters = [
+        ...scope.matchAll(/\.(?:eq|in|match)\(\s*["'`](\w+)["'`]/g),
+      ].map((x) => x[1]);
+
+      if (filters.length === 0) {
+        hits.push({ file, line: i + 1, table });
+        continue;
+      }
+
+      // فيه فلتر واحد على الأقل بمعرّف فريد؟ الصف بيبقى محدد
+      if (filters.some((c) => c === "id" || /_id$/.test(c))) continue;
 
       hits.push({ file, line: i + 1, table });
     }

@@ -37,9 +37,16 @@ export async function linkMissingShipments(
   }
 
   // الأوردرات اللي حالتها بتقول إنها عدّت على بوسطة ومالهاش رقم تتبع
+  //
+  // ⚠️⚠️ **الفلتر على البيزنس هنا مش رفاهية.** مفتاح الأدمن بيعدّي على
+  // الـRLS، فمن غيره القراية دي بترجّع أوردرات **كل البيزنسات**. والشاشة
+  // دي مش بتعرض بس — بتربط الأوردر بشحنة من **حساب بوسطة بتاع اللي فاتح
+  // الشاشة**. يعني مستخدم بيزنس كان يقدر يربط أوردر بيزنس تاني بشحنته هو،
+  // ويجرّ عليه رسومه وتحصيله.
   const { data: rows, error } = await db
     .from("orders")
     .select("id, order_number, order_status, customers(full_name)")
+    .eq("tenant_id", me.tenantId)
     .in("order_status", AT_CARRIER_STATUSES)
     .is("bosta_tracking", null)
     .overrideTypes<
