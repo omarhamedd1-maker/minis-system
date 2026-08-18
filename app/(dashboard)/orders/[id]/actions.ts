@@ -916,9 +916,15 @@ export async function linkBostaShipment(formData: FormData) {
   const supabase = createAdminClient();
 
   // نتأكد إن رقم التتبع ده مش مربوط بأوردر تاني
+  //
+  // ⚠️ **جوّه نفس البيزنس بس.** بمفتاح الأدمن القراية دي كانت بتشوف كل
+  // البيزنسات، والرسالة اللي بتطلع بتقول **رقم أوردر بيزنس تاني**. وأسوأ
+  // من كده: المسار اللي تحت بيفك الشحنة من الأوردر التاني لو كان ملغي —
+  // يعني كان بيقدر يلمس أوردر مش بتاعنا.
   const { data: other } = await supabase
     .from("orders")
     .select("id, order_number, order_status")
+    .eq("tenant_id", me.tenantId)
     .eq("bosta_tracking", tracking)
     .neq("id", orderId)
     .maybeSingle();

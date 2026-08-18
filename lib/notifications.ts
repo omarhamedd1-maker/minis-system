@@ -166,6 +166,9 @@ export async function collectNotices(
     const { data: log, error } = await db
       .from("activity_log")
       .select("order_id, created_at")
+      // ⚠️ بمفتاح الأدمن — من غير الفلتر ده بنقرا سجل كل البيزنسات،
+      // والحد (٢٠٠٠ صف) بيتاكل من بيزنس تاني فصفوفنا تقع بره القراية
+      .eq("tenant_id", tenantId)
       .eq("action", "order.status")
       .gte("created_at", since)
       .limit(2000);
