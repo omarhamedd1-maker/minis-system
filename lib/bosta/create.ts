@@ -24,7 +24,7 @@ import {
 import { createDelivery, fetchCities, fetchDeliveryByTracking } from "./client";
 import { matchCity, matchZone, type BostaCity } from "./cities";
 import { isDeadShipment } from "./order-status";
-import { loadTenantCredentials } from "../tenant-settings";
+import { bostaWebhookUrl, loadTenantCredentials } from "../tenant-settings";
 
 const ORDER_FIELDS = `id, order_number, discount, shipping_price, amount_paid, bosta_tracking, tenant_id,
   customers(full_name, phone, address, city, zone, street, building, floor, apartment, landmark),
@@ -201,6 +201,7 @@ export async function runBostaCreate(opts: {
     city,
     zone,
     pickupAddressId: creds.bostaPickupAddressId,
+    webhookUrl: bostaWebhookUrl(creds.bostaWebhookToken),
   });
 
   if (!result.ok) return { ok: false, error: result.error };
@@ -425,6 +426,7 @@ export async function runBostaReturn(opts: {
     returning,
     customer,
     city,
+    webhookUrl: bostaWebhookUrl(creds.bostaWebhookToken),
   });
 
   if (!result.ok) return { ok: false, error: result.error };
@@ -598,6 +600,7 @@ export async function runBostaExchange(opts: {
     city,
     zone,
     pickupAddressId: creds.bostaPickupAddressId,
+    webhookUrl: bostaWebhookUrl(creds.bostaWebhookToken),
   });
 
   if (!result.ok) return { ok: false, error: result.error };
