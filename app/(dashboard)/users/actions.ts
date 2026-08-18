@@ -157,13 +157,22 @@ export async function updateUserProfile(formData: FormData) {
 
   const authUserId = String(formData.get("auth_user_id") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
-  const active = formData.get("active") === "1";
   if (!authUserId) back("اليوزر مش موجود", false);
   if (!fullName) back("اكتب اسم المستخدم", false);
-  // منع إيقاف النفس بالغلط
-  if (authUserId === me.authUserId && !active) {
-    back("مينفعش توقف حسابك إنت", false);
-  }
+
+  // ⚠️⚠️ **حسابك إنت بيفضل مفعّل دايمًا — مابنرفضش، بنتجاهل الخانة.**
+  //
+  // مربع «الحساب مُفعّل» بيبقى **معطّل** لما يكون حسابك إنت، و**المربع
+  // المعطّل مابيتبعتش مع الفورم**. فالسيرفر كان بيقرا «مفيش تفعيل» ويفهمها
+  // إنك بتوقف نفسك، ويرفض بـ«مينفعش توقف حسابك إنت».
+  //
+  // النتيجة إن **تغيير اسمك كان مستحيل**: الرسالة بتطلع والاسم مابيتحفظش،
+  // ومفيش حاجة في الشاشة بتقول ليه. (اتقابلت فعلًا ١٨ أغسطس ٢٠٢٦.)
+  //
+  // والرفض ماكانش بيحمي من حاجة: الخانة معطّلة أصلًا، فمفيش طريقة تقول
+  // «وقّف نفسي» من الفورم ده. وإيقاف حساب تاني ليه زراره لوحده.
+  const isSelf = authUserId === me.authUserId;
+  const active = isSelf ? true : formData.get("active") === "1";
 
   const admin = createAdminClient();
   const { error } = await admin
@@ -173,10 +182,16 @@ export async function updateUserProfile(formData: FormData) {
     .eq("auth_user_id", authUserId);
   if (error) back("معرفناش نحفظ البيانات: " + error.message, false);
 
+  // ⚠️ **السطر ده بيوصف اللي حصل، مش الحالة اللي استقرّت عليها.**
+  //
+  // كان بيقول «فعّل حساب فلان» على أي حفظ — حتى لو اللي اتغيّر الاسم بس.
+  // فالسجل كان بيمتلي «فعّل» ورا «فعّل» ومحدش يعرف مين غيّر اسم مين.
   await logActivity(
     me,
     "user.profile",
-    `${active ? "فعّل" : "أوقف"} حساب ${fullName}`
+    isSelf
+      ? `غيّر اسمه لـ${fullName}`
+      : `${active ? "فعّل" : "أوقف"} حساب ${fullName}`
   );
   revalidatePath("/users");
   back("تم حفظ بيانات اليوزر", true);
