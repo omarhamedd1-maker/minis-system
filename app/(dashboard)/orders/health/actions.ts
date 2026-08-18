@@ -9,6 +9,9 @@ import {
   breakdownReturnReasons,
   type ReasonBreakdown,
 } from "@/lib/return-reasons";
+import { findDrift, type DriftRow } from "@/lib/shopify/drift";
+import { fetchShopifyOrders } from "@/lib/shopify/orders";
+import { loadTenantCredentials } from "@/lib/tenant-settings";
 
 export type HealthReport =
   | {
@@ -17,6 +20,13 @@ export type HealthReport =
       lead: ReturnType<typeof leadTime>;
       aging: Aging;
       reasons: ReasonBreakdown;
+      /**
+       * أوردرات إجماليها عندنا مختلف عن شوبيفاي.
+       *
+       * `null` معناها **مافيش مقارنة**: البيزنس مش مربوط بشوبيفاي، أو
+       * الجلب وقع. مش نفس معنى القايمة الفاضية (يعني كله مطابق).
+       */
+      drift: DriftRow[] | null;
     }
   | { ok: false; error: string };
 
@@ -36,9 +46,10 @@ export async function loadHealth(): Promise<HealthReport> {
   const { data, error } = await db
     .from("orders")
     .select(
-      `order_status, order_date, delivered_at, bosta_tracking, bosta_created_at,
-       bosta_cod, bosta_collected, cash_received_at, return_reason,
-       discount, shipping_price, order_items(quantity, sale_price_at_order)`
+      `order_number, order_status, order_date, delivered_at, bosta_tracking,
+       bosta_created_at, bosta_cod, bosta_collected, cash_received_at,
+       return_reason, discount, shipping_price,
+       order_items(quantity, sale_price_at_order)`
     )
     .eq("tenant_id", me.tenantId)
     .limit(5000);
@@ -53,5 +64,69 @@ export async function loadHealth(): Promise<HealthReport> {
     lead: leadTime(rows),
     aging: collectionAging(rows as never, cairoToday()),
     reasons: breakdownReturnReasons(rows as never),
+    drift: await loadDrift(db, me.tenantId, rows as never),
   };
+}
+
+type RowForDrift = {
+  order_number: string | null;
+  order_status: string | null;
+  discount: number | null;
+  shipping_price: number | null;
+  bosta_cod: number | null;
+  bosta_collected: boolean | null;
+  order_items: { quantity: number; sale_price_at_order: number }[] | null;
+};
+
+/**
+ * الفرق بين إجمالينا وإجمالي شوبيفاي.
+ *
+ * ⚠️ **بيتحسب مع فتح الصفحة، مش مخزّن.** ده بيكلّف نداء واحد لشوبيفاي،
+ * بس بيضمن إن الرقم اللي بتشوفه هو الرقم دلوقتي — والبديل (عمود مخزّن)
+ * بيحتاج تغيير في الداتابيز وبيقدم من غير ما حد ياخد باله.
+ *
+ * **وأي عطل هنا بيرجّع `null` مش استثناء** — صفحة صحة التشغيل كلها
+ * ماتقعش عشان شوبيفاي مردّتش.
+ */
+async function loadDrift(
+  db: ReturnType<typeof createAdminClient>,
+  tenantId: string,
+  rows: RowForDrift[]
+): Promise<DriftRow[] | null> {
+  try {
+    const creds = await loadTenantCredentials(db, tenantId);
+    if (!creds.shopifyShop || !creds.shopifyAccessToken) return null;
+
+    const shopifyOrders = await fetchShopifyOrders(
+      creds.shopifyShop,
+      creds.shopifyAccessToken
+    );
+
+    return findDrift(
+      rows
+        .filter((o) => o.order_number)
+        .map((o) => ({
+          orderNumber: String(o.order_number),
+          orderStatus: String(o.order_status ?? ""),
+          itemsTotal: (o.order_items ?? []).reduce(
+            (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
+            0
+          ),
+          discount: Number(o.discount ?? 0),
+          shipping: Number(o.shipping_price ?? 0),
+          bostaCod: o.bosta_cod === null ? null : Number(o.bosta_cod),
+          bostaCollected: Boolean(o.bosta_collected),
+        })),
+      shopifyOrders.map((s) => ({
+        orderNumber: s.orderNumber,
+        cancelled: s.cancelled,
+        total:
+          s.lines.reduce((a, l) => a + l.quantity * l.unitPrice, 0) -
+          Number(s.discount ?? 0) +
+          Number(s.shipping ?? 0),
+      }))
+    );
+  } catch {
+    return null;
+  }
 }
