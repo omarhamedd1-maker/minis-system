@@ -82,30 +82,52 @@ export default async function TrackPage({
           <p className="mt-3 text-sm leading-relaxed text-gray-600">{view.now}</p>
 
           <div className="mt-10 space-y-4">
-            {view.steps.map((s) => (
+            {view.steps.map((s) => {
+              // ⚠️ **الخطوة الأخيرة في الرحلة اللي خلصت بتتعلّم كمان** —
+              // «اتسلّم» مش خطوة جاية، دي خطوة تمّت.
+              const passed = s.done || (s.current && view.finished);
+              return (
               <div key={s.label} className="flex items-center gap-3">
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    s.current
-                      ? `${TONE[view.tone] ?? "bg-gray-900"} ring-4 ring-gray-100`
-                      : s.done
-                        ? "bg-gray-300"
+                {/*
+                  ⚠️ **الخطوة اللي عدّت بتفضل متعلّم عليها بعلامة صح** —
+                  قبل كده كانت بتبقى نقطة رمادية زي اللي لسه ماجاش،
+                  فالعميل مايعرفش وصل لفين.
+                */}
+                {passed ? (
+                  <svg
+                    viewBox="0 0 16 16"
+                    className="h-4 w-4 shrink-0 text-emerald-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 8.5 6.5 12 13 4" />
+                  </svg>
+                ) : (
+                  <span
+                    className={`h-4 w-4 shrink-0 rounded-full ${
+                      s.current
+                        ? `${TONE[view.tone] ?? "bg-gray-900"} ring-4 ring-gray-100`
                         : "bg-gray-100"
-                  }`}
-                />
+                    }`}
+                  />
+                )}
                 <span
                   className={`text-sm ${
                     s.current
                       ? "font-medium text-gray-900"
-                      : s.done
-                        ? "text-gray-500"
+                      : passed
+                        ? "text-gray-700"
                         : "text-gray-300"
                   }`}
                 >
                   {s.label}
                 </span>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <TrackGate tracking={tracking} hint={hint} action={openDetails} />
