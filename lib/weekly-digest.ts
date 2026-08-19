@@ -76,7 +76,7 @@ export function worthSending(input: DigestInput): boolean {
  * أول سطر = عنوان الإشعار (`lib/push/notify.ts` بيقسّمها كده).
  */
 export function weeklyDigest(input: DigestInput): string {
-  const { week: w, before: b } = input;
+  const { week: w } = input;
   const lines: string[] = [];
 
   const store = String(input.storeName ?? "").trim();

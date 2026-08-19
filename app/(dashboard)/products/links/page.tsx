@@ -78,6 +78,20 @@ export default async function OrderLinksPage({
     order_link_items: { variant_id: string }[] | null;
   }[];
 
+  // ⚠️ **اللينك بيختفي من القايمة بعد يوم — بس بيفضل شغّال.**
+  //
+  // اللينكات بتتبعت في رسايل وبتفضل موجودة عند الناس، فمسحها معناه صفحة
+  // مكسورة عند حد. اللي بيحصل إنها بتنزل تحت «أقدم»، واللي لسه شغّال
+  // وجابلك أوردرات بيفضل فوق مهما طال — ده مش لينك قديم، ده حملة شغّالة.
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const now = new Date().getTime();
+  const isRecent = (l: { created_at: string; active: boolean; orders_count: number }) =>
+    now - new Date(l.created_at).getTime() < DAY_MS ||
+    (l.active && l.orders_count > 0);
+
+  const recent = rows.filter(isRecent);
+  const older = rows.filter((l) => !isRecent(l));
+
   return (
     <div className="space-y-4">
       <BackLink href="/products" label="المنتجات" />
@@ -148,36 +162,77 @@ export default async function OrderLinksPage({
       </form>
 
       {/* ===== اللينكات الموجودة ===== */}
-      {rows.length > 0 && (
-        <div className="space-y-2">
-          {rows.map((l) => (
-            <div key={l.id} className="rounded-xl bg-white p-4 shadow-sm">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-medium text-gray-900">
-                  {l.title || "لينك من غير اسم"}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {(l.order_link_items ?? []).length} منتج ·{" "}
-                  {l.orders_count} أوردر
-                </span>
-              </div>
-
-              <CopyLink url={`${origin}/o/${l.id}`} href={`/o/${l.id}`} />
-
-              <form action={toggleOrderLink} className="mt-2">
-                <input type="hidden" name="link_id" value={l.id} />
-                <input type="hidden" name="active" value={l.active ? "0" : "1"} />
-                <button
-                  type="submit"
-                  className="text-xs text-gray-400 underline hover:text-gray-600"
-                >
-                  {l.active ? "اقفل اللينك" : "افتحه تاني"}
-                </button>
-              </form>
-            </div>
+      {recent.length > 0 && (
+        <div className="divide-y divide-gray-100 rounded-xl bg-white shadow-sm">
+          {recent.map((l) => (
+            <LinkRow key={l.id} link={l} origin={origin} />
           ))}
         </div>
       )}
+
+      {older.length > 0 && (
+        <details className="rounded-xl bg-white shadow-sm">
+          <summary className="cursor-pointer px-4 py-3 text-sm text-gray-500">
+            لينكات أقدم ({older.length})
+          </summary>
+          <div className="divide-y divide-gray-100 border-t border-gray-100">
+            {older.map((l) => (
+              <LinkRow key={l.id} link={l} origin={origin} />
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+
+/**
+ * سطر لينك واحد — مضغوط.
+ *
+ * ⚠️ **الاسم والأرقام في سطر، واللينك تحته** — الشكل القديم كان كارت لكل
+ * لينك، وعشرة لينكات كانوا بيملوا الشاشة.
+ */
+function LinkRow({
+  link,
+  origin,
+}: {
+  link: {
+    id: string;
+    title: string | null;
+    active: boolean;
+    orders_count: number;
+    order_link_items: { variant_id: string }[] | null;
+  };
+  origin: string;
+}) {
+  return (
+    <div className="px-4 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="text-sm font-medium text-gray-900">
+          {link.title || "من غير اسم"}
+          {!link.active && (
+            <span className="mr-2 text-[11px] font-normal text-gray-400">مقفول</span>
+          )}
+        </span>
+        <span className="text-[11px] text-gray-400">
+          {(link.order_link_items ?? []).length} منتج
+          {link.orders_count > 0 && ` · ${link.orders_count} أوردر`}
+        </span>
+      </div>
+
+      <CopyLink url={`${origin}/o/${link.id}`} href={`/o/${link.id}`} />
+
+      <form action={toggleOrderLink}>
+        <input type="hidden" name="link_id" value={link.id} />
+        <input type="hidden" name="active" value={link.active ? "0" : "1"} />
+        <button
+          type="submit"
+          className="mt-1 text-[11px] text-gray-400 underline hover:text-gray-600"
+        >
+          {link.active ? "اقفله" : "افتحه"}
+        </button>
+      </form>
     </div>
   );
 }
