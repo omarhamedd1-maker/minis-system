@@ -103,8 +103,9 @@ export const STEP_LABELS: Record<string, string> = {
 
 export const UI = {
   trackingLabel: "Tracking",
-  detailsPrompt: "Want the full details? Enter the last 2 digits of the phone number on this order.",
-  detailsPlaceholder: "67",
+  detailsPrompt: "Want the full details? Enter the phone number on this order.",
+  detailsHint: "It ends with",
+  detailsPlaceholder: "01xxxxxxxxx",
   detailsButton: "Show",
   wrong: "That doesn't match this order.",
   locked: "Too many tries. Please wait a little and try again.",

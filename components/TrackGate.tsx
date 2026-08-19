@@ -14,9 +14,11 @@ import { UI } from "@/lib/tracking-copy";
  */
 export function TrackGate({
   tracking,
+  hint,
   action,
 }: {
   tracking: string;
+  hint: string | null;
   action: (tracking: string, typed: string) => Promise<TrackResult>;
 }) {
   const [typed, setTyped] = useState("");
@@ -74,6 +76,11 @@ export function TrackGate({
     >
       <label className="block text-sm leading-relaxed text-gray-600">
         {UI.detailsPrompt}
+        {hint && (
+          <span className="mt-1 block text-gray-400" dir="ltr">
+            {UI.detailsHint} {hint}
+          </span>
+        )}
       </label>
 
       <div className="mt-3 flex gap-2">
@@ -84,7 +91,7 @@ export function TrackGate({
           maxLength={11}
           placeholder={UI.detailsPlaceholder}
           dir="ltr"
-          className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-center text-sm tracking-widest text-gray-900 focus:border-gray-900 focus:outline-none"
+          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
         />
         <button
           type="submit"
