@@ -39,6 +39,7 @@ type ProductRow = {
   id: string;
   name: string | null;
   name_ar: string | null;
+  image_url: string | null;
   deleted_in_shopify: boolean;
   shopify_status: string | null;
   product_variants: {
@@ -78,7 +79,7 @@ export default async function ProductsPage({
   const { data: allProducts, error } = await supabase
     .from("products")
     .select(
-      "id, name, name_ar, deleted_in_shopify, shopify_status, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
+      "id, name, name_ar, image_url, deleted_in_shopify, shopify_status, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
     )
     .order("name_ar")
     .overrideTypes<ProductRow[]>();
@@ -324,6 +325,15 @@ export default async function ProductsPage({
                 className="block rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
               >
                 <div className="flex items-start justify-between gap-2">
+                  {/* ⚠️ صورة شوبيفاي — الاسم لوحده مابيفرقش بين ١٠٠ منتج */}
+                  {product.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={product.image_url}
+                      alt=""
+                      className="h-11 w-11 shrink-0 rounded-lg bg-gray-50 object-cover"
+                    />
+                  )}
                   <div className="min-w-0">
                     <div className="truncate text-sm font-bold text-gray-900">
                       {product.name_ar ?? product.name ?? "بدون اسم"}
@@ -401,6 +411,14 @@ export default async function ProductsPage({
                     <td className="px-4 py-3 font-medium text-gray-900">
                       {index === 0 && (
                         <span className="flex items-center gap-2">
+                          {product.image_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={product.image_url}
+                              alt=""
+                              className="h-8 w-8 shrink-0 rounded bg-gray-50 object-cover"
+                            />
+                          )}
                           {product.name_ar ?? product.name ?? "بدون اسم"}
                           {product.deleted_in_shopify && (
                             <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
