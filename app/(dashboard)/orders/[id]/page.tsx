@@ -250,7 +250,7 @@ export default async function OrderDetailsPage({
   // ⚠️ **العنوان بيتاخد من الطلب نفسه** — الرابط لازم يبقى بدومين الموقع
   // اللي فاتح دلوقتي، مش رقم ثابت في الكود يبوظ لما الدومين يتغيّر.
   const origin = (await headers()).get("origin") ?? null;
-  const trackLink = trackingLink(order.bosta_tracking, origin);
+  const trackLink = trackingLink(order.id, origin);
 
   const flags = orderFlags({
     orderStatus: order.order_status,
@@ -767,18 +767,6 @@ export default async function OrderDetailsPage({
                 </dd>
               </div>
 
-              {/*
-                لينك التتبع اللي بيتبعت للعميل.
-
-                ⚠️ **باسم متجرك مش باسم بوسطة** — والصفحة بتوري الحالة
-                وبس، مافيش أي بيانات شخصية عليها.
-              */}
-              {trackLink && (
-                <div>
-                  <dt className="text-gray-500">لينك التتبع للعميل</dt>
-                  <CopyLink url={trackLink} href={trackLink} />
-                </div>
-              )}
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
@@ -1494,6 +1482,28 @@ export default async function OrderDetailsPage({
               </ConfirmButton>
             </form>
           )}
+        </div>
+      )}
+
+      {/*
+        لينك التتبع اللي بيتبعت للعميل.
+
+        ⚠️ **لوحده تحت الكروت مش جوّه كارت الشحنة** — ده لينك بيتنسخ
+        ويتبعت، مش تفصيلة في جدول بيانات.
+        ⚠️ **وموجود على كل أوردر من أول لحظة** — مبني على معرّف الأوردر
+        مش رقم التتبع، فالعميل يقدر يطمن قبل ما الشحنة تتعمل.
+      */}
+      {trackLink && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">
+              لينك التتبع للعميل
+            </h2>
+            <span className="text-[11px] text-gray-400">
+              بيفتح صفحة باسم متجرك
+            </span>
+          </div>
+          <CopyLink url={trackLink} href={trackLink} />
         </div>
       )}
 

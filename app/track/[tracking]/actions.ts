@@ -1,29 +1,34 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { phoneMatches, MIN_PHONE_DIGITS } from "@/lib/tracking-view";
+import { tailMatches, isLocked, afterWrong, type Attempts } from "@/lib/phone-gate";
+import { UI } from "@/lib/tracking-copy";
+import { looksLikeOrderId } from "@/lib/tracking-view";
 import { formatMoney } from "@/lib/format";
 
 /**
- * فتح تفاصيل الأوردر للعميل بعد ما يكتب تليفونه.
+ * فتح تفاصيل الأوردر بعد آخر أرقام التليفون.
  *
- * ⚠️⚠️ **دي بوابة من حاجتين**: رقم التتبع (اللي في اللينك) والتليفون (اللي
- * صاحب الأوردر بس يعرفه). واحد منهم لوحده مايفتحش.
+ * ⚠️⚠️ **آخر رقمين = ١٠٠ احتمال بس** (اختيار عمر عشان يسهّل على العميل)،
+ * فالحماية في **عدّ المحاولات** مش في طول الرقم.
  *
- * ⚠️ **ومابنقولش «التليفون غلط» بشكل يفرّق عن «الشحنة مش موجودة»** — الرد
- * واحد في الحالتين، عشان اللي بيجرّب أرقام مايعرفش هو قرّب ولا لأ.
+ * ⚠️ **والعدّاد في ذاكرة النسخة الشغالة** — يعني على سيرفر بيتقسم لنسخ،
+ * اللي بيجرّب ممكن يقع على نسخة عدّادها فاضي. ده احتكاك حقيقي بيوقّف
+ * التجريب اليدوي، **مش قفلة كاملة**. القفلة الكاملة محتاجة جدول في
+ * الداتابيز — وده شغل زيادة على حاجة لسه محدش جرّب يكسرها.
  *
- * ⚠️ **والقراية بمفتاح الأدمن من غير فلتر بيزنس** مقصودة: الزائر مالوش
- * بيزنس، ورقم التتبع بيحدد الشحنة لوحده.
+ * ⚠️ **والرد واحد** سواء الأرقام غلط أو الشحنة مش موجودة — اللي بيجرّب
+ * مايعرفش قرّب ولا لأ.
  */
+const tries = new Map<string, Attempts>();
+
 export type TrackDetails = {
   ok: true;
   orderNumber: string | null;
-  orderDate: string | null;
+  placedAt: string | null;
   deliveredAt: string | null;
-  /** المبلغ المطلوب عند الاستلام */
+  /** المبلغ عند الاستلام */
   cod: string | null;
-  /** اتحصّل ولا لسه */
   collected: boolean;
   address: string | null;
   items: { name: string; quantity: number }[];
@@ -31,32 +36,30 @@ export type TrackDetails = {
 
 export type TrackResult = TrackDetails | { ok: false; error: string };
 
-const WRONG = "الرقم مش مطابق لأوردر بالرقم ده.";
-
 export async function openDetails(
   tracking: string,
-  phone: string
+  typed: string
 ): Promise<TrackResult> {
   const t = String(tracking ?? "").trim();
-  const typed = String(phone ?? "").trim();
+  if (!t) return { ok: false, error: UI.wrong };
 
-  if (!t || typed.replace(/[^0-9٠-٩]/g, "").length < MIN_PHONE_DIGITS) {
-    return { ok: false, error: "اكتب رقم تليفون الأوردر كامل." };
-  }
+  const now = Date.now();
+  if (isLocked(tries.get(t), now)) return { ok: false, error: UI.locked };
 
   const db = createAdminClient();
-  const { data, error } = await db
+  const base = db
     .from("orders")
     .select(
       `order_number, order_date, delivered_at, bosta_cod, bosta_collected,
        customers(phone, address),
-       order_items(quantity, product_variants(variant_name, products(name_ar, name)))`
-    )
-    .eq("bosta_tracking", t)
+       order_items(quantity, product_variants(variant_name, products(name, name_ar)))`
+    );
+
+  const { data, error } = await (
+    looksLikeOrderId(t) ? base.eq("id", t) : base.eq("bosta_tracking", t)
+  )
     .limit(1)
     .maybeSingle();
-
-  if (error || !data) return { ok: false, error: WRONG };
 
   const row = data as unknown as {
     order_number: string | null;
@@ -69,30 +72,35 @@ export async function openDetails(
       quantity: number;
       product_variants: {
         variant_name: string | null;
-        products: { name_ar: string | null; name: string | null } | null;
+        products: { name: string | null; name_ar: string | null } | null;
       } | null;
     }[];
-  };
+  } | null;
 
-  if (!phoneMatches(row.customers?.phone, typed)) {
-    return { ok: false, error: WRONG };
+  if (error || !row || !tailMatches(row.customers?.phone, typed)) {
+    tries.set(t, afterWrong(tries.get(t), now));
+    return { ok: false, error: UI.wrong };
   }
+
+  tries.delete(t);
 
   return {
     ok: true,
     orderNumber: row.order_number,
-    orderDate: row.order_date,
+    placedAt: row.order_date,
     deliveredAt: row.delivered_at,
-    cod:
-      row.bosta_cod && row.bosta_cod > 0 ? formatMoney(row.bosta_cod) : null,
+    cod: row.bosta_cod && row.bosta_cod > 0 ? formatMoney(row.bosta_cod) : null,
     collected: Boolean(row.bosta_collected),
     address: row.customers?.address ?? null,
     items: (row.order_items ?? []).map((i) => {
       const v = i.product_variants;
-      const base = v?.products?.name_ar || v?.products?.name || "منتج";
+      // ⚠️ **اسم شوبيفاي (الإنجليزي) هو اللي العميل شافه وهو بيشتري** —
+      // الاسم العربي بتاعنا داخلي، وعرضه هنا بيخلّي العميل يقارن باسم تاني.
+      const base = v?.products?.name || v?.products?.name_ar || "Item";
       const variant = String(v?.variant_name ?? "").trim();
+      const skip = variant.toLowerCase() === "default title";
       return {
-        name: variant ? `${base} — ${variant}` : base,
+        name: variant && !skip ? `${base} — ${variant}` : base,
         quantity: Number(i.quantity) || 0,
       };
     }),

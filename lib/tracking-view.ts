@@ -4,16 +4,22 @@
 // العميل دلوقتي بيروح على موقع بوسطة عشان يعرف شحنته فين — وده اسم شركة
 // الشحن مش اسم متجرك. الصفحة دي بتخلّيه يفضل عندك.
 //
-// ⚠️⚠️ **الصفحة دي مفتوحة من غير حساب — أي حد معاه رقم التتبع بيفتحها.**
-// عشان كده اللي بيتعرض فيها **محدود بقصد**: الحالة والتاريخ واسم المتجر وبس.
-// مافيش تليفون ولا عنوان ولا مبلغ ولا اسم عميل — دي بيانات لو ظهرت لحد
-// عنده رقم تتبع بس تبقى تسريب.
+// ⚠️⚠️ **الصفحة مفتوحة من غير حساب — أي حد معاه رقم التتبع بيفتحها.**
+// اللي بيتعرض من غير تحقّق: **الحالة وبس**. التفاصيل (المنتجات · العنوان ·
+// المبلغ) ورا بوابة `lib/phone-gate.ts`.
 //
-// ⚠️ **ومافيش أسماء منتجات كمان** — «مقبض ستارة دهبي» على صفحة مفتوحة
-// معناها إن أي حد يعرف اشتريت إيه.
+// **والكلام إنجليزي** (`lib/tracking-copy.ts`) — دي الصفحة الوحيدة اللي
+// العميل بيقراها، وباقي السيستم عربي لأنه بيتكلّم مع صاحب المتجر.
 //
-// **الملف ده صافي** — بياخد حالة وبيرجّع خطوات.
+// **الملف ده صافي** — بياخد حالة وبيرجّع اللي يتعرض.
 // ==========================================================================
+
+import {
+  STATUS_COPY,
+  FALLBACK_COPY,
+  STEP_LABELS,
+  type StatusCopy,
+} from "./tracking-copy";
 
 export type TrackStep = {
   label: string;
@@ -23,164 +29,71 @@ export type TrackStep = {
   current: boolean;
 };
 
-export type TrackView = {
-  /** الجملة الكبيرة فوق */
-  headline: string;
-  /** سطر تحتها بيشرح */
-  detail: string;
+export type TrackView = StatusCopy & {
   steps: TrackStep[];
-  /** الشحنة خلصت مشوارها (وصلت أو رجعت)؟ */
+  /** الشحنة خلصت مشوارها (وصلت أو رجعت) */
   finished: boolean;
 };
 
 /** خط سير الشحنة الطبيعي */
-const JOURNEY: { key: string; label: string }[] = [
-  { key: "confirmed", label: "الأوردر اتأكد" },
-  { key: "ready", label: "جاهز عند شركة الشحن" },
-  { key: "shipped", label: "المندوب استلمه" },
-  { key: "out_for_delivery", label: "في الطريق ليك" },
-  { key: "delivered", label: "اتسلّم" },
-];
+const JOURNEY = ["confirmed", "ready", "shipped", "out_for_delivery", "delivered"];
+
+/** الحالات اللي وقفت الرحلة — مافيش خطوة «حالية» فيها */
+const STOPPED = ["returning", "returned", "returned_after_delivery", "cancelled"];
+
+const FINISHED = ["delivered", "returned", "returned_after_delivery", "cancelled"];
 
 /** الحالة الحالية فين في الخط — و`-1` لو بره الخط */
 function positionOf(status: string): number {
-  const i = JOURNEY.findIndex((s) => s.key === status);
+  const i = JOURNEY.indexOf(status);
   if (i >= 0) return i;
-  // الحالات اللي قبل التأكيد
+  // اللي لسه ماوصلش الخط بيتحسب على أوله
   if (status === "new" || status === "packed") return 0;
   return -1;
 }
 
-const HEADLINES: Record<string, { headline: string; detail: string }> = {
-  new: {
-    headline: "أوردرك وصلنا",
-    detail: "هنكلّمك نأكّد ونجهّزه.",
-  },
-  confirmed: {
-    headline: "أوردرك اتأكد",
-    detail: "بنجهّزه دلوقتي.",
-  },
-  packed: {
-    headline: "أوردرك اتجهّز",
-    detail: "هيروح لشركة الشحن قريّب.",
-  },
-  ready: {
-    headline: "جاهز عند شركة الشحن",
-    detail: "المندوب هيستلمه ويطلع بيه.",
-  },
-  shipped: {
-    headline: "الشحنة مع شركة الشحن",
-    detail: "ماشية في السكة ليك.",
-  },
-  out_for_delivery: {
-    headline: "المندوب في الطريق ليك",
-    detail: "خلّي تليفونك جنبك.",
-  },
-  delivered: {
-    headline: "اتسلّم — ألف هنا",
-    detail: "لو فيه أي مشكلة كلّمنا.",
-  },
-  awaiting_action: {
-    headline: "الشحنة واقفة",
-    detail: "بنحاول نوصلك — لو فيه حاجة نعرفها كلّمنا.",
-  },
-  returning: {
-    headline: "الشحنة راجعة",
-    detail: "لو ده مش قصدك كلّمنا وهنبعتها تاني.",
-  },
-  returned: {
-    headline: "الشحنة رجعت لنا",
-    detail: "لو عايزها تاني كلّمنا.",
-  },
-  returned_after_delivery: {
-    headline: "المرتجع وصلنا",
-    detail: "لو فيه فلوس ترجع، هتوصلك.",
-  },
-  cancelled: {
-    headline: "الأوردر اتلغى",
-    detail: "لو ده غلط كلّمنا.",
-  },
-};
-
-const FINISHED = ["delivered", "returned", "returned_after_delivery", "cancelled"];
-
-/**
- * شكل صفحة التتبع لحالة أوردر.
- *
- * ⚠️ **الحالة اللي مش معروفة بتدّي رسالة محايدة** — «حالة غير معروفة» على
- * صفحة بيقراها عميل بتخوّف من غير سبب.
- */
 export function trackView(status: string | null | undefined): TrackView {
   const s = String(status ?? "").trim();
-  const copy = HEADLINES[s] ?? {
-    headline: "شحنتك في السكة",
-    detail: "بنتابعها، ولو فيه جديد هنقولك.",
-  };
-
+  const copy = STATUS_COPY[s] ?? FALLBACK_COPY;
   const at = positionOf(s);
-  const failed = ["returning", "returned", "returned_after_delivery", "cancelled"];
 
-  const steps: TrackStep[] = JOURNEY.map((step, i) => ({
-    label: step.label,
-    // الشحنة اللي رجعت أو اتلغت: الخطوات اللي بعد وقوفها مابتتعلّمش خالص
+  const steps: TrackStep[] = JOURNEY.map((key, i) => ({
+    label: STEP_LABELS[key] ?? key,
     done: at >= 0 && i < at,
-    current: at === i && !failed.includes(s),
+    current: at === i && !STOPPED.includes(s),
   }));
 
-  return {
-    headline: copy.headline,
-    detail: copy.detail,
-    steps,
-    finished: FINISHED.includes(s),
-  };
+  return { ...copy, steps, finished: FINISHED.includes(s) };
 }
 
 /**
  * لينك التتبع اللي بيتبعت للعميل.
  *
- * بيرجّع `null` لو الأوردر لسه مالوش شحنة — لينك على رقم فاضي بيفتح
- * صفحة «مالقيناش شحنة» وده أوحش من إنه مايظهرش.
+ * ⚠️⚠️ **مبني على معرّف الأوردر مش رقم التتبع** — عشان يكون موجود من أول
+ * لحظة، قبل ما الشحنة تتعمل أصلًا. اللينك المبني على رقم التتبع كان
+ * بيظهر بعد الشحن بس، والعميل محتاج يطمن قبل كده.
+ *
+ * **وكمان أأمن**: معرّف الأوردر `uuid` مالوش تخمين، ورقم التتبع ٩ أرقام
+ * ينفع حد يعدّي عليها.
  */
 export function trackingLink(
-  tracking: string | null | undefined,
+  orderId: string | null | undefined,
   origin?: string | null
 ): string | null {
-  const t = String(tracking ?? "").trim();
-  if (!t) return null;
+  const id = String(orderId ?? "").trim();
+  if (!id) return null;
   const base = String(origin ?? "").trim() || "https://minis-system.vercel.app";
   const clean = base.endsWith("/") ? base.slice(0, -1) : base;
-  return `${clean}/track/${encodeURIComponent(t)}`;
+  return `${clean}/track/${encodeURIComponent(id)}`;
 }
 
 /**
- * ⚠️⚠️ **بوابة التليفون.**
+ * اللي في اللينك ده معرّف أوردر ولا رقم تتبع؟
  *
- * الصفحة المفتوحة بتوري الحالة وبس. عشان العميل يشوف تفاصيل أوردره لازم
- * يكتب **تليفون الأوردر** — يعني بقى فيه حاجتين: رقم التتبع (اللي معاه)،
- * والتليفون (اللي هو صاحبه).
- *
- * **المقارنة بآخر ٩ أرقام** لأن نفس التليفون بيتخزّن بأشكال مختلفة:
- * `01001234567` و`+201001234567` و`0020…` — والتسعة دول هما الجزء اللي
- * مابيتغيّرش.
- *
- * ⚠️ **وأقل من ٨ أرقام مابتتقارنش خالص** — «0100» ممكن تطابق ناس كتير،
- * والمقارنة القصيرة بتحوّل البوابة لخانة فاضية.
+ * ⚠️ **اللينكات القديمة اتبعتت برقم التتبع** — فالصفحة لازم تفضل تفتحهم.
  */
-export const MIN_PHONE_DIGITS = 8;
-const MATCH_TAIL = 9;
-
-export function phoneMatches(
-  stored: string | null | undefined,
-  typed: string | null | undefined
-): boolean {
-  const clean = (v: string | null | undefined) =>
-    String(v ?? "").replace(/[^0-9\u0660-\u0669]/g, "").replace(/[\u0660-\u0669]/g, (d) =>
-      String("٠١٢٣٤٥٦٧٨٩".indexOf(d))
-    );
-
-  const a = clean(stored);
-  const b = clean(typed);
-  if (a.length < MIN_PHONE_DIGITS || b.length < MIN_PHONE_DIGITS) return false;
-
-  return a.slice(-MATCH_TAIL) === b.slice(-MATCH_TAIL);
+export function looksLikeOrderId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value.trim()
+  );
 }
