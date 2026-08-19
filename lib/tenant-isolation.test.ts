@@ -24,7 +24,16 @@ import { describe, expect, it } from "vitest";
  * `last_seen_at` بـ`auth_user_id` بتاع الجلسة نفسها — يعني مربوط بالشخص
  * اللي داخل مش برقم صف بيتبعت من برّه. مافيش حاجة يقدر يوصلها بغير حسابه.
  */
-const ALLOWED = new Set(["lib/permissions.ts"]);
+/**
+ * ⚠️ **وصفحة التتبع استثناء تاني مقصود**: العميل بيفتحها من غير حساب،
+ * فمالوش بيزنس نفلتر بيه — رقم التتبع هو اللي بيحدد الشحنة. واللي
+ * بيتعرض **الحالة وبس**: مافيش اسم ولا تليفون ولا عنوان ولا مبلغ ولا
+ * اسم منتج، فحتى الرقم المخمّن مايوصّلش لبيانات حد.
+ */
+const ALLOWED = new Set([
+  "lib/permissions.ts",
+  "app/track/[tracking]/page.tsx",
+]);
 
 const GLOBAL_TABLES = new Set([
   "push_config",
