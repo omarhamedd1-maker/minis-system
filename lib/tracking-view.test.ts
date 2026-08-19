@@ -11,14 +11,9 @@ describe("صفحة التتبع", () => {
     }
   });
 
-  it("اللي لسه ماشي بيقول اللي بعده", () => {
-    expect(trackView("shipped").next).toBeTruthy();
-    expect(trackView("out_for_delivery").next).toBeTruthy();
-  });
-
-  it("اللي وصل مفيش بعده", () => {
-    expect(trackView("delivered").next).toBeNull();
+  it("اللي وصل بيبان إنه خلص", () => {
     expect(trackView("delivered").finished).toBe(true);
+    expect(trackView("shipped").finished).toBe(false);
   });
 
   it("الخطوات اللي عدّت بتتعلّم", () => {
@@ -35,7 +30,7 @@ describe("صفحة التتبع", () => {
 
   it("⚠️ مفيش أي جملة بتلوم العميل", () => {
     const all = Object.values(STATUS_COPY)
-      .map((c) => `${c.title} ${c.now} ${c.next ?? ""}`)
+      .map((c) => `${c.title} ${c.now}`)
       .join(" ")
       .toLowerCase();
     for (const bad of ["refused", "not answering", "wrong address", "failed"]) {

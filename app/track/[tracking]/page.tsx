@@ -75,11 +75,6 @@ export default async function TrackPage({
             {view.title}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-gray-600">{view.now}</p>
-          {view.next && (
-            <p className="mt-1.5 text-sm leading-relaxed text-gray-400">
-              {view.next}
-            </p>
-          )}
 
           <div className="mt-10 space-y-4">
             {view.steps.map((s) => (
