@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { trackView, trackingLink, looksLikeOrderId } from "./tracking-view";
+import {
+  trackView,
+  trackingLink,
+  looksLikeOrderId,
+  storeWordmark,
+} from "./tracking-view";
 import { STATUS_COPY } from "./tracking-copy";
 
 describe("صفحة التتبع", () => {
@@ -82,5 +87,23 @@ describe("اللينك على معرّف الأوردر", () => {
     expect(looksLikeOrderId("d76cbcc9-d2df-4d10-a635-fa620a81ec9a")).toBe(true);
     expect(looksLikeOrderId("8538298561")).toBe(false);
     expect(looksLikeOrderId("")).toBe(false);
+  });
+});
+
+describe("اسم المتجر فوق الصفحة", () => {
+  it("الاسم العربي بياخد المعرّف اللاتيني", () => {
+    expect(storeWordmark("مينيز", "minis")).toBe("MINIS");
+    expect(storeWordmark("مينيز", "2-sec")).toBe("2 SEC");
+  });
+
+  it("⚠️ الاسم اللاتيني بيتستخدم زي ما هو — أحسن من المعرّف", () => {
+    expect(storeWordmark("Mino Demo Store", "demo")).toBe("MINO DEMO STORE");
+    expect(storeWordmark("2 SEC", "2-sec")).toBe("2 SEC");
+  });
+
+  it("مفيش اسم ولا معرّف = مفيش سطر", () => {
+    expect(storeWordmark("مينيز", null)).toBeNull();
+    expect(storeWordmark(null, null)).toBeNull();
+    expect(storeWordmark("  ", "  ")).toBeNull();
   });
 });

@@ -88,13 +88,29 @@ export function afterWrong(
 
 
 /**
- * آخر رقمين بشكل مقنّع — تلميح للعميل مش كشف للرقم.
+ * التليفون بشكل مقنّع — تلميح للعميل مش كشف للرقم.
  *
- * ⚠️ **رقمين بس هما اللي بيبانوا** — ده كفاية إن صاحب الأوردر يعرف رقمه،
- * ومش كفاية إن حد تاني يستنتج الرقم.
+ * ⚠️ **أول رقمين وآخر رقمين بس هما اللي بيبانوا** (`01••••••20`) — الأول
+ * عشان العميل يعرف إن ده تليفون مصري ويبدأ يكتب، والآخر عشان يعرف أنهي
+ * رقم من أرقامه. والستة اللي في النص هما اللي بيفرّقوا بين رقم ورقم.
+ *
+ * ⚠️ **والرقم بيترجع لشكله المحلي الأول** — بوسطة وشوبيفاي بيخزّنوه بأشكال
+ * مختلفة (`+201…` و`201…` و`1…`)، ولو أخدنا أول رقمين زي ما هما كان
+ * التلميح هيطلع «12» أو «20» على نفس الرقم.
  */
 export function maskedTail(phone: string | null | undefined): string | null {
-  const d = digits(phone);
+  const d = localForm(phone);
   if (d.length < MIN_TYPED) return null;
-  return "•".repeat(Math.min(d.length - 2, 9)) + d.slice(-2);
+  return d.slice(0, 2) + "•".repeat(Math.max(1, d.length - 4)) + d.slice(-2);
+}
+
+/** الرقم المصري بشكله المحلي: `01…` */
+export function localForm(phone: string | null | undefined): string {
+  let d = digits(phone);
+  // كود الدولة
+  if (d.startsWith("0020")) d = d.slice(4);
+  else if (d.startsWith("20") && d.length > 10) d = d.slice(2);
+  // الصفر اللي بيضيع وقت التخزين
+  if (d && !d.startsWith("0")) d = "0" + d;
+  return d;
 }

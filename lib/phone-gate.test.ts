@@ -81,12 +81,18 @@ describe("عدّ المحاولات", () => {
   });
 });
 
-describe("قناع آخر رقمين", () => {
-  it("بيوري آخر رقمين بس", () => {
+describe("قناع التليفون", () => {
+  it("أول رقمين وآخر رقمين بس", () => {
     const m = maskedTail("01001234567")!;
+    expect(m.startsWith("01")).toBe(true);
     expect(m.endsWith("67")).toBe(true);
-    expect(m).not.toContain("0100");
-    expect(m.replace(/[^0-9]/g, "")).toBe("67");
+    expect(m.replace(/[^0-9]/g, "")).toBe("0167");
+  });
+
+  it("⚠️ الرقم بأي شكل بيطلع نفس القناع", () => {
+    for (const p of ["01223326577", "+201223326577", "1223326577", "00201223326577"]) {
+      expect(maskedTail(p), p).toBe("01•••••••77");
+    }
   });
 
   it("بيشتغل على الأرقام العربي", () => {
