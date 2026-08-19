@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity";
 import { requirePermission } from "@/lib/permissions";
 import { notifyAll } from "@/lib/push/notify";
@@ -397,7 +398,17 @@ export async function deleteTask(formData: FormData) {
   if (!taskId) back();
 
   const db = createAdminClient();
-  const { data } = await db.from("tasks").select("title").eq("id", taskId).maybeSingle();
+
+  // ⚠️ **القراية دي بالاتصال المحمي** (بند ٢.٦).
+  //
+  // كانت بمفتاح الأدمن وبتدوّر بالمعرّف بس من غير فلتر بيزنس — يعني عنوان
+  // تاسك بيزنس تاني كان ممكن يتكتب في سجل النشاط بتاعنا. الحارس مامسكهاش
+  // لأن الفلتر على معرّف فريد.
+  //
+  // **والمسح تحت سايبينه على مفتاح الأدمن** — مفيش سياسة حذف مثبتة،
+  // وهو مفلتر بالبيزنس أصلاً.
+  const rls = await createClient();
+  const { data } = await rls.from("tasks").select("title").eq("id", taskId).maybeSingle();
   const { error } = await db.from("tasks").delete().eq("tenant_id", me.tenantId).eq("id", taskId);
   if (error) back(taskId, "معرفناش نمسح التاسك: " + error.message);
 
