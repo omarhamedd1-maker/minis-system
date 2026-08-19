@@ -24,6 +24,13 @@ export type TenantCredentials = {
   /** بيانات تطبيق شوبيفاي — منها بنطلع توكن مؤقت في كل تشغيل */
   shopifyClientId: string | null;
   shopifyClientSecret: string | null;
+  /**
+   * قالب رسالة «اسأل بعد التسليم».
+   *
+   * الفاضي معناه **استخدم الافتراضي** (`lib/message-template.ts`) — مش
+   * «مافيش رسالة».
+   */
+  followupTemplate: string | null;
 };
 
 /**
@@ -53,6 +60,7 @@ export async function loadTenantCredentials(
     telegramChatId: data?.telegram_chat_id ?? null,
     shopifyClientId: data?.shopify_client_id ?? null,
     shopifyClientSecret: data?.shopify_client_secret ?? null,
+    followupTemplate: data?.followup_template ?? null,
   };
 }
 

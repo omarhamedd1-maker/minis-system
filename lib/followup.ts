@@ -15,6 +15,8 @@
 // **الملف ده صافي** — مافيش شبكة ولا قاعدة بيانات، والوقت بيتبعت جوّه.
 // ==========================================================================
 
+import { renderTemplate } from "./message-template";
+
 /**
  * ⚠️ **بعد كام يوم من التسليم.**
  *
@@ -58,30 +60,31 @@ function daysSince(value: string | null | undefined, now: Date): number | null {
 }
 
 /**
- * نص الرسالة.
+ * نص الرسالة لعميل واحد.
  *
- * ⚠️ **قصيرة وبتسأل سؤال واحد.** الرسالة الطويلة اللي فيها طلب تقييم ولينك
- * وعرض جديد بتتقري كإعلان وبتتقفل — والهدف هنا إن العميل **يرد**.
+ * ⚠️ **القالب بتاع صاحب المتجر** (`lib/message-template.ts`) — الكلام ده
+ * بيروح لعملاءه بصوته هو، فمينفعش يبقى مكتوب في الكود.
  */
 export function followupMessage(
   customerName: string | null | undefined,
   products: string[] | null | undefined,
-  storeName?: string | null
+  storeName?: string | null,
+  template?: string | null,
+  orderNumber?: string | null
 ): string {
-  const name = String(customerName ?? "").trim().split(" ")[0];
-  const hello = name ? `أهلًا ${name}` : "أهلًا";
   const list = (products ?? []).filter(Boolean);
-  const what =
-    list.length === 1
-      ? list[0]
-      : list.length > 1
-        ? `${list[0]} واللي معاه`
-        : "طلبك";
-  const from = String(storeName ?? "").trim();
-
-  return `${hello}${from ? ` — معاك ${from}` : ""} 👋
-وصلك ${what} من كام يوم، عايزين نطمن: كل حاجة تمام؟
-لو فيه أي مشكلة قول لنا وهنحلّها.`;
+  return renderTemplate(template, {
+    // الاسم الأول بس — «أهلًا مروة شهاب أحمد» بتتقري كرسالة من بنك
+    الاسم: String(customerName ?? "").trim().split(" ")[0],
+    المنتج:
+      list.length === 1
+        ? list[0]
+        : list.length > 1
+          ? `${list[0]} واللي معاه`
+          : "",
+    "رقم الأوردر": orderNumber ?? "",
+    المتجر: storeName ?? "",
+  });
 }
 
 /**
@@ -92,7 +95,8 @@ export function followupMessage(
 export function followupQueue(
   orders: FollowupOrder[],
   now: Date,
-  storeName?: string | null
+  storeName?: string | null,
+  template?: string | null
 ): FollowupRow[] {
   const out: FollowupRow[] = [];
 
@@ -115,7 +119,13 @@ export function followupQueue(
       customerName: o.customerName ?? null,
       customerPhone: phone,
       days,
-      message: followupMessage(o.customerName, o.products, storeName),
+      message: followupMessage(
+        o.customerName,
+        o.products,
+        storeName,
+        template,
+        o.orderNumber
+      ),
     });
   }
 

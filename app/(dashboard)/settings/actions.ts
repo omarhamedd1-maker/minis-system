@@ -1,6 +1,7 @@
 "use server";
 
 import { ltr } from "@/lib/format";
+import { validateTemplate } from "@/lib/message-template";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -27,6 +28,33 @@ function back(msg: string, ok = false): never {
 }
 
 /** بيتأكد إن المفتاح شغال فعلاً عند بوسطة قبل ما نحفظه */
+/**
+ * قالب رسالة «اسأل بعد التسليم».
+ *
+ * ⚠️ **بيتفحص قبل الحفظ** — القالب اللي فيه خانة غلط بيوصل للعميل
+ * بالأقواس مكتوبة زي ما هي، وده أوحش من إن الحفظ يترفض.
+ */
+export async function saveFollowupTemplate(formData: FormData) {
+  const me = await requirePermission("admin.settings");
+  const template = String(formData.get("followup_template") ?? "").trim();
+
+  const problem = validateTemplate(template);
+  if (problem) back(problem);
+
+  const db = createAdminClient();
+  const { error } = await db
+    .from("tenant_credentials")
+    .update({ followup_template: template, updated_at: new Date().toISOString() })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) back("معرفناش نحفظ الرسالة: " + error.message);
+
+  await logActivity(me, "settings.followup", "غيّر رسالة السؤال بعد التسليم");
+  revalidatePath("/settings");
+  revalidatePath("/orders/followup");
+  back("تمام — الرسالة اتحفظت", true);
+}
+
 export async function saveBostaKey(formData: FormData) {
   const me = await requirePermission("admin.settings");
   const key = String(formData.get("bosta_api_key") ?? "").trim();

@@ -8,7 +8,13 @@ import {
   saveShopify,
   saveShopifyApp,
   disconnectShopify,
+  saveFollowupTemplate,
 } from "./actions";
+import {
+  DEFAULT_FOLLOWUP_TEMPLATE,
+  MAX_TEMPLATE_LENGTH,
+  PLACEHOLDERS,
+} from "@/lib/message-template";
 import { EnablePush } from "@/components/EnablePush";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { headers } from "next/headers";
@@ -54,6 +60,23 @@ export default async function SettingsPage({
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
+
+  /**
+   * ⚠️⚠️ **قراية لوحدها بقصد.** العمود ده اتعمل ١٩ أغسطس ٢٠٢٦
+   * (`sql/followup-template.sql`)، ولو لسه مااتشغّلش الـ`select` بيرجّع
+   * **خطأ** — ولو كان جوّه استعلام المفاتيح كان هيوقّع شاشة الإعدادات
+   * كلها (ربط بوسطة وشوبيفاي) عشان خانة نص واحدة.
+   */
+  const followupTemplate = await (async () => {
+    const { data, error } = await db
+      .from("tenant_credentials")
+      .select("followup_template")
+      .eq("tenant_id", me.tenantId)
+      .maybeSingle();
+    if (error) return null;
+    return (data as { followup_template: string | null } | null)
+      ?.followup_template ?? null;
+  })();
 
   const importRuns = (await listImportRuns(db, me.tenantId)).map((run) => ({
     id: run.id,
@@ -346,6 +369,50 @@ export default async function SettingsPage({
       <div className="rounded-xl bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-bold text-gray-900">الإشعارات</h2>
         <EnablePush />
+      </div>
+
+      {/*
+        رسالة السؤال بعد التسليم.
+
+        ⚠️ **الكلام ده بيروح لعملاء صاحب المتجر بصوته هو** — فمينفعش
+        يبقى مكتوب في الكود. والخانات عربي عشان اللي بيكتب مايحتاجش
+        يبدّل لوحة المفاتيح في نص الجملة.
+      */}
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-gray-900">
+          رسالة السؤال بعد التسليم
+        </h2>
+        <p className="mt-0.5 text-[11px] text-gray-400">
+          دي اللي بتظهر جاهزة في شاشة «اسأل بعد التسليم» — تقدر تعدّلها لأي
+          عميل لوحده قبل ما تبعت.
+        </p>
+
+        <form action={saveFollowupTemplate} className="mt-3 space-y-2">
+          <textarea
+            name="followup_template"
+            rows={4}
+            defaultValue={followupTemplate ?? DEFAULT_FOLLOWUP_TEMPLATE}
+            maxLength={MAX_TEMPLATE_LENGTH}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            {PLACEHOLDERS.map((ph) => (
+              <span
+                key={ph.token}
+                title={ph.hint}
+                className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600"
+              >
+                {"{" + ph.token + "}"}
+              </span>
+            ))}
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+          >
+            احفظ الرسالة
+          </button>
+        </form>
       </div>
 
       {/*

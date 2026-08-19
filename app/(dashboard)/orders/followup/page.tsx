@@ -1,12 +1,9 @@
 import { BackLink } from "@/components/BackLink";
 import { createClient } from "@/lib/supabase/server";
 import { requirePagePermission, can } from "@/lib/permissions";
-import {
-  followupQueue,
-  whatsappLink,
-  ASK_AFTER_DAYS,
-  ASK_BEFORE_DAYS,
-} from "@/lib/followup";
+import { followupQueue, ASK_AFTER_DAYS, ASK_BEFORE_DAYS } from "@/lib/followup";
+import { FollowupList } from "@/components/FollowupList";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { markFollowedUp } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +19,30 @@ export default async function FollowupPage() {
   const user = await requirePagePermission("orders.view");
   const canMark = can(user, "orders.status");
   const supabase = await createClient();
+
+  // ⚠️ **القالب واسم المتجر بمفتاح الأدمن** — الجدولين دول مقفولين في
+  // الـRLS، والفشل هنا معناه القالب الافتراضي مش شاشة واقعة.
+  const admin = createAdminClient();
+  const [storeName, template] = await Promise.all([
+    (async () => {
+      const { data } = await admin
+        .from("tenants")
+        .select("name")
+        .eq("id", user.tenantId)
+        .maybeSingle();
+      return (data as { name: string | null } | null)?.name ?? null;
+    })(),
+    (async () => {
+      const { data, error } = await admin
+        .from("tenant_credentials")
+        .select("followup_template")
+        .eq("tenant_id", user.tenantId)
+        .maybeSingle();
+      if (error) return null;
+      return (data as { followup_template: string | null } | null)
+        ?.followup_template ?? null;
+    })(),
+  ]);
 
   type Row = {
     id: string;
@@ -79,7 +100,9 @@ export default async function FollowupPage() {
         ),
       ].filter(Boolean),
     })),
-    new Date()
+    new Date(),
+    storeName,
+    template
   );
 
   return (
@@ -101,52 +124,11 @@ export default async function FollowupPage() {
           مفيش حد مستني سؤال دلوقتي.
         </p>
       ) : (
-        <div className="space-y-2">
-          {queue.map((r) => (
-            <div
-              key={r.id}
-              className="rounded-xl bg-white p-4 shadow-sm sm:p-5"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-medium text-gray-900">
-                  {r.customerName ?? "بدون اسم"}
-                </span>
-                <span className="text-xs text-gray-500">
-                  #{r.orderNumber} · اتسلّم من {r.days} يوم
-                </span>
-              </div>
-
-              <p className="mt-2 whitespace-pre-line rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
-                {r.message}
-              </p>
-
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <a
-                  href={whatsappLink(r.customerPhone, r.message)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-                >
-                  افتح واتساب
-                </a>
-                {canMark && (
-                  <form action={markFollowedUp}>
-                    <input type="hidden" name="orderId" value={r.id} />
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-white px-4 py-1.5 text-sm text-gray-600 shadow-sm hover:bg-gray-100"
-                    >
-                      اتسأل خلاص
-                    </button>
-                  </form>
-                )}
-                <span className="text-xs text-gray-400" dir="ltr">
-                  {r.customerPhone}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <FollowupList
+          items={queue}
+          canMark={canMark}
+          markAction={markFollowedUp}
+        />
       )}
     </div>
   );
