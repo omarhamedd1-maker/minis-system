@@ -19,6 +19,9 @@ import { recordPrepaidCash } from "@/lib/prepaid-cash-run";
 import { activeTenantIds } from "@/lib/tenant-settings";
 import { runOrderImport } from "@/lib/shopify/orders";
 import { runProductImport } from "@/lib/shopify/products";
+import { checkDrop, dropMessage } from "@/lib/drop-alert";
+import { notifyAll } from "@/lib/push/notify";
+import { WEEKDAYS } from "@/lib/shipping-timing";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -40,6 +43,8 @@ export async function GET(request: Request) {
     recur: { created: number; checked: number };
     remind: { sent: number; checked: number; silent: number };
     prepaid: { added: number; adopted: number; alreadyDone: number; review: number };
+    /** المبيعات واقعة النهاردة؟ */
+    drop?: { today: number; usual: number } | null;
     /**
      * نتيجة استيراد أوردرات شوبيفاي للبيزنس ده.
      *
@@ -159,7 +164,47 @@ export async function GET(request: Request) {
           shopify = { skipped: e instanceof Error ? e.message : "الجلب وقع" };
         }
 
-        results[tenantId] = { recur, remind, prepaid, shopify };
+        // ⚠️⚠️ **حسّاس العطل** — المبيعات واقعة النهاردة عن نفس اليوم من
+        // الأسابيع اللي فاتت. المقارنة بنفس **يوم الأسبوع** مش بالمتوسط
+        // العام: السبت عند عمر ٥٥ شحنة والجمعة ١٨، فتنبيه بالمتوسط كان
+        // هيرن كل جمعة ويتقفل بعد شهر.
+        //
+        // ⚠️ **وبيتبعت مرة واحدة في اليوم** — التاج بيمنع التكرار كل ربع ساعة.
+        let drop: Ok["drop"] = null;
+        try {
+          const since = new Date(now.getTime() - 35 * 86_400_000)
+            .toISOString()
+            .slice(0, 10);
+          const { data: recent } = await db
+            .from("orders")
+            .select("order_status, order_date")
+            .eq("tenant_id", tenantId)
+            .gte("order_date", since)
+            .limit(3000);
+
+          const check = checkDrop(
+            ((recent ?? []) as { order_status: string | null; order_date: string | null }[]).map(
+              (o) => ({ orderStatus: o.order_status, orderDate: o.order_date })
+            ),
+            now
+          );
+
+          if (check.alert) {
+            drop = { today: check.today, usual: check.usual };
+            if (!dry) {
+              await notifyAll(
+                db,
+                tenantId,
+                dropMessage(check, WEEKDAYS[now.getUTCDay()] ?? ""),
+                { tag: `drop-${today}` }
+              );
+            }
+          }
+        } catch {
+          // التنبيه بس هو اللي مايبانش
+        }
+
+        results[tenantId] = { recur, remind, prepaid, shopify, drop };
       } catch (e) {
         // بيزنس وقع؟ الباقي يكمّل
         results[tenantId] = {

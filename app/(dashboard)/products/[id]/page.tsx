@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS, formatMoney } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
+import { DiscountCalculator } from "@/components/DiscountCalculator";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { BackLink } from "@/components/BackLink";
 import {
@@ -43,6 +45,36 @@ export default async function ProductDetailsPage({
     can(user, "products.cost") ||
     can(user, "products.stock");
   const supabase = await createClient();
+
+  // ⚠️ **أرقام الحاسبة من داتاك مش من تخمين**: الشحن من إعداداتك، ونسبة
+  // الرجوع من شحناتك اللي خلصت مشوارها فعلًا.
+  const admin = createAdminClient();
+  const [{ data: creds }, { data: settled }] = await Promise.all([
+    admin
+      .from("tenant_credentials")
+      .select("flat_shipping_price")
+      .eq("tenant_id", user.tenantId)
+      .maybeSingle(),
+    admin
+      .from("orders")
+      .select("order_status")
+      .eq("tenant_id", user.tenantId)
+      .in("order_status", ["delivered", "returned", "returned_after_delivery"])
+      .limit(3000),
+  ]);
+
+  const rows = (settled ?? []) as { order_status: string | null }[];
+  const returned = rows.filter((o) =>
+    ["returned", "returned_after_delivery"].includes(String(o.order_status))
+  ).length;
+  const returnRate = rows.length > 0 ? returned / rows.length : 0;
+  const shippingCharged =
+    Number(
+      (creds as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
+    ) || 0;
+  // ⚠️ **٨٨ هو الشحن الأساسي اللي باقة بوسطة بتغطيه** — الرقم ده ثابت في
+  // `lib/format.ts` ومستخدم في حساب تكلفة الشحن في كل السيستم.
+  const shippingCost = 88;
 
   const { data: product, error } = await supabase
     .from("products")
@@ -264,6 +296,26 @@ export default async function ProductDetailsPage({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/*
+                حاسبة الخصم الآمن.
+
+                ⚠️ **بتدخل نسبة الرجوع في الحساب** — «خصم ٢٠٪» بيبان بسيط،
+                والشحنة اللي بترجع بتدفع شحن ومابتحصّلش، ونصيبها بيتوزّع
+                على اللي وصل.
+              */}
+              <div className="mb-6">
+                <h3 className="mb-3 text-sm font-bold text-gray-700">
+                  تقدر تخصم كام
+                </h3>
+                <DiscountCalculator
+                  price={Number(variant.sale_price ?? 0)}
+                  cost={Number(variant.cost_price ?? 0)}
+                  shippingCharged={shippingCharged}
+                  shippingCost={shippingCost}
+                  returnRate={returnRate}
+                />
               </div>
 
               <div>
