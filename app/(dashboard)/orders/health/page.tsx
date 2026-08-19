@@ -25,7 +25,7 @@ export default async function HealthPage() {
     );
   }
 
-  const { rates, lead, aging, reasons, drift } = r;
+  const { rates, lead, aging, reasons, drift, productReturns, customerReturns } = r;
 
   return (
     <div className="space-y-4">
@@ -156,6 +156,71 @@ export default async function HealthPage() {
             <p className="mt-2 text-xs text-gray-400">
               وفيه {drift.length - 15} كمان — دول أكبرهم فرقًا.
             </p>
+          )}
+        </div>
+      )}
+
+      {/*
+        اللي بيرجع كتير — منتجات وعملاء.
+
+        ⚠️ **الحساب على الأوردر مش على البند بقصد**: خانة «الكمية الراجعة»
+        صفر في كل الداتا، لأن بوسطة بترجّع الطرد كله. الحساب بيها كان
+        هيطلّع كل النسب أصفار ويبان إن مفيش مشكلة.
+
+        **والمقام هو اللي اتشحن فعلًا** — الملغي واللي لسه جديد بره الحسبة.
+      */}
+      {(productReturns.rows.length > 0 || customerReturns.rows.length > 0) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {productReturns.rows.length > 0 && (
+            <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-sm font-bold text-gray-900">منتجات بترجع كتير</h2>
+                <span className="text-xs text-gray-500">
+                  المتوسط عندك {productReturns.overall}%
+                </span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-gray-400">
+                كل مرتجع بيدفع شحن رايح وجاي ورسوم. اللي فوق المتوسط بيستاهل
+                نظرة على وصفه وصوره.
+              </p>
+              <div className="mt-3 space-y-1.5">
+                {productReturns.rows.slice(0, 8).map((p) => (
+                  <div key={p.key} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 flex-1 truncate text-gray-900">{p.name}</span>
+                    <span className="shrink-0 tabular-nums">
+                      <span className={p.rate > productReturns.overall ? "text-red-600" : "text-gray-500"}>
+                        {p.rate}%
+                      </span>{" "}
+                      <span className="text-xs text-gray-400">({p.returned} من {p.shipped})</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {customerReturns.rows.length > 0 && (
+            <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-sm font-bold text-gray-900">عملاء بيرجّعوا كتير</h2>
+                <span className="text-xs text-gray-500">{customerReturns.rows.length} عميل</span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-gray-400">
+                دي مش قايمة سودا — بس قبل ما تشحن لواحد فيهم، تأكيد المكالمة
+                بيوفّر شحنة رايحة جاية.
+              </p>
+              <div className="mt-3 space-y-1.5">
+                {customerReturns.rows.slice(0, 8).map((c) => (
+                  <div key={c.key} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 flex-1 truncate text-gray-900">{c.name}</span>
+                    <span className="shrink-0 tabular-nums text-red-600">
+                      {c.rate}%{" "}
+                      <span className="text-xs text-gray-400">({c.returned} من {c.shipped})</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
