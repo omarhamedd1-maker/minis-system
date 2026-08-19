@@ -9,6 +9,11 @@
 //
 // **وسطر «اللي بعده» اتشال بقرار عمر** — الصفحة بقت أقصر وأنضف.
 //
+// ⚠️ **و«متجهّز» و«محتاج تصرّف» اتشالوا من القايمة بقرار عمر** — واللي مش
+// في القايمة بياخد الكلام المحايد (`FALLBACK_COPY`) بدل ما يقع.
+//
+// ⚠️ **وكلمة «parcel» اتشالت** — دي كلمة شركة شحن. العميل بيقول «order».
+//
 // ⚠️ **ومفيش أي جملة بتلوم العميل ولا بتخوّفه.** «رفض الاستلام» و«مش بيرد»
 // أسباب داخلية — على الصفحة بتبقى «we couldn't complete the delivery».
 //
@@ -35,19 +40,14 @@ export const STATUS_COPY: Record<string, StatusCopy> = {
     now: "Thanks for confirming — we're packing it now.",
     tone: "moving",
   },
-  packed: {
-    title: "Packed and ready",
-    now: "Everything's boxed and labelled.",
-    tone: "moving",
-  },
   ready: {
-    title: "Handed to the courier",
-    now: "It's waiting for the driver at the pickup point.",
+    title: "Ready to ship",
+    now: "It's packed, labelled, and waiting for the courier to collect it.",
     tone: "moving",
   },
   shipped: {
     title: "On its way",
-    now: "The courier has your parcel and it's travelling to your city.",
+    now: "It's with the courier and on the way to your city.",
     tone: "moving",
   },
   out_for_delivery: {
@@ -57,22 +57,17 @@ export const STATUS_COPY: Record<string, StatusCopy> = {
   },
   delivered: {
     title: "Delivered",
-    now: "Your parcel was handed over. We hope you love it.",
+    now: "Your order arrived. We hope you love it.",
     tone: "done",
-  },
-  awaiting_action: {
-    title: "We need a hand",
-    now: "We couldn't complete the delivery, so the parcel is on hold.",
-    tone: "warn",
   },
   returning: {
     title: "Heading back to us",
-    now: "The parcel is on its way back after the delivery attempts.",
+    now: "Your order is on its way back to us.",
     tone: "warn",
   },
   returned: {
     title: "Back with us",
-    now: "The parcel made it back to our warehouse.",
+    now: "Your order is back with us.",
     tone: "warn",
   },
   returned_after_delivery: {
@@ -100,7 +95,7 @@ export const FALLBACK_COPY: StatusCopy = {
 /** أسماء الخطوات على الخط */
 export const STEP_LABELS: Record<string, string> = {
   confirmed: "Confirmed",
-  ready: "With the courier",
+  ready: "Ready to ship",
   shipped: "In transit",
   out_for_delivery: "Out for delivery",
   delivered: "Delivered",
@@ -113,7 +108,7 @@ export const UI = {
   detailsButton: "Show",
   wrong: "That doesn't match this order.",
   locked: "Too many tries. Please wait a little and try again.",
-  notFound: "We couldn't find a parcel with this number",
+  notFound: "We couldn't find an order with this number",
   notFoundHint: "Double-check the number, and if it's still missing just message the store.",
   orderNumber: "Order",
   placed: "Placed",
