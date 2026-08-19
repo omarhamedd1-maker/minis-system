@@ -9,14 +9,14 @@ import { cairoToday } from "@/lib/format";
  *
  * ⚠️⚠️ **الصفحة دي مفتوحة للكل** — فكل حاجة بتتقرا من الداتابيز بمعرّف
  * اللينك، ومافيش حاجة بتتاخد من اللي العميل بعته غير اسمه وتليفونه وعنوانه
- * والكمية. **السعر بيتقرا من المنتج** — لو كان جاي من الصفحة، أي حد يقدر
- * يعدّله ويطلب بجنيه.
+ * والكميات. **الأسعار بتتقرا من المنتجات** — لو كانت جاية من الصفحة، أي حد
+ * كان يقدر يعدّلها ويطلب بجنيه.
  *
- * ⚠️ **والأوردر بيدخل «جديد» مش مؤكد** — يعني بيعدّي على نفس مكالمة التأكيد
- * اللي بتعملها لأي أوردر. مافيش حاجة بتروح لبوسطة لوحدها.
+ * ⚠️ **والعميل مايقدرش يطلب حاجة مش في اللينك** — أي معرّف مش في بنود
+ * اللينك بيتشال قبل ما نحسب حاجة.
  *
- * ⚠️ **والمخزون مابينزلش هنا** — الأوردر لسه ممكن يتلغي في التأكيد، وخصم
- * المخزون على أوردر مش مؤكد بيخلّي الرقم يكدب.
+ * ⚠️ **والأوردر بيدخل «جديد» مش مؤكد**، **والمخزون مابينزلش** — الأوردر لسه
+ * ممكن يتلغي في التأكيد، وخصم مخزون على أوردر مش مؤكد بيخلّي الرقم يكدب.
  */
 export type LinkResult =
   | { ok: true; orderNumber: string }
@@ -28,17 +28,23 @@ const MIN_GAP_MS = 20_000;
 
 export async function submitLinkOrder(
   linkId: string,
-  input: LinkOrderInput
+  input: LinkOrderInput & { items?: { variantId: string; quantity: number }[] }
 ): Promise<LinkResult> {
   const id = String(linkId ?? "").trim();
   if (!id) return { ok: false, error: "اللينك مش مظبوط" };
 
-  const checked = checkLinkOrder(input);
+  const wanted = (input.items ?? []).filter(
+    (i) => i && String(i.variantId ?? "").trim() && Number(i.quantity) > 0
+  );
+  if (wanted.length === 0) {
+    return { ok: false, error: "اختار منتج واحد على الأقل" };
+  }
+
+  const checked = checkLinkOrder({ ...input, quantity: 1 });
   if (!checked.ok) return checked;
 
   const now = Date.now();
-  const seen = lastSeen.get(id) ?? 0;
-  if (now - seen < MIN_GAP_MS) {
+  if (now - (lastSeen.get(id) ?? 0) < MIN_GAP_MS) {
     return { ok: false, error: "استنى شوية وحاول تاني" };
   }
 
@@ -46,28 +52,63 @@ export async function submitLinkOrder(
 
   const { data: link } = await db
     .from("order_links")
-    .select("tenant_id, variant_id, active")
+    .select("tenant_id, variant_id, active, order_link_items(variant_id)")
     .eq("id", id)
     .maybeSingle();
 
   const row = link as {
     tenant_id: string;
-    variant_id: string;
+    variant_id: string | null;
     active: boolean;
+    order_link_items: { variant_id: string }[] | null;
   } | null;
 
   if (!row || !row.active) {
     return { ok: false, error: "اللينك ده مش شغّال دلوقتي" };
   }
 
-  const { data: variant } = await db
-    .from("product_variants")
-    .select("sale_price, cost_price")
-    .eq("id", row.variant_id)
-    .maybeSingle();
+  // ⚠️ اللينكات القديمة عندها شكل واحد في `variant_id` بدل الجدول
+  const allowed = new Set(
+    (row.order_link_items ?? [])
+      .map((i) => i.variant_id)
+      .concat(row.variant_id ? [row.variant_id] : [])
+  );
+  const items = wanted.filter((i) => allowed.has(i.variantId));
+  if (items.length === 0) {
+    return { ok: false, error: "المنتجات دي مش في اللينك" };
+  }
 
-  const v = variant as { sale_price: number; cost_price: number } | null;
-  if (!v) return { ok: false, error: "المنتج ده مش متاح دلوقتي" };
+  const { data: variants } = await db
+    .from("product_variants")
+    .select("id, sale_price, cost_price")
+    .in(
+      "id",
+      items.map((i) => i.variantId)
+    );
+
+  const priced = new Map(
+    ((variants ?? []) as { id: string; sale_price: number; cost_price: number }[]).map(
+      (v) => [v.id, v]
+    )
+  );
+  if (priced.size === 0) {
+    return { ok: false, error: "المنتجات دي مش متاحة دلوقتي" };
+  }
+
+  // الشحن الثابت — الفشل معناه صفر، مش رقم مخترع
+  const shipping = await (async () => {
+    const { data, error } = await db
+      .from("tenant_credentials")
+      .select("flat_shipping_price")
+      .eq("tenant_id", row.tenant_id)
+      .maybeSingle();
+    if (error) return 0;
+    return (
+      Number(
+        (data as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
+      ) || 0
+    );
+  })();
 
   // العميل: نفس التليفون = نفس العميل
   const { data: existing } = await db
@@ -98,27 +139,12 @@ export async function submitLinkOrder(
     }
     customerId = created.id;
   } else {
-    // العميل موجود — بنحدّث عنوانه باللي كتبه دلوقتي
     await db
       .from("customers")
       .update({ address: checked.address })
       .eq("tenant_id", row.tenant_id)
       .eq("id", customerId);
   }
-
-  // ⚠️ **الشحن رقم واحد لكل مكان** — مافيش سلة شوبيفاي تحسبه هنا.
-  // والفشل في قرايته معناه صفر، مش رقم مخترع.
-  const shipping = await (async () => {
-    const { data, error } = await db
-      .from("tenant_credentials")
-      .select("flat_shipping_price")
-      .eq("tenant_id", row.tenant_id)
-      .maybeSingle();
-    if (error) return 0;
-    return Number(
-      (data as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
-    ) || 0;
-  })();
 
   const orderNumber = linkOrderNumber();
 
@@ -140,22 +166,27 @@ export async function submitLinkOrder(
     return { ok: false, error: "معرفناش نسجّل الطلب، جرّب تاني" };
   }
 
-  const { error: itemError } = await db.from("order_items").insert({
-    tenant_id: row.tenant_id,
-    order_id: order.id,
-    variant_id: row.variant_id,
-    quantity: checked.quantity,
-    sale_price_at_order: v.sale_price,
-    cost_price_at_order: v.cost_price,
-  });
+  let added = 0;
+  for (const item of items) {
+    const v = priced.get(item.variantId);
+    if (!v) continue;
+    const { error } = await db.from("order_items").insert({
+      tenant_id: row.tenant_id,
+      order_id: order.id,
+      variant_id: item.variantId,
+      quantity: item.quantity,
+      sale_price_at_order: v.sale_price,
+      cost_price_at_order: v.cost_price,
+    });
+    if (!error) added++;
+  }
 
-  if (itemError) {
+  if (added === 0) {
     return { ok: false, error: "معرفناش نسجّل الطلب، جرّب تاني" };
   }
 
   lastSeen.set(id, now);
 
-  // عدّاد اللينك — لو فشل مايأثرش على الطلب
   const { data: fresh } = await db
     .from("order_links")
     .select("orders_count")
@@ -165,7 +196,8 @@ export async function submitLinkOrder(
   await db
     .from("order_links")
     .update({
-      orders_count: Number((fresh as { orders_count: number } | null)?.orders_count ?? 0) + 1,
+      orders_count:
+        Number((fresh as { orders_count: number } | null)?.orders_count ?? 0) + 1,
     })
     .eq("tenant_id", row.tenant_id)
     .eq("id", id);

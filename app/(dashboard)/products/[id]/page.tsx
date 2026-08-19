@@ -1,5 +1,3 @@
-import { OrderLinkButton } from "@/components/OrderLinkButton";
-import { makeOrderLink } from "../link-actions";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { COST_COMPONENTS, formatMoney } from "@/lib/format";
@@ -133,13 +131,6 @@ export default async function ProductDetailsPage({
                 <h2 className="text-base font-bold text-gray-900">
                   {variant.variant_name ?? "افتراضي"}
                 </h2>
-                {/*
-                  ⚠️ **لينك الطلب المباشر** — تبعته في رسالة، العميل يملا
-                  عنوانه بنفسه، والأوردر ييجي عندك في «محتاج تأكيد».
-                */}
-                {isAdmin && (
-                  <OrderLinkButton variantId={variant.id} action={makeOrderLink} />
-                )}
                 {isAdmin ? (
                   <form action={saveSku} className="flex items-center gap-2">
                     <input type="hidden" name="variant_id" value={variant.id} />

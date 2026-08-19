@@ -39,7 +39,14 @@ const ITEMS: Item[] = [
       { href: "/customers/segments", label: "الشرايح", perm: "customers.view" },
     ],
   },
-  { href: "/products", label: "المنتجات", perm: "products.view" },
+  {
+    href: "/products",
+    label: "المنتجات",
+    perm: "products.view",
+    children: [
+      { href: "/products/links", label: "لينكات الطلب", perm: "products.edit" },
+    ],
+  },
   { href: "/suppliers", label: "الموردين", perm: "suppliers.view" },
   { href: "/expenses", label: "المصاريف", perm: "expenses.view" },
   { href: "/cash", label: "الخزنة", perm: "cash.view" },
@@ -64,6 +71,8 @@ function Icon({ href, className }: { href: string; className?: string }) {
       "M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM17 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
     "/customers/segments":
       "M12 3a9 9 0 1 0 9 9h-9V3zM14.5 3.5A7.5 7.5 0 0 1 20.5 9.5h-6v-6z",
+    "/products/links":
+      "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.8 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",
     "/products":
       "M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.1 18.1 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3zM6 6h.008v.008H6V6z",
     "/suppliers":
