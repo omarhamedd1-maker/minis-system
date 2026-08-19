@@ -7,7 +7,6 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { COST_COMPONENTS } from "@/lib/format";
 import { runProductImport, type ImportResult } from "@/lib/shopify/products";
-import { parseCostFile, type CostFilePlan } from "@/lib/costs-file";
 import { recordImportRun } from "@/lib/import-runs";
 
 export async function deleteProduct(formData: FormData) {
@@ -387,85 +386,3 @@ export async function importShopifyProducts(
   return res;
 }
 
-export type CostUploadResult =
-  | { ok: true; dry: boolean; plan: CostFilePlan; applied?: number }
-  | { ok: false; error: string };
-
-/**
- * رفع ملف التكاليف (بند ٤.٦).
- *
- * **بيعرض الأول وبعدين ينفّذ.** والخانة الفاضية معناها "سيبها زي ما هي" مش
- * "صفّرها" — أغلب الناس بتملا الناقص وتسيب الباقي.
- */
-export async function uploadCostFile(
-  formData: FormData
-): Promise<CostUploadResult> {
-  const me = await requirePermission("products.edit");
-  const dry = String(formData.get("dry") ?? "1") === "1";
-  const text = String(formData.get("content") ?? "");
-
-  if (!text.trim()) return { ok: false, error: "الملف فاضي" };
-
-  const db = createAdminClient();
-  // بيزنس صاحب الملف بس — من غير الفلتر ده الأسماء بتتطابق مع منتجات بيزنس
-  // تاني، والتكلفة ممكن تتكتب في المكان الغلط
-  const { data, error } = await db
-    .from("product_variants")
-    .select("id, variant_name, cost_price, products(name, name_ar)")
-    .eq("tenant_id", me.tenantId)
-    .overrideTypes<
-      {
-        id: string;
-        variant_name: string | null;
-        cost_price: number;
-        products: { name: string | null; name_ar: string | null } | null;
-      }[]
-    >();
-
-  if (error) return { ok: false, error: "معرفناش نقرا المنتجات: " + error.message };
-
-  const known = new Map(
-    (data ?? []).map((v) => {
-      const base = v.products?.name_ar || v.products?.name || "بدون اسم";
-      const variant = String(v.variant_name ?? "").trim();
-      const name =
-        variant && variant.toLowerCase() !== "default title"
-          ? `${base} — ${variant}`
-          : base;
-      return [v.id, { name, costPrice: Number(v.cost_price ?? 0) }];
-    })
-  );
-
-  const plan = parseCostFile(text, known);
-  if (dry || plan.updates.length === 0) return { ok: true, dry, plan };
-
-  let applied = 0;
-  for (const u of plan.updates) {
-    const { error: upErr } = await db
-      .from("product_variants")
-      .update({ cost_price: u.to })
-      .eq("tenant_id", me.tenantId)
-      .eq("id", u.variantId);
-    if (!upErr) applied++;
-  }
-
-  if (applied > 0) {
-    await logActivity(me, "products.costs", `حدّث تكلفة ${applied} شكل من ملف`);
-    // التراجع هنا مش مسح — ده رجوع كل تكلفة لقيمتها اللي كانت قبل الملف
-    await recordImportRun(db, {
-      tenantId: me.tenantId,
-      kind: "costs",
-      summary: `تكلفة ${applied} شكل`,
-      actorName: me.fullName ?? me.email ?? null,
-      payload: {
-        costs: plan.updates.map((u) => ({
-          variantId: u.variantId,
-          previous: u.from,
-        })),
-      },
-    });
-    revalidatePath("/products");
-  }
-
-  return { ok: true, dry: false, plan, applied };
-}

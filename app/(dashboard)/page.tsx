@@ -12,7 +12,6 @@ import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
 import { monthlyReport } from "@/lib/monthly-report";
-import { dailyBoard, boardIsClear } from "@/lib/daily-board";
 import { can, requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
@@ -26,8 +25,6 @@ type OrderRow = {
   bosta_fees_real: number | null;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
-  bosta_tracking: string | null;
-  bosta_created_at: string | null;
   customers: { full_name: string | null } | null;
   order_items: {
     quantity: number;
@@ -170,7 +167,7 @@ export default async function StatsPage({
       supabase
         .from("orders")
         .select(
-          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, bosta_tracking, bosta_created_at, customers(full_name),
+          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, customers(full_name),
            order_items(quantity, sale_price_at_order, cost_price_at_order,
              product_variants(id, variant_name, products(name)))`
         )
@@ -249,21 +246,6 @@ export default async function StatsPage({
     (expensesResult.data ?? []) as never,
     today,
     6
-  );
-
-  // لوحة اليوم — **مش متأثرة بالفترة المختارة فوق بقصد**. السؤال اللي
-  // بتجاوبه هو «أبدأ منين النهاردة»، والفلتر بتاع «آخر ٣٠ يوم» مالوش
-  // دخل بأوردر جديد دخل الصبح.
-  const board = dailyBoard(
-    allOrders.map((o) => ({
-      id: o.id,
-      orderStatus: o.order_status,
-      bostaTracking: o.bosta_tracking,
-      bostaCreatedAt: o.bosta_created_at,
-      bostaCod: o.bosta_cod,
-      bostaCollected: o.bosta_collected,
-    })),
-    new Date()
   );
 
   // الأرباح مبنية على تكلفة ناقصة؟ اقرا `lib/zero-cost.ts`
@@ -596,48 +578,6 @@ export default async function StatsPage({
           </a>
         )}
       </div>
-
-      {/*
-        لوحة اليوم.
-
-        كل رقم بيفتح **نفس الأوردرات دي بالظبط** مش فلتر قريب منها —
-        السطر اللي بيقول «٣ واقفين» لازم يفتح التلاتة، مش كل اللي عند بوسطة.
-      */}
-      <section className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="text-sm font-bold text-gray-900">مستنيك النهاردة</h2>
-        {boardIsClear(board) ? (
-          <p className="mt-1 text-sm text-gray-500">
-            مافيش حاجة مستنية إيدك. كل الأوردرات ماشية.
-          </p>
-        ) : (
-          <p className="mt-0.5 text-[11px] text-gray-400">
-            دوس على أي رقم يفتحلك الأوردرات نفسها.
-          </p>
-        )}
-
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {board
-            .filter((row) => row.count > 0)
-            .map((row) => (
-              <Link
-                key={row.key}
-                href={row.href}
-                className={`flex items-baseline justify-between gap-3 rounded-lg px-3 py-2 text-sm hover:brightness-95 ${
-                  row.urgent
-                    ? "bg-amber-50 text-amber-900"
-                    : "bg-gray-50 text-gray-700"
-                }`}
-              >
-                <span className="min-w-0 flex-1">{row.label}</span>
-                <span className="shrink-0 font-bold tabular-nums">
-                  {row.money === undefined
-                    ? row.count
-                    : `${row.count} · ${formatMoney(row.money)}`}
-                </span>
-              </Link>
-            ))}
-        </div>
-      </section>
 
       <section>
         {/* الفترة المختارة على اليمين، والاختيارات التانية جنبها على الشمال */}

@@ -12,6 +12,7 @@ import {
   paymentMethodLabel,
 } from "@/lib/format";
 import { shippingSettlement } from "@/lib/dashboard-stats";
+import { shortLogText } from "@/lib/log-text";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { StatusBox } from "@/components/StatusBox";
@@ -329,7 +330,9 @@ export default async function OrderDetailsPage({
   for (const l of orderLog ?? []) {
     timeline.push({
       at: l.created_at,
-      text: l.summary ?? l.action,
+      // ⚠️ **القص وقت العرض بس** — الجدول فيه النص الكامل، والسجل العام
+      // محتاجه كامل عشان يقول أنهي أوردر.
+      text: shortLogText(l.summary, order.order_number) || l.action,
       when: fmtWhen(l.created_at),
       who: l.actor_name ?? undefined,
       dot: l.action.startsWith("bosta")
