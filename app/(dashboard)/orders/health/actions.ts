@@ -13,6 +13,7 @@ import { findDrift, type DriftRow } from "@/lib/shopify/drift";
 import { customerReturnRates, productReturnRates, type RateReport } from "@/lib/return-rates";
 import { priceTests, type PriceTest } from "@/lib/price-tests";
 import { shippingByDay, type TimingReport } from "@/lib/shipping-timing";
+import { discountImpact, type DiscountReport } from "@/lib/discount-impact";
 import { fetchShopifyOrders } from "@/lib/shopify/orders";
 import { loadTenantCredentials } from "@/lib/tenant-settings";
 
@@ -38,6 +39,8 @@ export type HealthReport =
       prices: PriceTest[];
       /** الشحن حسب يوم الأسبوع في الأسبوع */
       timing: TimingReport;
+      /** الخصم كسّب ولا خسّر */
+      discounts: DiscountReport;
     }
   | { ok: false; error: string };
 
@@ -71,6 +74,8 @@ export async function loadHealth(): Promise<HealthReport> {
 
   const rows = (data ?? []) as unknown as OpsOrder[];
 
+  const codes = await loadDiscountCodes(db, me.tenantId);
+
   return {
     ok: true,
     rates: carrierRates(rows),
@@ -87,6 +92,25 @@ export async function loadHealth(): Promise<HealthReport> {
         bostaTracking: o.bosta_tracking,
         bostaCreatedAt: o.bosta_created_at,
         deliveredAt: o.delivered_at,
+      }))
+    ),
+    // ⚠️ **الإجمالي هنا هو اللي العميل دفعه** (بنود − خصم + شحن) مش قيمة
+    // البضاعة — الفرق ده هو الفرق بين «الخصم بيزوّد الأوردر» و«بياكله».
+    discounts: discountImpact(
+      rows.map((o) => ({
+        orderStatus: o.order_status,
+        itemsTotal: (o.order_items ?? []).reduce(
+          (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
+          0
+        ),
+        discount: Number(o.discount ?? 0),
+        shipping: Number(o.shipping_price ?? 0),
+        code:
+          codes.get(
+            String(
+              (o as unknown as { order_number?: string | null }).order_number ?? ""
+            )
+          ) ?? null,
       }))
     ),
   };
@@ -206,4 +230,38 @@ function toPrice(rows: Record<string, unknown>[]) {
       };
     }),
   }));
+}
+
+/**
+ * كود الخصم لكل أوردر.
+ *
+ * ⚠️⚠️ **بره الاستعلام الأساسي بقصد.** العمود ده اتعمل ١٩ أغسطس ٢٠٢٦
+ * (`sql/discount-code-and-followup.sql`)، ولو لسه مااتشغّلش الـ`select`
+ * بيرجّع **خطأ** — ولو كان جوّه الاستعلام الكبير كان هيوقّع شاشة صحة
+ * التشغيل كلها بدل ما يضيّع تفصيلة واحدة.
+ *
+ * الفشل هنا = خريطة فاضية، والشاشة بتقول إن تفصيل الأكواد لسه بيتملى.
+ */
+async function loadDiscountCodes(
+  db: ReturnType<typeof createAdminClient>,
+  tenantId: string
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  try {
+    const { data, error } = await db
+      .from("orders")
+      .select("order_number, discount_code")
+      .eq("tenant_id", tenantId)
+      .not("discount_code", "is", null)
+      .limit(5000);
+    if (error) return out;
+    for (const row of (data ?? []) as { order_number: string | null; discount_code: string | null }[]) {
+      const n = String(row.order_number ?? "").trim();
+      const c = String(row.discount_code ?? "").trim();
+      if (n && c) out.set(n, c);
+    }
+  } catch {
+    // العمود لسه مااتعملش — الشاشة بتشتغل من غير تفصيل الأكواد
+  }
+  return out;
 }

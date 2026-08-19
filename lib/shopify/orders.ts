@@ -33,6 +33,7 @@ const ORDERS_QUERY = `query($cursor: String, $size: Int!) {
       cancelledAt
       displayFulfillmentStatus
       currentTotalDiscountsSet { shopMoney { amount } }
+      discountCodes
       totalShippingPriceSet { shopMoney { amount } }
       shippingAddress { name phone address1 address2 city province }
       lineItems(first: 100) {
@@ -55,6 +56,7 @@ type RawOrder = {
   cancelledAt?: string | null;
   displayFulfillmentStatus?: string | null;
   currentTotalDiscountsSet?: { shopMoney?: { amount?: string } } | null;
+  discountCodes?: string[] | null;
   totalShippingPriceSet?: { shopMoney?: { amount?: string } } | null;
   shippingAddress?: {
     name?: string | null;
@@ -118,6 +120,9 @@ export async function fetchShopifyOrders(
         cancelledAt: o.cancelledAt ?? null,
         fulfilled: String(o.displayFulfillmentStatus ?? "") === "FULFILLED",
         discount: Number(o.currentTotalDiscountsSet?.shopMoney?.amount ?? 0),
+        // ⚠️ **أول كود بس.** شوبيفاي بتسمح بأكتر من كود على الأوردر، بس
+        // الخصم بيتخزّن عندنا كرقم واحد — فتوزيعه على كودين هيبقى تخمين.
+        discountCode: (o.discountCodes ?? [])[0] ?? null,
         shipping: Number(o.totalShippingPriceSet?.shopMoney?.amount ?? 0),
         customer: {
           // **مش بناخد رقم العميل عند شوبيفاي بقصد.** الحقل ده محتاج صلاحية
@@ -379,6 +384,7 @@ export async function runOrderImport(opts: {
         order_status: item.status,
         order_date: o.createdAt,
         discount: o.discount,
+        discount_code: o.discountCode ?? null,
         shipping_price: o.shipping,
         delivered_at: item.status === "delivered" ? o.createdAt : null,
         cancelled_at: item.status === "cancelled" ? o.createdAt : null,

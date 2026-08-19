@@ -19,13 +19,13 @@ type Allowed = Leaf & { children: Leaf[] | undefined };
 
 const ITEMS: Item[] = [
   { href: "/", label: "الداشبورد", perm: "finance.dashboard" },
-  { href: "/search", label: "بحث", perm: "orders.view" },
   {
     href: "/orders",
     label: "الأوردرات",
     perm: "orders.view",
     children: [
       { href: "/orders/carts", label: "سلات متروكة", perm: "orders.view" },
+      { href: "/orders/followup", label: "اسأل بعد التسليم", perm: "orders.view" },
     ],
   },
   { href: "/tasks", label: "التاسكات", perm: "tasks.view" },
@@ -50,11 +50,12 @@ const ITEMS: Item[] = [
 function Icon({ href, className }: { href: string; className?: string }) {
   const paths: Record<string, string> = {
     "/": "M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5Z",
-    "/search": "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4",
     "/orders": "M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM4 7.5 12 12l8-4.5M12 12v9",
     "/tasks": "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 14l2 2 4-4",
     "/customers": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
     "/orders/health": "M3 12h4l2-6 3 12 2.5-7 1.5 3h5",
+    "/orders/followup":
+      "M21 11.5a8.4 8.4 0 0 1-9 8.4 8.4 8.4 0 0 1-3.8-.9L3 20.5l1.5-4.5a8.4 8.4 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.4-9 8.4 8.4 0 0 1 9 8.3z",
     "/orders/carts":
       "M3 4h2l2.4 10.4a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H6M9 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM17 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
     "/customers/segments":

@@ -348,6 +348,34 @@ export default async function SettingsPage({
         <EnablePush />
       </div>
 
+      {/*
+        تنزيل الداتا.
+
+        ⚠️ **نسخة عند صاحب المتجر على جهازه** — مش نسخة احتياطية للسيستم.
+        لو حصل حاجة للداتابيز الملفات دي هي اللي في إيده.
+      */}
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-gray-900">نزّل الداتا</h2>
+        <p className="mt-0.5 text-[11px] text-gray-400">
+          ملفات إكسيل عندك على جهازك.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[
+            { what: "orders", label: "الأوردرات" },
+            { what: "customers", label: "العملاء" },
+            { what: "products", label: "المنتجات" },
+          ].map((f) => (
+            <a
+              key={f.what}
+              href={"/export?what=" + f.what}
+              className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+            >
+              {f.label}
+            </a>
+          ))}
+        </div>
+      </div>
+
       <ImportHistory runs={importRuns} undoAction={undoImport} />
 
       <Link
