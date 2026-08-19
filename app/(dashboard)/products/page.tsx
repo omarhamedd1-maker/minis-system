@@ -2,6 +2,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LEGACY_BUCKET_PRODUCT, formatMoney } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
+import {
+  stockRunway,
+  runningOut,
+  untrackedSellers,
+  WINDOW_DAYS,
+} from "@/lib/stock-runway";
 import { ImportShopifyProducts } from "@/components/ImportShopifyProducts";
 import { importShopifyProducts } from "./actions";
 
@@ -102,6 +108,52 @@ export default async function ProductsPage({
       return sa.localeCompare(sb);
     });
 
+  // ⚠️ **«فاضل ٩ قطع» مش معلومة لوحدها** — ٩ من حاجة بتتباع ٣ في اليوم
+  // معناها ٣ أيام. الاستعلام ده بيجيب بيع آخر شهر بس عشان يطلّع المعدّل.
+  const now = new Date();
+  const since = new Date(now.getTime() - WINDOW_DAYS * 86_400_000).toISOString();
+  const salesRows =
+    (
+      await supabase
+        .from("orders")
+        .select("order_status, order_date, order_items(variant_id, quantity)")
+        .gte("order_date", since)
+        .limit(2000)
+        .overrideTypes<
+          {
+            order_status: string | null;
+            order_date: string | null;
+            order_items: { variant_id: string | null; quantity: number }[] | null;
+          }[]
+        >()
+    ).data ?? [];
+
+  const runway = stockRunway(
+      visibleProducts.flatMap((p) =>
+        p.product_variants.map((v) => ({
+          id: v.id,
+          name:
+            (p.name_ar || p.name || "منتج") +
+            (String(v.variant_name ?? "").trim()
+              ? " — " + String(v.variant_name).trim()
+              : ""),
+          onHand: Number(v.quantity_on_hand ?? 0),
+        }))
+      ),
+      salesRows.flatMap((o) =>
+        (o.order_items ?? []).map((i) => ({
+          variantId: i.variant_id,
+          at: o.order_date,
+          orderStatus: o.order_status,
+          quantity: Number(i.quantity) || 0,
+        }))
+      ),
+    now
+  );
+
+  const lowStock = runningOut(runway);
+  const untracked = untrackedSellers(runway);
+
   // فلتر "الناقص" — الأشكال اللي تكلفتها صفر، اللي الجلب من شوبيفاي بيوديك لها
   const costFiltered = onlyMissingCost
     ? visibleProducts.filter((p) =>
@@ -161,6 +213,63 @@ export default async function ProductsPage({
           {canEdit && <ImportShopifyProducts action={importShopifyProducts} />}
         </div>
       </div>
+
+      {/*
+        قرّب يخلص.
+
+        ⚠️ **اللي مااتباعش ٣ قطع في الشهر مش هنا** — مش هينفد، وتحذير
+        عليه بيغرق التحذير الحقيقي.
+      */}
+      {/*
+        ⚠️ **رقم مش متمسك، مش بضاعة خلصت.** محدش بيبيع ٧٣ قطعة من مخزون
+        صفر. بيتعرض كخبر هادي عشان التنبيه يفضل معناه «اتصرّف».
+      */}
+      {untracked.length > 0 && (
+        <div className="rounded-lg bg-gray-50 px-4 py-2.5 text-sm text-gray-600">
+          <span className="font-medium">
+            {untracked.length} شكل بيتباع ومخزونه مكتوب صفر
+          </span>
+          {" — "}
+          {untracked.slice(0, 3).map((r) => r.name).join("، ")}
+          {untracked.length > 3 ? " وغيرهم" : ""}. يعني الرقم مش بيتحدّث،
+          فتنبيه النفاد مابيشتغلش عليهم.
+        </div>
+      )}
+
+      {lowStock.length > 0 && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">قرّب يخلص</h2>
+            <span className="text-xs text-gray-500">
+              على معدّل بيع آخر {WINDOW_DAYS} يوم
+            </span>
+          </div>
+          <div className="mt-3 space-y-1.5">
+            {lowStock.slice(0, 8).map((r) => (
+              <div
+                key={r.id}
+                className="flex items-baseline justify-between gap-3 text-sm"
+              >
+                <span className="min-w-0 flex-1 truncate text-gray-900">
+                  {r.name}
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  <span
+                    className={
+                      (r.daysLeft ?? 0) <= 3 ? "text-red-600" : "text-amber-700"
+                    }
+                  >
+                    {r.daysLeft} يوم
+                  </span>{" "}
+                  <span className="text-xs text-gray-400">
+                    (فاضل {r.onHand} · باع {r.soldInWindow})
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {onlyMissingCost && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
