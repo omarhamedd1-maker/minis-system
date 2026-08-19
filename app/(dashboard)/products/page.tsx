@@ -427,14 +427,6 @@ export default async function ProductsPage({
                     <td className="px-4 py-3 font-medium text-gray-900">
                       {index === 0 && (
                         <span className="flex items-center gap-2">
-                          {product.image_url && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={product.image_url}
-                              alt=""
-                              className="h-8 w-8 shrink-0 rounded bg-gray-50 object-cover"
-                            />
-                          )}
                           {product.name_ar ?? product.name ?? "بدون اسم"}
                           {product.deleted_in_shopify && (
                             <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
