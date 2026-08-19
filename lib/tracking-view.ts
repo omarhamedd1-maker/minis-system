@@ -97,3 +97,26 @@ export function looksLikeOrderId(value: string): boolean {
     value.trim()
   );
 }
+
+/**
+ * اسم المتجر اللي بيتكتب فوق صفحة التتبع — **إنجليزي وكابيتال**.
+ *
+ * الصفحة كلها إنجليزي، فاسم عربي فوقها بيبان غريب. ⚠️ والاسم العربي مش
+ * بيتترجم — بنستخدم **المعرّف اللاتيني** (`slug`) اللي البيزنس مسجّل بيه
+ * أصلًا: `minis` ← `MINIS`، و`2-sec` ← `2 SEC`.
+ *
+ * ⚠️ **ولو الاسم نفسه لاتيني بيتستخدم زي ما هو** — «Mino Demo Store» أحسن
+ * من «DEMO».
+ */
+export function storeWordmark(
+  name: string | null | undefined,
+  slug: string | null | undefined
+): string | null {
+  const n = String(name ?? "").trim();
+  // فيه حرف لاتيني؟ يبقى الاسم نفسه ينفع
+  if (/[A-Za-z]/.test(n)) return n.toUpperCase();
+
+  const s = String(slug ?? "").trim();
+  if (!s) return null;
+  return s.replace(/[-_]+/g, " ").toUpperCase();
+}

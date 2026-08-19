@@ -1,5 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { trackView, looksLikeOrderId } from "@/lib/tracking-view";
+import {
+  trackView,
+  looksLikeOrderId,
+  storeWordmark,
+} from "@/lib/tracking-view";
 import { UI } from "@/lib/tracking-copy";
 import { maskedTail } from "@/lib/phone-gate";
 import { TrackGate } from "@/components/TrackGate";
@@ -39,7 +43,7 @@ export default async function TrackPage({
   const db = createAdminClient();
   const query = db
     .from("orders")
-    .select("order_status, tenants(name), customers(phone)");
+    .select("order_status, tenants(name, slug), customers(phone)");
   const { data } = await (
     looksLikeOrderId(tracking)
       ? query.eq("id", tracking)
@@ -50,18 +54,22 @@ export default async function TrackPage({
 
   const row = data as {
     order_status: string | null;
-    tenants: { name: string | null } | null;
+    tenants: { name: string | null; slug: string | null } | null;
     customers: { phone: string | null } | null;
   } | null;
 
-  const store = row?.tenants?.name ?? null;
+  // ⚠️ **إنجليزي وكابيتال** — الصفحة كلها إنجليزي، والاسم العربي فوقها
+  // بيبان غريب. الاسم اللاتيني بييجي من معرّف البيزنس.
+  const store = storeWordmark(row?.tenants?.name, row?.tenants?.slug);
   const hint = maskedTail(row?.customers?.phone);
   const view = row ? trackView(row.order_status) : null;
 
   return (
     <div className="mx-auto max-w-md px-6 py-16" dir="ltr">
       {store && (
-        <p className="text-sm font-medium tracking-wide text-gray-900">{store}</p>
+        <p className="text-sm font-light tracking-[0.2em] text-gray-900">
+          {store}
+        </p>
       )}
 
       {!view ? (
