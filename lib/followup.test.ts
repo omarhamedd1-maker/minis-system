@@ -98,10 +98,20 @@ describe("طابور السؤال بعد التسليم", () => {
 
 describe("نص الرسالة", () => {
   it("بينادي بالاسم الأول ويذكر المنتج", () => {
-    const m = followupMessage("مروة شهاب", ["مقبض ستارة"], "مينيز");
+    const m = followupMessage("مروة شهاب", ["مقبض ستارة"]);
     expect(m).toContain("أهلًا مروة");
     expect(m).toContain("مقبض ستارة");
-    expect(m).toContain("مينيز");
+  });
+
+  it("⚠️ القالب بتاع صاحب المتجر هو اللي بيتبعت", () => {
+    const m = followupMessage(
+      "مروة شهاب",
+      ["مقبض"],
+      "مينيز",
+      "معاك {المتجر} — أوردر {رقم الأوردر} وصل يا {الاسم}؟",
+      "1367"
+    );
+    expect(m).toBe("معاك مينيز — أوردر 1367 وصل يا مروة؟");
   });
 
   it("أكتر من منتج بيتقال باختصار", () => {
@@ -110,11 +120,12 @@ describe("نص الرسالة", () => {
     );
   });
 
-  it("من غير اسم ولا منتج بتفضل رسالة مفهومة", () => {
+  it("من غير اسم ولا منتج بتفضل رسالة مفهومة ومفيش خانة فاضية بايظة", () => {
     const m = followupMessage(null, null);
     expect(m).toContain("أهلًا");
-    expect(m).toContain("طلبك");
+    expect(m).toContain("كل حاجة تمام؟");
     expect(m).not.toContain("undefined");
+    expect(m).not.toContain("{");
   });
 });
 
