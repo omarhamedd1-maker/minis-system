@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { trackView } from "@/lib/tracking-view";
+import { TrackGate } from "@/components/TrackGate";
+import { openDetails } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +89,14 @@ export default async function TrackPage({
               </div>
             ))}
           </div>
+
+          {/*
+            بوابة التفاصيل.
+
+            ⚠️ **الحالة فوق بتبان للكل، والتفاصيل بعد التليفون بس** —
+            يعني بقى فيه حاجتين: اللينك، وإن يكون هو صاحب الأوردر.
+          */}
+          <TrackGate tracking={tracking} action={openDetails} />
 
           <p className="mt-8 text-xs text-gray-400" dir="ltr">
             {tracking}

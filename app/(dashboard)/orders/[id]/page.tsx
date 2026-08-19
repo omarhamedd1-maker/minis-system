@@ -14,6 +14,9 @@ import {
 import { shippingSettlement } from "@/lib/dashboard-stats";
 import { shortLogText } from "@/lib/log-text";
 import { orderFlags } from "@/lib/order-flags";
+import { trackingLink } from "@/lib/tracking-view";
+import { CopyLink } from "@/components/CopyLink";
+import { headers } from "next/headers";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { StatusBox } from "@/components/StatusBox";
@@ -244,6 +247,11 @@ export default async function OrderDetailsPage({
   );
   // ⚠️ **تنبيهات مش موانع** — الأوردر بيتشحن عادي، والعلامة بتقول «بصّ
   // على دي الأول». وبتختفي لوحدها أول ما الأوردر يروح لبوسطة.
+  // ⚠️ **العنوان بيتاخد من الطلب نفسه** — الرابط لازم يبقى بدومين الموقع
+  // اللي فاتح دلوقتي، مش رقم ثابت في الكود يبوظ لما الدومين يتغيّر.
+  const origin = (await headers()).get("origin") ?? null;
+  const trackLink = trackingLink(order.bosta_tracking, origin);
+
   const flags = orderFlags({
     orderStatus: order.order_status,
     total: itemsTotal - (order.discount ?? 0) + (order.shipping_price ?? 0),
@@ -758,6 +766,19 @@ export default async function OrderDetailsPage({
                   {order.bosta_tracking ?? "—"}
                 </dd>
               </div>
+
+              {/*
+                لينك التتبع اللي بيتبعت للعميل.
+
+                ⚠️ **باسم متجرك مش باسم بوسطة** — والصفحة بتوري الحالة
+                وبس، مافيش أي بيانات شخصية عليها.
+              */}
+              {trackLink && (
+                <div>
+                  <dt className="text-gray-500">لينك التتبع للعميل</dt>
+                  <CopyLink url={trackLink} href={trackLink} />
+                </div>
+              )}
               <div className="flex items-center justify-between gap-4">
                 <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>

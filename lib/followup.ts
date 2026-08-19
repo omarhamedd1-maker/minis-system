@@ -37,6 +37,8 @@ export type FollowupOrder = {
   customerPhone?: string | null;
   /** المنتجات — بتدخل في نص الرسالة */
   products?: string[] | null;
+  /** لينك صفحة التتبع بتاعت الأوردر ده */
+  trackLink?: string | null;
 };
 
 export type FollowupRow = {
@@ -70,7 +72,8 @@ export function followupMessage(
   products: string[] | null | undefined,
   storeName?: string | null,
   template?: string | null,
-  orderNumber?: string | null
+  orderNumber?: string | null,
+  trackLink?: string | null
 ): string {
   const list = (products ?? []).filter(Boolean);
   return renderTemplate(template, {
@@ -84,6 +87,7 @@ export function followupMessage(
           : "",
     "رقم الأوردر": orderNumber ?? "",
     المتجر: storeName ?? "",
+    "لينك التتبع": trackLink ?? "",
   });
 }
 
@@ -124,7 +128,8 @@ export function followupQueue(
         o.products,
         storeName,
         template,
-        o.orderNumber
+        o.orderNumber,
+        o.trackLink
       ),
     });
   }

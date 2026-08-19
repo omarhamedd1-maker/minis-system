@@ -33,6 +33,7 @@ import { describe, expect, it } from "vitest";
 const ALLOWED = new Set([
   "lib/permissions.ts",
   "app/track/[tracking]/page.tsx",
+  "app/track/[tracking]/actions.ts",
 ]);
 
 const GLOBAL_TABLES = new Set([
