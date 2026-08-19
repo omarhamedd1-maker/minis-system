@@ -29,7 +29,7 @@ export default async function OrderLinkPage({
   const { data } = await db
     .from("order_links")
     .select(
-      `active,
+      `active, tenant_id,
        tenants(name, slug),
        product_variants(sale_price, variant_name, products(name, name_ar, image_url))`
     )
@@ -38,6 +38,7 @@ export default async function OrderLinkPage({
 
   const row = data as {
     active: boolean;
+    tenant_id: string;
     tenants: { name: string | null; slug: string | null } | null;
     product_variants: {
       sale_price: number;
@@ -49,6 +50,22 @@ export default async function OrderLinkPage({
       } | null;
     } | null;
   } | null;
+
+  // ⚠️ **الشحن باستعلام لوحده** — مافيش علاقة مباشرة بين اللينك
+  // و`tenant_credentials`، والعمود لسه ممكن مايكونش اتعمل. الفشل = صفر.
+  const shipping = row
+    ? await (async () => {
+        const { data: c, error } = await db
+          .from("tenant_credentials")
+          .select("flat_shipping_price")
+          .eq("tenant_id", row.tenant_id)
+          .maybeSingle();
+        if (error) return 0;
+        return Number(
+          (c as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
+        ) || 0;
+      })()
+    : 0;
 
   const store = storeWordmark(row?.tenants?.name, row?.tenants?.slug);
   const variant = row?.product_variants ?? null;
@@ -103,6 +120,7 @@ export default async function OrderLinkPage({
         <LinkOrderForm
           linkId={linkId}
           price={variant.sale_price}
+          shipping={shipping}
           action={submitLinkOrder}
         />
       )}

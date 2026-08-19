@@ -16,10 +16,12 @@ import { MAX_QUANTITY } from "@/lib/order-link";
 export function LinkOrderForm({
   linkId,
   price,
+  shipping,
   action,
 }: {
   linkId: string;
   price: number;
+  shipping: number;
   action: (linkId: string, input: Record<string, unknown>) => Promise<LinkResult>;
 }) {
   const [quantity, setQuantity] = useState(1);
@@ -116,11 +118,13 @@ export function LinkOrderForm({
       >
         {pending
           ? "بنسجّل طلبك…"
-          : `اطلب الآن — ${Math.round(price * quantity).toLocaleString("ar-EG")} جنيه`}
+          : `اطلب الآن — ${Math.round(price * quantity + shipping).toLocaleString("ar-EG")} جنيه`}
       </button>
 
       <p className="text-center text-[11px] text-gray-400">
-        الدفع عند الاستلام · هنكلّمك نأكّد قبل الشحن
+        {shipping > 0
+          ? `شامل الشحن ${Math.round(shipping).toLocaleString("ar-EG")} جنيه · الدفع عند الاستلام`
+          : "الدفع عند الاستلام · هنكلّمك نأكّد قبل الشحن"}
       </p>
     </form>
   );

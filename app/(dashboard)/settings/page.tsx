@@ -8,6 +8,7 @@ import {
   saveShopify,
   saveShopifyApp,
   disconnectShopify,
+  saveFlatShipping,
 } from "./actions";
 import { EnablePush } from "@/components/EnablePush";
 import { readShopifyApp } from "@/lib/shopify/app";
@@ -54,6 +55,19 @@ export default async function SettingsPage({
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
+
+  // ⚠️ قراية لوحدها — العمود لسه ممكن مايكونش اتعمل، والفشل مايوقّعش الشاشة
+  const flatShipping = await (async () => {
+    const { data, error } = await db
+      .from("tenant_credentials")
+      .select("flat_shipping_price")
+      .eq("tenant_id", me.tenantId)
+      .maybeSingle();
+    if (error) return 0;
+    return Number(
+      (data as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
+    );
+  })();
 
   const importRuns = (await listImportRuns(db, me.tenantId)).map((run) => ({
     id: run.id,
@@ -374,6 +388,34 @@ export default async function SettingsPage({
             </a>
           ))}
         </div>
+      </div>
+
+      {/*
+        الشحن الثابت.
+
+        ⚠️ **رقم واحد لأي مكان** — ده اللي بيتحصّل من العميل، وبيتستخدم في
+        أوردرات اللينك المباشر اللي مافيش سلة شوبيفاي بتحسبها.
+      */}
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <h2 className="text-sm font-bold text-gray-900">الشحن الثابت</h2>
+        <p className="mt-0.5 text-[11px] text-gray-400">
+          اللي بتحصّله من العميل على أي أوردر جاي من لينك طلب مباشر.
+        </p>
+        <form action={saveFlatShipping} className="mt-3 flex flex-wrap gap-2">
+          <input
+            name="flat_shipping_price"
+            type="number"
+            min="0"
+            defaultValue={flatShipping}
+            className="w-28 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+          >
+            احفظ
+          </button>
+        </form>
       </div>
 
       <ImportHistory runs={importRuns} undoAction={undoImport} />

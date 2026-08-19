@@ -106,6 +106,20 @@ export async function submitLinkOrder(
       .eq("id", customerId);
   }
 
+  // ⚠️ **الشحن رقم واحد لكل مكان** — مافيش سلة شوبيفاي تحسبه هنا.
+  // والفشل في قرايته معناه صفر، مش رقم مخترع.
+  const shipping = await (async () => {
+    const { data, error } = await db
+      .from("tenant_credentials")
+      .select("flat_shipping_price")
+      .eq("tenant_id", row.tenant_id)
+      .maybeSingle();
+    if (error) return 0;
+    return Number(
+      (data as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
+    ) || 0;
+  })();
+
   const orderNumber = linkOrderNumber();
 
   const { data: order, error: orderError } = await db
@@ -117,7 +131,7 @@ export async function submitLinkOrder(
       customer_id: customerId,
       order_status: "new",
       order_date: cairoToday(),
-      shipping_price: 0,
+      shipping_price: shipping,
     })
     .select("id")
     .single();
