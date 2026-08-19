@@ -134,3 +134,53 @@ export function trackView(status: string | null | undefined): TrackView {
     finished: FINISHED.includes(s),
   };
 }
+
+/**
+ * لينك التتبع اللي بيتبعت للعميل.
+ *
+ * بيرجّع `null` لو الأوردر لسه مالوش شحنة — لينك على رقم فاضي بيفتح
+ * صفحة «مالقيناش شحنة» وده أوحش من إنه مايظهرش.
+ */
+export function trackingLink(
+  tracking: string | null | undefined,
+  origin?: string | null
+): string | null {
+  const t = String(tracking ?? "").trim();
+  if (!t) return null;
+  const base = String(origin ?? "").trim() || "https://minis-system.vercel.app";
+  const clean = base.endsWith("/") ? base.slice(0, -1) : base;
+  return `${clean}/track/${encodeURIComponent(t)}`;
+}
+
+/**
+ * ⚠️⚠️ **بوابة التليفون.**
+ *
+ * الصفحة المفتوحة بتوري الحالة وبس. عشان العميل يشوف تفاصيل أوردره لازم
+ * يكتب **تليفون الأوردر** — يعني بقى فيه حاجتين: رقم التتبع (اللي معاه)،
+ * والتليفون (اللي هو صاحبه).
+ *
+ * **المقارنة بآخر ٩ أرقام** لأن نفس التليفون بيتخزّن بأشكال مختلفة:
+ * `01001234567` و`+201001234567` و`0020…` — والتسعة دول هما الجزء اللي
+ * مابيتغيّرش.
+ *
+ * ⚠️ **وأقل من ٨ أرقام مابتتقارنش خالص** — «0100» ممكن تطابق ناس كتير،
+ * والمقارنة القصيرة بتحوّل البوابة لخانة فاضية.
+ */
+export const MIN_PHONE_DIGITS = 8;
+const MATCH_TAIL = 9;
+
+export function phoneMatches(
+  stored: string | null | undefined,
+  typed: string | null | undefined
+): boolean {
+  const clean = (v: string | null | undefined) =>
+    String(v ?? "").replace(/[^0-9\u0660-\u0669]/g, "").replace(/[\u0660-\u0669]/g, (d) =>
+      String("٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    );
+
+  const a = clean(stored);
+  const b = clean(typed);
+  if (a.length < MIN_PHONE_DIGITS || b.length < MIN_PHONE_DIGITS) return false;
+
+  return a.slice(-MATCH_TAIL) === b.slice(-MATCH_TAIL);
+}

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePagePermission, can } from "@/lib/permissions";
 import { followupQueue, ASK_AFTER_DAYS, ASK_BEFORE_DAYS } from "@/lib/followup";
 import { FollowupList } from "@/components/FollowupList";
+import { trackingLink } from "@/lib/tracking-view";
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { markFollowedUp, saveFollowupTemplate } from "./actions";
 import {
@@ -60,6 +62,7 @@ export default async function FollowupPage({
     order_status: string | null;
     delivered_at: string | null;
     followed_up_at: string | null;
+    bosta_tracking: string | null;
     customers: { full_name: string | null; phone: string | null } | null;
     order_items: {
       product_variants: {
@@ -71,7 +74,7 @@ export default async function FollowupPage({
   const { data, error } = await supabase
     .from("orders")
     .select(
-      `id, order_number, order_status, delivered_at, followed_up_at,
+      `id, order_number, order_status, delivered_at, followed_up_at, bosta_tracking,
        customers(full_name, phone),
        order_items(product_variants(products(name_ar, name)))`
     )
@@ -89,6 +92,9 @@ export default async function FollowupPage({
       </div>
     );
   }
+
+  // العنوان من الطلب عشان اللينك يبقى بدومين الموقع اللي فاتح دلوقتي
+  const origin = (await headers()).get("origin") ?? null;
 
   const queue = followupQueue(
     (data ?? []).map((o) => ({
@@ -109,6 +115,7 @@ export default async function FollowupPage({
           )
         ),
       ].filter(Boolean),
+      trackLink: trackingLink(o.bosta_tracking, origin),
     })),
     new Date(),
     storeName,
