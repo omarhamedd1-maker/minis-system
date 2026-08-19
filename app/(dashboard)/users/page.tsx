@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import {
   PERMISSIONS,
   PRESETS,
@@ -57,7 +56,6 @@ export default async function UsersPage({
   const { saved, error } = await searchParams;
 
   const admin = createAdminClient();
-  const rls = await createClient();
 
   const [{ data: appUsers }, authList, { data: activityData }, { data: tenant }] =
     await Promise.all([
@@ -70,11 +68,7 @@ export default async function UsersPage({
         .eq("tenant_id", me.tenantId)
         .overrideTypes<AppUserRow[]>(),
       admin.auth.admin.listUsers({ perPage: 200 }),
-      // ⚠️ **دي بالاتصال المحمي** (بند ٢.٦) — `activity_log` مثبت إنه
-      // بيتقرا بيه في شاشة سجل النشاط الشغّالة. الباقي في الصفحة دي لسه
-      // على مفتاح الأدمن: `roles` و`tenants` مش مثبتين، وواجهة الحسابات
-      // (`auth.admin`) مالهاش بديل محمي أصلًا.
-      rls
+      admin
         .from("activity_log")
         .select("id, actor_id, actor_name, action, summary, created_at")
         .eq("tenant_id", me.tenantId)
