@@ -11,6 +11,7 @@ import { DayPicker } from "@/components/DayPicker";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
+import { monthlyReport } from "@/lib/monthly-report";
 import { can, requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
@@ -176,9 +177,11 @@ export default async function StatsPage({
       supabase
         .from("expenses")
         .select("category, amount, expense_date")
-        .gte("expense_date", periodStart)
-        .lte("expense_date", periodEnd)
-        .limit(2000)
+        // ⚠️ **بنجيب من `fetchStart` مش من `periodStart`** — الجدول الشهري
+        // محتاج مصاريف الست شهور، والفلترة لكل شهر بتحصل جوّه التقرير.
+        // والكروت فوق بتفلتر بالفترة بنفسها فمافيش تأثير عليها.
+        .gte("expense_date", fetchStart)
+        .limit(5000)
         .overrideTypes<
           { category: string; amount: number; expense_date: string }[]
         >(),
@@ -223,9 +226,26 @@ export default async function StatsPage({
   // أرقام الكروت المالية (أول تحميل) — بتتحدّث لايف في العميل
   const headline = computeHeadline(
     allOrders,
-    expensesResult.data,
+    // ⚠️ الكروت على الفترة المختارة، والمصاريف اتجابت أوسع عشان الجدول
+    // الشهري — فبنفلترها هنا
+    expensesResult.data.filter(
+      (e) => e.expense_date >= periodStart && e.expense_date <= periodEnd
+    ),
     periodStart,
     periodEnd
+  );
+
+  // ⚠️ **التقرير الشهري بينادي نفس حسبة الداشبورد** (`computeHeadline`)
+  // مرة لكل شهر. لو اتكتبت حسبة تانية، كان هيبقى فيه رقمين مختلفين لنفس
+  // الشهر في نفس الصفحة ومحدش يعرف مين الصح.
+  //
+  // **وبيتحسب على `allOrders`** مش على الفترة المختارة — الجدول ده عن
+  // الاتجاه، مش عن الفلتر اللي فوق.
+  const months = monthlyReport(
+    allOrders as never,
+    (expensesResult.data ?? []) as never,
+    today,
+    6
   );
 
   // الأرباح مبنية على تكلفة ناقصة؟ اقرا `lib/zero-cost.ts`
@@ -710,6 +730,53 @@ export default async function StatsPage({
           {comparisonTitle}
         </h2>
         <GroupedBars groups={monthGroups} aLabel="المبيعات" bLabel="الأرباح" />
+      </div>
+
+      {/*
+        التقرير الشهري — ورقة واحدة عن الاتجاه.
+
+        الشارت فوق بيوري الشكل، والجدول ده بيوري الأرقام اللي بتتقال لشريك
+        أو محاسب: بعت كام، صافي كام، رجع كام، والفرق عن الشهر اللي فات.
+      */}
+      <div className="overflow-x-auto rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="mb-3 text-sm font-bold text-gray-900">آخر ٦ شهور</h2>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-right text-gray-500">
+              <th className="px-3 py-2 font-medium">الشهر</th>
+              <th className="px-3 py-2 font-medium">المبيعات</th>
+              <th className="px-3 py-2 font-medium">صافي الربح</th>
+              <th className="px-3 py-2 font-medium">الفرق</th>
+              <th className="px-3 py-2 font-medium">أوردرات</th>
+              <th className="px-3 py-2 font-medium">رجوع</th>
+            </tr>
+          </thead>
+          <tbody>
+            {months.map((m) => (
+              <tr key={m.month} className="border-b border-gray-100 last:border-0">
+                <td className="px-3 py-2 font-medium text-gray-900">{m.label}</td>
+                <td className="px-3 py-2 tabular-nums text-gray-700">{formatMoney(m.head.sales)}</td>
+                <td className={`px-3 py-2 tabular-nums font-medium ${m.head.netProfit < 0 ? "text-red-600" : "text-green-700"}`}>
+                  {formatMoney(m.head.netProfit)}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-xs">
+                  {m.profitDelta === null ? (
+                    <span className="text-gray-300">—</span>
+                  ) : (
+                    <span className={m.profitDelta < 0 ? "text-red-600" : "text-green-700"}>
+                      {m.profitDelta > 0 ? "+" : ""}
+                      {formatMoney(m.profitDelta)}
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-gray-700">{m.head.orderCount}</td>
+                <td className="px-3 py-2 tabular-nums text-gray-700">
+                  {m.returnRate}% <span className="text-xs text-gray-400">({m.returned})</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
