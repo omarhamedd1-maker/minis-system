@@ -6,19 +6,20 @@ import {
   afterWrong,
   MAX_TRIES,
   LOCK_MINUTES,
+  maskedTail,
 } from "./phone-gate";
 
 const PHONE = "01001234567";
 const NOW = 1_000_000;
 
 describe("بوابة آخر أرقام", () => {
-  it("آخر رقمين بيعدّوا", () => {
-    expect(tailMatches(PHONE, "67")).toBe(true);
-    expect(tailMatches(PHONE, "٦٧")).toBe(true);
+  it("⚠️ آخر رقمين مابقوش يفتحوا — الرقم كامل بقى مطلوب", () => {
+    expect(tailMatches(PHONE, "67")).toBe(false);
+    expect(tailMatches(PHONE, "٦٧")).toBe(false);
   });
 
-  it("رقمين غلط مايعدّوش", () => {
-    expect(tailMatches(PHONE, "68")).toBe(false);
+  it("الرقم الغلط مايعدّيش", () => {
+    expect(tailMatches(PHONE, "01009999999")).toBe(false);
   });
 
   it("الرقم كامل بيعدّي بأشكاله", () => {
@@ -27,14 +28,14 @@ describe("بوابة آخر أرقام", () => {
     }
   });
 
-  it("⚠️ رقم واحد مايفتحش", () => {
-    expect(tailMatches(PHONE, "7")).toBe(false);
+  it("⚠️ الرقم الناقص مايفتحش", () => {
+    expect(tailMatches(PHONE, "1234567")).toBe(false);
     expect(tailMatches(PHONE, "")).toBe(false);
   });
 
   it("التليفون الناقص عندنا مايفتحش", () => {
-    expect(tailMatches(null, "67")).toBe(false);
-    expect(tailMatches("7", "67")).toBe(false);
+    expect(tailMatches(null, "01001234567")).toBe(false);
+    expect(tailMatches("7", "01001234567")).toBe(false);
   });
 
   it("بيشيل الحروف والمسافات", () => {
@@ -77,5 +78,24 @@ describe("عدّ المحاولات", () => {
     const next = afterWrong(state, later);
     expect(next.wrong).toBe(1);
     expect(isLocked(next, later)).toBe(false);
+  });
+});
+
+describe("قناع آخر رقمين", () => {
+  it("بيوري آخر رقمين بس", () => {
+    const m = maskedTail("01001234567")!;
+    expect(m.endsWith("67")).toBe(true);
+    expect(m).not.toContain("0100");
+    expect(m.replace(/[^0-9]/g, "")).toBe("67");
+  });
+
+  it("بيشتغل على الأرقام العربي", () => {
+    expect(maskedTail("٠١٠٠١٢٣٤٥٦٧")!.endsWith("67")).toBe(true);
+  });
+
+  it("⚠️ الرقم القصير مالوش قناع — مايبانش أصلًا", () => {
+    expect(maskedTail("123")).toBeNull();
+    expect(maskedTail(null)).toBeNull();
+    expect(maskedTail("")).toBeNull();
   });
 });

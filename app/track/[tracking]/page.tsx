@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { trackView, looksLikeOrderId } from "@/lib/tracking-view";
 import { UI } from "@/lib/tracking-copy";
+import { maskedTail } from "@/lib/phone-gate";
 import { TrackGate } from "@/components/TrackGate";
 import { openDetails } from "./actions";
 
@@ -36,7 +37,9 @@ export default async function TrackPage({
   // ⚠️ **اللينك بقى بمعرّف الأوردر** عشان يشتغل قبل ما الشحنة تتعمل،
   // **واللينكات القديمة اتبعتت برقم التتبع** فلازم تفضل تفتح.
   const db = createAdminClient();
-  const query = db.from("orders").select("order_status, tenants(name)");
+  const query = db
+    .from("orders")
+    .select("order_status, tenants(name), customers(phone)");
   const { data } = await (
     looksLikeOrderId(tracking)
       ? query.eq("id", tracking)
@@ -48,9 +51,11 @@ export default async function TrackPage({
   const row = data as {
     order_status: string | null;
     tenants: { name: string | null } | null;
+    customers: { phone: string | null } | null;
   } | null;
 
   const store = row?.tenants?.name ?? null;
+  const hint = maskedTail(row?.customers?.phone);
   const view = row ? trackView(row.order_status) : null;
 
   return (
@@ -103,7 +108,7 @@ export default async function TrackPage({
             ))}
           </div>
 
-          <TrackGate tracking={tracking} action={openDetails} />
+          <TrackGate tracking={tracking} hint={hint} action={openDetails} />
 
           {/* ⚠️ معرّف الأوردر مالوش معنى للعميل — مايتعرضش */}
           {!looksLikeOrderId(tracking) && (
