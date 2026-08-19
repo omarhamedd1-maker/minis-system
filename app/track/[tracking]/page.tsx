@@ -95,45 +95,33 @@ export default async function TrackPage({
               // «اتسلّم» مش خطوة جاية، دي خطوة تمّت.
               const passed = s.done || (s.current && view.finished);
               return (
-              <div key={s.label} className="flex items-center gap-3">
-                {/*
-                  ⚠️ **الخطوة اللي عدّت بتفضل متعلّم عليها بعلامة صح** —
-                  قبل كده كانت بتبقى نقطة رمادية زي اللي لسه ماجاش،
-                  فالعميل مايعرفش وصل لفين.
-                */}
-                {passed ? (
-                  <svg
-                    viewBox="0 0 16 16"
-                    className="h-4 w-4 shrink-0 text-emerald-500"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M3 8.5 6.5 12 13 4" />
-                  </svg>
-                ) : (
+                <div key={s.label} className="flex items-center gap-3">
+                  {/*
+                    ⚠️ **نقطة صغيرة، والخطوة اللي تمّت خضرا** — الشكل ده
+                    بيقول «وصلنا لفين» من غير ما ياخد مساحة ولا يبان كقايمة
+                    مهام.
+                  */}
                   <span
-                    className={`h-4 w-4 shrink-0 rounded-full ${
-                      s.current
-                        ? `${TONE[view.tone] ?? "bg-gray-900"} ring-4 ring-gray-100`
-                        : "bg-gray-100"
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      passed
+                        ? "bg-emerald-500"
+                        : s.current
+                          ? `${TONE[view.tone] ?? "bg-gray-900"} ring-4 ring-gray-100`
+                          : "bg-gray-200"
                     }`}
                   />
-                )}
-                <span
-                  className={`text-sm ${
-                    s.current
-                      ? "font-medium text-gray-900"
-                      : passed
-                        ? "text-gray-700"
-                        : "text-gray-300"
-                  }`}
-                >
-                  {s.label}
-                </span>
-              </div>
+                  <span
+                    className={`text-sm ${
+                      s.current
+                        ? "font-medium text-gray-900"
+                        : passed
+                          ? "text-gray-700"
+                          : "text-gray-300"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </div>
               );
             })}
           </div>
