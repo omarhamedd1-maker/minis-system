@@ -34,10 +34,15 @@ export async function updateSession(request: NextRequest) {
   // **شاشة التسجيل لازم تفتح من غير حساب** — دي المكان اللي العميل بيعمل
   // فيه بيزنسه بنفسه، ولو اتقفلت بالبوابة محدش هيوصلها أصلًا.
   const isSignupPage = pathname.startsWith("/signup");
+  // ⚠️⚠️ **صفحة تتبع الشحنة للعميل** — العميل مالوش حساب عندنا أصلًا،
+  // فالبوابة هنا كانت بتحوّله على `/login` واللينك اللي بنبعتهوله
+  // مايفتحش. الصفحة نفسها بتوري الحالة وبس، والتفاصيل ورا تليفون الأوردر.
+  const isTrackPage = pathname.startsWith("/track/");
   // مسارات عامة: تعريف البرنامج وأيقوناته لازم تفتح من غير تسجيل دخول
   const isPublic =
     isLoginPage ||
     isSignupPage ||
+    isTrackPage ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/icon" ||
     pathname === "/apple-icon";
