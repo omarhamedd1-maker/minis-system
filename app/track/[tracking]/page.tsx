@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { trackView } from "@/lib/tracking-view";
+import { trackView, looksLikeOrderId } from "@/lib/tracking-view";
 import { UI } from "@/lib/tracking-copy";
 import { TrackGate } from "@/components/TrackGate";
 import { openDetails } from "./actions";
@@ -33,11 +33,15 @@ export default async function TrackPage({
   const { tracking: raw } = await params;
   const tracking = decodeURIComponent(String(raw ?? "")).trim();
 
+  // ⚠️ **اللينك بقى بمعرّف الأوردر** عشان يشتغل قبل ما الشحنة تتعمل،
+  // **واللينكات القديمة اتبعتت برقم التتبع** فلازم تفضل تفتح.
   const db = createAdminClient();
-  const { data } = await db
-    .from("orders")
-    .select("order_status, tenants(name)")
-    .eq("bosta_tracking", tracking)
+  const query = db.from("orders").select("order_status, tenants(name)");
+  const { data } = await (
+    looksLikeOrderId(tracking)
+      ? query.eq("id", tracking)
+      : query.eq("bosta_tracking", tracking)
+  )
     .limit(1)
     .maybeSingle();
 
@@ -106,9 +110,12 @@ export default async function TrackPage({
 
           <TrackGate tracking={tracking} action={openDetails} />
 
-          <p className="mt-12 text-xs uppercase tracking-wide text-gray-300">
-            {UI.trackingLabel} {tracking}
-          </p>
+          {/* ⚠️ معرّف الأوردر مالوش معنى للعميل — مايتعرضش */}
+          {!looksLikeOrderId(tracking) && (
+            <p className="mt-12 text-xs uppercase tracking-wide text-gray-300">
+              {UI.trackingLabel} {tracking}
+            </p>
+          )}
         </>
       )}
     </div>

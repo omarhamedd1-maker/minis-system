@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { tailMatches, isLocked, afterWrong, type Attempts } from "@/lib/phone-gate";
 import { UI } from "@/lib/tracking-copy";
+import { looksLikeOrderId } from "@/lib/tracking-view";
 import { formatMoney } from "@/lib/format";
 
 /**
@@ -46,14 +47,17 @@ export async function openDetails(
   if (isLocked(tries.get(t), now)) return { ok: false, error: UI.locked };
 
   const db = createAdminClient();
-  const { data, error } = await db
+  const base = db
     .from("orders")
     .select(
       `order_number, order_date, delivered_at, bosta_cod, bosta_collected,
        customers(phone, address),
        order_items(quantity, product_variants(variant_name, products(name, name_ar)))`
-    )
-    .eq("bosta_tracking", t)
+    );
+
+  const { data, error } = await (
+    looksLikeOrderId(t) ? base.eq("id", t) : base.eq("bosta_tracking", t)
+  )
     .limit(1)
     .maybeSingle();
 

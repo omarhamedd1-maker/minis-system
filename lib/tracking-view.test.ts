@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { trackView, trackingLink } from "./tracking-view";
+import { trackView, trackingLink, looksLikeOrderId } from "./tracking-view";
 import { STATUS_COPY } from "./tracking-copy";
 
 describe("صفحة التتبع", () => {
@@ -74,5 +74,18 @@ describe("لينك التتبع", () => {
 
   it("مفيش عنوان = الافتراضي", () => {
     expect(trackingLink("111")).toContain("/track/111");
+  });
+});
+
+describe("اللينك على معرّف الأوردر", () => {
+  it("⚠️ موجود من غير شحنة — العميل يطمن قبل ما تتشحن", () => {
+    const id = "d76cbcc9-d2df-4d10-a635-fa620a81ec9a";
+    expect(trackingLink(id, "https://x.com")).toBe(`https://x.com/track/${id}`);
+  });
+
+  it("بيفرّق بين معرّف الأوردر ورقم التتبع", () => {
+    expect(looksLikeOrderId("d76cbcc9-d2df-4d10-a635-fa620a81ec9a")).toBe(true);
+    expect(looksLikeOrderId("8538298561")).toBe(false);
+    expect(looksLikeOrderId("")).toBe(false);
   });
 });

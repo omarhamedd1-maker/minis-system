@@ -115,7 +115,7 @@ export default async function FollowupPage({
           )
         ),
       ].filter(Boolean),
-      trackLink: trackingLink(o.bosta_tracking, origin),
+      trackLink: trackingLink(o.id, origin),
     })),
     new Date(),
     storeName,

@@ -69,16 +69,31 @@ export function trackView(status: string | null | undefined): TrackView {
 /**
  * لينك التتبع اللي بيتبعت للعميل.
  *
- * بيرجّع `null` لو الأوردر لسه مالوش شحنة — **مافيش حاجة تتتبع قبل ما
- * الشحنة تتعمل عند بوسطة**، ولينك على رقم فاضي بيفتح صفحة «مالقيناش».
+ * ⚠️⚠️ **مبني على معرّف الأوردر مش رقم التتبع** — عشان يكون موجود من أول
+ * لحظة، قبل ما الشحنة تتعمل أصلًا. اللينك المبني على رقم التتبع كان
+ * بيظهر بعد الشحن بس، والعميل محتاج يطمن قبل كده.
+ *
+ * **وكمان أأمن**: معرّف الأوردر `uuid` مالوش تخمين، ورقم التتبع ٩ أرقام
+ * ينفع حد يعدّي عليها.
  */
 export function trackingLink(
-  tracking: string | null | undefined,
+  orderId: string | null | undefined,
   origin?: string | null
 ): string | null {
-  const t = String(tracking ?? "").trim();
-  if (!t) return null;
+  const id = String(orderId ?? "").trim();
+  if (!id) return null;
   const base = String(origin ?? "").trim() || "https://minis-system.vercel.app";
   const clean = base.endsWith("/") ? base.slice(0, -1) : base;
-  return `${clean}/track/${encodeURIComponent(t)}`;
+  return `${clean}/track/${encodeURIComponent(id)}`;
+}
+
+/**
+ * اللي في اللينك ده معرّف أوردر ولا رقم تتبع؟
+ *
+ * ⚠️ **اللينكات القديمة اتبعتت برقم التتبع** — فالصفحة لازم تفضل تفتحهم.
+ */
+export function looksLikeOrderId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value.trim()
+  );
 }

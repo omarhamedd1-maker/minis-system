@@ -250,7 +250,7 @@ export default async function OrderDetailsPage({
   // ⚠️ **العنوان بيتاخد من الطلب نفسه** — الرابط لازم يبقى بدومين الموقع
   // اللي فاتح دلوقتي، مش رقم ثابت في الكود يبوظ لما الدومين يتغيّر.
   const origin = (await headers()).get("origin") ?? null;
-  const trackLink = trackingLink(order.bosta_tracking, origin);
+  const trackLink = trackingLink(order.id, origin);
 
   const flags = orderFlags({
     orderStatus: order.order_status,
@@ -1490,7 +1490,8 @@ export default async function OrderDetailsPage({
 
         ⚠️ **لوحده تحت الكروت مش جوّه كارت الشحنة** — ده لينك بيتنسخ
         ويتبعت، مش تفصيلة في جدول بيانات.
-        ⚠️ **وبيظهر بعد ما الشحنة تتعمل بس** — قبلها مافيش حاجة تتتبع.
+        ⚠️ **وموجود على كل أوردر من أول لحظة** — مبني على معرّف الأوردر
+        مش رقم التتبع، فالعميل يقدر يطمن قبل ما الشحنة تتعمل.
       */}
       {trackLink && (
         <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
