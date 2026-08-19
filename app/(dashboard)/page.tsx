@@ -12,7 +12,7 @@ import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
 import { monthlyReport } from "@/lib/monthly-report";
-import { can, requirePagePermission } from "@/lib/permissions";
+import { requirePagePermission } from "@/lib/permissions";
 
 type OrderRow = {
   id: string;
@@ -109,7 +109,6 @@ export default async function StatsPage({
   searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
   const dashUser = await requirePagePermission("finance.dashboard");
-  const canExport = can(dashUser, "finance.export");
   const { period: rawPeriod, from: rawFrom, to: rawTo } = await searchParams;
   const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "today";
 
@@ -569,25 +568,7 @@ export default async function StatsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-gray-900">الداشبورد</h1>
-        {/* تنزيل الداتا — نسخة عندك على جهازك، مش عند حد */}
-        {canExport && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-gray-400">نزّل:</span>
-            {[
-              { what: "orders", label: "الأوردرات" },
-              { what: "customers", label: "العملاء" },
-              { what: "products", label: "المنتجات" },
-            ].map((f) => (
-              <a
-                key={f.what}
-                href={`/export?what=${f.what}`}
-                className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-              >
-                {f.label}
-              </a>
-            ))}
-          </div>
-        )}
+
       </div>
 
       <section>

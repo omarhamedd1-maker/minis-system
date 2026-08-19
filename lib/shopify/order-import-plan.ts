@@ -42,6 +42,13 @@ export type ShopifyOrderIn = {
   cancelledAt?: string | null;
   fulfilled: boolean;
   discount: number;
+  /**
+   * كود الخصم اللي العميل استخدمه.
+   *
+   * ⚠️ **الأوردرات اللي دخلت قبل ما الخانة دي تتعمل هتفضل فاضية** —
+   * الاستيراد بيضيف الجديد بس، والكود مش متخزّن عندنا في أي مكان تاني.
+   */
+  discountCode?: string | null;
   shipping: number;
   customer: {
     shopifyCustomerId: string | null;

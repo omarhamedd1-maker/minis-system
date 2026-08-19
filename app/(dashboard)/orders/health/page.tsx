@@ -2,6 +2,7 @@ import { BackLink } from "@/components/BackLink";
 import { formatMoney } from "@/lib/format";
 import { requirePagePermission } from "@/lib/permissions";
 import { loadHealth } from "./actions";
+import { discountVerdict } from "@/lib/discount-impact";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,8 @@ export default async function HealthPage() {
     );
   }
 
-  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing } = r;
+  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts } = r;
+  const verdict = discountVerdict(discounts);
 
   return (
     <div className="space-y-4">
@@ -322,6 +324,75 @@ export default async function HealthPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/*
+        الخصم كسّب ولا خسّر.
+
+        ⚠️ **الحكم بيتقال بس لما المجموعتين يبقى فيهم عدد كفاية** — حكم
+        على ٣ أوردرات فيها خصم مالوش معنى، والصمت أحسن.
+      */}
+      {discounts.withDiscount.orders > 0 && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">الخصم كسّب ولا خسّر</h2>
+            <span className="text-xs text-gray-500">
+              {formatMoney(Math.round(discounts.withDiscount.discount))} اتخصمت
+            </span>
+          </div>
+
+          <p className="mt-0.5 text-[11px] text-gray-400">
+            {verdict ??
+              "لسه مافيش أوردرات كفاية في المجموعتين عشان المقارنة يبقى ليها معنى."}
+          </p>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {[
+              { label: "أوردرات فيها خصم", g: discounts.withDiscount },
+              { label: "من غير خصم", g: discounts.without },
+            ].map((x) => (
+              <div key={x.label} className="rounded-lg bg-gray-50 px-3 py-2">
+                <p className="text-xs text-gray-500">{x.label}</p>
+                <p className="text-sm tabular-nums text-gray-900">
+                  {x.g.orders} أوردر · متوسط{" "}
+                  {formatMoney(Math.round(x.g.average))}
+                </p>
+                <p className="text-[11px] text-gray-400">
+                  رجوع{" "}
+                  {x.g.returnRate === null ? "—" : x.g.returnRate + "%"}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {discounts.codes.length > 0 ? (
+            <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-2">
+              {discounts.codes.slice(0, 8).map((c) => (
+                <div
+                  key={c.code}
+                  className="flex items-baseline justify-between gap-3 text-sm"
+                >
+                  <span className="font-medium text-gray-900" dir="ltr">
+                    {c.code}
+                  </span>
+                  <span className="tabular-nums text-gray-500">
+                    {c.orders} أوردر · جاب{" "}
+                    {formatMoney(Math.round(c.revenue))} · كلّف{" "}
+                    {formatMoney(Math.round(c.discount))}
+                    {c.returned > 0 && " · رجع " + c.returned}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // ⚠️ **مش نقص** — كود الخصم بقى بيتجاب من شوبيفاي من ١٩ أغسطس
+            // ٢٠٢٦، والأوردرات اللي قبل كده مالهاش كود متخزّن عندنا أصلًا.
+            <p className="mt-3 border-t border-gray-100 pt-2 text-xs text-gray-400">
+              تفصيل الأكواد بيتملى مع الأوردرات الجاية — الأوردرات القديمة
+              دخلت من غير ما الكود يتخزّن.
+            </p>
+          )}
         </div>
       )}
 
