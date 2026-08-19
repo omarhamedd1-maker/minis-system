@@ -76,11 +76,6 @@ export function TrackGate({
     >
       <label className="block text-sm leading-relaxed text-gray-600">
         {UI.detailsPrompt}
-        {hint && (
-          <span className="mt-1 block text-gray-400" dir="ltr">
-            {UI.detailsHint} {hint}
-          </span>
-        )}
       </label>
 
       <div className="mt-3 flex gap-2">
@@ -89,7 +84,7 @@ export function TrackGate({
           onChange={(e) => setTyped(e.target.value)}
           inputMode="numeric"
           maxLength={11}
-          placeholder={UI.detailsPlaceholder}
+          placeholder={hint ?? UI.detailsPlaceholder}
           dir="ltr"
           className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
         />
