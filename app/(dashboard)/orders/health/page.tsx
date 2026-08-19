@@ -3,6 +3,8 @@ import { formatMoney } from "@/lib/format";
 import { requirePagePermission } from "@/lib/permissions";
 import { loadHealth } from "./actions";
 import { discountVerdict } from "@/lib/discount-impact";
+import { FillReasons } from "@/components/FillReasons";
+import { fillReasonsAction } from "./fill-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -412,10 +414,17 @@ export default async function HealthPage() {
           // مالهاش سبب **مش لأن حد نسي** — الخانة نفسها ماكانتش موجودة.
           // النسخة الأولى كانت بتقول «و٤٦ شحنة مستنية»، وده بيقرا كأنه
           // دَين على صاحب المتجر في حاجة مافيش طريقة يعملها أصلًا.
-          <p className="mt-3 text-sm text-gray-500">
-            مفيش سبب متسجّل على أي شحنة راجعة لسه، فالقسم فاضي. بيتملى
-            لوحده مع أول شحنة يتكتب سببها.
-          </p>
+          <>
+            {/*
+              ⚠️ **القسم الفاضي مش نقص ولا شغل متأخّر** — الخانة اتعملت
+              ١٢ أغسطس ٢٠٢٦. بس بوسطة نفسها بتسجّل سبب كل محاولة، فالزرار
+              تحت بيجيبه منها بدل ما القسم يفضل فاضي.
+            */}
+            <p className="mt-3 text-sm text-gray-500">
+              مفيش سبب متسجّل على أي شحنة راجعة لسه — وبوسطة عندها السبب.
+            </p>
+            <FillReasons action={fillReasonsAction} />
+          </>
         ) : (
           <>
             <div className="mt-3 space-y-2">
@@ -444,6 +453,7 @@ export default async function HealthPage() {
                 الأرقام ماتبانش أدق مما هي.
               </p>
             )}
+            {reasons.unknown > 0 && <FillReasons action={fillReasonsAction} />}
           </>
         )}
       </div>

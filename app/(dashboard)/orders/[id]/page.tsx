@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import { shippingSettlement } from "@/lib/dashboard-stats";
 import { shortLogText } from "@/lib/log-text";
+import { orderFlags } from "@/lib/order-flags";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { StatusBox } from "@/components/StatusBox";
@@ -183,6 +184,7 @@ export default async function OrderDetailsPage({
   const historyBadge = riskBadge(history.risk);
   const historyParts = historySegments(history);
 
+
   // قايمة المنتجات لفورم إضافة منتج (لمن يقدر يعدّل البنود)
   const { data: variantsData } = canItems
     ? await supabase
@@ -240,6 +242,15 @@ export default async function OrderDetailsPage({
     (sum, item) => sum + item.quantity * item.sale_price_at_order,
     0
   );
+  // ⚠️ **تنبيهات مش موانع** — الأوردر بيتشحن عادي، والعلامة بتقول «بصّ
+  // على دي الأول». وبتختفي لوحدها أول ما الأوردر يروح لبوسطة.
+  const flags = orderFlags({
+    orderStatus: order.order_status,
+    total: itemsTotal - (order.discount ?? 0) + (order.shipping_price ?? 0),
+    address: order.customers?.address ?? null,
+    previousOrders: history.total,
+    previousReturns: history.returned,
+  });
   // الملغي: مفيش شحن يتحسب
   const grandTotal =
     itemsTotal - order.discount + (isCancelled ? 0 : order.shipping_price);
@@ -495,6 +506,28 @@ export default async function OrderDetailsPage({
           <BackLink href="/orders" label="الرجوع للأوردرات" variant="exit" />
         </div>
       </div>
+
+      {/*
+        علامات قبل الشحن.
+
+        ⚠️ **مش مانع** — مافيش زرار بيتقفل ومافيش خطوة بتتفرض. ده كلام
+        بيتقال مرة قبل ما البوليصة تتطبع، وبيختفي بعدها لوحده.
+      */}
+      {flags.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+          <div className="space-y-1.5">
+            {flags.map((f) => (
+              <div key={f.key} className="flex items-start gap-2">
+                <span className="mt-0.5 text-xs leading-none">⚠️</span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-amber-900">{f.text}</div>
+                  <div className="text-[11px] text-amber-700/80">{f.why}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/*
         بوسطة واقفة ومحتاجة تصرّف.

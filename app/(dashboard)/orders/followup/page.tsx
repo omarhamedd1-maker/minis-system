@@ -4,7 +4,12 @@ import { requirePagePermission, can } from "@/lib/permissions";
 import { followupQueue, ASK_AFTER_DAYS, ASK_BEFORE_DAYS } from "@/lib/followup";
 import { FollowupList } from "@/components/FollowupList";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { markFollowedUp } from "./actions";
+import { markFollowedUp, saveFollowupTemplate } from "./actions";
+import {
+  DEFAULT_FOLLOWUP_TEMPLATE,
+  MAX_TEMPLATE_LENGTH,
+  PLACEHOLDERS,
+} from "@/lib/message-template";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +20,12 @@ export const dynamic = "force-dynamic";
  * بيفتح واتساب على المحادثة والرسالة مكتوبة. الرسالة اللي بتروح لوحدها لعميل
  * مالهوش دعوة أوحش من إنها ماتروحش.
  */
-export default async function FollowupPage() {
+export default async function FollowupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string; error?: string }>;
+}) {
+  const { saved, error: saveError } = await searchParams;
   const user = await requirePagePermission("orders.view");
   const canMark = can(user, "orders.status");
   const supabase = await createClient();
@@ -118,6 +128,58 @@ export default async function FollowupPage() {
         {ASK_AFTER_DAYS} أيام بيخلّي المشكلة توصلك قبل ما تتحوّل لشحنة عكسية.
         بعد {ASK_BEFORE_DAYS} أيام بيخرج من القايمة — السؤال ساعتها اتأخّر.
       </p>
+
+      {saveError && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </p>
+      )}
+      {saved && (
+        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          الرسالة اتحفظت
+        </p>
+      )}
+
+      {/*
+        الرسالة نفسها.
+
+        ⚠️ **مكانها هنا مش في الإعدادات** — بتتقري وبتتعدّل في نفس الشاشة
+        اللي بتتبعت منها، والخانات عربي عشان اللي بيكتب مايحتاجش يبدّل
+        لوحة المفاتيح في نص الجملة.
+      */}
+      {canMark && (
+        <details className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <summary className="cursor-pointer text-sm font-bold text-gray-900">
+            الرسالة اللي بتتبعت
+          </summary>
+          <form action={saveFollowupTemplate} className="mt-3 space-y-2">
+            <textarea
+              name="followup_template"
+              rows={4}
+              defaultValue={template ?? DEFAULT_FOLLOWUP_TEMPLATE}
+              maxLength={MAX_TEMPLATE_LENGTH}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              {PLACEHOLDERS.map((ph) => (
+                <span
+                  key={ph.token}
+                  title={ph.hint}
+                  className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600"
+                >
+                  {"{" + ph.token + "}"}
+                </span>
+              ))}
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+            >
+              احفظ الرسالة
+            </button>
+          </form>
+        </details>
+      )}
 
       {queue.length === 0 ? (
         <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
