@@ -22,6 +22,13 @@ export type ShopifyVariantIn = {
 export type ShopifyProductIn = {
   productId: string;
   title: string;
+  /**
+   * صورة المنتج الأساسية عند شوبيفاي.
+   *
+   * ⚠️ **دي اللي العميل شافها وهو بيشتري** — وبتظهر في قايمة المنتجات
+   * وفي صفحة الطلب المباشر. المنتج من غير صورة بيبقى سطر نص.
+   */
+  imageUrl?: string | null;
   variants: ShopifyVariantIn[];
 };
 

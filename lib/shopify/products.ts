@@ -30,6 +30,7 @@ const PRODUCTS_QUERY = `query($cursor: String, $size: Int!) {
     nodes {
       legacyResourceId
       title
+      featuredMedia { preview { image { url } } }
       variants(first: 100) {
         nodes { legacyResourceId title sku price }
       }
@@ -40,6 +41,7 @@ const PRODUCTS_QUERY = `query($cursor: String, $size: Int!) {
 type RawProduct = {
   legacyResourceId?: string | null;
   title?: string | null;
+  featuredMedia?: { preview?: { image?: { url?: string | null } | null } | null } | null;
   variants?: {
     nodes?: {
       legacyResourceId?: string | null;
@@ -79,6 +81,7 @@ export async function fetchShopifyProducts(
       out.push({
         productId,
         title: String(p.title ?? "").trim() || "منتج بدون اسم",
+        imageUrl: p.featuredMedia?.preview?.image?.url ?? null,
         variants: (p.variants?.nodes ?? [])
           .filter((v) => v.legacyResourceId)
           .map((v) => ({
@@ -213,6 +216,7 @@ export async function runProductImport(opts: {
         tenant_id: tenantId,
         shopify_product_id: p.productId,
         name: p.title,
+        image_url: p.imageUrl ?? null,
       })
       .select("id")
       .maybeSingle();

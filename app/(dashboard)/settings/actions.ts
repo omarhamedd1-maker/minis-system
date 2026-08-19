@@ -27,6 +27,30 @@ function back(msg: string, ok = false): never {
 }
 
 /** بيتأكد إن المفتاح شغال فعلاً عند بوسطة قبل ما نحفظه */
+/**
+ * الشحن الثابت — الرقم اللي بيتحصّل من العميل في أي مكان.
+ *
+ * ⚠️ **بيتستخدم في أوردرات اللينك المباشر** — مافيش سلة شوبيفاي تحسبه.
+ * والفاضي معناه **صفر**، مش «رقم افتراضي».
+ */
+export async function saveFlatShipping(formData: FormData) {
+  const me = await requirePermission("admin.settings");
+  const raw = Number(formData.get("flat_shipping_price") ?? 0);
+  const value = Number.isFinite(raw) && raw >= 0 ? Math.round(raw) : 0;
+
+  const db = createAdminClient();
+  const { error } = await db
+    .from("tenant_credentials")
+    .update({ flat_shipping_price: value, updated_at: new Date().toISOString() })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) back("معرفناش نحفظ سعر الشحن: " + error.message);
+
+  await logActivity(me, "settings.shipping", `غيّر الشحن الثابت لـ${value}`);
+  revalidatePath("/settings");
+  back("تمام — سعر الشحن اتحفظ", true);
+}
+
 export async function saveBostaKey(formData: FormData) {
   const me = await requirePermission("admin.settings");
   const key = String(formData.get("bosta_api_key") ?? "").trim();
