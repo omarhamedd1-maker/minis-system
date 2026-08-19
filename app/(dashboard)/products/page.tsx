@@ -3,8 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { LEGACY_BUCKET_PRODUCT, formatMoney } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { ImportShopifyProducts } from "@/components/ImportShopifyProducts";
-import { CostFile } from "@/components/CostFile";
-import { importShopifyProducts, uploadCostFile } from "./actions";
+import { importShopifyProducts } from "./actions";
 
 const SHOPIFY_STATUS: Record<
   string,
@@ -103,13 +102,6 @@ export default async function ProductsPage({
       return sa.localeCompare(sb);
     });
 
-  // كام شكل لسه محتاج تكلفة — بيتعرض على زرار التنزيل
-  const missingCostCount = visibleProducts.reduce(
-    (sum, p) =>
-      sum + p.product_variants.filter((v) => !(Number(v.cost_price) > 0)).length,
-    0
-  );
-
   // فلتر "الناقص" — الأشكال اللي تكلفتها صفر، اللي الجلب من شوبيفاي بيوديك لها
   const costFiltered = onlyMissingCost
     ? visibleProducts.filter((p) =>
@@ -183,10 +175,6 @@ export default async function ProductsPage({
             اعرض الكل
           </Link>
         </div>
-      )}
-
-      {canEdit && (
-        <CostFile action={uploadCostFile} missingCount={missingCostCount} />
       )}
 
       {actionError && (
