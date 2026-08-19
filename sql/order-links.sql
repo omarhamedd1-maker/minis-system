@@ -59,3 +59,35 @@ alter table products add column if not exists image_url text;
 
 alter table tenant_credentials
   add column if not exists flat_shipping_price numeric not null default 0;
+
+
+-- ==========================================================================
+-- بنود اللينك — أكتر من منتج في لينك واحد
+-- --------------------------------------------------------------------------
+-- ⚠️ **اللينك بقى سلة مش منتج.** لينك لكل منتج معناه إنك تدخل كل منتج وتعمل
+-- لينك وتبعت ٥ لينكات في رسالة — والعميل يطلب واحد بس.
+--
+-- ⚠️ **و`variant_id` القديم في `order_links` سايب زي ما هو** — اللينكات
+-- اللي اتعملت قبل كده بتفضل شغّالة، والجديد بيقرا من الجدول ده.
+-- ==========================================================================
+
+create table if not exists order_link_items (
+  id uuid primary key default gen_random_uuid(),
+  link_id uuid not null references order_links(id) on delete cascade,
+  -- ⚠️ **رقم البيزنس هنا كمان** — الجدول مربوط باللينك، بس الحارس بيطلب
+  -- الخانة على كل كتابة، والتكرار ده بيمنع صف ينزل تحت بيزنس غلط.
+  tenant_id uuid not null references tenants(id) on delete cascade,
+  variant_id uuid not null references product_variants(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (link_id, variant_id)
+);
+
+create index if not exists order_link_items_link_idx
+  on order_link_items (link_id);
+
+alter table order_link_items enable row level security;
+
+-- واسم اللينك عشان تعرفه من بين لينكاتك
+alter table order_links add column if not exists title text;
+-- والشكل الواحد بقى اختياري — البنود في الجدول الجديد
+alter table order_links alter column variant_id drop not null;

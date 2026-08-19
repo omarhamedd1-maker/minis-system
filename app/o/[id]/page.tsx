@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { storeWordmark } from "@/lib/tracking-view";
-import { LinkOrderForm } from "@/components/LinkOrderForm";
+import { LinkOrderForm, type LinkItem } from "@/components/LinkOrderForm";
 import { submitLinkOrder } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -8,14 +8,13 @@ export const dynamic = "force-dynamic";
 /**
  * صفحة الطلب اللي العميل بيفتحها من اللينك.
  *
- * ⚠️⚠️ **مفتوحة من غير حساب** (مستثناة في `lib/supabase/middleware.ts`) —
- * العميل مالوش حساب عندنا.
+ * ⚠️⚠️ **مفتوحة من غير حساب** (مستثناة في `lib/supabase/middleware.ts`).
  *
- * ⚠️ **واللي بيتعرض هو المنتج وسعره وبس** — مافيش أي حاجة عن المتجر ولا عن
- * عملاء تانيين. والسعر بيتقرا من الداتابيز مش من اللينك.
+ * ⚠️ **واللي بيتعرض هو المنتجات وأسعارها وبس** — مافيش أي حاجة عن المتجر ولا
+ * عن عملاء تانيين. والأسعار بتتقرا من الداتابيز مش من اللينك.
  *
- * ⚠️ **واللينك المقفول بيدّي صفحة بتقول كده** — مش صفحة مكسورة. اللينكات
- * بتتبعت في رسايل وبتفضل موجودة بعد ما العرض يخلص.
+ * ⚠️ **والأسماء إنجليزي** — أسماء شوبيفاي هي اللي العميل شافها وهو بيشتري،
+ * والاسم العربي بتاعنا داخلي.
  */
 export default async function OrderLinkPage({
   params,
@@ -29,9 +28,9 @@ export default async function OrderLinkPage({
   const { data } = await db
     .from("order_links")
     .select(
-      `active, tenant_id,
+      `active, tenant_id, title, variant_id,
        tenants(name, slug),
-       product_variants(sale_price, variant_name, products(name, name_ar, image_url))`
+       order_link_items(variant_id)`
     )
     .eq("id", linkId)
     .maybeSingle();
@@ -39,38 +38,13 @@ export default async function OrderLinkPage({
   const row = data as {
     active: boolean;
     tenant_id: string;
+    title: string | null;
+    variant_id: string | null;
     tenants: { name: string | null; slug: string | null } | null;
-    product_variants: {
-      sale_price: number;
-      variant_name: string | null;
-      products: {
-        name: string | null;
-        name_ar: string | null;
-        image_url: string | null;
-      } | null;
-    } | null;
+    order_link_items: { variant_id: string }[] | null;
   } | null;
 
-  // ⚠️ **الشحن باستعلام لوحده** — مافيش علاقة مباشرة بين اللينك
-  // و`tenant_credentials`، والعمود لسه ممكن مايكونش اتعمل. الفشل = صفر.
-  const shipping = row
-    ? await (async () => {
-        const { data: c, error } = await db
-          .from("tenant_credentials")
-          .select("flat_shipping_price")
-          .eq("tenant_id", row.tenant_id)
-          .maybeSingle();
-        if (error) return 0;
-        return Number(
-          (c as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
-        ) || 0;
-      })()
-    : 0;
-
-  const store = storeWordmark(row?.tenants?.name, row?.tenants?.slug);
-  const variant = row?.product_variants ?? null;
-
-  if (!row || !variant) {
+  if (!row) {
     return (
       <div className="mx-auto max-w-md px-6 py-20 text-center">
         <h1 className="text-xl font-bold text-gray-900">اللينك ده مش موجود</h1>
@@ -81,11 +55,59 @@ export default async function OrderLinkPage({
     );
   }
 
-  const base = variant.products?.name_ar || variant.products?.name || "منتج";
-  const extra = String(variant.variant_name ?? "").trim();
-  const title =
-    extra && extra.toLowerCase() !== "default title" ? `${base} — ${extra}` : base;
-  const image = variant.products?.image_url ?? null;
+  // ⚠️ اللينكات القديمة عندها شكل واحد في `variant_id` بدل الجدول
+  const ids = [
+    ...new Set(
+      (row.order_link_items ?? [])
+        .map((i) => i.variant_id)
+        .concat(row.variant_id ? [row.variant_id] : [])
+    ),
+  ];
+
+  const [{ data: variants }, { data: creds }] = await Promise.all([
+    ids.length > 0
+      ? db
+          .from("product_variants")
+          .select("id, variant_name, sale_price, products(name, name_ar, image_url)")
+          .in("id", ids)
+      : Promise.resolve({ data: [] }),
+    db
+      .from("tenant_credentials")
+      .select("flat_shipping_price")
+      .eq("tenant_id", row.tenant_id)
+      .maybeSingle(),
+  ]);
+
+  const items: LinkItem[] = (
+    (variants ?? []) as unknown as {
+      id: string;
+      variant_name: string | null;
+      sale_price: number;
+      products: {
+        name: string | null;
+        name_ar: string | null;
+        image_url: string | null;
+      } | null;
+    }[]
+  ).map((v) => {
+    // ⚠️ اسم شوبيفاي الأول — ده اللي العميل شافه وهو بيشتري
+    const base = v.products?.name || v.products?.name_ar || "Item";
+    const extra = String(v.variant_name ?? "").trim();
+    const skip = extra.toLowerCase() === "default title";
+    return {
+      variantId: v.id,
+      title: extra && !skip ? `${base} — ${extra}` : base,
+      price: Number(v.sale_price ?? 0),
+      image: v.products?.image_url ?? null,
+    };
+  });
+
+  const shipping =
+    Number(
+      (creds as { flat_shipping_price: number | null } | null)?.flat_shipping_price ?? 0
+    ) || 0;
+
+  const store = storeWordmark(row.tenants?.name, row.tenants?.slug);
 
   return (
     <div className="mx-auto max-w-md px-6 py-10">
@@ -95,31 +117,24 @@ export default async function OrderLinkPage({
         </p>
       )}
 
-      {image && (
-        // ⚠️ صورة شوبيفاي — `img` عادي عشان الدومين مش لازم يتسجّل في الإعدادات
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image}
-          alt={title}
-          className="mt-6 aspect-square w-full rounded-2xl bg-gray-50 object-cover"
-        />
+      {row.title && (
+        <h1 className="mt-4 text-center text-lg font-bold text-gray-900">
+          {row.title}
+        </h1>
       )}
-
-      <h1 className="mt-6 text-center text-xl font-bold text-gray-900">
-        {title}
-      </h1>
-      <p className="mt-1 text-center text-2xl font-bold tabular-nums text-gray-900">
-        {Math.round(variant.sale_price).toLocaleString("ar-EG")} جنيه
-      </p>
 
       {!row.active ? (
         <p className="mt-8 rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
           العرض ده خلص. كلّم المتجر لو لسه عايزه.
         </p>
+      ) : items.length === 0 ? (
+        <p className="mt-8 rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+          مفيش منتجات في اللينك ده.
+        </p>
       ) : (
         <LinkOrderForm
           linkId={linkId}
-          price={variant.sale_price}
+          items={items}
           shipping={shipping}
           action={submitLinkOrder}
         />

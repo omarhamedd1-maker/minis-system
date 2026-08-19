@@ -196,6 +196,30 @@ export async function runProductImport(opts: {
     }))
   );
 
+  // ⚠️⚠️ **الصور بتتحدّث لوحدها قبل أي حاجة تانية.**
+  //
+  // الصورة بتتحط وقت **إضافة** المنتج بس، يعني المنتجات اللي دخلت قبل ما
+  // العمود يتعمل كانت هتفضل من غير صورة للأبد مهما جبت من شوبيفاي.
+  //
+  // ⚠️ **وبتتحدّث حتى لو مفيش أي تغيير تاني** — عشان كده قبل الخروج
+  // المبكر، مش بعده.
+  if (!dry) {
+    const byShopifyId = new Map(
+      (ourProducts ?? []).map((p) => [String(p.shopify_product_id ?? ""), p.id])
+    );
+    for (const sp of shopifyProducts) {
+      const url = String(sp.imageUrl ?? "").trim();
+      if (!url) continue;
+      const ourId = byShopifyId.get(String(sp.productId));
+      if (!ourId) continue;
+      await db
+        .from("products")
+        .update({ image_url: url })
+        .eq("tenant_id", tenantId)
+        .eq("id", ourId);
+    }
+  }
+
   if (dry || importChangeCount(plan) === 0) {
     return { ok: true, dry, plan };
   }
