@@ -10,6 +10,9 @@ import {
   type ReasonBreakdown,
 } from "@/lib/return-reasons";
 import { findDrift, type DriftRow } from "@/lib/shopify/drift";
+import { customerReturnRates, productReturnRates, type RateReport } from "@/lib/return-rates";
+import { priceTests, type PriceTest } from "@/lib/price-tests";
+import { shippingByDay, type TimingReport } from "@/lib/shipping-timing";
 import { fetchShopifyOrders } from "@/lib/shopify/orders";
 import { loadTenantCredentials } from "@/lib/tenant-settings";
 
@@ -27,6 +30,14 @@ export type HealthReport =
        * الجلب وقع. مش نفس معنى القايمة الفاضية (يعني كله مطابق).
        */
       drift: DriftRow[] | null;
+      /** المنتجات اللي بترجع أكتر من غيرها */
+      productReturns: RateReport;
+      /** العملاء اللي بيرجّعوا */
+      customerReturns: RateReport;
+      /** المنتجات اللي اتباعت بأكتر من سعر — وأنهي سعر كسب */
+      prices: PriceTest[];
+      /** الشحن حسب يوم الأسبوع في الأسبوع */
+      timing: TimingReport;
     }
   | { ok: false; error: string };
 
@@ -48,8 +59,10 @@ export async function loadHealth(): Promise<HealthReport> {
     .select(
       `order_number, order_status, order_date, delivered_at, bosta_tracking,
        bosta_created_at, bosta_cod, bosta_collected, cash_received_at,
-       return_reason, discount, shipping_price,
-       order_items(quantity, sale_price_at_order)`
+       return_reason, discount, shipping_price, customer_id,
+       customers(full_name),
+       order_items(quantity, sale_price_at_order, variant_id,
+         product_variants(variant_name, products(name_ar, name)))`
     )
     .eq("tenant_id", me.tenantId)
     .limit(5000);
@@ -65,6 +78,17 @@ export async function loadHealth(): Promise<HealthReport> {
     aging: collectionAging(rows as never, cairoToday()),
     reasons: breakdownReturnReasons(rows as never),
     drift: await loadDrift(db, me.tenantId, rows as never),
+    productReturns: productReturnRates(toRate(rows as never)),
+    customerReturns: customerReturnRates(toRate(rows as never)),
+    prices: priceTests(toPrice(rows as never)),
+    timing: shippingByDay(
+      rows.map((o) => ({
+        orderStatus: o.order_status,
+        bostaTracking: o.bosta_tracking,
+        bostaCreatedAt: o.bosta_created_at,
+        deliveredAt: o.delivered_at,
+      }))
+    ),
   };
 }
 
@@ -129,4 +153,57 @@ async function loadDrift(
   } catch {
     return null;
   }
+}
+
+/**
+ * تحويل صف الأوردر لشكل حسبة نسب الرجوع.
+ *
+ * ⚠️ **اسم الشكل بيتحط جنب اسم المنتج** — منتج ليه ٤٤ شكل كان بيطلع ٤٤
+ * سطر بنفس الاسم بالظبط في الشاشة، ومحدش يعرف أنهي واحد فيهم اللي بيرجع.
+ */
+function toRate(rows: Record<string, unknown>[]) {
+  return rows.map((o) => ({
+    orderStatus: o.order_status as string | null,
+    customerId: (o.customer_id as string | null) ?? null,
+    customerName:
+      (o.customers as { full_name?: string | null } | null)?.full_name ?? null,
+    items: ((o.order_items ?? []) as Record<string, unknown>[]).map((i) => {
+      const v = i.product_variants as
+        | { variant_name?: string | null; products?: { name_ar?: string | null; name?: string | null } | null }
+        | null;
+      const base = v?.products?.name_ar || v?.products?.name || "منتج";
+      const variant = String(v?.variant_name ?? "").trim();
+      return {
+        variantId: (i.variant_id as string | null) ?? null,
+        productName: variant ? `${base} — ${variant}` : base,
+      };
+    }),
+  }));
+}
+
+/**
+ * تحويل صف الأوردر لشكل مقارنة الأسعار.
+ *
+ * ⚠️ السعر بيتاخد من **البند نفسه** (`sale_price_at_order`) مش من المنتج
+ * الحالي — وده بالظبط اللي بيخلي المقارنة ممكنة: سعر النهارده مايقولش
+ * حاجة عن اللي اتباع بيه الشهر اللي فات.
+ */
+function toPrice(rows: Record<string, unknown>[]) {
+  return rows.map((o) => ({
+    orderDate: (o.order_date as string | null) ?? null,
+    orderStatus: (o.order_status as string | null) ?? null,
+    items: ((o.order_items ?? []) as Record<string, unknown>[]).map((i) => {
+      const v = i.product_variants as
+        | { variant_name?: string | null; products?: { name_ar?: string | null; name?: string | null } | null }
+        | null;
+      const base = v?.products?.name_ar || v?.products?.name || "منتج";
+      const variant = String(v?.variant_name ?? "").trim();
+      return {
+        variantId: (i.variant_id as string | null) ?? null,
+        productName: variant ? `${base} — ${variant}` : base,
+        quantity: Number(i.quantity) || 0,
+        price: Number(i.sale_price_at_order) || 0,
+      };
+    }),
+  }));
 }
