@@ -1,6 +1,7 @@
 "use server";
 
 import { isReturnReason, returnReasonLabel } from "@/lib/return-reasons";
+import { planRestock, restockSummary } from "@/lib/restock";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -1655,4 +1656,78 @@ export async function updateReturnReason(formData: FormData) {
   );
   revalidatePath(`/orders/${orderId}`);
   redirect(`/orders/${orderId}?saved=1`);
+}
+
+/**
+ * المرتجع يرجع المخزن.
+ *
+ * ⚠️⚠️ **مرة واحدة بس** — `restocked_at` هي اللي بتمنع التكرار. دوستين
+ * بيزوّدوا الكمية مرتين، والرقم الغلط بيخلّيك تبيع حاجة مش موجودة.
+ *
+ * ⚠️ **والأوردر اللي مخزونه ماتخصمش أصلًا مايترجعش** — الأوردرات القديمة
+ * دخلت من غير حركة مخزون، فرجوعها بيزوّد الرقم من غير ما ينقص قبلها.
+ */
+export async function restockReturn(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  if (!orderId) return;
+
+  const supabase = createAdminClient();
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("order_status, restocked_at, order_items(variant_id, quantity)")
+    .eq("tenant_id", me.tenantId)
+    .eq("id", orderId)
+    .maybeSingle();
+
+  const row = order as {
+    order_status: string | null;
+    restocked_at: string | null;
+    order_items: { variant_id: string | null; quantity: number }[] | null;
+  } | null;
+
+  if (!row) return;
+
+  const { data: movements } = await supabase
+    .from("stock_movements")
+    .select("id")
+    .eq("tenant_id", me.tenantId)
+    .eq("related_order_id", orderId)
+    .limit(1);
+
+  const plan = planRestock({
+    orderStatus: row.order_status,
+    restockedAt: row.restocked_at,
+    hadStockMovement: (movements ?? []).length > 0,
+    items: (row.order_items ?? []).map((i) => ({
+      variantId: i.variant_id,
+      quantity: i.quantity,
+    })),
+  });
+
+  if (!plan.ok) {
+    redirect(`/orders/${orderId}?error=` + encodeURIComponent(plan.reason));
+  }
+
+  for (const item of plan.items) {
+    await adjustStock(
+      supabase,
+      item.variantId,
+      item.quantity,
+      orderId,
+      "رجوع مرتجع للمخزن",
+      me.tenantId
+    );
+  }
+
+  await supabase
+    .from("orders")
+    .update({ restocked_at: new Date().toISOString() })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", orderId);
+
+  await logActivity(me, "order.restock", restockSummary(plan.items), orderId);
+  revalidatePath(`/orders/${orderId}`);
+  redirect(`/orders/${orderId}?saved=` + encodeURIComponent(restockSummary(plan.items)));
 }

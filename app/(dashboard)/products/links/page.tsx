@@ -52,12 +52,18 @@ export default async function OrderLinksPage({
 
   const options = ((variants ?? []) as unknown as V[])
     .map((v) => {
-      const base = v.products?.name_ar || v.products?.name || "منتج";
+      // ⚠️ **إنت بتشوف الاسمين، والعميل بيشوف اسم شوبيفاي بس.**
+      // الاسم العربي بتاعك هو اللي بتعرف بيه المنتج، واسم شوبيفاي هو اللي
+      // العميل شافه وهو بيشتري — فاللي بتختار منه محتاج الاتنين.
+      const arabic = String(v.products?.name_ar ?? "").trim();
+      const shopify = String(v.products?.name ?? "").trim();
       const extra = String(v.variant_name ?? "").trim();
       const skip = extra.toLowerCase() === "default title";
+      const base = arabic || shopify || "منتج";
       return {
         id: v.id,
         label: extra && !skip ? `${base} — ${extra}` : base,
+        second: arabic && shopify && arabic !== shopify ? shopify : null,
         price: Number(v.sale_price ?? 0),
       };
     })
@@ -117,8 +123,13 @@ export default async function OrderLinksPage({
                   value={o.id}
                   className="h-4 w-4 shrink-0 rounded border-gray-300"
                 />
-                <span className="min-w-0 flex-1 truncate text-gray-900">
-                  {o.label}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-gray-900">{o.label}</span>
+                  {o.second && (
+                    <span className="block truncate text-[11px] text-gray-400" dir="ltr">
+                      {o.second}
+                    </span>
+                  )}
                 </span>
                 <span className="shrink-0 tabular-nums text-xs text-gray-400">
                   {formatMoney(o.price)}

@@ -62,6 +62,7 @@ import {
   updateReturnReason,
   confirmRefund,
   undoRefund,
+  restockReturn,
 } from "./actions";
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
@@ -73,6 +74,7 @@ type OrderDetails = {
   id: string;
   order_number: string | null;
   order_status: string | null;
+  restocked_at: string | null;
   order_date: string | null;
   archived: boolean;
   shipping_price: number;
@@ -148,7 +150,7 @@ export default async function OrderDetailsPage({
   const { data: order, error } = await supabase
     .from("orders")
     .select(
-      `id, order_number, order_status, order_date, archived, shipping_price, discount,
+      `id, order_number, order_status, order_date, archived, shipping_price, discount, restocked_at,
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        bosta_created_at, refunded_at, refunded_amount, cash_received_at,
        delivered_at, return_note, return_reason, return_tracking, payment_method, amount_paid,
@@ -1504,6 +1506,47 @@ export default async function OrderDetailsPage({
             </span>
           </div>
           <CopyLink url={trackLink} href={trackLink} />
+        </div>
+      )}
+
+      {/*
+        رجوع المرتجع للمخزن.
+
+        ⚠️⚠️ **مرة واحدة بس** — بعد الدوسة الزرار بيتحوّل لسطر بيقول إنه رجع.
+        الدوسة التانية كانت هتزوّد الكمية مرتين، والرقم الغلط بيخلّيك تبيع
+        حاجة مش موجودة.
+      */}
+      {["returned", "returned_after_delivery"].includes(
+        order.order_status ?? ""
+      ) && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">
+                البضاعة الراجعة
+              </h2>
+              <p className="mt-0.5 text-[11px] text-gray-400">
+                رجعت لك فعلًا؟ رجّعها للمخزون عشان الرقم يفضل صح.
+              </p>
+            </div>
+            {order.restocked_at ? (
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
+                رجعت المخزن
+              </span>
+            ) : (
+              canStatus && (
+                <form action={restockReturn}>
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                  >
+                    رجّعها للمخزون
+                  </button>
+                </form>
+              )
+            )}
+          </div>
         </div>
       )}
 
