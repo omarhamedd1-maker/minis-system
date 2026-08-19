@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { BackLink } from "@/components/BackLink";
 import { requirePagePermission } from "@/lib/permissions";
 
@@ -44,28 +44,17 @@ export default async function ActivityPage({
   const limit = Math.min(Math.max(Number(rawLimit) || 100, 100), 2000);
   const typeValid = CATEGORIES.some((c) => c.value === type) ? type : undefined;
 
-  // ⚠️ **اتصال محمي بالـRLS، مش مفتاح الأدمن.**
-  //
-  // مفتاح الأدمن بيعدّي فوق كل قواعد المنع في الداتابيز، فالفلتر على
-  // البيزنس بيبقى **علينا إحنا نفتكره** — والحارس هو الذاكرة. الاتصال ده
-  // بيمشي بجلسة المستخدم، فالداتابيز نفسها بترفض.
-  //
-  // **والفلتر سايبينه** عن قصد: حزام وحمّالة. لو قاعدة منع اتشالت يوم من
-  // الداتابيز، الفلتر لسه واقف.
-  //
-  // ⚠️ **والاستعلامين هنا مسطّحين بقصد** — مافيش جدول متداخل. الجدول
-  // المتداخل اللي سياسته ناقصة **بيرجع فاضي من غير خطأ**، فالشاشة تبان
-  // شغّالة وأرقامها أصفار. عشان كده الشاشات اللي فيها تداخل بتتحوّل
-  // لوحدها بعد ما نتأكد من كل جدول.
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const { data: appUsers } = await supabase
+  // ⚠️ **`tenant_id` إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع،
+  // فالفلتر هنا هو الحماية الوحيدة
+  const { data: appUsers } = await admin
     .from("app_users")
     .select("auth_user_id, full_name")
     .eq("tenant_id", me.tenantId)
     .overrideTypes<{ auth_user_id: string; full_name: string | null }[]>();
 
-  let query = supabase
+  let query = admin
     .from("activity_log")
     .select("id, actor_id, actor_name, action, summary, created_at")
     .eq("tenant_id", me.tenantId)
