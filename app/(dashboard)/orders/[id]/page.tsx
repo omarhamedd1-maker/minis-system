@@ -38,7 +38,6 @@ import {
   summarizeCustomerHistory,
 } from "@/lib/customer-history";
 import { can, requirePagePermission } from "@/lib/permissions";
-import { createAdminClient } from "@/lib/supabase/admin";
 import {
   addOrderItem,
   deleteOrder,
@@ -285,7 +284,9 @@ export default async function OrderDetailsPage({
     summary: string | null;
     created_at: string;
   };
-  const logDb = createAdminClient();
+  // ⚠️ **الاتصال المحمي** (بند ٢.٦) — `activity_log` مثبت إنه بيتقرا بيه
+  // في شاشة سجل النشاط الشغّالة. والفلتر تحت سايبينه زي ما هو.
+  const logDb = supabase;
   const byText = `summary.like.%${order.order_number}%`;
   let orderLog: LogRow[] = [];
   {
