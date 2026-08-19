@@ -8,8 +8,8 @@
 // ⚠️⚠️ **بتقول اللي حصل، مش اللي المفروض تعمله** — قرار عمر في كل التنبيهات:
 // السبب بس، من غير نصايح ولا خطوات.
 //
-// ⚠️ **والمقارنة بالأسبوع اللي فاته** — رقم لوحده مالوش معنى: «بعت ٤٠ ألف»
-// مش خبر، «٤٠ ألف مقابل ٢٥ الأسبوع اللي فات» ده الخبر.
+// ⚠️ **مافيش «أكتر» ولا «أقل» — قرار عمر.** الرسالة بتقول أرقام الأسبوع
+// وبس؛ الحكم على إن ده كويس ولا وحش بتاعه هو.
 //
 // ⚠️ **والأسبوع اللي مافيهوش بيع خالص مابيتبعتش** — رسالة بأصفار كل جمعة
 // بتخلّي الرسالة نفسها تتقفل.
@@ -54,13 +54,6 @@ export function changePercent(now: number, before: number): number | null {
   return Math.round(((now - before) / before) * 100);
 }
 
-/** «أكتر ٢٠٪» / «أقل ١٥٪» / «زي الأسبوع اللي فات» */
-function compare(now: number, before: number): string {
-  const pct = changePercent(now, before);
-  if (pct === null) return "";
-  if (Math.abs(pct) < 5) return " · زي الأسبوع اللي فات";
-  return pct > 0 ? ` · أكتر ${pct}%` : ` · أقل ${Math.abs(pct)}%`;
-}
 
 /**
  * الأسبوع ده يستاهل رسالة؟
@@ -90,13 +83,13 @@ export function weeklyDigest(input: DigestInput): string {
   lines.push(store ? `أسبوع ${store}` : "خلاصة الأسبوع");
 
   lines.push(
-    `مبيعات ${formatMoney(Math.round(w.sales))}${compare(w.sales, b.sales)}`
+    `مبيعات ${formatMoney(Math.round(w.sales))}`
   );
 
   // ⚠️ الصافي بيبقى بالسالب أحيانًا — وده رقم حقيقي مش غلط، فبيتكتب زي ما هو
-  lines.push(`صافي ${formatMoney(Math.round(w.net))}${compare(w.net, b.net)}`);
+  lines.push(`صافي ${formatMoney(Math.round(w.net))}`);
 
-  lines.push(`${w.orders} أوردر${compare(w.orders, b.orders)}`);
+  lines.push(`${w.orders} أوردر`);
 
   if (w.settled > 0) {
     const rate = Math.round((w.returned / w.settled) * 100);

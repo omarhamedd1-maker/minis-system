@@ -31,25 +31,6 @@ describe("خلاصة الأسبوع", () => {
     expect(t).toContain("20 أوردر");
   });
 
-  it("⚠️ بتقارن بالأسبوع اللي فاته — الرقم لوحده مالوش معنى", () => {
-    const t = weeklyDigest(input());
-    expect(t).toContain("أكتر 60%");
-  });
-
-  it("النزول بيتقال كنزول", () => {
-    const t = weeklyDigest(
-      input({ week: week({ sales: 20000 }), before: week({ sales: 40000 }) })
-    );
-    expect(t).toContain("أقل 50%");
-  });
-
-  it("الفرق الصغير = زي الأسبوع اللي فات", () => {
-    const t = weeklyDigest(
-      input({ week: week({ sales: 40000 }), before: week({ sales: 39000 }) })
-    );
-    expect(t).toContain("زي الأسبوع اللي فات");
-  });
-
   it("⚠️ مافيش أساس نقارن عليه = مفيش مقارنة، مش «زيادة ١٠٠٪»", () => {
     expect(changePercent(1000, 0)).toBeNull();
     const t = weeklyDigest(input({ before: week({ sales: 0, net: 0, orders: 0 }) }));
@@ -94,6 +75,13 @@ describe("خلاصة الأسبوع", () => {
     );
   });
 });
+
+  it("⚠️ مافيش «أكتر» ولا «أقل» — أرقام وبس", () => {
+    const t = weeklyDigest(input());
+    expect(t).not.toContain("أكتر");
+    expect(t).not.toContain("أقل");
+    expect(t).not.toContain("زي الأسبوع");
+  });
 
 describe("يستاهل يتبعت؟", () => {
   it("فيه بيع = أيوة", () => {
