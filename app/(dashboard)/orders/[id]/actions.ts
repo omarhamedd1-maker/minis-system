@@ -1661,8 +1661,8 @@ export async function updateReturnReason(formData: FormData) {
 /**
  * المرتجع يرجع المخزن.
  *
- * ⚠️⚠️ **مرة واحدة بس** — `restocked_at` هي اللي بتمنع التكرار. دوستين
- * بيزوّدوا الكمية مرتين، والرقم الغلط بيخلّيك تبيع حاجة مش موجودة.
+ * ⚠️⚠️ **مرة واحدة بس** — **حركة المخزون نفسها هي العلامة**: بنشوف لو فيه
+ * حركة على الأوردر ده بسبب الرجوع خلاص. دوستين بيزوّدوا الكمية مرتين،
  *
  * ⚠️ **والأوردر اللي مخزونه ماتخصمش أصلًا مايترجعش** — الأوردرات القديمة
  * دخلت من غير حركة مخزون، فرجوعها بيزوّد الرقم من غير ما ينقص قبلها.
@@ -1676,14 +1676,13 @@ export async function restockReturn(formData: FormData) {
 
   const { data: order } = await supabase
     .from("orders")
-    .select("order_status, restocked_at, order_items(variant_id, quantity)")
+    .select("order_status, order_items(variant_id, quantity)")
     .eq("tenant_id", me.tenantId)
     .eq("id", orderId)
     .maybeSingle();
 
   const row = order as {
     order_status: string | null;
-    restocked_at: string | null;
     order_items: { variant_id: string | null; quantity: number }[] | null;
   } | null;
 
@@ -1691,14 +1690,16 @@ export async function restockReturn(formData: FormData) {
 
   const { data: movements } = await supabase
     .from("stock_movements")
-    .select("id")
+    .select("reason")
     .eq("tenant_id", me.tenantId)
     .eq("related_order_id", orderId)
-    .limit(1);
+    .limit(50);
 
   const plan = planRestock({
     orderStatus: row.order_status,
-    restockedAt: row.restocked_at,
+    alreadyRestocked: ((movements ?? []) as { reason: string | null }[]).some(
+      (m) => String(m.reason ?? "").trim() === "رجوع مرتجع للمخزن"
+    ),
     hadStockMovement: (movements ?? []).length > 0,
     items: (row.order_items ?? []).map((i) => ({
       variantId: i.variant_id,
@@ -1721,11 +1722,6 @@ export async function restockReturn(formData: FormData) {
     );
   }
 
-  await supabase
-    .from("orders")
-    .update({ restocked_at: new Date().toISOString() })
-    .eq("tenant_id", me.tenantId)
-    .eq("id", orderId);
 
   await logActivity(me, "order.restock", restockSummary(plan.items), orderId);
   revalidatePath(`/orders/${orderId}`);

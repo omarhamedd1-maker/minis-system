@@ -3,7 +3,7 @@ import { planRestock, restockSummary, type RestockOrder } from "./restock";
 
 const order = (o: Partial<RestockOrder> = {}): RestockOrder => ({
   orderStatus: "returned",
-  restockedAt: null,
+  alreadyRestocked: false,
   hadStockMovement: true,
   items: [
     { variantId: "v1", quantity: 2 },
@@ -31,7 +31,7 @@ describe("رجوع المرتجع للمخزن", () => {
   });
 
   it("⚠️ مرة واحدة بس — الدوسة التانية بترفض", () => {
-    const p = planRestock(order({ restockedAt: "2026-08-19T10:00:00Z" }));
+    const p = planRestock(order({ alreadyRestocked: true }));
     expect(p.ok).toBe(false);
     if (!p.ok) expect(p.reason).toContain("خلاص");
   });

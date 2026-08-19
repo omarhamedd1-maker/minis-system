@@ -25,8 +25,14 @@ export type RestockItem = {
 
 export type RestockOrder = {
   orderStatus: string | null;
-  /** اترجّع قبل كده؟ */
-  restockedAt?: string | null;
+  /**
+   * اترجّع قبل كده؟
+   *
+   * ⚠️ **العلامة من حركات المخزون نفسها مش من عمود جديد** — الحركة
+   * بتتسجّل بسبب اسمه، فوجودها هي الدليل. كده مافيش عمود لازم يتضاف
+   * ومافيش حالة الكود فيها بيقول «رجعت» والحركة مش موجودة.
+   */
+  alreadyRestocked: boolean;
   /** الأوردر ده خصم مخزون وقت ما اتعمل؟ */
   hadStockMovement: boolean;
   items: RestockItem[];
@@ -47,7 +53,7 @@ export function planRestock(order: RestockOrder): RestockPlan {
     return { ok: false, reason: "الأوردر ده مارجعش" };
   }
 
-  if (order.restockedAt) {
+  if (order.alreadyRestocked) {
     return { ok: false, reason: "رجع المخزن خلاص" };
   }
 

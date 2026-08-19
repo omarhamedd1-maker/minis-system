@@ -74,7 +74,6 @@ type OrderDetails = {
   id: string;
   order_number: string | null;
   order_status: string | null;
-  restocked_at: string | null;
   order_date: string | null;
   archived: boolean;
   shipping_price: number;
@@ -150,7 +149,7 @@ export default async function OrderDetailsPage({
   const { data: order, error } = await supabase
     .from("orders")
     .select(
-      `id, order_number, order_status, order_date, archived, shipping_price, discount, restocked_at,
+      `id, order_number, order_status, order_date, archived, shipping_price, discount,
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        bosta_created_at, refunded_at, refunded_amount, cash_received_at,
        delivered_at, return_note, return_reason, return_tracking, payment_method, amount_paid,
@@ -253,6 +252,16 @@ export default async function OrderDetailsPage({
   // اللي فاتح دلوقتي، مش رقم ثابت في الكود يبوظ لما الدومين يتغيّر.
   const origin = (await headers()).get("origin") ?? null;
   const trackLink = trackingLink(order.id, origin);
+
+  // ⚠️ **رجعت المخزن؟ الحركة نفسها هي العلامة** — مافيش عمود لازم يتضاف،
+  // ومافيش حالة الكود فيها بيقول «رجعت» والحركة مش موجودة.
+  const { data: restockMoves } = await supabase
+    .from("stock_movements")
+    .select("id")
+    .eq("related_order_id", id)
+    .eq("reason", "رجوع مرتجع للمخزن")
+    .limit(1);
+  const restocked = (restockMoves ?? []).length > 0;
 
   const flags = orderFlags({
     orderStatus: order.order_status,
@@ -1529,7 +1538,7 @@ export default async function OrderDetailsPage({
                 رجعت لك فعلًا؟ رجّعها للمخزون عشان الرقم يفضل صح.
               </p>
             </div>
-            {order.restocked_at ? (
+            {restocked ? (
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
                 رجعت المخزن
               </span>
