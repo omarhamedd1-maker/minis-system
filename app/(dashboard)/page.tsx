@@ -569,13 +569,24 @@ export default async function StatsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold text-gray-900">الداشبورد</h1>
+        {/* تنزيل الداتا — نسخة عندك على جهازك، مش عند حد */}
         {canExport && (
-          <a
-            href="/export"
-            className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
-          >
-            تصدير Excel
-          </a>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-gray-400">نزّل:</span>
+            {[
+              { what: "orders", label: "الأوردرات" },
+              { what: "customers", label: "العملاء" },
+              { what: "products", label: "المنتجات" },
+            ].map((f) => (
+              <a
+                key={f.what}
+                href={`/export?what=${f.what}`}
+                className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+              >
+                {f.label}
+              </a>
+            ))}
+          </div>
         )}
       </div>
 

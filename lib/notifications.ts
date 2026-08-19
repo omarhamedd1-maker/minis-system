@@ -11,6 +11,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { readSyncHealth, syncHealthMessage } from "./bosta/sync-runs";
 import { refundDue } from "./refund";
 import { loadTenantCredentials } from "./tenant-settings";
+import { staleBeforeShipping, STALE_AFTER_DAYS } from "./stale-orders";
+import { stockRunway, runningOut, WINDOW_DAYS } from "./stock-runway";
 
 export type NoticeLevel = "danger" | "warn" | "info";
 
@@ -255,6 +257,130 @@ export async function collectNotices(
     }
   } catch {
     // الخانة لسه مااتعملتش؟ الإشعار بس هو اللي مايبانش
+  }
+
+  // ٤) أوردر مؤكد قاعد من غير بوليصة
+  //
+  // ⚠️ **ده الفراغ الوحيد اللي مافيش حاجة بتغطيه**: مش جديد فيبان في
+  // «محتاج تأكيد»، ومش عند بوسطة فالمزامنة ماتشوفوش. أوردر فضل ٢٧ يوم
+  // كده ومحدش عرف.
+  try {
+    const { data: waiting } = await db
+      .from("orders")
+      .select("id, order_number, order_status, order_date, bosta_tracking")
+      .eq("tenant_id", tenantId)
+      .eq("archived", false)
+      .in("order_status", ["confirmed", "packed"])
+      .limit(500);
+
+    const stale = staleBeforeShipping(
+      (
+        (waiting ?? []) as unknown as {
+          id: string;
+          order_number: string | null;
+          order_status: string | null;
+          order_date: string | null;
+          bosta_tracking: string | null;
+        }[]
+      ).map((o) => ({
+        id: o.id,
+        orderNumber: o.order_number,
+        orderStatus: o.order_status,
+        orderDate: o.order_date,
+        bostaTracking: o.bosta_tracking,
+      })),
+      new Date()
+    );
+
+    if (stale.length > 0) {
+      notices.push({
+        id: "stale",
+        level: "warn",
+        title: "أوردرات مؤكدة قاعدة من غير بوليصة",
+        count: stale.length,
+        detail: `أقدم واحد بقاله ${stale[0].days} يوم (#${stale[0].orderNumber}) — الحد ${STALE_AFTER_DAYS} أيام`,
+        href: noticeHref(
+          stale.map((s) => s.id),
+          "/orders?status=confirmed"
+        ),
+      });
+    }
+  } catch {
+    // الإشعار بس هو اللي مايبانش
+  }
+
+  // ٥) بضاعة قرّبت تخلص
+  //
+  // ⚠️ **«فاضل ٩» مش معلومة** — ٩ من حاجة بتتباع ٣ في اليوم = ٣ أيام،
+  // و٩ من حاجة بتتباع واحدة في الشهر = تسع شهور.
+  //
+  // ⚠️⚠️ **واللي مخزونه صفر وهو بيتباع بره التنبيه** — ده رقم مش متمسك
+  // مش بضاعة خلصت (`lib/stock-runway.ts`). لو دخل، التنبيه كان هيرن
+  // كل يوم على أكتر منتجين بيبيعوا عند عمر وهما شغالين.
+  try {
+    const [variantsRes, salesRes] = await Promise.all([
+      db
+        .from("product_variants")
+        .select("id, variant_name, quantity_on_hand, products(name_ar, name)")
+        .eq("tenant_id", tenantId)
+        .limit(2000),
+      db
+        .from("orders")
+        .select("order_status, order_date, order_items(variant_id, quantity)")
+        .eq("tenant_id", tenantId)
+        .gte(
+          "order_date",
+          new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString()
+        )
+        .limit(2000),
+    ]);
+
+    const variants = (
+      (variantsRes.data ?? []) as unknown as {
+        id: string;
+        variant_name: string | null;
+        quantity_on_hand: number;
+        products: { name_ar: string | null; name: string | null } | null;
+      }[]
+    ).map((v) => {
+      const base = v.products?.name_ar || v.products?.name || "منتج";
+      const variant = String(v.variant_name ?? "").trim();
+      return {
+        id: v.id,
+        name: variant ? `${base} — ${variant}` : base,
+        onHand: Number(v.quantity_on_hand ?? 0),
+      };
+    });
+
+    const sales = (
+      (salesRes.data ?? []) as unknown as {
+        order_status: string | null;
+        order_date: string | null;
+        order_items: { variant_id: string | null; quantity: number }[] | null;
+      }[]
+    ).flatMap((o) =>
+      (o.order_items ?? []).map((i) => ({
+        variantId: i.variant_id,
+        at: o.order_date,
+        orderStatus: o.order_status,
+        quantity: Number(i.quantity) || 0,
+      }))
+    );
+
+    const low = runningOut(stockRunway(variants, sales, new Date()));
+
+    if (low.length > 0) {
+      notices.push({
+        id: "stock",
+        level: "warn",
+        title: "بضاعة قرّبت تخلص",
+        count: low.length,
+        detail: `${low[0].name}: فاضل ${low[0].onHand} — تكفي ${low[0].daysLeft} يوم`,
+        href: "/products",
+      });
+    }
+  } catch {
+    // الإشعار بس هو اللي مايبانش
   }
 
   return notices.sort((a, b) => ORDER[a.level] - ORDER[b.level]);
