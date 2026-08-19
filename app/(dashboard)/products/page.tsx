@@ -387,6 +387,7 @@ export default async function ProductsPage({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 text-right text-gray-500">
+                <th className="w-12 px-2 py-3"></th>
                 <th className="px-4 py-3 font-medium">الكود</th>
                 <th className="px-4 py-3 font-medium">المنتج</th>
                 <th className="px-4 py-3 font-medium">الاسم في شوبيفاي</th>
@@ -405,6 +406,21 @@ export default async function ProductsPage({
                     key={variant.id}
                     className="border-b border-gray-100 last:border-0"
                   >
+                    {/*
+                      ⚠️ **الصورة أول السطر من اليمين** — العين بتمسك الصورة
+                      قبل النص، والاسم لوحده مابيفرقش بين منتجات أسماؤها
+                      متشابهة.
+                    */}
+                    <td className="w-12 px-2 py-2">
+                      {index === 0 && product.image_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.image_url}
+                          alt=""
+                          className="h-9 w-9 rounded bg-gray-50 object-cover"
+                        />
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-700" dir="ltr">
                       {variant.sku ?? "—"}
                     </td>
