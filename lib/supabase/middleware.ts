@@ -38,11 +38,15 @@ export async function updateSession(request: NextRequest) {
   // فالبوابة هنا كانت بتحوّله على `/login` واللينك اللي بنبعتهوله
   // مايفتحش. الصفحة نفسها بتوري الحالة وبس، والتفاصيل ورا تليفون الأوردر.
   const isTrackPage = pathname.startsWith("/track/");
+  // ⚠️ **وصفحة الطلب المباشر** — اللينك بيتبعت للعميل في رسالة، والعميل
+  // مالوش حساب. لو البوابة حوّلته على الدخول، اللينك مالوش لازمة أصلًا.
+  const isOrderLink = pathname.startsWith("/o/");
   // مسارات عامة: تعريف البرنامج وأيقوناته لازم تفتح من غير تسجيل دخول
   const isPublic =
     isLoginPage ||
     isSignupPage ||
     isTrackPage ||
+    isOrderLink ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/icon" ||
     pathname === "/apple-icon";
