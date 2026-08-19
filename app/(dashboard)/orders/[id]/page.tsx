@@ -62,6 +62,7 @@ import {
   updateReturnReason,
   confirmRefund,
   undoRefund,
+  restockReturn,
 } from "./actions";
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
@@ -251,6 +252,16 @@ export default async function OrderDetailsPage({
   // اللي فاتح دلوقتي، مش رقم ثابت في الكود يبوظ لما الدومين يتغيّر.
   const origin = (await headers()).get("origin") ?? null;
   const trackLink = trackingLink(order.id, origin);
+
+  // ⚠️ **رجعت المخزن؟ الحركة نفسها هي العلامة** — مافيش عمود لازم يتضاف،
+  // ومافيش حالة الكود فيها بيقول «رجعت» والحركة مش موجودة.
+  const { data: restockMoves } = await supabase
+    .from("stock_movements")
+    .select("id")
+    .eq("related_order_id", id)
+    .eq("reason", "رجوع مرتجع للمخزن")
+    .limit(1);
+  const restocked = (restockMoves ?? []).length > 0;
 
   const flags = orderFlags({
     orderStatus: order.order_status,
@@ -1504,6 +1515,47 @@ export default async function OrderDetailsPage({
             </span>
           </div>
           <CopyLink url={trackLink} href={trackLink} />
+        </div>
+      )}
+
+      {/*
+        رجوع المرتجع للمخزن.
+
+        ⚠️⚠️ **مرة واحدة بس** — بعد الدوسة الزرار بيتحوّل لسطر بيقول إنه رجع.
+        الدوسة التانية كانت هتزوّد الكمية مرتين، والرقم الغلط بيخلّيك تبيع
+        حاجة مش موجودة.
+      */}
+      {["returned", "returned_after_delivery"].includes(
+        order.order_status ?? ""
+      ) && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-gray-900">
+                البضاعة الراجعة
+              </h2>
+              <p className="mt-0.5 text-[11px] text-gray-400">
+                رجعت لك فعلًا؟ رجّعها للمخزون عشان الرقم يفضل صح.
+              </p>
+            </div>
+            {restocked ? (
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
+                رجعت المخزن
+              </span>
+            ) : (
+              canStatus && (
+                <form action={restockReturn}>
+                  <input type="hidden" name="order_id" value={order.id} />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                  >
+                    رجّعها للمخزون
+                  </button>
+                </form>
+              )
+            )}
+          </div>
         </div>
       )}
 
