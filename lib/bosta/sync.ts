@@ -32,6 +32,7 @@ import { BOSTA_FEES, shippingCost } from "../shipping-cost";
 import { orderStatusBadge } from "../format";
 import { failedDeliveryMessage } from "../alert-messages";
 import { notifyAll } from "../push/notify";
+import { dailyTag } from "../push/once";
 import { checkStalePickup, stalePickupMessage } from "./stale-shipment";
 import { checkCod, codMismatchMessage } from "./cod-check";
 import { checkRefundDue, refundDue, refundReminderMessage } from "../refund";
@@ -896,7 +897,14 @@ export async function runBostaSync(opts: {
             count: dueNow.length,
             oldestDays: Math.max(...dueNow.map((x) => x.days)),
           }),
-          { fetchImpl, tag: "unconfirmed-group", url: "/orders?status=new" }
+          {
+            fetchImpl,
+            // ⚠️ **التاج بيحمل اليوم** — التنبيه ده بيتكرر بقصد كل يوم،
+            // والتاج الثابت كان هيخلّيه يتبعت مرة واحدة في العمر بعد ما
+            // المنع اتحط جوّه `notifyAll`.
+            tag: dailyTag("unconfirmed-group", new Date()),
+            url: "/orders?status=new",
+          }
         );
       } else {
         for (const x of dueNow) {

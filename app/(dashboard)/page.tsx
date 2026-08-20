@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { upcomingSeasons } from "@/lib/seasons";
 import { createClient } from "@/lib/supabase/server";
 import {
   EXCLUDED_STATUSES,
@@ -563,6 +564,13 @@ export default async function StatsPage({
     todayDayOfMonth > 0 ? currentMonthSales / todayDayOfMonth : 0;
   const projectedMonthSales = Math.round(monthDailyRate * daysInMonth);
 
+  /**
+   * المواسم اللي جاية في الشهرين الجايين.
+   *
+   * ⚠️ **من قايمة مكتوبة مش محسوبة** — رمضان والأعياد بالهجري وبيتقدّموا
+   * كل سنة، فالقاعدة الثابتة بتغلط. ولما القايمة تخلص الملف بيسكت.
+   */
+  const seasons = upcomingSeasons(new Date(), 60);
 
   return (
     <div className="space-y-6">
@@ -570,6 +578,31 @@ export default async function StatsPage({
         <h1 className="text-xl font-bold text-gray-900">الداشبورد</h1>
 
       </div>
+
+      {/*
+        المواسم الجاية.
+
+        ⚠️ **سطر واحد مش كارت** — ده مش رقم بتشتغل عليه كل يوم، ده تذكير
+        بيعدّي. الكارت بياخد مساحة الأرقام اللي بتتبص كل صباح.
+      */}
+      {seasons.length > 0 && (
+        <p className="text-xs text-gray-500">
+          جاي:{" "}
+          {seasons.map((s, i) => (
+            <span key={s.key}>
+              {i > 0 && " · "}
+              <span className="text-gray-900">{s.name}</span>{" "}
+              <span className="text-gray-400">
+                {s.daysAway === 0
+                  ? "النهاردة"
+                  : s.daysAway === 1
+                    ? "بكرة"
+                    : `بعد ${s.daysAway} يوم`}
+              </span>
+            </span>
+          ))}
+        </p>
+      )}
 
       <section>
         {/* الفترة المختارة على اليمين، والاختيارات التانية جنبها على الشمال */}
