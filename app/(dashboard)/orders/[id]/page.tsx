@@ -263,12 +263,33 @@ export default async function OrderDetailsPage({
     .limit(1);
   const restocked = (restockMoves ?? []).length > 0;
 
+  /**
+   * نفس التليفون كام أوردر تاني في نفس اليوم.
+   *
+   * ⚠️ **بالتليفون مش بالعنوان** — العنوان بيتكتب بألف طريقة («٩ شارع
+   * المعادي» و«٩ ش المعادى») فمقارنته حرف بحرف بتفوّت أغلب التكرار.
+   */
+  const sameDayOthers = await (async () => {
+    const phone = String(order.customers?.phone ?? "").trim();
+    const day = String(order.order_date ?? "").slice(0, 10);
+    if (!phone || !day) return 0;
+    const { count } = await supabase
+      .from("orders")
+      .select("id, customers!inner(phone)", { count: "exact", head: true })
+      .eq("customers.phone", phone)
+      .eq("order_date", day)
+      .neq("id", id);
+    return count ?? 0;
+  })();
+
   const flags = orderFlags({
     orderStatus: order.order_status,
     total: itemsTotal - (order.discount ?? 0) + (order.shipping_price ?? 0),
     address: order.customers?.address ?? null,
     previousOrders: history.total,
     previousReturns: history.returned,
+    previousCancels: history.cancelled,
+    sameDayOthers,
   });
   // الملغي: مفيش شحن يتحسب
   const grandTotal =

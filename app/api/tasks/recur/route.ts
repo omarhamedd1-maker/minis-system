@@ -20,6 +20,11 @@ import { activeTenantIds } from "@/lib/tenant-settings";
 import { runOrderImport } from "@/lib/shopify/orders";
 import { runProductImport } from "@/lib/shopify/products";
 import { checkDrop, dropMessage } from "@/lib/drop-alert";
+import {
+  productDrift,
+  driftMessage,
+  WINDOW_DAYS as DRIFT_DAYS,
+} from "@/lib/product-drift";
 import { notifyAll } from "@/lib/push/notify";
 import { WEEKDAYS } from "@/lib/shipping-timing";
 
@@ -45,6 +50,8 @@ export async function GET(request: Request) {
     prepaid: { added: number; adopted: number; alreadyDone: number; review: number };
     /** المبيعات واقعة النهاردة؟ */
     drop?: { today: number; usual: number } | null;
+    /** منتجات نسبة رجوعها قفزت عن نفسها */
+    drift?: { name: string; before: number; now: number }[] | null;
     /**
      * نتيجة استيراد أوردرات شوبيفاي للبيزنس ده.
      *
@@ -204,7 +211,84 @@ export async function GET(request: Request) {
           // التنبيه بس هو اللي مايبانش
         }
 
-        results[tenantId] = { recur, remind, prepaid, shopify, drop };
+        // ⚠️⚠️ **المنتج اللي اتغيّر سلوكه** — النسبة الكلية بتخبّي ده تمامًا:
+        // بتتحرك ١٪ بينما منتج واحد جوّاها اتضاعف تلات مرات.
+        //
+        // ⚠️ **مرة في الأسبوع مش كل يوم** — النسبة محسوبة على ٣٠ يوم،
+        // فمابتتحركش من يوم للتاني، والتنبيه اليومي بنفس الكلام بيتقفل.
+        let drift: Ok["drift"] = null;
+        try {
+          if (now.getUTCDay() === 6) {
+            const since = new Date(now.getTime() - 2 * DRIFT_DAYS * 86_400_000)
+              .toISOString()
+              .slice(0, 10);
+
+            type SoldRow = {
+              order_status: string | null;
+              order_date: string | null;
+              order_items: {
+                variant_id: string | null;
+                product_variants: {
+                  variant_name: string | null;
+                  products: { name_ar: string | null; name: string | null } | null;
+                } | null;
+              }[];
+            };
+
+            const { data: sold } = await db
+              .from("orders")
+              .select(
+                "order_status, order_date, order_items(variant_id, product_variants(variant_name, products(name_ar, name)))"
+              )
+              .eq("tenant_id", tenantId)
+              .in("order_status", [
+                "delivered",
+                "returned",
+                "returned_after_delivery",
+              ])
+              .gte("order_date", since)
+              .limit(3000)
+              // ⚠️ الوصلات بترجع كمصفوفات في النوع المولّد، وهي كائن واحد
+              // فعلًا — `overrideTypes` بتصحّح ده زي باقي الشاشات
+              .overrideTypes<SoldRow[]>();
+
+            const lines = (sold ?? []).flatMap((o) =>
+              (o.order_items ?? []).map((i) => ({
+                variantId: i.variant_id,
+                productName:
+                  i.product_variants?.products?.name_ar ??
+                  i.product_variants?.products?.name ??
+                  null,
+                variantName: i.product_variants?.variant_name ?? null,
+                day: o.order_date,
+                returned: ["returned", "returned_after_delivery"].includes(
+                  String(o.order_status)
+                ),
+              }))
+            );
+
+            const moved = productDrift(lines, now);
+            if (moved.length > 0) {
+              drift = moved.map((d) => ({
+                name: [d.productName, d.variantName].filter(Boolean).join(" · "),
+                before: d.before,
+                now: d.now,
+              }));
+              if (!dry) {
+                await notifyAll(
+                  db,
+                  tenantId,
+                  moved.map(driftMessage).join("\n"),
+                  { tag: "drift-" + today }
+                );
+              }
+            }
+          }
+        } catch {
+          // التنبيه بس هو اللي مايبانش
+        }
+
+        results[tenantId] = { recur, remind, prepaid, shopify, drop, drift };
       } catch (e) {
         // بيزنس وقع؟ الباقي يكمّل
         results[tenantId] = {

@@ -28,6 +28,9 @@ export const SHORT_ADDRESS = 25;
 /** الأوردر الأكبر من كده من عميل جديد بيستاهل مكالمة */
 export const BIG_ORDER = 3000;
 
+/** كام إلغاء قبل كده عشان العلامة تظهر */
+export const CANCELS_TO_FLAG = 2;
+
 export type FlagOrder = {
   orderStatus: string | null;
   /** إجمالي الأوردر بالفلوس */
@@ -37,10 +40,20 @@ export type FlagOrder = {
   previousOrders?: number;
   /** كام منهم رجع */
   previousReturns?: number;
+  /** كام أوردر اتلغى للعميل ده قبل كده */
+  previousCancels?: number;
+  /**
+   * كام أوردر تاني على **نفس التليفون في نفس اليوم** (من غير ده).
+   *
+   * ⚠️ **التليفون مش العنوان** — العنوان بيتكتب بألف طريقة («٩ شارع
+   * المعادي» و«٩ ش المعادى») فمقارنته حرف بحرف بتفوّت أغلب التكرار.
+   * التليفون بيتكتب بطريقة واحدة.
+   */
+  sameDayOthers?: number;
 };
 
 export type OrderFlag = {
-  key: "address" | "returner" | "big_new";
+  key: "address" | "returner" | "big_new" | "canceller" | "same_day";
   /** الجملة اللي بتظهر */
   text: string;
   /** إيه اللي ممكن يتعمل — من غير أمر */
@@ -86,6 +99,26 @@ export function orderFlags(o: FlagOrder): OrderFlag[] {
     });
   }
 
+  // ⚠️ **الإلغاء مش الرجوع.** الإلغاء بيضيّع وقت قبل ما الشحنة تتعمل، فتكلفته
+  // أقل — عشان كده بنستنى يتكرر بدل ما نرن من أول مرة.
+  const cancels = Math.max(0, Number(o.previousCancels ?? 0));
+  if (cancels >= CANCELS_TO_FLAG) {
+    flags.push({
+      key: "canceller",
+      text: `اتلغاله ${cancels} أوردرات قبل كده`,
+      why: "الأوردر اللي بيتلغى بعد التجهيز بياكل وقت ومكان في العربية",
+    });
+  }
+
+  const sameDay = Math.max(0, Number(o.sameDayOthers ?? 0));
+  if (sameDay > 0) {
+    flags.push({
+      key: "same_day",
+      text: `نفس التليفون عليه ${sameDay + 1} أوردرات النهاردة`,
+      why: "غالبًا نفس الأوردر اتبعت مرتين، وشحن الاتنين بيرجّع واحد",
+    });
+  }
+
   // ⚠️ **الكبير من عميل جديد بس** — العميل اللي اشترى قبل كده وأوردره كبير
   // ده أحسن عميل عندك، ووضع علامة عليه بيخلّي العلامات كلها ضوضاء.
   if (prev === 0 && Number(o.total) >= BIG_ORDER) {
@@ -97,4 +130,29 @@ export function orderFlags(o: FlagOrder): OrderFlag[] {
   }
 
   return flags;
+}
+
+/**
+ * العلامات اللي وراها تاريخ فعلي — مش شكل الأوردر.
+ *
+ * ⚠️⚠️ **العنوان القصير لوحده مش أوردر مشبوه.** على داتا مينيز العنوان
+ * بيرن على نُص الأوردرات تقريبًا، فلو دخل في القايمة، القايمة بتبقى هي
+ * قايمة الأوردرات كلها ومحدش يبص عليها تاني.
+ */
+const HISTORY_FLAGS = ["returner", "canceller", "same_day"];
+
+/**
+ * الأوردر ده يستاهل وقفة قبل ما يتشحن؟
+ *
+ * ⚠️ **علامة تاريخ واحدة، أو علامتين أيًا كانوا.** العلامة الشكلية لوحدها
+ * (عنوان قصير · أوردر كبير) مابتوقفش أوردر.
+ */
+export function worthChecking(flags: OrderFlag[]): boolean {
+  if (flags.some((f) => HISTORY_FLAGS.includes(f.key))) return true;
+  return flags.length >= 2;
+}
+
+/** «رجّع أوردر قبل كده · العنوان مختصر» */
+export function flagLine(flags: OrderFlag[]): string {
+  return flags.map((f) => f.text).join(" · ");
 }

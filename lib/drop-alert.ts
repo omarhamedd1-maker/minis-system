@@ -7,6 +7,15 @@
 // وغالبًا السبب مش «السوق» — الموقع واقع، أو الإعلان وقف، أو طريقة الدفع
 // بايظة، أو الاستيراد من شوبيفاي واقف. والتقرير الأسبوعي بيقول لك بعد ٥ أيام.
 //
+// ⚠️⚠️ **اليوم اللي لسه بادئ مش يوم واقع.** أول نسخة كانت بتقارن اليوم كله
+// باللي فات، فالساعة ٣ الفجر كانت بترن كل يوم بـ«٠ أوردر النهاردة» —
+// واليوم أصلًا ماكانش بدأ. التنبيه ده وصل لعمر ٢٠ أغسطس ٢٠٢٦ وكان غلط.
+//
+// **الإصلاح**: المقارنة بقت **لنفس الساعة**. أوردرات النهاردة لحد دلوقتي
+// مقابل أوردرات نفس اليوم من الأسابيع اللي فاتت **لحد نفس الساعة**.
+// وقبل `MIN_HOUR` مافيش تنبيه خالص — الفرق في أول الصبح رقمين صغيرين
+// والفرق بينهم صدفة مش عطل.
+//
 // ⚠️⚠️ **المقارنة بنفس اليوم من الأسبوع مش بالمتوسط العام.** السبت عندك ٥٥
 // شحنة والجمعة ١٨ — يعني «أقل من المتوسط» يوم الجمعة حاجة طبيعية كل أسبوع،
 // والتنبيه اللي بيرن كل جمعة بيتقفل بعد شهر.
@@ -29,15 +38,24 @@ export const DROP_THRESHOLD = 0.6;
 /** ⚠️ اليوم اللي متوسطه أقل من كده مايتقارنش — يوم بأوردر واحد بيتقلب بسهولة */
 export const MIN_AVERAGE = 2;
 
+/**
+ * ⚠️⚠️ **قبل الساعة دي بتوقيت مصر مافيش تنبيه.**
+ *
+ * الصبح بدري الرقمين بيبقوا صغيرين (١ مقابل ٢)، والفرق بينهم صدفة مش عطل.
+ * والساعة ٢ الضهر بيكون عدّى نُص يوم الشغل — كفاية إن الفرق يبقى حقيقي.
+ */
+export const MIN_HOUR = 14;
+
 export type DropOrder = {
   orderStatus: string | null;
+  /** ⚠️ **بالساعة مش باليوم بس** — المقارنة محتاجة الوقت */
   orderDate: string | null;
 };
 
 export type DropCheck = {
-  /** أوردرات النهاردة */
+  /** أوردرات النهاردة لحد دلوقتي */
   today: number;
-  /** متوسط نفس اليوم من الأسابيع اللي فاتت */
+  /** متوسط نفس اليوم من الأسابيع اللي فاتت **لحد نفس الساعة** */
   usual: number;
   /** كام أسبوع دخل في المتوسط */
   weeks: number;
@@ -45,21 +63,39 @@ export type DropCheck = {
   dropPercent: number | null;
   /** ننبّه؟ */
   alert: boolean;
+  /** لسه بدري على الحكم؟ */
+  tooEarly: boolean;
 };
 
-function dayOf(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const s = String(value).slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+/** الساعة بتوقيت مصر */
+function cairoHour(at: Date): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Cairo",
+      hour: "2-digit",
+      hour12: false,
+    }).format(at)
+  );
 }
 
-/** يوم الأسبوع من تاريخ نصي */
-function weekdayOf(day: string): number {
-  return new Date(`${day}T00:00:00Z`).getUTCDay();
+/** اليوم بتوقيت مصر `2026-08-20` */
+function cairoDay(at: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" }).format(at);
+}
+
+/** يوم الأسبوع بتوقيت مصر */
+function cairoWeekdayOf(at: Date): number {
+  return new Date(`${cairoDay(at)}T00:00:00Z`).getUTCDay();
+}
+
+function parse(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 /**
- * المبيعات النهاردة مقابل نفس اليوم من الأسابيع اللي فاتت.
+ * المبيعات النهاردة مقابل نفس اليوم من الأسابيع اللي فاتت — **لنفس الساعة**.
  *
  * `now` بيتبعت جوّه عشان الاختبار يبقى ثابت.
  */
@@ -68,32 +104,44 @@ export function checkDrop(
   now: Date,
   weeksBack = 4
 ): DropCheck {
-  const today = now.toISOString().slice(0, 10);
-  const todayWeekday = weekdayOf(today);
+  const hour = cairoHour(now);
+  const today = cairoDay(now);
+  const todayWeekday = cairoWeekdayOf(now);
 
-  const perDay = new Map<string, number>();
-  for (const o of orders) {
-    if (NOT_A_SALE.includes(String(o.orderStatus))) continue;
-    const day = dayOf(o.orderDate);
-    if (!day) continue;
-    perDay.set(day, (perDay.get(day) ?? 0) + 1);
-  }
+  const early = hour < MIN_HOUR;
 
-  // نفس يوم الأسبوع في الأسابيع اللي فاتت — من غير النهاردة
+  /**
+   * أوردرات يوم معيّن **لحد ساعة معيّنة**.
+   *
+   * ⚠️ **الساعة بتوقيت مصر** — الأوردر الساعة ١١ بالليل بتوقيت مصر بيبقى
+   * اليوم اللي بعده بالتوقيت العالمي، ولو حسبناه كده اليوم بيبان أفقر
+   * والتنبيه بيرن على وهم.
+   */
+  const countUntil = (day: string, untilHour: number): number => {
+    let n = 0;
+    for (const o of orders) {
+      if (NOT_A_SALE.includes(String(o.orderStatus))) continue;
+      const at = parse(o.orderDate);
+      if (!at) continue;
+      if (cairoDay(at) !== day) continue;
+      if (cairoHour(at) > untilHour) continue;
+      n++;
+    }
+    return n;
+  };
+
   const past: number[] = [];
   for (let w = 1; w <= weeksBack; w++) {
-    const d = new Date(now.getTime() - w * 7 * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    if (weekdayOf(d) !== todayWeekday) continue;
-    past.push(perDay.get(d) ?? 0);
+    const at = new Date(now.getTime() - w * 7 * 86_400_000);
+    if (cairoWeekdayOf(at) !== todayWeekday) continue;
+    past.push(countUntil(cairoDay(at), hour));
   }
 
-  const todayCount = perDay.get(today) ?? 0;
+  const todayCount = countUntil(today, hour);
   const usual =
     past.length > 0 ? past.reduce((s, n) => s + n, 0) / past.length : 0;
 
-  const enough = past.length >= MIN_WEEKS && usual >= MIN_AVERAGE;
+  const enough = !early && past.length >= MIN_WEEKS && usual >= MIN_AVERAGE;
   const dropPercent = enough ? Math.round((1 - todayCount / usual) * 100) : null;
 
   return {
@@ -102,6 +150,7 @@ export function checkDrop(
     weeks: past.length,
     dropPercent,
     alert: enough && todayCount < usual * (1 - DROP_THRESHOLD),
+    tooEarly: early,
   };
 }
 
@@ -114,7 +163,7 @@ export function checkDrop(
 export function dropMessage(check: DropCheck, day: string): string {
   return [
     "المبيعات واقعة النهاردة",
-    `${check.today} أوردر، والمعتاد يوم ${day} حوالي ${check.usual}`,
+    `${check.today} أوردر، والمعتاد يوم ${day} في نفس الوقت حوالي ${check.usual}`,
     "ده بيحصل عادة لما الموقع يقع، أو الإعلان يقف، أو المزامنة تتعطّل",
   ].join("\n");
 }

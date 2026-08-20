@@ -4,19 +4,23 @@ import {
   dropMessage,
   MIN_WEEKS,
   MIN_AVERAGE,
+  MIN_HOUR,
   type DropOrder,
 } from "./drop-alert";
 
-// ٢٠ أغسطس ٢٠٢٦ — خميس
-const NOW = new Date("2026-08-20T18:00:00Z");
+// ٢٠ أغسطس ٢٠٢٦ — خميس، الساعة ٦ مساءً بتوقيت مصر (١٥:٠٠ عالمي في الصيف)
+const NOW = new Date("2026-08-20T15:00:00Z");
+/** الساعة ٣ الفجر بتوقيت مصر — الوقت اللي التنبيه الغلط رن فيه */
+const DAWN = new Date("2026-08-20T00:47:00Z");
+
 const dayBack = (n: number) =>
   new Date(NOW.getTime() - n * 86_400_000).toISOString().slice(0, 10);
 
-/** أوردرات في يوم معيّن */
+/** أوردرات في يوم معيّن، الساعة ١٠ صباحًا بتوقيت مصر */
 function on(day: string, count: number, status = "delivered"): DropOrder[] {
   return Array.from({ length: count }, () => ({
     orderStatus: status,
-    orderDate: `${day}T12:00:00Z`,
+    orderDate: `${day}T07:00:00Z`,
   }));
 }
 
@@ -38,8 +42,31 @@ describe("حسّاس العطل", () => {
     expect(c.alert).toBe(false);
   });
 
+  it("⚠️⚠️ اليوم اللي لسه بادئ مش يوم واقع — مافيش تنبيه بالليل ولا الفجر", () => {
+    // نفس الداتا بالظبط اللي بتنبّه الساعة ٦ مساءً
+    const orders = [...pastWeeks(10), ...on(dayBack(0), 0)];
+    const c = checkDrop(orders, DAWN);
+    expect(c.tooEarly).toBe(true);
+    expect(c.alert).toBe(false);
+    expect(c.dropPercent).toBeNull();
+  });
+
+  it("⚠️ المقارنة لنفس الساعة — اللي بيتباع بالليل مايتحسبش على النهاردة", () => {
+    // الأسابيع اللي فاتت: ٥ بدري و٥ بالليل. النهاردة ٤ بدري.
+    // لو حسبنا اليوم كله فات، «المعتاد» يبقى ١٠ والنهاردة ٤ = تنبيه غلط.
+    const past = [7, 14, 21, 28].flatMap((d) => [
+      ...on(dayBack(d), 5),
+      ...Array.from({ length: 5 }, () => ({
+        orderStatus: "delivered",
+        orderDate: `${dayBack(d)}T20:00:00Z`,
+      })),
+    ]);
+    const c = checkDrop([...past, ...on(dayBack(0), 4)], NOW);
+    expect(c.usual).toBe(5);
+    expect(c.alert).toBe(false);
+  });
+
   it("⚠️ المقارنة بنفس اليوم من الأسبوع مش بالمتوسط العام", () => {
-    // أيام تانية مليانة، ونفس اليوم ضعيف دايمًا
     const others = [1, 2, 3].flatMap((d) => on(dayBack(d), 50));
     const c = checkDrop([...others, ...pastWeeks(3), ...on(dayBack(0), 3)], NOW);
     expect(c.usual).toBe(3);
@@ -90,5 +117,9 @@ describe("حسّاس العطل", () => {
     expect(text).toContain("الخميس");
     expect(text).not.toContain("لازم");
     expect(text).not.toContain("اعمل");
+  });
+
+  it("الساعة الفاصلة معقولة — بعد نُص يوم الشغل", () => {
+    expect(MIN_HOUR).toBeGreaterThanOrEqual(12);
   });
 });

@@ -62,3 +62,14 @@ describe("المحافظة ← المنطقة", () => {
     expect(zoneOfGovernorate(null)).toBeNull();
   });
 });
+
+describe("⚠️ الأرقام العربي في اسم المحافظة", () => {
+  it("«٦ أكتوبر» بالأرقام العربي بتوصل لنفس المنطقة", () => {
+    expect(normalizeGovernorate("٦ أكتوبر")).toBe("6اكتوبر");
+    expect(normalizeGovernorate("٦ أكتوبر")).toBe(normalizeGovernorate("6 اكتوبر"));
+  });
+
+  it("والتشكيل لسه بيتمسح", () => {
+    expect(normalizeGovernorate("القَاهِرَة")).toBe(normalizeGovernorate("القاهرة"));
+  });
+});

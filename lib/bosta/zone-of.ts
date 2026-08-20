@@ -13,12 +13,21 @@
 
 import type { PricingZone } from "./pricing";
 
-/** بيوحّد الاسم عشان المقارنة تنفع */
+/**
+ * بيوحّد الاسم عشان المقارنة تنفع.
+ *
+ * ⚠️⚠️ **الأرقام العربي بتتحوّل الأول قبل مسح التشكيل.**
+ *
+ * مدى التشكيل `U+064B`–`U+0670` **جوّاه الأرقام العربي** (`٠` = `U+0660`)،
+ * فالمدى الواسع كان بيمسح «٦» من «٦ أكتوبر» وتبقى «اكتوبر» — ومايطابقش
+ * المفتاح `6october`، فالمحافظة ترجع «مش معروفة» والشحنة تفضل من غير سعر.
+ */
 export function normalizeGovernorate(raw: string | null | undefined): string {
   return String(raw ?? "")
     .toLowerCase()
     .trim()
-    .replace(/[ً-ٰٟ]/g, "")
+    .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
+    .replace(/[ً-ْٰ]/g, "")
     .replace(/[إأآا]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/[ةه]/g, "ه")
