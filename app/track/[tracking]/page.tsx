@@ -8,6 +8,7 @@ import { UI } from "@/lib/tracking-copy";
 import { maskedTail } from "@/lib/phone-gate";
 import { TrackGate } from "@/components/TrackGate";
 import { openDetails } from "./actions";
+import { deliveryEta, etaCopy } from "@/lib/delivery-eta";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ export default async function TrackPage({
   const db = createAdminClient();
   const query = db
     .from("orders")
-    .select("order_status, tenants(name, slug), customers(phone)");
+    .select("tenant_id, order_status, tenants(name, slug), customers(phone)");
   const { data } = await (
     looksLikeOrderId(tracking)
       ? query.eq("id", tracking)
@@ -53,6 +54,7 @@ export default async function TrackPage({
     .maybeSingle();
 
   const row = data as {
+    tenant_id: string | null;
     order_status: string | null;
     tenants: { name: string | null; slug: string | null } | null;
     customers: { phone: string | null } | null;
@@ -63,6 +65,35 @@ export default async function TrackPage({
   const store = storeWordmark(row?.tenants?.name, row?.tenants?.slug);
   const hint = maskedTail(row?.customers?.phone);
   const view = row ? trackView(row.order_status) : null;
+
+  /**
+   * «بيوصل خلال كام يوم» — من شحنات **المتجر ده** اللي وصلت فعلًا.
+   *
+   * ⚠️⚠️ **الوعد من الشريحة ٧٥٪ مش من الوسيط.** الوسيط وعد بيتكسر نُص
+   * الوقت بالتعريف، والعميل اللي اتوعد وماجاش في الميعاد بيرفض الاستلام.
+   *
+   * ⚠️ **وبيتحسب لكل بيزنس لوحده** — سرعة مينيز مش سرعة أي متجر تاني.
+   */
+  const eta = await (async () => {
+    if (!row?.tenant_id || !view || view.finished) return null;
+    const { data: past } = await db
+      .from("orders")
+      .select("bosta_created_at, delivered_at")
+      .eq("tenant_id", row.tenant_id)
+      .eq("order_status", "delivered")
+      .not("delivered_at", "is", null)
+      .not("bosta_created_at", "is", null)
+      .order("delivered_at", { ascending: false })
+      .limit(300);
+
+    return deliveryEta(
+      ((past ?? []) as { bosta_created_at: string; delivered_at: string }[]).map(
+        (o) => ({ shippedAt: o.bosta_created_at, deliveredAt: o.delivered_at })
+      )
+    );
+  })();
+
+  const etaText = eta ? etaCopy(eta, Boolean(view?.finished)) : null;
 
   return (
     <div className="mx-auto max-w-md px-6 py-16" dir="ltr">
@@ -88,6 +119,11 @@ export default async function TrackPage({
             {view.title}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-gray-600">{view.now}</p>
+
+          {/* ⚠️ مافيش رقم = مافيش سطر — مش رقم افتراضي */}
+          {etaText && (
+            <p className="mt-1 text-sm leading-relaxed text-gray-400">{etaText}</p>
+          )}
 
           <div className="mt-10 space-y-4">
             {view.steps.map((s) => {
