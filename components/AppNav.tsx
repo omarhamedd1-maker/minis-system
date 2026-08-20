@@ -27,6 +27,7 @@ const ITEMS: Item[] = [
       { href: "/orders/risky", label: "محتاجة نظرة", perm: "orders.view" },
       { href: "/orders/rescue", label: "اتصل قبل ما ترجع", perm: "orders.view" },
       { href: "/orders/health", label: "صحة التشغيل", perm: "finance.dashboard" },
+      { href: "/orders/map", label: "بتبيع فين", perm: "finance.dashboard" },
       { href: "/orders/returns", label: "المرتجعات", perm: "orders.view" },
       { href: "/orders/carts", label: "سلات متروكة", perm: "orders.view" },
       { href: "/orders/followup", label: "اسأل بعد التسليم", perm: "orders.view" },
