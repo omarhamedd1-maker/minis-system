@@ -28,7 +28,7 @@ export default async function HealthPage() {
     );
   }
 
-  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts } = r;
+  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts, codGap } = r;
   const verdict = discountVerdict(discounts);
 
   return (
@@ -323,6 +323,50 @@ export default async function HealthPage() {
                       " — بس الرجوع بيزيد مع السعر الأعلى"}
                   </p>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/*
+        رقمنا مقابل رقم بوسطة.
+
+        ⚠️⚠️ **مافيش تصليح تلقائي بقصد** — أحيانًا رقمنا هو الغلط، وأحيانًا
+        الاتنين صح (شحنة جزئية)، وبوسطة بتحدّد عدد مرات تعديل التحصيل
+        فالأوتوماتيك بياكلهم.
+      */}
+      {codGap.rows.length > 0 && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">
+              التحصيل مختلف عن بوسطة
+            </h2>
+            <span className="text-xs text-gray-500">
+              {codGap.rows.length} أوردر · {formatMoney(codGap.total)}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-gray-400">
+            الرقم اللي بوسطة هتحصّله مختلف عن إجمالي الأوردر عندنا.
+            {codGap.fixable > 0
+              ? ` ${codGap.fixable} منهم لسه في السكة وينفع يتظبطوا.`
+              : " كلهم خلصوا خلاص، فالفرق للعلم بس."}
+          </p>
+          <div className="mt-3 space-y-1.5">
+            {codGap.rows.slice(0, 10).map((g) => (
+              <div
+                key={g.orderNumber}
+                className="flex items-baseline justify-between gap-3 text-sm"
+              >
+                <span className="text-gray-900">#{g.orderNumber}</span>
+                <span className="tabular-nums text-xs text-gray-500">
+                  عندنا {formatMoney(g.ours)} · بوسطة {formatMoney(g.bosta)}
+                  {" · "}
+                  <span className={g.diff > 0 ? "text-emerald-600" : "text-red-600"}>
+                    {g.diff > 0 ? "+" : ""}
+                    {formatMoney(g.diff)}
+                  </span>
+                </span>
               </div>
             ))}
           </div>

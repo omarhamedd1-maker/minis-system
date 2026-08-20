@@ -14,6 +14,7 @@ import { customerReturnRates, productReturnRates, type RateReport } from "@/lib/
 import { priceTests, type PriceTest } from "@/lib/price-tests";
 import { shippingByDay, type TimingReport } from "@/lib/shipping-timing";
 import { discountImpact, type DiscountReport } from "@/lib/discount-impact";
+import { codGaps, type GapReport } from "@/lib/cod-gap";
 import { fetchShopifyOrders } from "@/lib/shopify/orders";
 import { loadTenantCredentials } from "@/lib/tenant-settings";
 
@@ -41,6 +42,8 @@ export type HealthReport =
       timing: TimingReport;
       /** الخصم كسّب ولا خسّر */
       discounts: DiscountReport;
+      /** رقمنا مقابل رقم بوسطة */
+      codGap: GapReport;
     }
   | { ok: false; error: string };
 
@@ -96,6 +99,31 @@ export async function loadHealth(): Promise<HealthReport> {
     ),
     // ⚠️ **الإجمالي هنا هو اللي العميل دفعه** (بنود − خصم + شحن) مش قيمة
     // البضاعة — الفرق ده هو الفرق بين «الخصم بيزوّد الأوردر» و«بياكله».
+    codGap: codGaps(
+      rows.map((o) => {
+        const r = o as unknown as {
+          order_number: string | null;
+          order_status: string | null;
+          bosta_cod: number | null;
+          bosta_collected: boolean | null;
+          discount: number | null;
+          shipping_price: number | null;
+          order_items: { quantity: number; sale_price_at_order: number }[] | null;
+        };
+        return {
+          orderNumber: r.order_number,
+          orderStatus: r.order_status,
+          bostaCod: r.bosta_cod,
+          bostaCollected: r.bosta_collected,
+          itemsTotal: (r.order_items ?? []).reduce(
+            (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
+            0
+          ),
+          discount: Number(r.discount ?? 0),
+          shipping: Number(r.shipping_price ?? 0),
+        };
+      })
+    ),
     discounts: discountImpact(
       rows.map((o) => ({
         orderStatus: o.order_status,

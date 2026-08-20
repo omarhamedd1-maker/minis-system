@@ -8,6 +8,7 @@ import {
   untrackedSellers,
   WINDOW_DAYS,
 } from "@/lib/stock-runway";
+import { deadStock, frozenValue, withoutCost, DEAD_AFTER_DAYS } from "@/lib/dead-stock";
 import { ImportShopifyProducts } from "@/components/ImportShopifyProducts";
 import { importShopifyProducts } from "./actions";
 
@@ -155,6 +156,47 @@ export default async function ProductsPage({
   const lowStock = runningOut(runway);
   const untracked = untrackedSellers(runway);
 
+  // ⚠️ **البضاعة الميتة محتاجة تاريخ أطول من الاستعلام اللي فوق** — ده
+  // بيجيب آخر بيعة لكل شكل بس، مش كل البيعات.
+  const lastSales =
+    (
+      await supabase
+        .from("orders")
+        .select("order_status, order_date, order_items(variant_id)")
+        .gte("order_date", new Date(now.getTime() - 400 * 86_400_000).toISOString())
+        .limit(4000)
+        .overrideTypes<
+          {
+            order_status: string | null;
+            order_date: string | null;
+            order_items: { variant_id: string | null }[] | null;
+          }[]
+        >()
+    ).data ?? [];
+
+  const dead = deadStock(
+    visibleProducts.flatMap((p) =>
+      p.product_variants.map((v) => ({
+        id: v.id,
+        name:
+          (p.name_ar || p.name || "منتج") +
+          (String(v.variant_name ?? "").trim()
+            ? " — " + String(v.variant_name).trim()
+            : ""),
+        onHand: Number(v.quantity_on_hand ?? 0),
+        costPrice: Number(v.cost_price ?? 0),
+      }))
+    ),
+    lastSales.flatMap((o) =>
+      (o.order_items ?? []).map((i) => ({
+        variantId: i.variant_id,
+        at: o.order_date,
+        orderStatus: o.order_status,
+      }))
+    ),
+    now
+  );
+
   // فلتر "الناقص" — الأشكال اللي تكلفتها صفر، اللي الجلب من شوبيفاي بيوديك لها
   const costFiltered = onlyMissingCost
     ? visibleProducts.filter((p) =>
@@ -234,6 +276,47 @@ export default async function ProductsPage({
           {untracked.slice(0, 3).map((r) => r.name).join("، ")}
           {untracked.length > 3 ? " وغيرهم" : ""}. يعني الرقم مش بيتحدّث،
           فتنبيه النفاد مابيشتغلش عليهم.
+        </div>
+      )}
+
+      {/*
+        بضاعة ميتة — فلوس واقفة على الرف.
+
+        ⚠️ **القيمة بالتكلفة مش بسعر البيع** — اللي متجمّد هو اللي دفعته.
+      */}
+      {dead.length > 0 && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">
+              بضاعة واقفة من {DEAD_AFTER_DAYS} يوم
+            </h2>
+            <span className="text-xs text-gray-500">
+              {frozenValue(dead) > 0 &&
+                `${formatMoney(frozenValue(dead))} متجمّدة`}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-gray-400">
+            القيمة بالتكلفة اللي دفعتها، مش بسعر البيع.
+            {withoutCost(dead) > 0 &&
+              ` و${withoutCost(dead)} منهم تكلفتهم مش متسجّلة، فالرقم أقل من الحقيقة.`}
+          </p>
+          <div className="mt-3 space-y-1.5">
+            {dead.slice(0, 8).map((r) => (
+              <div
+                key={r.id}
+                className="flex items-baseline justify-between gap-3 text-sm"
+              >
+                <span className="min-w-0 flex-1 truncate text-gray-900">
+                  {r.name}
+                </span>
+                <span className="shrink-0 tabular-nums text-xs text-gray-500">
+                  {r.value !== null ? formatMoney(r.value) : `${r.onHand} قطعة`}
+                  {" · "}
+                  {r.days === null ? "عمره ما اتباع" : `${r.days} يوم`}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

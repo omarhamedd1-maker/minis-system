@@ -9,8 +9,11 @@ import {
   saveShopifyApp,
   disconnectShopify,
   saveFlatShipping,
+  checkIntegrations,
+  saveBackupGroup,
 } from "./actions";
 import { EnablePush } from "@/components/EnablePush";
+import { IntegrationHealth } from "@/components/IntegrationHealth";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { headers } from "next/headers";
 import { ImportHistory } from "@/components/ImportHistory";
@@ -69,6 +72,19 @@ export default async function SettingsPage({
     );
   })();
 
+  // ⚠️ قراية لوحدها — الفشل هنا مايوقّعش صفحة الإعدادات كلها
+  const backup = await (async () => {
+    const { data, error } = await db
+      .from("tenant_credentials")
+      .select("telegram_bot_token, telegram_chat_id")
+      .eq("tenant_id", me.tenantId)
+      .maybeSingle();
+    if (error) return { token: null, chat: null };
+    const row = data as { telegram_bot_token: string | null; telegram_chat_id: string | null } | null;
+    return { token: row?.telegram_bot_token ?? null, chat: row?.telegram_chat_id ?? null };
+  })();
+  const hasBackup = Boolean(backup.token && backup.chat);
+
   const importRuns = (await listImportRuns(db, me.tenantId)).map((run) => ({
     id: run.id,
     kind: run.kind,
@@ -126,6 +142,8 @@ export default async function SettingsPage({
           {error}
         </p>
       )}
+
+      <IntegrationHealth check={checkIntegrations} />
 
       {/* ===== شوبيفاي — ضغطة واحدة ===== */}
       <div className="rounded-xl bg-white p-5 shadow-sm">
@@ -354,6 +372,48 @@ export default async function SettingsPage({
             <CopyLink url={bostaHook} />
           </div>
         )}
+      </div>
+
+      {/*
+        النسخة الاحتياطية.
+
+        ⚠️⚠️ **النسخة اللي في نفس المكان مش نسخة.** لو الملفات اتحفظت جوّه
+        نفس الحساب، الحاجة اللي هتوديه هتودّيها معاها — عشان كده بتروح
+        على جروب تليجرام برّه السيستم خالص.
+      */}
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-gray-900">النسخة الاحتياطية</h2>
+          <Badge on={hasBackup} />
+        </div>
+        <p className="mt-1 text-xs text-gray-400">
+          كل يوم بيتبعت ملف CSV لكل جدول على جروب تليجرام — أوردرات وعملاء
+          ومنتجات ومصاريف. الملفات دي بتتفتح بإيدك من غير السيستم ده.
+        </p>
+
+        <form action={saveBackupGroup} className="mt-3 space-y-2">
+          <input
+            name="telegram_bot_token"
+            defaultValue={backup.token ?? ""}
+            placeholder="توكن البوت"
+            className={input}
+            dir="ltr"
+          />
+          <input
+            name="telegram_chat_id"
+            defaultValue={backup.chat ?? ""}
+            placeholder="رقم الجروب (بيبدأ بـ‎-100)"
+            className={input}
+            dir="ltr"
+          />
+          <button className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+            {hasBackup ? "غيّر الجروب" : "شغّل النسخة"}
+          </button>
+          <p className="text-[11px] text-gray-400">
+            البوت لازم يكون عضو في الجروب — من غير كده تليجرام بيرفض البعت
+            برسالة شكلها كأن التوكن غلط.
+          </p>
+        </form>
       </div>
 
       {/* ===== إشعارات الموبايل ===== */}
