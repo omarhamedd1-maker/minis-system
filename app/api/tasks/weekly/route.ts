@@ -158,7 +158,7 @@ export async function GET(request: Request) {
         continue;
       }
 
-      await notifyAll(db, tenantId, text, { tag: "weekly" });
+      await notifyAll(db, tenantId, text, { tag: `weekly-${thisEnd}` });
       out.push({ tenantId, sent: true });
     } catch (e) {
       // ⚠️ بيزنس واحد وقع مايوقّفش الباقي

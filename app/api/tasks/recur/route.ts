@@ -25,6 +25,7 @@ import {
   driftMessage,
   WINDOW_DAYS as DRIFT_DAYS,
 } from "@/lib/product-drift";
+import { seasonAlerts, seasonMessage } from "@/lib/seasons";
 import { notifyAll } from "@/lib/push/notify";
 import { WEEKDAYS } from "@/lib/shipping-timing";
 
@@ -52,6 +53,8 @@ export async function GET(request: Request) {
     drop?: { today: number; usual: number } | null;
     /** منتجات نسبة رجوعها قفزت عن نفسها */
     drift?: { name: string; before: number; now: number }[] | null;
+    /** مواسم قرّبت — شهر أو أسبوع */
+    seasons?: { name: string; daysAway: number }[] | null;
     /**
      * نتيجة استيراد أوردرات شوبيفاي للبيزنس ده.
      *
@@ -288,7 +291,34 @@ export async function GET(request: Request) {
           // التنبيه بس هو اللي مايبانش
         }
 
-        results[tenantId] = { recur, remind, prepaid, shopify, drop, drift };
+        // ⚠️ **المواسم** — تنبيه قبل كل مناسبة بشهر وبأسبوع.
+        //
+        // ⚠️ **والتاج بالموسم وباليوم** — من غيره التنبيه بيتكرر كل ربع
+        // ساعة طول اليوم، والشباك ٣ أيام فيبقى ٢٨٨ مرة.
+        let seasons: Ok["seasons"] = null;
+        try {
+          const due = seasonAlerts(now);
+          if (due.length > 0) {
+            seasons = due.map((d) => ({
+              name: d.season.name,
+              daysAway: d.daysAway,
+            }));
+            if (!dry) {
+              for (const d of due) {
+                await notifyAll(
+                  db,
+                  tenantId,
+                  seasonMessage(d.season, d.daysAway),
+                  { tag: `season-${d.season.key}-${d.daysAway}` }
+                );
+              }
+            }
+          }
+        } catch {
+          // التنبيه بس هو اللي مايبانش
+        }
+
+        results[tenantId] = { recur, remind, prepaid, shopify, drop, drift, seasons };
       } catch (e) {
         // بيزنس وقع؟ الباقي يكمّل
         results[tenantId] = {
