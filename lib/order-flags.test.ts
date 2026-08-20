@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { orderFlags, SHORT_ADDRESS, BIG_ORDER, type FlagOrder } from "./order-flags";
+import {
+  orderFlags,
+  worthChecking,
+  flagLine,
+  SHORT_ADDRESS,
+  BIG_ORDER,
+  type FlagOrder,
+} from "./order-flags";
 
 const good = "٢٧ شارع مصدق، الدقي، عمارة 12 الدور 3 شقة 5";
 
@@ -95,5 +102,65 @@ describe("علامات الأوردر", () => {
         address: good,
       })
     ).not.toThrow();
+  });
+});
+
+describe("الأوردر المشبوه", () => {
+  const base = {
+    orderStatus: "confirmed",
+    total: 500,
+    address: "٩ شارع المعادي، الدور التالت، شقة ٥",
+  };
+
+  it("الإلغاء المتكرر بيتعلّم عليه", () => {
+    const f = orderFlags({ ...base, previousCancels: 2 });
+    expect(f.map((x) => x.key)).toContain("canceller");
+  });
+
+  it("⚠️ إلغاء واحد مش علامة — الإلغاء أرخص من الرجوع", () => {
+    const f = orderFlags({ ...base, previousCancels: 1 });
+    expect(f.map((x) => x.key)).not.toContain("canceller");
+  });
+
+  it("نفس التليفون مرتين في اليوم", () => {
+    const f = orderFlags({ ...base, sameDayOthers: 1 });
+    expect(f.find((x) => x.key === "same_day")?.text).toContain("2 أوردرات");
+  });
+
+  it("⚠️ العنوان القصير لوحده مش أوردر مشبوه", () => {
+    const f = orderFlags({ ...base, address: "المعادي ٩" });
+    expect(f).toHaveLength(1);
+    expect(worthChecking(f)).toBe(false);
+  });
+
+  it("⚠️ علامة تاريخ واحدة كفاية", () => {
+    const f = orderFlags({ ...base, previousReturns: 1, previousOrders: 3 });
+    expect(f).toHaveLength(1);
+    expect(worthChecking(f)).toBe(true);
+  });
+
+  it("علامتين شكليتين كفاية", () => {
+    const f = orderFlags({ ...base, address: "المعادي", total: 5000 });
+    expect(worthChecking(f)).toBe(true);
+  });
+
+  it("الأوردر النضيف مايستاهلش وقفة", () => {
+    expect(worthChecking(orderFlags({ ...base, previousOrders: 2 }))).toBe(false);
+  });
+
+  it("السطر بيجمع العلامات", () => {
+    const f = orderFlags({ ...base, previousReturns: 1, sameDayOthers: 1 });
+    expect(flagLine(f)).toContain(" · ");
+  });
+
+  it("⚠️ بعد الشحن مافيش علامات خالص", () => {
+    const f = orderFlags({
+      ...base,
+      orderStatus: "shipped",
+      previousReturns: 5,
+      sameDayOthers: 3,
+    });
+    expect(f).toEqual([]);
+    expect(worthChecking(f)).toBe(false);
   });
 });
