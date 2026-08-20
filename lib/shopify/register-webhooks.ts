@@ -109,6 +109,39 @@ export type RegisterResult = {
  * بيفضل شغّال باللفة الدورية كل ربع ساعة — الفرق إن الأوردر بيتأخر مش
  * إنه بيضيع. عشان كده الدالة دي **مابترميش**، بترجّع اللي حصل.
  */
+/**
+ * بيقرا الويب هوكس الموجودة **من غير ما يعمل حاجة**.
+ *
+ * ⚠️⚠️ **الفحص لازم يقرا بس.** `registerShopifyWebhooks` بتسجّل الناقص —
+ * ومينفعش شاشة بتقولك «إيه الحالة» تغيّر الحالة وهي بتقيسها.
+ */
+export async function listShopifyWebhooks(opts: {
+  shop: string;
+  token: string;
+  fetchImpl?: typeof fetch;
+}): Promise<ExistingHook[] | null> {
+  try {
+    const data: {
+      webhookSubscriptions?: {
+        nodes?: { topic?: string; endpoint?: { callbackUrl?: string } }[];
+      };
+    } = await shopifyGraphQL(
+      opts.shop,
+      opts.token,
+      LIST_QUERY,
+      {},
+      opts.fetchImpl
+    );
+    return (data.webhookSubscriptions?.nodes ?? []).map((n) => ({
+      topic: String(n.topic ?? ""),
+      callbackUrl: n.endpoint?.callbackUrl ?? null,
+    }));
+  } catch {
+    // ⚠️ `null` معناها **مانعرفش** — مش «مافيش ويبهوكس»
+    return null;
+  }
+}
+
 export async function registerShopifyWebhooks(opts: {
   shop: string;
   token: string;

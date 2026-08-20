@@ -19,6 +19,10 @@ import { readShopifyApp } from "@/lib/shopify/app";
 import { registerShopifyWebhooks } from "@/lib/shopify/register-webhooks";
 import { headers } from "next/headers";
 import { randomUUID } from "node:crypto";
+import { listShopifyWebhooks } from "@/lib/shopify/register-webhooks";
+import { readSyncHealth } from "@/lib/bosta/sync-runs";
+import { integrationHealth, type LinkCard } from "@/lib/integration-health";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
 // مابيتنفذش، فمانحتاجش else في كل مكان
@@ -343,4 +347,123 @@ export async function disconnectShopify() {
   await logActivity(me, "settings.shopify", "فصل ربط متجر شوبيفاي");
   revalidatePath("/settings");
   back("الربط اتفصل", true);
+}
+
+/**
+ * بيسأل شوبيفاي وبوسطة **دلوقتي** ويرجّع حالتهم.
+ *
+ * ⚠️⚠️ **بالطلب مش لوحده.** لو الفحص اتعمل مع كل فتحة للصفحة، الصفحة
+ * هتستنى الطرف الواقع لحد ما يقطع الاتصال — يعني الوصلة الواقعة تعطّل
+ * الشاشة اللي المفروض تصلّحها.
+ *
+ * ⚠️ **وبيقرا بس** — مافيش تسجيل ويبهوكس ولا حفظ مفاتيح جوّه فحص.
+ */
+export async function checkIntegrations(): Promise<LinkCard[]> {
+  const me = await requirePermission("admin.settings");
+  const db = createAdminClient();
+  const creds = await loadTenantCredentials(db, me.tenantId);
+
+  const shopLinked = Boolean(creds.shopifyShop && creds.shopifyAccessToken);
+  const bostaLinked = Boolean(creds.bostaApiKey);
+
+  const [shopProbe, hooks, bostaProbe, sync, lastOrder] = await Promise.all([
+    shopLinked
+      ? testShopifyToken(creds.shopifyShop!, creds.shopifyAccessToken!)
+      : null,
+    shopLinked
+      ? listShopifyWebhooks({
+          shop: creds.shopifyShop!,
+          token: creds.shopifyAccessToken!,
+        })
+      : null,
+    bostaLinked ? testConnection(creds.bostaApiKey!) : null,
+    readSyncHealth(db, me.tenantId),
+    db
+      .from("orders")
+      .select("order_date")
+      .eq("tenant_id", me.tenantId)
+      .order("order_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  return integrationHealth(
+    {
+      shopify: {
+        linked: shopLinked,
+        probe: shopProbe
+          ? shopProbe.ok
+            ? { ok: true }
+            : { ok: false, error: shopProbe.error }
+          : null,
+        webhooks: hooks === null ? null : hooks.length,
+        lastOrderAt:
+          (lastOrder.data as { order_date?: string } | null)?.order_date ?? null,
+      },
+      bosta: {
+        linked: bostaLinked,
+        probe: bostaProbe,
+        // ⚠️ «مش عارفين» (الجدول لسه مااتعملش) مش نفس «ولا مرة»
+        lastSyncAt:
+          sync.state === "unknown" ? new Date().toISOString() : (sync.lastRun?.created_at ?? null),
+        lastSyncFailed: sync.state === "failing",
+      },
+    },
+    new Date()
+  );
+}
+
+/**
+ * جروب النسخة الاحتياطية.
+ *
+ * ⚠️⚠️ **البوت لازم يكون عضو في الجروب** — التوكن لوحده مابيبعتش، وتليجرام
+ * بيرد ساعتها بـ`chat not found` اللي شكلها كأن التوكن غلط وهو صح. عشان
+ * كده بنجرّب بعتة حقيقية قبل الحفظ بدل ما نكتشف ده بعد شهر من نسخ ماراحتش.
+ */
+export async function saveBackupGroup(formData: FormData) {
+  const me = await requirePermission("admin.settings");
+  const token = String(formData.get("telegram_bot_token") ?? "").trim();
+  const chat = String(formData.get("telegram_chat_id") ?? "").trim();
+
+  const db = createAdminClient();
+
+  // الاتنين فاضيين = إيقاف النسخة
+  if (!token && !chat) {
+    const { error } = await db
+      .from("tenant_credentials")
+      .update({
+        telegram_bot_token: null,
+        telegram_chat_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("tenant_id", me.tenantId);
+    if (error) back("معرفناش نحفظ: " + error.message);
+    await logActivity(me, "settings.backup", "وقّف النسخة الاحتياطية");
+    revalidatePath("/settings");
+    back("النسخة الاحتياطية اتوقفت", true);
+  }
+
+  if (!token || !chat) back("محتاج توكن البوت ورقم الجروب الاتنين");
+
+  const test = await sendTelegramMessage(
+    token,
+    chat,
+    "تمام — النسخة الاحتياطية هتيجي على الجروب ده كل يوم."
+  );
+  if (!test.ok) back("تليجرام رفض: " + (test.error ?? "مانفعش"));
+
+  const { error } = await db
+    .from("tenant_credentials")
+    .update({
+      telegram_bot_token: token,
+      telegram_chat_id: chat,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) back("معرفناش نحفظ: " + error.message);
+
+  await logActivity(me, "settings.backup", "ظبّط جروب النسخة الاحتياطية");
+  revalidatePath("/settings");
+  back("تمام — بعتنا رسالة تجربة على الجروب", true);
 }
