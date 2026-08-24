@@ -115,10 +115,10 @@ export function LiveMoneyCards({
         label="المبيعات"
         className="col-span-2"
         hero
-        hint={`الإجمالي بالملغي والمرتجع: ${money(s.grossSales)}`}
+        hint={`من غير الملغي والمرتجع: ${money(s.sales)}`}
       >
         <span className="text-gray-900">
-          <CountUp key={key} baseline={base} value={s.sales} format={money} />
+          <CountUp key={key} baseline={base} value={s.grossSales} format={money} />
         </span>
       </Card>
       <Card label="عدد الأوردرات">
