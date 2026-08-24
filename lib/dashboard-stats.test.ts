@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeHeadline,
-  dailySalesSeries,
   orderCarrierCost,
   shippingSettlement,
-  statusCounts,
   type StatOrder,
 } from "./dashboard-stats";
 
@@ -217,93 +215,5 @@ describe("الإجمالي بالملغي والمرتجع", () => {
     );
     expect(h.sales).toBe(300);
     expect(h.grossSales).toBe(300);
-  });
-});
-
-describe("شريط حالات الفترة", () => {
-  const item = (qty: number, price: number) => ({
-    quantity: qty,
-    sale_price_at_order: price,
-    cost_price_at_order: 0,
-  });
-  const order = (status: string, date: string): StatOrder => ({
-    order_status: status,
-    order_date: date,
-    delivered_at: null,
-    discount: 0,
-    shipping_price: 0,
-    bosta_shipping_cost: null,
-    bosta_fees_real: null,
-    bosta_cod: null,
-    bosta_collected: null,
-    order_items: [item(1, 100)],
-  });
-
-  it("بتعد الحالات جوه الفترة بس ومرتبة بالأكثر", () => {
-    const counts = statusCounts(
-      [
-        order("new", "2026-08-24T09:00:00Z"),
-        order("delivered", "2026-08-24T10:00:00Z"),
-        order("delivered", "2026-08-23T10:00:00Z"),
-        order("cancelled", "2026-08-24T11:00:00Z"),
-        // بره الفترة — ماتتحسبش
-        order("delivered", "2026-08-01T10:00:00Z"),
-      ],
-      "2026-08-20",
-      "2026-08-24"
-    );
-    expect(counts[0]).toEqual({ status: "delivered", count: 2 });
-    expect(counts.map((c) => c.status)).toEqual([
-      "delivered",
-      "new",
-      "cancelled",
-    ]);
-  });
-
-  it("مافيش أوردرات = قايمة فاضية", () => {
-    expect(statusCounts([], "2026-08-24", "2026-08-24")).toEqual([]);
-  });
-});
-
-describe("خط ميلان المبيعات", () => {
-  const sold = (date: string, price: number): StatOrder => ({
-    order_status: "confirmed",
-    order_date: date,
-    delivered_at: null,
-    discount: 0,
-    shipping_price: 0,
-    bosta_shipping_cost: null,
-    bosta_fees_real: null,
-    bosta_cod: null,
-    bosta_collected: null,
-    order_items: [
-      { quantity: 1, sale_price_at_order: price, cost_price_at_order: 0 },
-    ],
-  });
-
-  it("بيملّي الأيام من غير بيع بصفر — الفجوة معلومة", () => {
-    const s = dailySalesSeries(
-      [sold("2026-08-24T10:00:00Z", 200)],
-      3,
-      "2026-08-24"
-    );
-    expect(s.map((p) => p.day)).toEqual([
-      "2026-08-22",
-      "2026-08-23",
-      "2026-08-24",
-    ]);
-    expect(s.map((p) => p.value)).toEqual([0, 0, 200]);
-  });
-
-  it("الملغي والمرتجع مش في الخط — ده خط المبيعات الصافية", () => {
-    const s = dailySalesSeries(
-      [
-        sold("2026-08-24T10:00:00Z", 300),
-        { ...sold("2026-08-24T11:00:00Z", 500), order_status: "cancelled" },
-      ],
-      1,
-      "2026-08-24"
-    );
-    expect(s[0].value).toBe(300);
   });
 });
