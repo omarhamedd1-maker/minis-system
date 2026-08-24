@@ -41,7 +41,7 @@ export function ImportShopifyProducts({
         type="button"
         onClick={() => run(true)}
         disabled={busy}
-        className="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+        className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
       >
         {busy && !plan ? "بنجيب…" : "جيب من شوبيفاي"}
       </button>

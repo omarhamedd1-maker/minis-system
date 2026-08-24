@@ -134,7 +134,7 @@ export default async function ProductDetailsPage({
           </div>
           <button
             type="submit"
-            className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
           >
             حفظ الاسم
           </button>
@@ -269,7 +269,7 @@ export default async function ProductDetailsPage({
                       </span>
                       <button
                         type="submit"
-                        className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                       >
                         حفظ المكونات
                       </button>
@@ -346,7 +346,7 @@ export default async function ProductDetailsPage({
                     />
                     <button
                       type="submit"
-                      className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                      className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                     >
                       حفظ المخزون
                     </button>

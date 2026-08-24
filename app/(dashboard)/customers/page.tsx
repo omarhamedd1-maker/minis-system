@@ -169,7 +169,7 @@ export default async function CustomersPage({
             />
             <button
               type="submit"
-              className="rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+              className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
             >
               بحث
             </button>
@@ -193,7 +193,7 @@ export default async function CustomersPage({
             href={sortHref(key)}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               sort === key
-                ? "bg-gray-900 text-white"
+                ? "bg-primary text-white"
                 : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
             }`}
           >
@@ -269,7 +269,7 @@ export default async function CustomersPage({
                 ))}
                 <button
                   type="submit"
-                  className="mt-2 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+                  className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
                 >
                   ادمج المجموعة
                 </button>

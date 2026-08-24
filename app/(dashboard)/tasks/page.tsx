@@ -142,7 +142,7 @@ export default async function TasksPage({
             href={`/tasks?view=${v.key}`}
             className={`rounded-full px-3 py-1.5 text-xs font-medium ${
               view === v.key
-                ? "bg-gray-900 text-white"
+                ? "bg-primary text-white"
                 : "bg-white text-gray-700 shadow-sm hover:bg-gray-50"
             }`}
           >

@@ -279,7 +279,7 @@ export default async function PlatformPage({
         {/* بيتقفل وهو بيبعت — الدوستين السريعتين كانوا بيعملوا بيزنسين */}
         <SubmitOnce
           pendingLabel="بيتعمل…"
-          className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:bg-gray-300"
+          className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:bg-gray-300"
         >
           إنشاء البيزنس
         </SubmitOnce>

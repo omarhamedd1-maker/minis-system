@@ -35,7 +35,7 @@ export function DayPicker({
         aria-label="اختار يوم أو فترة من التقويم"
         className={`rounded-full p-1.5 shadow-sm ${
           active
-            ? "bg-gray-900 text-white"
+            ? "bg-primary text-white"
             : "bg-white text-gray-600 hover:bg-gray-100"
         }`}
       >

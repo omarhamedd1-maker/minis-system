@@ -63,7 +63,7 @@ export function ReturnPanel({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
         >
           <BostaMark className="h-4 w-4" />
           اعمل شحنة مرتجع من العميل
@@ -135,7 +135,7 @@ export function ReturnPanel({
           <button
             type="submit"
             disabled={totalReturning === 0}
-            className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
+            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
           >
             حفظ ({totalReturning})
           </button>
@@ -156,7 +156,7 @@ export function ReturnPanel({
               )
                 e.preventDefault();
             }}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
           >
             <BostaMark className="h-4 w-4" />
             اطلب الشحنة من بوسطة

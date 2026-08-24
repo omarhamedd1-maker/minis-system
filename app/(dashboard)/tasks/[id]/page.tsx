@@ -347,7 +347,7 @@ export default async function TaskPage({
             />
             <button
               type="submit"
-              className="shrink-0 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               أضف
             </button>
@@ -435,7 +435,7 @@ export default async function TaskPage({
             />
             <button
               type="submit"
-              className="shrink-0 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               ارفع
             </button>
@@ -477,7 +477,7 @@ export default async function TaskPage({
             />
             <button
               type="submit"
-              className="shrink-0 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               أضف
             </button>
@@ -522,7 +522,7 @@ export default async function TaskPage({
                   {members.map((m) => (
                     <label
                       key={m.id}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-gray-900 has-checked:text-white"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-primary has-checked:text-white"
                     >
                       <input
                         type="checkbox"
@@ -538,7 +538,7 @@ export default async function TaskPage({
               </fieldset>
               <button
                 type="submit"
-                className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
               >
                 اسند
               </button>
@@ -597,7 +597,7 @@ export default async function TaskPage({
 
             <button
               type="submit"
-              className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white"
+              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               حفظ
             </button>

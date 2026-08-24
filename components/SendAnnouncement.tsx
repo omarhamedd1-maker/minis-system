@@ -67,7 +67,7 @@ export function SendAnnouncement({
         <button
           type="button"
           onClick={onDone}
-          className="w-full rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium text-white"
+          className="w-full rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white"
         >
           تمام
         </button>
@@ -158,7 +158,7 @@ export function SendAnnouncement({
 
       {/* ===== المعاينة — نفس اللي هيطلع على التليفون ===== */}
       {title.trim() && (
-        <div className="rounded-lg bg-gray-900 p-2">
+        <div className="rounded-lg bg-primary p-2">
           <div className="rounded-md bg-white/95 p-2">
             <div className="mb-0.5 text-[9px] font-medium text-gray-400">
               from Gridpoint
@@ -215,7 +215,7 @@ export function SendAnnouncement({
       <button
         type="submit"
         disabled={pending || !title.trim() || chosen.length === 0}
-        className="w-full rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-700 disabled:bg-gray-300"
+        className="w-full rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-dark disabled:bg-gray-300"
       >
         {pending ? "بيتبعت…" : "ابعت"}
       </button>

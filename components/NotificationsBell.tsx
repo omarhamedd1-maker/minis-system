@@ -122,7 +122,7 @@ export function NotificationsBell({
                   onClick={() => setComposing(true)}
                   title="ابعت إشعار للتيم"
                   aria-label="ابعت إشعار للتيم"
-                  className="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-900 hover:text-white"
+                  className="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-primary hover:text-white"
                 >
                   <svg
                     viewBox="0 0 24 24"

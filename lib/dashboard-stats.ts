@@ -292,3 +292,62 @@ export function computeHeadline(
     avgOrder,
   };
 }
+
+/**
+ * عدّاد أوردرات الفترة لكل حالة — للشريط الملون فوق كروت الداشبورد.
+ *
+ * صحة البيع بتتبان من التوزيع من غير قراية: كتير «ملغي» أو «مرتجع»
+ * بيبان أحمر من أول بصة.
+ */
+export function statusCounts(
+  orders: StatOrder[],
+  periodStart: string,
+  periodEnd: string
+): { status: string; count: number }[] {
+  const day = (o: StatOrder) => (o.order_date ? cairoDateOf(o.order_date) : "");
+  const counts = new Map<string, number>();
+  for (const o of orders) {
+    const d = day(o);
+    if (d < periodStart || d > periodEnd) continue;
+    const s = o.order_status ?? "new";
+    counts.set(s, (counts.get(s) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([status, count]) => ({ status, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export type DayPoint = { day: string; value: number };
+
+/**
+ * مبيعات كل يوم لآخر N يوم — لخط الميلان تحت رقم المبيعات.
+ *
+ * بنفس معادلة المبيعات بالظبط (بنود − خصم + شحن) على الحالات الصافية،
+ * والأيام اللي مافيش فيها بيع بتترجع **صفر مش ماتحذفش** — الفجوة في
+ * الخط هي المعلومة.
+ */
+export function dailySalesSeries(
+  orders: StatOrder[],
+  days: number,
+  today: string
+): DayPoint[] {
+  const start = shiftDays(today, -(days - 1));
+  const totals = new Map<string, number>();
+  for (const o of orders) {
+    if (!o.order_date) continue;
+    if (EXCLUDED.includes(o.order_status ?? "")) continue;
+    const d = cairoDateOf(o.order_date);
+    if (d < start || d > today) continue;
+    const v =
+      o.order_items.reduce((s, i) => s + i.quantity * i.sale_price_at_order, 0) -
+      o.discount +
+      Number(o.shipping_price ?? 0);
+    totals.set(d, (totals.get(d) ?? 0) + v);
+  }
+  const out: DayPoint[] = [];
+  for (let i = 0; i < days; i++) {
+    const d = shiftDays(start, i);
+    out.push({ day: d, value: Math.round((totals.get(d) ?? 0) * 100) / 100 });
+  }
+  return out;
+}

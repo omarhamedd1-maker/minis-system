@@ -177,7 +177,7 @@ export function EnablePush() {
           type="button"
           onClick={enable}
           disabled={state === "working"}
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {state === "working" ? "لحظة…" : "شغّل الإشعارات على الموبايل ده"}
         </button>

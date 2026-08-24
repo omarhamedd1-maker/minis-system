@@ -35,8 +35,8 @@ export function AddTask({
         onClick={() => setOpen(true)}
         className={
           compact
-            ? "flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"
-            : "rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"
+            ? "flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+            : "rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
         }
       >
         + تاسك جديد
@@ -111,7 +111,7 @@ export function AddTask({
             {team.map((m) => (
               <label
                 key={m.id}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-gray-900 has-checked:text-white"
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-primary has-checked:text-white"
               >
                 <input
                   type="checkbox"
@@ -137,7 +137,7 @@ export function AddTask({
 
       <button
         type="submit"
-        className="w-full rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"
+        className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
       >
         أضف التاسك
       </button>

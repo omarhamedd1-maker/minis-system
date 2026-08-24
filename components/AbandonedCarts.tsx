@@ -63,7 +63,7 @@ export function AbandonedCarts({
         <button
           onClick={run}
           disabled={busy}
-          className="shrink-0 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
         >
           {busy ? "بيجيب…" : "جيب السلات"}
         </button>

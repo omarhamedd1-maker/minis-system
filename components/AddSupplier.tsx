@@ -20,7 +20,7 @@ export function AddSupplier({
         onClick={() => setOpen(true)}
         title="إضافة مورد"
         aria-label="إضافة مورد"
-        className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-white transition-transform hover:bg-gray-700 active:scale-90"
+        className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white transition-transform hover:bg-primary-dark active:scale-90"
       >
         <svg
           viewBox="0 0 24 24"
@@ -71,7 +71,7 @@ export function AddSupplier({
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-gray-900 py-2 text-sm font-medium text-white"
+                  className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white"
                 >
                   حفظ
                 </button>

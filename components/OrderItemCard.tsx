@@ -127,7 +127,7 @@ export function OrderItemCard({
           <button
             type="submit"
             title="حفظ"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white"
           >
             <svg
               viewBox="0 0 24 24"

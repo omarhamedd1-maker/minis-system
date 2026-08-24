@@ -66,7 +66,7 @@ export function OrderItemRow({
               <button
                 type="submit"
                 form={formId}
-                className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white"
+                className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white"
               >
                 حفظ
               </button>

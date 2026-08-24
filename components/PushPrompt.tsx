@@ -111,7 +111,7 @@ export function PushPrompt() {
   if (!show) return null;
 
   return (
-    <div className="mb-4 rounded-xl border border-gray-900 bg-gray-900 p-3 text-white">
+    <div className="mb-4 rounded-xl border border-gray-900 bg-primary p-3 text-white">
       <p className="text-sm font-bold">شغّل إشعارات الموبايل؟</p>
       <p className="mt-1 text-xs leading-6 text-gray-300">
         هتوصلك تنبيهات أول ما عميل مايستلمش، أو شحنة تقف، أو أوردر يفضل مش

@@ -8,6 +8,13 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* ===== هوية Gridpoint =====
+     اللون الأساسي اختاره عمر (٢٤ أغسطس ٢٠٢٦) — رمادي مزرق داكن هادي.
+     بيتعرّف هنا مرة واحدة، وكل الأزرار والقايمة والروابط بتسحبه من هنا —
+     تغييره من السطرين دول بيغيّر وش السيستم كله. */
+  --color-primary: #2d3748;
+  --color-primary-dark: #1a202c;
+  --color-primary-soft: #eceff3;
   --font-sans: Lexend, Cairo, sans-serif;
 }
 

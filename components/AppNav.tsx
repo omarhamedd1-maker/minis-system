@@ -201,7 +201,7 @@ export function AppNav({
                   title={i.label}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
                     active
-                      ? "bg-gray-900 text-white"
+                      ? "bg-primary text-white"
                       : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                   } ${expanded ? "" : "justify-center"}`}
                 >
@@ -227,7 +227,7 @@ export function AppNav({
                     >
                       <span
                         className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                          on ? "bg-gray-900" : "bg-gray-300"
+                          on ? "bg-primary" : "bg-gray-300"
                         }`}
                       />
                       <span className="whitespace-nowrap">{c.label}</span>
@@ -276,7 +276,7 @@ export function AppNav({
                 aria-label={i.label}
                 className={`flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-[0.88] ${
                   active
-                    ? "bg-gray-900 text-white active:bg-black"
+                    ? "bg-primary text-white active:bg-primary-dark"
                     : "text-gray-500 active:bg-gray-200"
                 }`}
               >
@@ -329,7 +329,7 @@ export function AppNav({
                     onClick={() => setMoreOpen(false)}
                     className={`flex flex-col items-center gap-1.5 rounded-xl p-3 text-xs font-medium ${
                       active
-                        ? "bg-gray-900 text-white"
+                        ? "bg-primary text-white"
                         : "text-gray-700 hover:bg-gray-100"
                     }`}
                   >
