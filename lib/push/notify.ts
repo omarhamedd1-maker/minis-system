@@ -12,6 +12,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendPush, type PushResult } from "./send";
+import { reserveOnce } from "./once";
 
 /** بيشيل وسوم HTML ويسيب النص — الإشعار مابيعرضش وسوم */
 export function plainText(html: string): string {
@@ -55,12 +56,35 @@ function splitTitle(text: string): { title: string; body: string } {
   };
 }
 
+/**
+ * تنبيه لكل الأجهزة.
+ *
+ * ⚠️⚠️ **التنبيه اللي معاه `tag` بيتبعت مرة واحدة بس.**
+ *
+ * `tag` في الويب بوش **مابيمنعش الإرسال** — هو بيخلّي الجهاز يستبدل الإشعار
+ * القديم على الشاشة، والرسالة بتتبعت برضه والتليفون بيرن برضه. يعني كل
+ * التنبيهات المربوطة بتاج كانت بتتبعت **كل ربع ساعة طول اليوم** مع كل لفة
+ * كرون: `cod-<أوردر>` و`stale-<أوردر>` و`drop-<اليوم>` وكلهم.
+ *
+ * عمر اتضرب بده يوم ٢٠ أغسطس ٢٠٢٦ والتنبيه فضل يرن من الفجر.
+ *
+ * **فالمنع اتحط هنا مش عند كل نداء** — عشان أي تنبيه جديد يتكتب بكرة
+ * يبقى محمي من غير ما حد يفتكر.
+ *
+ * ⚠️ **يبقى كل تاج لازم يوصف مرة واحدة**: `weekly-<الأسبوع>` مش `weekly`،
+ * وإلا التنبيه بيتبعت مرة في العمر.
+ */
 export async function notifyAll(
   db: SupabaseClient,
   tenantId: string,
   message: string,
   opts?: { url?: string; tag?: string; fetchImpl?: typeof fetch }
 ): Promise<void> {
+  if (opts?.tag) {
+    const gate = await reserveOnce(db, tenantId, opts.tag);
+    if (!gate.send) return;
+  }
+
   const { title, body } = splitTitle(message);
 
   // **تليجرام اتشال.** التنبيهات بقت على الموبايل بس — إشعار من البرنامج
