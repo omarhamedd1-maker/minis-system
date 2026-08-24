@@ -201,6 +201,15 @@ export type OrderImportResult =
     }
   | { ok: false; error: string };
 
+/**
+ * سبب التخطي لما مافيش متجر مربوط.
+ *
+ * ⚠️ **ده وضع طبيعي مش عطل** — بيزنس جديد أو الديمو. تنبيه عليه كان هيضرب
+ * كل ربع ساعة على ناس مالهمش ذنب. العطل الحقيقي هو اللي **مربط وبيقف**:
+ * توكن باظ أو متجر شال التطبيق — وده بياخد تنبيه.
+ */
+export const NOT_LINKED_ERROR = "البيزنس ده لسه مربطش متجر شوبيفاي";
+
 export async function runOrderImport(opts: {
   db: SupabaseClient;
   tenantId: string;
@@ -211,7 +220,7 @@ export async function runOrderImport(opts: {
 
   const creds = await loadTenantCredentials(db, tenantId);
   if (!creds.shopifyShop || !creds.shopifyAccessToken) {
-    return { ok: false, error: "البيزنس ده لسه مربطش متجر شوبيفاي" };
+    return { ok: false, error: NOT_LINKED_ERROR };
   }
 
   let shopifyOrders: ShopifyOrderIn[];

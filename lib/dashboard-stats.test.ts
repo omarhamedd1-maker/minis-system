@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { orderCarrierCost, shippingSettlement } from "./dashboard-stats";
+import {
+  computeHeadline,
+  orderCarrierCost,
+  shippingSettlement,
+  type StatOrder,
+} from "./dashboard-stats";
 
 describe("تكلفة بوسطة: الحقيقي بيكسب على التقدير", () => {
   it("موجود الرقم الحقيقي؟ ياخده", () => {
@@ -120,5 +125,95 @@ describe("تسوية الشحن: كلّف كام والعميل دفع كام", 
       customerReceived: true,
     });
     expect(s.net).toBe(0);
+  });
+});
+
+describe("الإجمالي بالملغي والمرتجع", () => {
+  const item = (qty: number, price: number, cost = 0) => ({
+    quantity: qty,
+    sale_price_at_order: price,
+    cost_price_at_order: cost,
+  });
+  const order = (over: Partial<StatOrder> = {}): StatOrder => ({
+    order_status: "delivered",
+    order_date: "2026-08-24T10:00:00Z",
+    delivered_at: null,
+    discount: 0,
+    shipping_price: 0,
+    bosta_shipping_cost: null,
+    bosta_fees_real: null,
+    bosta_cod: null,
+    bosta_collected: null,
+    order_items: [],
+    ...over,
+  });
+  const empty = { amount: 0 };
+  const day = "2026-08-24";
+
+  it("المبيعات بتقفّي الملغي والمرتجع — والإجمالي بيشملهم كلهم", () => {
+    const h = computeHeadline(
+      [
+        order({ order_items: [item(1, 1000)] }),
+        order({ order_status: "cancelled", order_items: [item(1, 500)] }),
+        order({
+          order_status: "returned",
+          order_items: [item(1, 300)],
+        }),
+        order({
+          order_status: "returned_after_delivery",
+          order_items: [item(2, 100)],
+        }),
+      ],
+      [empty],
+      day,
+      day
+    );
+    // المبيعات = المتسلم بس
+    expect(h.sales).toBe(1000);
+    // الإجمالي = كل حاجة حركت في الفترة: 1000 + 500 + 300 + 200
+    expect(h.grossSales).toBe(2000);
+    expect(h.orderCount).toBe(1);
+  });
+
+  it("الفرق بين الإجمالي والمبيعات = قيمة اللي اتلغى ورجع بالظبط", () => {
+    const h = computeHeadline(
+      [
+        order({ order_items: [item(1, 800)], discount: 50, shipping_price: 40 }),
+        order({
+          order_status: "cancelled",
+          order_items: [item(1, 250)],
+          discount: 0,
+          shipping_price: 30,
+        }),
+      ],
+      [empty],
+      day,
+      day
+    );
+    expect(h.sales).toBe(790); // 800 − 50 + 40
+    expect(h.grossSales).toBe(1070); // + 250 − 0 + 30
+    expect(h.grossSales - h.sales).toBe(280);
+  });
+
+  it("مافيش أوردرات في الفترة؟ الاتنين صفر", () => {
+    const h = computeHeadline(
+      [order({ order_date: "2026-01-01T10:00:00Z" })],
+      [empty],
+      day,
+      day
+    );
+    expect(h.sales).toBe(0);
+    expect(h.grossSales).toBe(0);
+  });
+
+  it("كله سليم؟ الإجمالي يساوي المبيعات", () => {
+    const h = computeHeadline(
+      [order({ order_items: [item(2, 150)] })],
+      [empty],
+      day,
+      day
+    );
+    expect(h.sales).toBe(300);
+    expect(h.grossSales).toBe(300);
   });
 });

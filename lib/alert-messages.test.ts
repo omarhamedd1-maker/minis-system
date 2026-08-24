@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { failedDeliveryMessage, syncDownMessage } from "./alert-messages";
+import {
+  failedDeliveryMessage,
+  shopifyImportFailMessage,
+  syncDownMessage,
+} from "./alert-messages";
 import { codMismatchMessage } from "./bosta/cod-check";
 import { stalePickupMessage } from "./bosta/stale-shipment";
 import { refundReminderMessage } from "./refund";
@@ -186,5 +190,23 @@ describe("شكل الإشعارات", () => {
     const msg = syncDownMessage("آخر تشغيل ناجح من ساعتين");
     expect(msg.split("\n")[0]).toContain("المزامنة");
     expect(msg).toContain("آخر تشغيل ناجح من ساعتين");
+  });
+});
+
+describe("رسالة استيراد شوبيفاي الواقف", () => {
+  it("السبب بيتكتب زي ما هو — هو اللي بيفهم صاحب المتجر إن التوكن باظ", () => {
+    const msg = shopifyImportFailMessage(
+      "[API] Invalid API key or access token (unrecognized login or wrong password)"
+    );
+    expect(msg).toContain(
+      "[API] Invalid API key or access token (unrecognized login or wrong password)"
+    );
+  });
+
+  it("أول سطر هو عنوان الإشعار — والآخر بيقول اعمل إيه", () => {
+    const msg = shopifyImportFailMessage("اتقطع النت");
+    const lines = msg.split("\n");
+    expect(lines[0]).toContain("استيراد أوردرات شوبيفاي وقف");
+    expect(lines[lines.length - 1]).toContain("اربط المتجر تاني");
   });
 });
