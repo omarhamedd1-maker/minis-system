@@ -127,7 +127,7 @@ export type LeadTime = {
  * في مينيز **٢٠١ من ٢٣٨** كده، ولو اتحسبوا الوسيط بيطلع صفر يوم وده رقم
  * مستحيل. بنعدّهم في `skipped` عشان يبانوا مش يتخبّوا.
  */
-export function leadTime(orders: OpsOrder[], _today?: string): LeadTime {
+export function leadTime(orders: OpsOrder[]): LeadTime {
   const spans: number[] = [];
   let skipped = 0;
   for (const o of orders) {

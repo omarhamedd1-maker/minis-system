@@ -191,25 +191,10 @@ export const EXCLUDED_STATUSES = [
   "returned_after_delivery",
 ];
 
-// الشحن الأساسي اللي الباقة بتغطيه في كل شحنة — ثابت 88 في بوسطة
-export const BUNDLE_COVERS = 88;
-
-// ===== باقات بوسطة =====
-// الباقة بتتدفع شهرياً وبتغطي الشحن الأساسي لعدد شحنات معيّن.
-// نصيب الأوردر الواحد = سعر الباقة ÷ عدد شحناتها.
-export const BOSTA_BUNDLES = [
-  { key: "basic", label: "أساسية", price: 2000, shipments: 20 },
-  { key: "plus", label: "بلس", price: 3950, shipments: 40 },
-  { key: "pro", label: "احترافية", price: 4500, shipments: 50 },
-] as const;
-
-export function bundlePerOrder(price: number, shipments: number) {
-  if (!shipments) return 0;
-  return Math.round((price / shipments) * 100) / 100;
-}
-
-// الباقة الحالية — بتتقرأ من إعدادات السيستم، ودي القيمة الافتراضية لو مفيش إعداد
-export const DEFAULT_BUNDLE = BOSTA_BUNDLES[0];
+// باقات بوسطة التقديرية (`BUNDLE_COVERS` · `BOSTA_BUNDLES` ·
+// `bundlePerOrder` · `DEFAULT_BUNDLE`) اتمسحت ٢٤ أغسطس — ميتة من ٦ أغسطس
+// ومحدش بينده عليها. الرسوم بقت بتتقرا **حقيقية من كشف حساب بوسطة**
+// (`bosta_ship_fee_real`)، فنصيب الباقة التقديري بقى بيدغدغ.
 
 // أنواع المصاريف — بتتستخدم في صفحة المصاريف وفي فواتير الموردين
 export const EXPENSE_CATEGORIES = [

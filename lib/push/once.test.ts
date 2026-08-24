@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { reserveOnce, dailyTag } from "./once";
 
 /** قاعدة بيانات وهمية بتتصرّف زي القيد الفريد */
