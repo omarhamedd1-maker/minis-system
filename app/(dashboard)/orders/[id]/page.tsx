@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
+  AT_CARRIER_STATUSES,
   CUSTOMER_PAID_STATUSES,
   ORDER_STATUS_OPTIONS,
   PAYMENT_METHODS,
@@ -804,7 +805,11 @@ export default async function OrderDetailsPage({
                 <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
               </div>
               {/* تسوية الشحن: اللي بوسطة خدته − اللي العميل دفعه = الباقي */}
-              {(realFee || order.bosta_shipping_cost > 0) &&
+              {/* ⚠️ **والحساب مابيبانش غير لما بوسطة تستلم الشحنة فعلاً.** الشحنة
+                  اللي لسه «جاهز للبيك اب» المندوب ماخدش فيها حاجة — عرض الرقم
+                  في اللحظة دي معناه تحصيل وهمي على ورق. (طلب عمر ٢٤ أغسطس) */}
+              {AT_CARRIER_STATUSES.includes(order.order_status ?? "") &&
+                (realFee || order.bosta_shipping_cost > 0) &&
                 (() => {
                   // **لو بوسطة قالت رقمها الحقيقي، هو اللي يتحاسب** — التقدير
                   // للشحنة اللي لسه شغالة بس، لأن بوسطة مابتقفلش الحساب غير
