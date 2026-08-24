@@ -173,6 +173,13 @@ export type StatExpense = { amount: number };
 
 export type Headline = {
   sales: number;
+  /**
+   * كل الأوردرات من غير فلتر حالة — بالملغي والمرتجع كمان.
+   *
+   * المبيعات بتقفّي الملغي والمرتجع عشان تمثل فلوس حقيقية، والرقم ده
+   * بيوري حجم الحركة كله في الفترة زي ما شوبيفاي شايفاه.
+   */
+  grossSales: number;
   profit: number;
   expensesTotal: number;
   shippingRevenue: number;
@@ -210,6 +217,13 @@ export function computeHeadline(
 
   // المبيعات شاملة الشحن اللي العميل دفعه — عشان الرقم يقارن بشوبيفاي على طول
   const sales = validOrders.reduce(
+    (s, o) => s + itemsTotal(o) - o.discount + Number(o.shipping_price ?? 0),
+    0
+  );
+  // ⚠️ **الإجمالي من غير فلتر حالة** — نفس معادلة المبيعات بالظبط، بس على
+  // كل الأوردرات اللي اتعملت في الفترة: الملغي والمرتجع كمان. الفرق بينه
+  // وبين `sales` هو بالظبط قيمة اللي اتلغى أو رجع.
+  const grossSales = periodOrders.reduce(
     (s, o) => s + itemsTotal(o) - o.discount + Number(o.shipping_price ?? 0),
     0
   );
@@ -265,6 +279,7 @@ export function computeHeadline(
 
   return {
     sales,
+    grossSales,
     profit,
     expensesTotal,
     shippingRevenue,

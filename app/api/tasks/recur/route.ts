@@ -17,9 +17,10 @@ import { generateRecurringTasks } from "@/lib/tasks-recur";
 import { runTaskReminders } from "@/lib/task-reminders-run";
 import { recordPrepaidCash } from "@/lib/prepaid-cash-run";
 import { activeTenantIds } from "@/lib/tenant-settings";
-import { runOrderImport } from "@/lib/shopify/orders";
+import { NOT_LINKED_ERROR, runOrderImport } from "@/lib/shopify/orders";
 import { runProductImport } from "@/lib/shopify/products";
 import { checkDrop, dropMessage } from "@/lib/drop-alert";
+import { shopifyImportFailMessage } from "@/lib/alert-messages";
 import {
   productDrift,
   driftMessage,
@@ -31,6 +32,39 @@ import { WEEKDAYS } from "@/lib/shipping-timing";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
+
+/**
+ * تنبيه إن استيراد شوبيفاي واقف — **مرة في اليوم لكل بيزنس، وبس لما الجدول موجود**.
+ *
+ * ⚠️⚠️ **من غير جدول `notification_log` بنسكت خالص.** التاج هو اللي بيمنع
+ * التكرار، والجدول هو اللي بيحجز التاج. من غير الجدول التنبيه ده كان هيتبعت
+ * كل ربع ساعة — ٩٦ مرة في اليوم، ودي بالظبط مصيبة ٢٠ أغسطس. لحد ما
+ * `sql/notification-log.sql` يتشغّل، شاشة الصحة هي اللي بتوري العطل لوحدها.
+ */
+async function alertImportFailed(
+  db: Parameters<typeof notifyAll>[0],
+  tenantId: string,
+  reason: string,
+  today: string,
+  dry: boolean
+) {
+  if (dry) return;
+  try {
+    // الفحص ده بسؤال «الجدول موجود؟» — والفلتر بالبيزنس عشان الحارس
+    // يعدّيه، ومافيش قراية صفوف هنا أصلًا
+    const { error } = await db
+      .from("notification_log")
+      .select("tag")
+      .eq("tenant_id", tenantId)
+      .limit(1);
+    if (error) return; // الجدول مش موجود — الصمت أهون من ٩٦ تنبيه
+    await notifyAll(db, tenantId, shopifyImportFailMessage(reason), {
+      tag: `shopify-import-${today}`,
+    });
+  } catch {
+    // التنبيه بس هو اللي مايبانش — الاستيراد بيتحقق تاني ربع ساعة بعده
+  }
+}
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -167,11 +201,22 @@ export async function GET(request: Request) {
             };
           } else {
             shopify = { skipped: r.error };
+            // ⚠️ **مش كل تخطّي عطل.** «لسه مربطش» وضع طبيعي لبيزنس جديد
+            // أو الديمو — تنبيهه كان هيضرب على ناس مالهمش ذنب. العطل
+            // الحقيقي هو اللي **مربط وبيقف**: توكن باظ أو التطبيق اتشال —
+            // وده معناه إن الأوردرات وقفت عن بيزنس بيشتغل فعلًا.
+            if (r.error !== NOT_LINKED_ERROR) {
+              await alertImportFailed(db, tenantId, r.error, today, dry);
+            }
           }
         } catch (e) {
           // ⚠️ **السبب لازم يبان.** الكاتش الصامت كان بيخلّي النتيجة `null`
           // من غير ما حد يعرف البيزنس مش مربوط ولا الجلب وقع.
-          shopify = { skipped: e instanceof Error ? e.message : "الجلب وقع" };
+          const msg = e instanceof Error ? e.message : "الجلب وقع";
+          shopify = { skipped: msg };
+          // اللفة دي وقعت من غير ما توصل لفحص «مربوط ولا لأ»؟ التنبيه
+          // محتاج يوصل برضه — العطل أثناء الجلب نفسه عطل فعلًا
+          await alertImportFailed(db, tenantId, msg, today, dry);
         }
 
         // ⚠️⚠️ **حسّاس العطل** — المبيعات واقعة النهاردة عن نفس اليوم من
