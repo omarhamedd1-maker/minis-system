@@ -297,6 +297,7 @@ export async function runBostaSync(opts: {
       order_number: o.order_number,
       bosta_tracking: o.bosta_tracking,
       customerName: o.customers?.full_name ?? null,
+      customerPhone: o.customers?.phone ?? null,
       row: o,
     }))
   );
@@ -360,7 +361,11 @@ export async function runBostaSync(opts: {
     // متسلّم خلاص. رسومها بس هي اللي بتدخل.
     if (isExchange(d)) {
       const m = matchDelivery(d, index);
-      if (m.kind === "order_number" || m.kind === "tracking") {
+      if (
+        m.kind === "order_number" ||
+        m.kind === "tracking" ||
+        m.kind === "phone"
+      ) {
         const row = m.order.row;
         addSide(
           row.id,

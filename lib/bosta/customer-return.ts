@@ -8,8 +8,11 @@
 // أنهي واحد — فبنسيبها للمراجعة بدل ما نحرّك بضاعة وفلوس على أوردر غلط.
 // ==========================================================================
 
-import { normalizeName } from "./match";
+import { normalizeName, phoneKey } from "./match";
 import { isDeadShipment } from "./order-status";
+
+// بتعيش هنا عشان الاختبارات القديمة اللي بتجيبها من الملف ده
+export { phoneKey };
 
 /** أنواع الشحنات عند بوسطة — اتأكدنا منها من شحنات حقيقية */
 export const DELIVERY_TYPES = {
@@ -18,12 +21,6 @@ export const DELIVERY_TYPES = {
   customerReturn: 25, // العميل استلم وبعدين رجّعها
   exchange: 30,
 } as const;
-
-/** آخر أربع أرقام بس — بوسطة بتكتب التليفون بأشكال مختلفة (+20، 0020، 01…) */
-export function phoneKey(phone: string | null | undefined): string {
-  const digits = String(phone ?? "").replace(/\D/g, "");
-  return digits.length >= 9 ? digits.slice(-9) : "";
-}
 
 export type ReturnCandidate = {
   id: string;

@@ -76,3 +76,73 @@ describe("ربط الشحنة بالأوردر", () => {
     expect(r.kind).toBe("order_number");
   });
 });
+
+describe("المطابقة بالتليفون — لما المرجع ناقص", () => {
+  const withPhones = [
+    { id: "1", order_number: "1360", bosta_tracking: "8550116799", customerName: "محمد حسن", customerPhone: "01005361491" },
+    { id: "2", order_number: "1371", bosta_tracking: null, customerName: "محمد السعودي", customerPhone: "01026791554" },
+    { id: "3", order_number: "1122", bosta_tracking: null, customerName: "هبه زناتي", customerPhone: null },
+  ];
+  const idx = buildIndex(withPhones);
+
+  it("تليفون يطابق أوردر واحد غير مربوط والاسم مؤكد = ربط", () => {
+    const r = matchDelivery(
+      { receiver: { fullName: "محمد السعودي", phone: "+201026791554" } },
+      idx
+    );
+    expect(r.kind).toBe("phone");
+    if (r.kind === "phone") expect(r.order.id).toBe("2");
+  });
+
+  it("صيغ التليفون المختلفة بتطلع لنفس المفتاح (+20 و0020 والمحلي)", () => {
+    for (const p of ["+201026791554", "00201026791554", "01026791554"]) {
+      const r = matchDelivery(
+        { receiver: { fullName: "السعودي", phone: p } },
+        idx
+      );
+      expect(r.kind).toBe("phone");
+    }
+  });
+
+  it("الأوردر المربوط مابيبقاش مرشح — شحنة تانية لنفس العميل ماتلزقش فيه", () => {
+    // الأوردر 1 مربوط (عنده تتبع) — فتليفونه مالوش مرشح غيره
+    const r = matchDelivery(
+      { receiver: { fullName: "محمد حسن", phone: "01005361491" } },
+      idx
+    );
+    expect(r.kind).toBe("none");
+  });
+
+  it("اتنين على نفس التليفون؟ الاسم هو اللي بيفصل", () => {
+    const two = [
+      { id: "a", order_number: "10", bosta_tracking: null, customerName: "أحمد سامي", customerPhone: "01223334445" },
+      { id: "b", order_number: "11", bosta_tracking: null, customerName: "أحمد فؤاد", customerPhone: "01223334445" },
+    ];
+    const r = matchDelivery(
+      { receiver: { fullName: "سامي", phone: "01223334445" } },
+      buildIndex(two)
+    );
+    expect(r.kind).toBe("phone");
+    if (r.kind === "phone") expect(r.order.id).toBe("a");
+  });
+
+  it("اتنين على نفس التليفون والاسم بيطابق الاتنين = مافيش تخمين", () => {
+    const two = [
+      { id: "a", order_number: "10", bosta_tracking: null, customerName: "أحمد سامي", customerPhone: "01223334445" },
+      { id: "b", order_number: "11", bosta_tracking: null, customerName: "سامي محمود", customerPhone: "01223334445" },
+    ];
+    const r = matchDelivery(
+      { receiver: { fullName: "أحمد سامي", phone: "01223334445" } },
+      buildIndex(two)
+    );
+    expect(r.kind).toBe("none");
+  });
+
+  it("تليفون مطابق بس الاسم مختلف تمامًا = مفيش — ده بيحرّك فلوس", () => {
+    const r = matchDelivery(
+      { receiver: { fullName: "سعاد إبراهيم", phone: "01026791554" } },
+      idx
+    );
+    expect(r.kind).toBe("none");
+  });
+});
