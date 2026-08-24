@@ -64,15 +64,6 @@ const RANGES: { label: string; from: number; to: number | null }[] = [
   { label: "أكتر من شهر", from: 31, to: null },
 ];
 
-/** إجمالي الأوردر زي ما العميل بيدفعه — البضاعة ناقص الخصم زائد الشحن */
-function orderTotal(o: AgingOrder): number {
-  const goods = o.order_items.reduce(
-    (s, i) => s + i.quantity * i.sale_price_at_order,
-    0
-  );
-  return goods - (o.discount ?? 0) + Number(o.shipping_price ?? 0);
-}
-
 /**
  * المبلغ اللي بوسطة المفروض تحصّله على الأوردر.
  *

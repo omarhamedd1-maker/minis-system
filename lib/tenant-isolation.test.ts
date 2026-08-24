@@ -14,8 +14,7 @@
 // ده هيبقى ضجيج مالوش لازمة.
 // ==========================================================================
 
-import { readFileSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /** جداول مش متقسّمة على البيزنسات أصلاً — مالهاش عمود `tenant_id` */
@@ -46,6 +45,15 @@ const GLOBAL_TABLES = new Set([
 
 type Hit = { file: string; line: number; table: string };
 
+/** قراية آمنة — ملف قارناه مش نص أو مرفوض مايوقّعش الحارس نفسه */
+function safeRead(f: string): string {
+  try {
+    return readFileSync(f, "utf8");
+  } catch {
+    return "";
+  }
+}
+
 function unfilteredAdminReads(): Hit[] {
   // ⚠️ **مش بس اللي بيعمل المفتاح جواه.**
   //
@@ -56,18 +64,24 @@ function unfilteredAdminReads(): Hit[] {
   //
   // وطلع فيهم فعلًا **٨ كتابات** من غير رقم بيزنس (١٣ أغسطس)، منها استيراد
   // متجر عميل جديد بالكامل — عملاءه ومنتجاته وأوردراته — جوّه بيزنس عمر.
-  const files = execSync(
-    'grep -rlE "createAdminClient|SupabaseClient" app lib components',
-    { encoding: "utf8" }
-  )
-    .trim()
-    .split("\n")
-    .map((f) => f.trim())
+  //
+  // ⚠️ **والمسح نفسه بـNode مش بـ`grep`.** الحارس كان بينادي أمر `grep`
+  // — مش موجود في ويندوز، فبوابة `npm run check` كانت بتقع على جهاز
+  // التطوير قبل ما تقيس أي حاجة أصلاً (٢٤ أغسطس). المسح بقى بـ`node:fs`
+  // — نفس النتيجة على أي نظام، وبالمساطر القدامية (`/` مش `\`).
+  function walk(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = `${dir}/${e.name}`;
+      return e.isDirectory() ? walk(p) : [p];
+    });
+  }
+  const files = ["app", "lib", "components"]
+    .flatMap(walk)
     .filter(
       (f) =>
-        f &&
         !f.endsWith("supabase/admin.ts") &&
-        !f.includes(".test.")
+        !f.includes(".test.") &&
+        /createAdminClient|SupabaseClient/.test(safeRead(f))
     );
 
   const hits: Hit[] = [];
@@ -243,10 +257,11 @@ describe("عزل البيزنسات", () => {
             `الحل: زوّد .eq("tenant_id", me.tenantId) على كل واحد فيهم.\n`
         : undefined
     ).toEqual([]);
-    // ⚠️ **٣٠ ثانية مش رفاهية.** الاختبار ده بيشغّل `grep` على كل الملفات
-    // وبيقراهم واحد واحد — وده أبطأ من أي اختبار تاني في المشروع. والمهلة
-    // الافتراضية في vitest **٥ ثواني**، فتحت ضغط التشغيل المتوازي كان
-    // بيتعدّاها ويقع **من غير ما يكون فيه غلط أصلاً**.
+    // ⚠️ **٣٠ ثانية مش رفاهية.** الاختبار ده بيلف على كل ملفات `app`
+    // و`lib` و`components` ويقراهم واحد واحد — وده أبطأ من أي اختبار
+    // تاني في المشروع. المهلة الافتراضية في vitest **٥ ثواني**، فتحت ضغط
+    // التشغيل المتوازي كان بيتعدّاها ويقع **من غير ما يكون فيه غلط
+    // أصلاً**.
     //
     // اتمسك بتشغيل السويت ٦ مرات (١٨ أغسطس): وقع مرة بـ٥٥٧٤ مللي، وعدّى
     // ٨ مرات لوحده في ٢٥٠ مللي. والفشل العشوائي أوحش من البطء، لأنه
