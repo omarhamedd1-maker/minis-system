@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
+import { cairoToday } from "@/lib/format";
+import { checkImage, readReceipt, type ReadReceipt } from "@/lib/receipt";
+import { readReceiptImage } from "@/lib/receipt-read";
 
 export async function updateExpense(formData: FormData) {
   const me = await requirePermission("expenses.edit");
@@ -217,4 +220,35 @@ export async function addExpense(formData: FormData) {
   await logActivity(me, "expense.add", `سجّل مصروف ${category} بمبلغ ${amount}`);
   revalidatePath("/expenses");
   revalidatePath("/suppliers");
+}
+
+/**
+ * بيقرا صورة إيصال ويرجّع اللي فيها — **من غير ما يحفظ حاجة**.
+ *
+ * ⚠️⚠️ **القراية اقتراح مش تسجيل.** الرقم اللي بيتقرا من صورة بيغلط
+ * (الإضاءة، خط الإيصال، الفاتورة اللي فيها إجمالي وضريبة وخصم)، فاللي
+ * بيرجع بيتحط في الخانات والمستخدم بيراجع ويأكّد بنفسه.
+ *
+ * ⚠️ **بالضغط بس** — مافيش لفة دورية بتقرا صور لوحدها، والنداء عليه فلوس.
+ */
+export async function scanReceipt(
+  formData: FormData
+): Promise<{ ok: true; read: ReadReceipt } | { ok: false; reason: string }> {
+  await requirePermission("expenses.edit");
+
+  const file = formData.get("image");
+  if (!(file instanceof File)) return { ok: false, reason: "مافيش صورة" };
+
+  const check = checkImage({ type: file.type, size: file.size });
+  if (!check.ok) return check;
+
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  const result = await readReceiptImage({
+    base64,
+    mediaType: file.type as "image/jpeg" | "image/png" | "image/webp",
+  });
+
+  if (!result.ok) return result;
+
+  return { ok: true, read: readReceipt(result.raw, cairoToday()) };
 }
