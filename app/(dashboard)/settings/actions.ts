@@ -16,6 +16,7 @@ import {
 } from "@/lib/shopify/client";
 import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { readShopifyApp } from "@/lib/shopify/app";
+import { resolveShopifyToken } from "@/lib/shopify/token";
 import { registerShopifyWebhooks } from "@/lib/shopify/register-webhooks";
 import { headers } from "next/headers";
 import { randomUUID } from "node:crypto";
@@ -363,18 +364,28 @@ export async function checkIntegrations(): Promise<LinkCard[]> {
   const db = createAdminClient();
   const creds = await loadTenantCredentials(db, me.tenantId);
 
-  const shopLinked = Boolean(creds.shopifyShop && creds.shopifyAccessToken);
+  const shopLinked = Boolean(creds.shopifyShop);
   const bostaLinked = Boolean(creds.bostaApiKey);
 
+  // ⚠️⚠️ **الفحص لازم يستخدم نفس التوكن اللي الاستيراد بيستخدمه.**
+  // لو فحصنا بالتوكن المتخزّن، الشاشة تقول «المفتاح مرفوض» والاستيراد
+  // شغّال — أو العكس. والتوكن المتخزّن بيموت بعد ٢٤ ساعة.
+  const auth = shopLinked
+    ? await resolveShopifyToken(db, me.tenantId, creds)
+    : null;
+  const live = auth?.ok ? auth : null;
+
   const [shopProbe, hooks, bostaProbe, sync, lastOrder] = await Promise.all([
-    shopLinked
-      ? testShopifyToken(creds.shopifyShop!, creds.shopifyAccessToken!)
-      : null,
-    shopLinked
-      ? listShopifyWebhooks({
-          shop: creds.shopifyShop!,
-          token: creds.shopifyAccessToken!,
-        })
+    live
+      ? testShopifyToken(live.shop, live.token)
+      : shopLinked
+        ? Promise.resolve({
+            ok: false as const,
+            error: auth && !auth.ok ? auth.error : "معرفناش نطلّع توكن",
+          })
+        : null,
+    live
+      ? listShopifyWebhooks({ shop: live.shop, token: live.token })
       : null,
     bostaLinked ? testConnection(creds.bostaApiKey!) : null,
     readSyncHealth(db, me.tenantId),

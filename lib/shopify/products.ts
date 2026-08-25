@@ -9,7 +9,7 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadTenantCredentials } from "../tenant-settings";
+import { resolveShopifyToken } from "./token";
 import { ShopifyError, shopifyGraphQL } from "./client";
 import {
   importChangeCount,
@@ -123,18 +123,13 @@ export async function runProductImport(opts: {
 }): Promise<ImportResult> {
   const { db, tenantId, dry = false, fetchImpl } = opts;
 
-  const creds = await loadTenantCredentials(db, tenantId);
-  if (!creds.shopifyShop || !creds.shopifyAccessToken) {
-    return { ok: false, error: "البيزنس ده لسه مربطش متجر شوبيفاي" };
-  }
+  // ⚠️ توكن حيّ — المتخزّن بيموت بعد ٢٤ ساعة (اقرا `lib/shopify/token.ts`)
+  const auth = await resolveShopifyToken(db, tenantId, undefined, fetchImpl);
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   let shopifyProducts: ShopifyProductIn[];
   try {
-    shopifyProducts = await fetchShopifyProducts(
-      creds.shopifyShop,
-      creds.shopifyAccessToken,
-      fetchImpl
-    );
+    shopifyProducts = await fetchShopifyProducts(auth.shop, auth.token, fetchImpl);
   } catch (e) {
     return {
       ok: false,

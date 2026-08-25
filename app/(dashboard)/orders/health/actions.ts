@@ -16,7 +16,7 @@ import { shippingByDay, type TimingReport } from "@/lib/shipping-timing";
 import { discountImpact, type DiscountReport } from "@/lib/discount-impact";
 import { codGaps, type GapReport } from "@/lib/cod-gap";
 import { fetchShopifyOrders } from "@/lib/shopify/orders";
-import { loadTenantCredentials } from "@/lib/tenant-settings";
+import { resolveShopifyToken } from "@/lib/shopify/token";
 
 export type HealthReport =
   | {
@@ -170,13 +170,11 @@ async function loadDrift(
   rows: RowForDrift[]
 ): Promise<DriftRow[] | null> {
   try {
-    const creds = await loadTenantCredentials(db, tenantId);
-    if (!creds.shopifyShop || !creds.shopifyAccessToken) return null;
+    // ⚠️ توكن حيّ — المتخزّن بيموت بعد ٢٤ ساعة (`lib/shopify/token.ts`)
+    const auth = await resolveShopifyToken(db, tenantId);
+    if (!auth.ok) return null;
 
-    const shopifyOrders = await fetchShopifyOrders(
-      creds.shopifyShop,
-      creds.shopifyAccessToken
-    );
+    const shopifyOrders = await fetchShopifyOrders(auth.shop, auth.token);
 
     return findDrift(
       rows

@@ -2,7 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser, can } from "@/lib/permissions";
-import { loadTenantCredentials } from "@/lib/tenant-settings";
+import { resolveShopifyToken } from "@/lib/shopify/token";
 import {
   fetchAbandonedCarts,
   triageCarts,
@@ -34,14 +34,13 @@ export async function loadAbandonedCarts(): Promise<CartsReport> {
   }
 
   const db = createAdminClient();
-  const creds = await loadTenantCredentials(db, me.tenantId);
-  if (!creds.shopifyShop || !creds.shopifyAccessToken) {
-    return { ok: false, error: "البيزنس ده لسه مربطش شوبيفاي" };
-  }
+  // ⚠️ توكن حيّ — المتخزّن بيموت بعد ٢٤ ساعة (`lib/shopify/token.ts`)
+  const auth = await resolveShopifyToken(db, me.tenantId);
+  if (!auth.ok) return { ok: false, error: auth.error };
 
   let carts: AbandonedCart[];
   try {
-    carts = await fetchAbandonedCarts(creds.shopifyShop, creds.shopifyAccessToken);
+    carts = await fetchAbandonedCarts(auth.shop, auth.token);
   } catch (e) {
     return {
       ok: false,

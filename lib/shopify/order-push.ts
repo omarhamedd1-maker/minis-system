@@ -17,7 +17,7 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadTenantCredentials } from "../tenant-settings";
+import { resolveShopifyToken } from "./token";
 import { ShopifyError, shopifyGraphQL } from "./client";
 import {
   NOT_SHOPIFY_PREFIXES,
@@ -139,12 +139,11 @@ export async function runShopifyOrderPush(opts: {
     return { ok: false, error: "الأوردر مش مربوط بشوبيفاي", status: 400 };
   }
 
-  const creds = await loadTenantCredentials(db, order.tenant_id);
-  if (!creds.shopifyShop || !creds.shopifyAccessToken) {
-    return { ok: false, error: "البيزنس ده لسه مربطش متجر شوبيفاي", status: 400 };
-  }
-  const shop = creds.shopifyShop;
-  const token = creds.shopifyAccessToken;
+  // ⚠️ توكن حيّ — المتخزّن بيموت بعد ٢٤ ساعة (اقرا `lib/shopify/token.ts`)
+  const auth = await resolveShopifyToken(db, order.tenant_id);
+  if (!auth.ok) return { ok: false, error: auth.error, status: 400 };
+  const shop = auth.shop;
+  const token = auth.token;
 
   const items: OurItem[] = (order.order_items ?? []).map((it) => ({
     shopifyVariantId: it.product_variants?.shopify_variant_id ?? null,
