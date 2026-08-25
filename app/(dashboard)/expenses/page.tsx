@@ -11,7 +11,13 @@ import {
 import { ExpenseRow } from "@/components/ExpenseRow";
 import { ExpenseCard } from "@/components/ExpenseCard";
 import { can, requirePagePermission } from "@/lib/permissions";
-import { addExpense, deleteExpense, updateExpense } from "./actions";
+import {
+  addExpense,
+  deleteExpense,
+  updateExpense,
+  scanReceipt,
+} from "./actions";
+import { ReceiptScan } from "@/components/ReceiptScan";
 
 type ExpenseRow = {
   id: string;
@@ -87,7 +93,7 @@ export default async function ExpensesPage({
     new Set([
       ...(usedCats ?? []).map((r) => r.category).filter(Boolean),
       ...STARTER_CATEGORIES,
-    ])
+    ]),
   );
 
   // أسماء الموردين بتتقري بمفتاح الأدمن (جدول الموردين مقفول في الـRLS)
@@ -113,7 +119,7 @@ export default async function ExpensesPage({
 
   const buildHref = (next: { cat?: string | null; period?: string }) => {
     const params = new URLSearchParams();
-    const c = next.cat === null ? undefined : next.cat ?? cat;
+    const c = next.cat === null ? undefined : (next.cat ?? cat);
     const p = next.period ?? period;
     if (c) params.set("cat", c);
     if (p && p !== "month") params.set("period", p);
@@ -188,90 +194,98 @@ export default async function ExpensesPage({
       )}
 
       {isAdmin && (
-        <form
-          action={addExpense}
-          className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
-        >
-          <div className="flex flex-col gap-1">
-            <label htmlFor="category" className="text-xs text-gray-500">
-              النوع
-            </label>
-            <CategoryPicker
-              id="category"
-              required
-              categories={CATEGORY_SUGGESTIONS}
-              className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-          <div className="flex min-w-48 flex-1 flex-col gap-1">
-            <label htmlFor="description" className="text-xs text-gray-500">
-              الوصف (اختياري)
-            </label>
-            <input
-              id="description"
-              name="description"
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="amount" className="text-xs text-gray-500">
-              المبلغ (جنيه)
-            </label>
-            <input
-              id="amount"
-              name="amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              required
-              className="w-28 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="expense_date" className="text-xs text-gray-500">
-              التاريخ
-            </label>
-            <input
-              id="expense_date"
-              name="expense_date"
-              type="date"
-              defaultValue={today}
-              required
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-            />
-          </div>
-          {suppliers.length > 0 && (
-            <div className="flex flex-col gap-1">
-              <label htmlFor="supplier_id" className="text-xs text-gray-500">
-                المورد (اختياري)
-              </label>
-              <select
-                id="supplier_id"
-                name="supplier_id"
-                defaultValue=""
-                className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
-              >
-                <option value="">مش على مورد</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <button
-            type="submit"
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+        <div className="space-y-3">
+          {/*
+            صوّر الإيصال والخانات تحت بتتملي.
+            ⚠️ **بيملّي الفورم، مابيحفظش** — الرقم اللي بيتقرا من صورة بيغلط،
+            فالمراجعة والتأكيد على المستخدم زي أي مصروف.
+          */}
+          <ReceiptScan scan={scanReceipt} />
+          <form
+            action={addExpense}
+            className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
           >
-            تسجيل المصروف
-          </button>
-          <p className="w-full text-xs text-gray-400">
-            لو اخترت مورد، المصروف ده بيتسجّل دفعة في حسابه وبيقلّل اللي عليك له.
-            فواتير البضاعة بالأجل بتتسجّل من صفحة المورد نفسه ومابتتحسبش مصروف
-            غير لما تحاسبه.
-          </p>
-        </form>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="category" className="text-xs text-gray-500">
+                النوع
+              </label>
+              <CategoryPicker
+                id="category"
+                required
+                categories={CATEGORY_SUGGESTIONS}
+                className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <div className="flex min-w-48 flex-1 flex-col gap-1">
+              <label htmlFor="description" className="text-xs text-gray-500">
+                الوصف (اختياري)
+              </label>
+              <input
+                id="description"
+                name="description"
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="amount" className="text-xs text-gray-500">
+                المبلغ (جنيه)
+              </label>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                className="w-28 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="expense_date" className="text-xs text-gray-500">
+                التاريخ
+              </label>
+              <input
+                id="expense_date"
+                name="expense_date"
+                type="date"
+                defaultValue={today}
+                required
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              />
+            </div>
+            {suppliers.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="supplier_id" className="text-xs text-gray-500">
+                  المورد (اختياري)
+                </label>
+                <select
+                  id="supplier_id"
+                  name="supplier_id"
+                  defaultValue=""
+                  className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                >
+                  <option value="">مش على مورد</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              type="submit"
+              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+            >
+              تسجيل المصروف
+            </button>
+            <p className="w-full text-xs text-gray-400">
+              لو اخترت مورد، المصروف ده بيتسجّل دفعة في حسابه وبيقلّل اللي عليك
+              له. فواتير البضاعة بالأجل بتتسجّل من صفحة المورد نفسه ومابتتحسبش
+              مصروف غير لما تحاسبه.
+            </p>
+          </form>
+        </div>
       )}
 
       {expenses.length === 0 ? (
@@ -282,75 +296,75 @@ export default async function ExpensesPage({
         </div>
       ) : (
         <>
-        {/* ===== موبايل: كروت ===== */}
-        <div className="space-y-2 md:hidden">
-          {expenses.map((expense) => (
-            <ExpenseCard
-              key={expense.id}
-              expense={expense}
-              categories={CATEGORY_SUGGESTIONS}
-              supplier={
-                expense.supplier_id
-                  ? supplierName.get(expense.supplier_id) ?? null
-                  : null
-              }
-              canEdit={isAdmin}
-              updateAction={updateExpense}
-              deleteAction={deleteExpense}
-            />
-          ))}
-        </div>
+          {/* ===== موبايل: كروت ===== */}
+          <div className="space-y-2 md:hidden">
+            {expenses.map((expense) => (
+              <ExpenseCard
+                key={expense.id}
+                expense={expense}
+                categories={CATEGORY_SUGGESTIONS}
+                supplier={
+                  expense.supplier_id
+                    ? (supplierName.get(expense.supplier_id) ?? null)
+                    : null
+                }
+                canEdit={isAdmin}
+                updateAction={updateExpense}
+                deleteAction={deleteExpense}
+              />
+            ))}
+          </div>
 
-        {/* ===== كمبيوتر: جدول ===== */}
-        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-right text-gray-500">
-                <th className="px-4 py-3 font-medium">التاريخ</th>
-                <th className="px-4 py-3 font-medium">النوع</th>
-                <th className="px-4 py-3 font-medium">الوصف</th>
-                <th className="px-4 py-3 font-medium">المبلغ</th>
-                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((expense) =>
-                isAdmin ? (
-                  <ExpenseRow
-                    key={expense.id}
-                    expense={expense}
-                    categories={CATEGORY_SUGGESTIONS}
-                    supplier={
-                      expense.supplier_id
-                        ? supplierName.get(expense.supplier_id) ?? null
-                        : null
-                    }
-                    updateAction={updateExpense}
-                    deleteAction={deleteExpense}
-                  />
-                ) : (
-                  <tr
-                    key={expense.id}
-                    className="border-b border-gray-100 last:border-0"
-                  >
-                    <td className="px-4 py-3 text-gray-700">
-                      {formatDate(expense.expense_date)}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {expense.category}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {expense.description ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {formatMoney(expense.amount)}
-                    </td>
-                  </tr>
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
+          {/* ===== كمبيوتر: جدول ===== */}
+          <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-right text-gray-500">
+                  <th className="px-4 py-3 font-medium">التاريخ</th>
+                  <th className="px-4 py-3 font-medium">النوع</th>
+                  <th className="px-4 py-3 font-medium">الوصف</th>
+                  <th className="px-4 py-3 font-medium">المبلغ</th>
+                  {isAdmin && <th className="px-4 py-3 font-medium"></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((expense) =>
+                  isAdmin ? (
+                    <ExpenseRow
+                      key={expense.id}
+                      expense={expense}
+                      categories={CATEGORY_SUGGESTIONS}
+                      supplier={
+                        expense.supplier_id
+                          ? (supplierName.get(expense.supplier_id) ?? null)
+                          : null
+                      }
+                      updateAction={updateExpense}
+                      deleteAction={deleteExpense}
+                    />
+                  ) : (
+                    <tr
+                      key={expense.id}
+                      className="border-b border-gray-100 last:border-0"
+                    >
+                      <td className="px-4 py-3 text-gray-700">
+                        {formatDate(expense.expense_date)}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {expense.category}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {expense.description ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {formatMoney(expense.amount)}
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
     </div>
