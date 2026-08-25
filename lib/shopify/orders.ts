@@ -9,7 +9,7 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadTenantCredentials } from "../tenant-settings";
+import { resolveShopifyToken } from "./token";
 import { ShopifyError, shopifyGraphQL } from "./client";
 import {
   customerKey,
@@ -218,18 +218,22 @@ export async function runOrderImport(opts: {
 }): Promise<OrderImportResult> {
   const { db, tenantId, dry = false, fetchImpl } = opts;
 
-  const creds = await loadTenantCredentials(db, tenantId);
-  if (!creds.shopifyShop || !creds.shopifyAccessToken) {
-    return { ok: false, error: NOT_LINKED_ERROR };
+  // ⚠️⚠️ **توكن حيّ مش متخزّن** — توكن شوبيفاي بيموت بعد ٢٤ ساعة،
+  // والمتخزّن كان بيفضل يتستخدم بعد ما يموت فالاستيراد يترفض في صمت.
+  const auth = await resolveShopifyToken(db, tenantId, undefined, fetchImpl);
+  if (!auth.ok) {
+    return {
+      ok: false,
+      error:
+        auth.error === "البيزنس ده لسه مربطش متجر شوبيفاي"
+          ? NOT_LINKED_ERROR
+          : auth.error,
+    };
   }
 
   let shopifyOrders: ShopifyOrderIn[];
   try {
-    shopifyOrders = await fetchShopifyOrders(
-      creds.shopifyShop,
-      creds.shopifyAccessToken,
-      fetchImpl
-    );
+    shopifyOrders = await fetchShopifyOrders(auth.shop, auth.token, fetchImpl);
   } catch (e) {
     return {
       ok: false,
