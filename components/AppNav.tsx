@@ -67,7 +67,14 @@ const ITEMS: Item[] = [
       { href: "/users/activity", label: "سجل النشاط", perm: "admin.users" },
     ],
   },
-  { href: "/settings", label: "الإعدادات", perm: "admin.settings" },
+  {
+    href: "/settings",
+    label: "الإعدادات",
+    perm: "admin.settings",
+    children: [
+      { href: "/settings/rules", label: "قواعد التنبيه", perm: "admin.settings" },
+    ],
+  },
   { href: "/platform", label: "البيزنسات", perm: "platform" },
 ];
 

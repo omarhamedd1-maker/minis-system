@@ -27,6 +27,7 @@ import {
   WINDOW_DAYS as DRIFT_DAYS,
 } from "@/lib/product-drift";
 import { seasonAlerts, seasonMessage } from "@/lib/seasons";
+import { runAutomation } from "@/lib/automation-run";
 import { notifyAll } from "@/lib/push/notify";
 import { WEEKDAYS } from "@/lib/shipping-timing";
 
@@ -89,6 +90,8 @@ export async function GET(request: Request) {
     drift?: { name: string; before: number; now: number }[] | null;
     /** مواسم قرّبت — شهر أو أسبوع */
     seasons?: { name: string; daysAway: number }[] | null;
+    /** قواعد صاحب المتجر — كام قاعدة وكام حالة عدّت الحد */
+    rules?: { rules: number; hits: number; sent: number } | null;
     /**
      * نتيجة استيراد أوردرات شوبيفاي للبيزنس ده.
      *
@@ -363,7 +366,28 @@ export async function GET(request: Request) {
           // التنبيه بس هو اللي مايبانش
         }
 
-        results[tenantId] = { recur, remind, prepaid, shopify, drop, drift, seasons };
+        // ⚠️ **قواعد صاحب المتجر** — الحدود اللي هو ظبّطها بنفسه.
+        //
+        // ⚠️ **بتنبّه بس** — مافيش تعديل في الداتا ولا رسايل للعملاء.
+        // والبيزنس اللي مالوش قواعد بيتعدّى من غير أي استعلام.
+        let rules: Ok["rules"] = null;
+        try {
+          const r = await runAutomation({ db, tenantId, now, dry });
+          if (r.rules > 0) rules = r;
+        } catch {
+          // التنبيه بس هو اللي مايبانش
+        }
+
+        results[tenantId] = {
+          recur,
+          remind,
+          prepaid,
+          shopify,
+          drop,
+          drift,
+          seasons,
+          rules,
+        };
       } catch (e) {
         // بيزنس وقع؟ الباقي يكمّل
         results[tenantId] = {
