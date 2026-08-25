@@ -29,7 +29,7 @@ export function FillReasons({
             setNote(r.message);
           })
         }
-        className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
       >
         {pending ? "بنسأل بوسطة…" : "جيب الأسباب من بوسطة"}
       </button>

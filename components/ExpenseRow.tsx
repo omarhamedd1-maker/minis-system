@@ -131,7 +131,7 @@ export function ExpenseRow({
           <button
             type="submit"
             form={formId}
-            className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+            className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
           >
             حفظ
           </button>

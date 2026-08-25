@@ -124,7 +124,7 @@ export function SelectableOrderCard({
         <span
           className={`absolute start-3 top-3.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
             selected
-              ? "border-gray-900 bg-gray-900 text-white"
+              ? "border-gray-900 bg-primary text-white"
               : "border-gray-300 bg-white"
           }`}
         >

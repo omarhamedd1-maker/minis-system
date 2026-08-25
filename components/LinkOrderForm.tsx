@@ -133,7 +133,7 @@ export function LinkOrderForm({
                       [i.variantId]: Math.min(MAX_QUANTITY, (s[i.variantId] ?? 0) + 1),
                     }))
                   }
-                  className="h-8 w-8 rounded-full bg-gray-900 text-lg leading-none text-white"
+                  className="h-8 w-8 rounded-full bg-primary text-lg leading-none text-white"
                 >
                   +
                 </button>
@@ -174,7 +174,7 @@ export function LinkOrderForm({
       <button
         type="submit"
         disabled={pending || chosen.length === 0}
-        className="w-full rounded-xl bg-gray-900 py-3.5 text-sm font-bold text-white hover:bg-gray-700 disabled:opacity-40"
+        className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-40"
       >
         {pending
           ? "بنسجّل طلبك…"

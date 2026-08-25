@@ -26,7 +26,7 @@ export function DiscountBox({
           onClick={() => setMode("amount")}
           className={`px-2 py-1 text-xs font-medium ${
             mode === "amount"
-              ? "bg-gray-900 text-white"
+              ? "bg-primary text-white"
               : "bg-white text-gray-600"
           }`}
         >
@@ -37,7 +37,7 @@ export function DiscountBox({
           onClick={() => setMode("percent")}
           className={`px-2 py-1 text-xs font-medium ${
             mode === "percent"
-              ? "bg-gray-900 text-white"
+              ? "bg-primary text-white"
               : "bg-white text-gray-600"
           }`}
         >

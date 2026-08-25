@@ -138,7 +138,7 @@ export default async function ExpensesPage({
             href={buildHref({ period: key })}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               period === key
-                ? "bg-gray-900 text-white"
+                ? "bg-primary text-white"
                 : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
             }`}
           >
@@ -150,7 +150,7 @@ export default async function ExpensesPage({
           href={buildHref({ cat: null })}
           className={`rounded-full px-3 py-1 text-xs font-medium ${
             !cat
-              ? "bg-gray-900 text-white"
+              ? "bg-primary text-white"
               : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
           }`}
         >
@@ -162,7 +162,7 @@ export default async function ExpensesPage({
             href={buildHref({ cat: c })}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               cat === c
-                ? "bg-gray-900 text-white"
+                ? "bg-primary text-white"
                 : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
             }`}
           >
@@ -262,7 +262,7 @@ export default async function ExpensesPage({
           )}
           <button
             type="submit"
-            className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
           >
             تسجيل المصروف
           </button>

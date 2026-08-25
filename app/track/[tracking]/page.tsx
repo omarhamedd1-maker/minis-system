@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
  */
 const TONE: Record<string, string> = {
   good: "bg-emerald-500",
-  moving: "bg-gray-900",
+  moving: "bg-primary",
   warn: "bg-amber-500",
   done: "bg-emerald-500",
 };
@@ -142,7 +142,7 @@ export default async function TrackPage({
                       passed
                         ? "bg-emerald-500"
                         : s.current
-                          ? `${TONE[view.tone] ?? "bg-gray-900"} ring-4 ring-gray-100`
+                          ? `${TONE[view.tone] ?? "bg-primary"} ring-4 ring-gray-100`
                           : "bg-gray-200"
                     }`}
                   />

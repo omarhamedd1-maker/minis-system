@@ -87,7 +87,7 @@ export function UserEditor({
             !user.active
               ? "bg-red-100 text-red-700"
               : user.isAdmin
-                ? "bg-gray-900 text-white"
+                ? "bg-primary text-white"
                 : "bg-gray-100 text-gray-600"
           }`}
         >
@@ -100,7 +100,7 @@ export function UserEditor({
               {user.fullName ?? "بدون اسم"}
             </span>
             {user.isAdmin && (
-              <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-medium text-white">
+              <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-white">
                 أدمن
               </span>
             )}
@@ -204,7 +204,7 @@ export function UserEditor({
                   </label>
                   <button
                     type="submit"
-                    className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                    className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                   >
                     حفظ البيانات
                   </button>
@@ -279,7 +279,7 @@ export function UserEditor({
 
                 <button
                   type="submit"
-                  className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                  className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                 >
                   حفظ الصلاحيات
                 </button>

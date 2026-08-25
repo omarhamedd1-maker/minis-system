@@ -85,7 +85,7 @@ export function CustomerEdit({
       <div className="mt-3 flex items-center gap-2">
         <button
           type="submit"
-          className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+          className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
         >
           حفظ
         </button>

@@ -954,7 +954,7 @@ export default async function OrderDetailsPage({
                   href={`/orders/${order.id}/awb`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+                  className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -1014,7 +1014,7 @@ export default async function OrderDetailsPage({
               <input type="hidden" name="order_id" value={order.id} />
               <ConfirmButton
                 message={`متأكد إنك عايز تبعت أوردر ${order.order_number ?? ""} لبوسطة كشحنة؟`}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
               >
                 <BostaMark className="h-4 w-4" />
                 ابعت لبوسطة كشحنة
@@ -1044,7 +1044,7 @@ export default async function OrderDetailsPage({
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                  className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
                 >
                   ربط
                 </button>
@@ -1115,7 +1115,7 @@ export default async function OrderDetailsPage({
               </div>
               <button
                 type="submit"
-                className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
+                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
               >
                 حفظ
               </button>
@@ -1167,7 +1167,7 @@ export default async function OrderDetailsPage({
               </select>
               <button
                 type="submit"
-                className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
               >
                 حفظ
               </button>
@@ -1574,7 +1574,7 @@ export default async function OrderDetailsPage({
                   <input type="hidden" name="order_id" value={order.id} />
                   <button
                     type="submit"
-                    className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                    className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                   >
                     رجّعها للمخزون
                   </button>

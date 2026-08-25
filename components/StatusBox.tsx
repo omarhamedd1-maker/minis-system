@@ -75,7 +75,7 @@ export function StatusBox({
         type="submit"
         title="حفظ"
         aria-label="حفظ"
-        className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-900 text-white"
+        className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white"
       >
         <svg
           viewBox="0 0 24 24"

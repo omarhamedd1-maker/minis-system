@@ -144,7 +144,7 @@ export default async function SearchPage({
         />
         <button
           type="submit"
-          className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
+          className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-dark"
         >
           دوّر
         </button>

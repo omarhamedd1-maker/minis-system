@@ -138,7 +138,7 @@ export default async function OrderMapPage() {
                   {/* شريط بسيط — الطول نسبة لأكبر منطقة */}
                   <div className="mt-1 h-1.5 w-full rounded-full bg-gray-100">
                     <div
-                      className="h-1.5 rounded-full bg-gray-900"
+                      className="h-1.5 rounded-full bg-primary"
                       style={{ width: `${Math.round((r.orders / most) * 100)}%` }}
                     />
                   </div>

@@ -139,7 +139,7 @@ export function CashCard({
             />
             <button
               type="submit"
-              className="rounded-lg bg-gray-900 px-4 py-1.5 text-xs font-medium text-white"
+              className="rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-white"
             >
               حفظ
             </button>

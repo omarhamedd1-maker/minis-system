@@ -79,7 +79,7 @@ export function SupplierTxnForm({
           onClick={() => setKind("purchase")}
           className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
             !isPayment
-              ? "bg-gray-900 text-white"
+              ? "bg-primary text-white"
               : "bg-gray-100 text-gray-600 active:bg-gray-200"
           }`}
         >
@@ -319,7 +319,7 @@ export function SupplierTxnForm({
           className={`rounded-lg px-4 py-1.5 text-sm font-medium text-white ${
             isPayment
               ? "bg-green-600 hover:bg-green-700"
-              : "bg-gray-900 hover:bg-gray-700"
+              : "bg-primary hover:bg-primary-dark"
           }`}
         >
           {isPayment ? "تسجيل الدفعة" : "تسجيل الفاتورة"}

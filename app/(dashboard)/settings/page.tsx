@@ -182,7 +182,7 @@ export default async function SettingsPage({
                 />
                 <button
                   type="submit"
-                  className="shrink-0 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                  className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
                 >
                   اربط
                 </button>
@@ -277,7 +277,7 @@ export default async function SettingsPage({
                   />
                   <button
                     type="submit"
-                    className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
                   >
                     اربط بالتوكن
                   </button>
@@ -342,7 +342,7 @@ export default async function SettingsPage({
           />
           <button
             type="submit"
-            className="shrink-0 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
           >
             {hasBosta ? "غيّر" : "اربط"}
           </button>
@@ -406,7 +406,7 @@ export default async function SettingsPage({
             className={input}
             dir="ltr"
           />
-          <button className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white">
             {hasBackup ? "غيّر الجروب" : "شغّل النسخة"}
           </button>
           <p className="text-[11px] text-gray-400">
@@ -471,7 +471,7 @@ export default async function SettingsPage({
           />
           <button
             type="submit"
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
           >
             احفظ
           </button>
@@ -514,7 +514,7 @@ export default async function SettingsPage({
             />
             <button
               type="submit"
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
             >
               احفظ
             </button>

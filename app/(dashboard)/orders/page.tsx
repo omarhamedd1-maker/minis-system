@@ -294,7 +294,7 @@ export default async function OrdersPage({
           {canCreate && (
             <Link
               href="/orders/new"
-              className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
             >
               إضافة أوردر
             </Link>
@@ -423,7 +423,7 @@ export default async function OrdersPage({
                 href={`/orders${p.toString() ? `?${p}` : ""}`}
                 className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
                   period === key
-                    ? "bg-gray-900 text-white"
+                    ? "bg-primary text-white"
                     : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
                 }`}
               >
@@ -438,7 +438,7 @@ export default async function OrdersPage({
             href={periodQS("")}
             className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
               !status && !showArchived
-                ? "bg-gray-900 text-white"
+                ? "bg-primary text-white"
                 : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
             }`}
           >
@@ -450,7 +450,7 @@ export default async function OrdersPage({
               href={periodQS(`status=${option.value}`)}
               className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
                 status === option.value && !showArchived
-                  ? "bg-gray-900 text-white"
+                  ? "bg-primary text-white"
                   : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
               }`}
             >
@@ -484,7 +484,7 @@ export default async function OrdersPage({
           />
           <button
             type="submit"
-            className="shrink-0 rounded-full bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+            className="shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
           >
             بحث
           </button>

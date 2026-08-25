@@ -155,7 +155,7 @@ export function BulkStatusBar({
   if (count === 0) return null;
 
   return (
-    <div className="sticky top-14 z-[35] mb-4 rounded-xl bg-gray-900 p-3 text-white shadow-lg md:top-0">
+    <div className="sticky top-14 z-[35] mb-4 rounded-xl bg-primary p-3 text-white shadow-lg md:top-0">
       {/* سطر فوق: العدد + إلغاء */}
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">

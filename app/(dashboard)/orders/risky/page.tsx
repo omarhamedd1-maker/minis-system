@@ -187,7 +187,7 @@ export default async function RiskyPage() {
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <a
                     href={`tel:${o.customers.phone}`}
-                    className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                    className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                   >
                     اتصل
                   </a>
