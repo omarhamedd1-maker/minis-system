@@ -13,18 +13,11 @@
 // ==========================================================================
 
 import { deliveryOrderNumber, type BostaDelivery } from "./reconcile";
+import { phoneKey } from "../phone";
 
-/**
- * آخر تسع أرقام بس — بوسطة بتكتب التليفون بأشكال مختلفة (+20، 0020، 01…).
- *
- * التسع أرقام بتشيل مفتاح الدولة والصفر البادئ مع بعض، فالأشكال كلها
- * بتطلع لنفس المفتاح. (نفس الدالة اللي بتربط شحنات مرتجع العميل من ٢٤
- * أغسطس — اتنقلت هنا عشان المطابقة العادية تستخدمها من غير دورة استيراد.)
- */
-export function phoneKey(phone: string | null | undefined): string {
-  const digits = String(phone ?? "").replace(/\D/g, "");
-  return digits.length >= 9 ? digits.slice(-9) : "";
-}
+// بتعيش هنا عشان كل اللي بيستوردوها من الملف ده مايتكسروش —
+// الأصل في `lib/phone.ts` (توحيد ٢٤ أغسطس)
+export { phoneKey };
 
 /** بيشيل التشكيل ويوحّد الألف والياء والتاء المربوطة عشان المقارنة تنفع */
 export function normalizeName(s: string | null | undefined): string {
