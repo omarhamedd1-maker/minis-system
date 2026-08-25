@@ -38,6 +38,7 @@ const ITEMS: Item[] = [
     ],
   },
   { href: "/tasks", label: "التاسكات", perm: "tasks.view" },
+  { href: "/reports", label: "تقارير", perm: "finance.dashboard" },
   {
     href: "/customers",
     label: "العملاء",
