@@ -51,6 +51,7 @@ const ITEMS: Item[] = [
     label: "المنتجات",
     perm: "products.view",
     children: [
+      { href: "/products/bundles", label: "الباقات", perm: "products.view" },
       { href: "/products/links", label: "لينكات الطلب", perm: "products.edit" },
     ],
   },
