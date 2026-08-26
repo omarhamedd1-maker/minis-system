@@ -5,9 +5,6 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
-import { cairoToday } from "@/lib/format";
-import { checkImage, readReceipt, type ReadReceipt } from "@/lib/receipt";
-import { readReceiptImage } from "@/lib/receipt-read";
 
 export async function updateExpense(formData: FormData) {
   const me = await requirePermission("expenses.edit");
@@ -26,7 +23,9 @@ export async function updateExpense(formData: FormData) {
   ) {
     redirect(
       "/expenses?error=" +
-        encodeURIComponent("اكتب النوع والمبلغ والتاريخ — والمبلغ لازم يكون أكبر من صفر")
+        encodeURIComponent(
+          "اكتب النوع والمبلغ والتاريخ — والمبلغ لازم يكون أكبر من صفر",
+        ),
     );
   }
 
@@ -41,7 +40,7 @@ export async function updateExpense(formData: FormData) {
         amount,
         expense_date: expenseDate,
       },
-      { count: "exact" }
+      { count: "exact" },
     )
     .eq("tenant_id", me.tenantId)
     .eq("id", id);
@@ -49,7 +48,7 @@ export async function updateExpense(formData: FormData) {
   if (updateError || count === 0) {
     redirect(
       "/expenses?error=" +
-        encodeURIComponent("معرفناش نعدل المصروف — اتأكد إن عندك صلاحية تعديل")
+        encodeURIComponent("معرفناش نعدل المصروف — اتأكد إن عندك صلاحية تعديل"),
     );
   }
 
@@ -63,8 +62,8 @@ export async function updateExpense(formData: FormData) {
     redirect(
       "/expenses?error=" +
         encodeURIComponent(
-          "المصروف اتعدل لكن معرفناش نحدث الخزنة: " + cashError.message
-        )
+          "المصروف اتعدل لكن معرفناش نحدث الخزنة: " + cashError.message,
+        ),
     );
   }
 
@@ -110,7 +109,7 @@ export async function deleteExpense(formData: FormData) {
   if (cashError) {
     redirect(
       "/expenses?error=" +
-        encodeURIComponent("معرفناش نمسح حركة الخزنة: " + cashError.message)
+        encodeURIComponent("معرفناش نمسح حركة الخزنة: " + cashError.message),
     );
   }
 
@@ -123,7 +122,7 @@ export async function deleteExpense(formData: FormData) {
   if (deleteError || count === 0) {
     redirect(
       "/expenses?error=" +
-        encodeURIComponent("معرفناش نمسح المصروف — اتأكد إن عندك صلاحية تعديل")
+        encodeURIComponent("معرفناش نمسح المصروف — اتأكد إن عندك صلاحية تعديل"),
     );
   }
 
@@ -143,7 +142,9 @@ export async function addExpense(formData: FormData) {
   if (!category || !Number.isFinite(amount) || amount <= 0 || !expenseDate) {
     redirect(
       "/expenses?error=" +
-        encodeURIComponent("اكتب النوع والمبلغ والتاريخ — والمبلغ لازم يكون أكبر من صفر")
+        encodeURIComponent(
+          "اكتب النوع والمبلغ والتاريخ — والمبلغ لازم يكون أكبر من صفر",
+        ),
     );
   }
 
@@ -167,9 +168,7 @@ export async function addExpense(formData: FormData) {
   if (expenseError || !expense) {
     redirect(
       "/expenses?error=" +
-        encodeURIComponent(
-          "معرفناش نسجل المصروف — اتأكد إن عندك صلاحية تعديل"
-        )
+        encodeURIComponent("معرفناش نسجل المصروف — اتأكد إن عندك صلاحية تعديل"),
     );
   }
 
@@ -189,12 +188,16 @@ export async function addExpense(formData: FormData) {
       });
 
     if (txnError) {
-      await supabase.from("expenses").delete().eq("tenant_id", me.tenantId).eq("id", expense.id);
+      await supabase
+        .from("expenses")
+        .delete()
+        .eq("tenant_id", me.tenantId)
+        .eq("id", expense.id);
       redirect(
         "/expenses?error=" +
           encodeURIComponent(
-            "معرفناش نسجل الدفعة في حساب المورد: " + txnError.message
-          )
+            "معرفناش نسجل الدفعة في حساب المورد: " + txnError.message,
+          ),
       );
     }
   }
@@ -212,43 +215,16 @@ export async function addExpense(formData: FormData) {
     redirect(
       "/expenses?error=" +
         encodeURIComponent(
-          "المصروف اتسجل لكن معرفناش نسجله في الخزنة: " + cashError.message
-        )
+          "المصروف اتسجل لكن معرفناش نسجله في الخزنة: " + cashError.message,
+        ),
     );
   }
 
-  await logActivity(me, "expense.add", `سجّل مصروف ${category} بمبلغ ${amount}`);
+  await logActivity(
+    me,
+    "expense.add",
+    `سجّل مصروف ${category} بمبلغ ${amount}`,
+  );
   revalidatePath("/expenses");
   revalidatePath("/suppliers");
-}
-
-/**
- * بيقرا صورة إيصال ويرجّع اللي فيها — **من غير ما يحفظ حاجة**.
- *
- * ⚠️⚠️ **القراية اقتراح مش تسجيل.** الرقم اللي بيتقرا من صورة بيغلط
- * (الإضاءة، خط الإيصال، الفاتورة اللي فيها إجمالي وضريبة وخصم)، فاللي
- * بيرجع بيتحط في الخانات والمستخدم بيراجع ويأكّد بنفسه.
- *
- * ⚠️ **بالضغط بس** — مافيش لفة دورية بتقرا صور لوحدها، والنداء عليه فلوس.
- */
-export async function scanReceipt(
-  formData: FormData
-): Promise<{ ok: true; read: ReadReceipt } | { ok: false; reason: string }> {
-  await requirePermission("expenses.edit");
-
-  const file = formData.get("image");
-  if (!(file instanceof File)) return { ok: false, reason: "مافيش صورة" };
-
-  const check = checkImage({ type: file.type, size: file.size });
-  if (!check.ok) return check;
-
-  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-  const result = await readReceiptImage({
-    base64,
-    mediaType: file.type as "image/jpeg" | "image/png" | "image/webp",
-  });
-
-  if (!result.ok) return result;
-
-  return { ok: true, read: readReceipt(result.raw, cairoToday()) };
 }

@@ -52,6 +52,17 @@ export type HealthFacts = {
     webhooks: number | null;
     /** آخر أوردر دخل عندنا */
     lastOrderAt: string | null;
+    /**
+     * آخر مرة الاستيراد **حاول** — نجح أو فشل.
+     *
+     * ⚠️⚠️ **ده الفرق بين «المتجر هادي» و«الوصلة مقطوعة».** عدد الأوردرات
+     * مؤشر ضعيف: يوم من غير بيع حاجة طبيعية. لكن الاستيراد بيلف كل ربع
+     * ساعة، فوقوفه **مش احتمال**. لما أوردرات ٢ سِك وقفت مرتين، ماكانش
+     * فيه سجل يقول ده — فالتشخيص كان تخمين.
+     */
+    lastImportAt?: string | null;
+    /** آخر محاولة استيراد فشلت؟ */
+    importFailed?: boolean;
   };
   bosta: {
     linked: boolean;
@@ -128,6 +139,26 @@ function shopifyCard(s: HealthFacts["shopify"], now: Date): LinkCard {
           }
         : { label: "الويبهوكس", state: "ok", detail: `${s.webhooks} متسجّلين` }
   );
+
+  /**
+   * ⚠️⚠️ **الاستيراد هو المؤشر القوي.** بيلف كل ربع ساعة، فسكوته عطل
+   * أكيد — مش زي عدد الأوردرات اللي ممكن يكون المتجر هادي.
+   */
+  const importMins = minutesSince(s.lastImportAt, now);
+  if (s.lastImportAt !== undefined) {
+    checks.push({
+      label: "الاستيراد",
+      state:
+        importMins === null || importMins > DOWN_MINUTES
+          ? "down"
+          : s.importFailed || importMins > STALE_MINUTES
+            ? "warn"
+            : "ok",
+      detail:
+        agoText(importMins) +
+        (s.importFailed ? " · وآخر محاولة فشلت" : ""),
+    });
+  }
 
   // ⚠️ **ده مؤشر أضعف بكتير** — يوم من غير أوردرات حاجة طبيعية. عشان كده
   // أقصى حاجة بيوصلها «مريب»، وعمره ما يقول «واقعة» لوحده.

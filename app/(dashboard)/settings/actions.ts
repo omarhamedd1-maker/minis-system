@@ -375,7 +375,7 @@ export async function checkIntegrations(): Promise<LinkCard[]> {
     : null;
   const live = auth?.ok ? auth : null;
 
-  const [shopProbe, hooks, bostaProbe, sync, lastOrder] = await Promise.all([
+  const [shopProbe, hooks, bostaProbe, sync, shopSync, lastOrder] = await Promise.all([
     live
       ? testShopifyToken(live.shop, live.token)
       : shopLinked
@@ -389,6 +389,7 @@ export async function checkIntegrations(): Promise<LinkCard[]> {
       : null,
     bostaLinked ? testConnection(creds.bostaApiKey!) : null,
     readSyncHealth(db, me.tenantId),
+    readSyncHealth(db, me.tenantId, new Date(), "shopify"),
     db
       .from("orders")
       .select("order_date")
@@ -408,6 +409,12 @@ export async function checkIntegrations(): Promise<LinkCard[]> {
             : { ok: false, error: shopProbe.error }
           : null,
         webhooks: hooks === null ? null : hooks.length,
+        // ⚠️ آخر محاولة استيراد — المؤشر القوي (`lib/integration-health.ts`)
+        lastImportAt:
+          shopSync.state === "unknown"
+            ? undefined
+            : (shopSync.lastRun?.created_at ?? null),
+        importFailed: shopSync.state === "failing",
         lastOrderAt:
           (lastOrder.data as { order_date?: string } | null)?.order_date ?? null,
       },

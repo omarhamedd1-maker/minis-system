@@ -102,6 +102,6 @@ export function shopifyImportFailMessage(reason: string): string {
   return [
     "<b>استيراد أوردرات شوبيفاي وقف</b> 🔴",
     reason,
-    "الأوردرات الجديدة مش هتنزل — افتح الإعدادات واربط المتجر تاني",
+    "الأوردرات الجديدة واقفة عند شوبيفاي ومش بتنزل.",
   ].join("\n");
 }

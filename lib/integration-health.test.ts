@@ -115,3 +115,48 @@ describe("صحة الوصلات", () => {
     expect(agoText(60 * 24 * 3)).toBe("من 3 يوم");
   });
 });
+
+describe("⚠️⚠️ أثر الاستيراد", () => {
+  const withImport = (over: Partial<HealthFacts["shopify"]>) =>
+    integrationHealth(facts({ shopify: over }), NOW).find(
+      (c) => c.key === "shopify"
+    )!;
+
+  it("الاستيراد اشتغل من شوية = تمام", () => {
+    const c = withImport({ lastImportAt: minsBack(10) });
+    expect(c.checks.find((x) => x.label === "الاستيراد")?.state).toBe("ok");
+    expect(c.state).toBe("ok");
+  });
+
+  it("⚠️⚠️ الاستيراد واقف = عطل أكيد — بيلف كل ربع ساعة", () => {
+    const c = withImport({ lastImportAt: minsBack(400) });
+    expect(c.state).toBe("down");
+  });
+
+  it("آخر محاولة فشلت = ملاحظة", () => {
+    const c = withImport({ lastImportAt: minsBack(10), importFailed: true });
+    expect(c.checks.find((x) => x.label === "الاستيراد")?.detail).toContain(
+      "فشلت"
+    );
+    expect(c.state).toBe("warn");
+  });
+
+  it("⚠️ عمره ما اشتغل = عطل مش «تمام»", () => {
+    const c = withImport({ lastImportAt: null });
+    expect(c.state).toBe("down");
+  });
+
+  it("⚠️ الجدول لو مش موجود، السطر مايظهرش أصلًا — مش بيكدب", () => {
+    const c = withImport({});
+    expect(c.checks.find((x) => x.label === "الاستيراد")).toBeUndefined();
+    expect(c.state).toBe("ok");
+  });
+
+  it("⚠️ الاستيراد الشغّال مايخفيش سكوت الأوردرات", () => {
+    const c = withImport({
+      lastImportAt: minsBack(10),
+      lastOrderAt: minsBack(60 * 24 * 30),
+    });
+    expect(c.checks.find((x) => x.label === "آخر أوردر")?.state).toBe("warn");
+  });
+});
