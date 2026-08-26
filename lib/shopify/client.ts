@@ -115,6 +115,37 @@ export async function fetchAccessToken(
   return String(json.access_token);
 }
 
+/**
+ * بيحوّل رد شوبيفاي المرفوض لجملة تتقري.
+ *
+ * ⚠️⚠️ **٤٠٢ معناها المتجر مقفول من شوبيفاي، مش إن فيه عطل عندنا.**
+ * ده حصل لمتجر ٢ سِك يوم ٢٦ أغسطس ٢٠٢٦: الـAPI **والواجهة** الاتنين
+ * ردّوا `402 Payment Required`. شوبيفاي بترجّع النص `Unavailable Shop`
+ * — كلمتين مالهمش معنى للي بيقرا الإشعار، فقعدنا ندوّر في التوكن
+ * والمفاتيح والمتجر أصلًا مجمّد لأن فاتورة شوبيفاي مادفعتش.
+ *
+ * ⚠️ **والفرق ده مهم**: العطل اللي عندنا بنصلّحه، والمتجر المقفول محدش
+ * يقدر يعمل فيه حاجة غير صاحبه.
+ */
+export function shopifyHttpError(status: number, errors?: unknown): string {
+  if (status === 402) {
+    return "متجر شوبيفاي مقفول — فاتورة شوبيفاي مش مدفوعة، والمتجر مقفول قدام العملاء كمان";
+  }
+  if (status === 401 || status === 403) {
+    return "شوبيفاي رفضت المفتاح";
+  }
+  if (status === 404) {
+    return "المتجر ده مش موجود عند شوبيفاي";
+  }
+  if (status === 423) {
+    return "متجر شوبيفاي متجمّد";
+  }
+  if (status === 429) {
+    return "شوبيفاي مزحومة دلوقتي — الطلبات كتير";
+  }
+  return String(errors ?? `شوبيفاي ردّت بكود ${status}`);
+}
+
 /** بينادي GraphQL بالتوكن */
 export async function shopifyGraphQL<T>(
   shop: string,
@@ -139,10 +170,7 @@ export async function shopifyGraphQL<T>(
   const json = await res.json().catch(() => null);
 
   if (!res.ok) {
-    throw new ShopifyError(
-      String(json?.errors ?? `شوبيفاي ردّت بكود ${res.status}`),
-      res.status
-    );
+    throw new ShopifyError(shopifyHttpError(res.status, json?.errors), res.status);
   }
   // GraphQL بترجّع ٢٠٠ مع أخطاء جوّه الجسم — لازم نفحصها
   if (json?.errors?.length) {
