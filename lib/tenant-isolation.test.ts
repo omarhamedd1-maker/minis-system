@@ -33,6 +33,11 @@ const ALLOWED = new Set([
   "lib/permissions.ts",
   "app/track/[tracking]/page.tsx",
   "app/track/[tracking]/actions.ts",
+  // ⚠️ **صفحة التقييم** — العميل مالوش بيزنس، ومعرّف الأوردر (`uuid`) هو
+  // اللي بيحدده لوحده. والبيزنس بيتاخد **من الأوردر نفسه** مش من اللي
+  // بيبعت، فمافيش طريق يسجّل تقييم على بيزنس تاني.
+  "app/r/[id]/page.tsx",
+  "app/r/[id]/actions.ts",
 ]);
 
 const GLOBAL_TABLES = new Set([

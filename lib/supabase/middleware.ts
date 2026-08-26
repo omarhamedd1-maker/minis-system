@@ -41,12 +41,16 @@ export async function updateSession(request: NextRequest) {
   // ⚠️ **وصفحة الطلب المباشر** — اللينك بيتبعت للعميل في رسالة، والعميل
   // مالوش حساب. لو البوابة حوّلته على الدخول، اللينك مالوش لازمة أصلًا.
   const isOrderLink = pathname.startsWith("/o/");
+  // ⚠️ **وصفحة التقييم** — نفس السبب: العميل مالوش حساب، وأي تسجيل دخول
+  // معناه صفر تقييمات.
+  const isRatingPage = pathname.startsWith("/r/");
   // مسارات عامة: تعريف البرنامج وأيقوناته لازم تفتح من غير تسجيل دخول
   const isPublic =
     isLoginPage ||
     isSignupPage ||
     isTrackPage ||
     isOrderLink ||
+    isRatingPage ||
     pathname === "/manifest.webmanifest" ||
     pathname === "/icon" ||
     pathname === "/apple-icon";
