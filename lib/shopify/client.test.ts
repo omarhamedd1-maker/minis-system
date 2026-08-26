@@ -7,6 +7,7 @@ import {
   normalizeShop,
   testShopifyConnection,
   testShopifyToken,
+  shopifyHttpError,
 } from "./client";
 
 const CREDS = {
@@ -200,5 +201,33 @@ describe("الربط بتوكن جاهز", () => {
     const f = vi.fn(async () => { throw new Error("timeout"); });
     const r = await testShopifyToken("s.myshopify.com", "shpat_x", f as unknown as typeof fetch);
     expect(r).toMatchObject({ ok: false, error: "timeout" });
+  });
+});
+
+describe("⚠️⚠️ ردود شوبيفاي المرفوضة", () => {
+  it("٤٠٢ = المتجر مقفول، مش عطل عندنا", () => {
+    const msg = shopifyHttpError(402, "Unavailable Shop");
+    expect(msg).toContain("مقفول");
+    expect(msg).toContain("فاتورة شوبيفاي");
+    // ⚠️ «Unavailable Shop» كلمتين مالهمش معنى للي بيقرا الإشعار
+    expect(msg).not.toContain("Unavailable");
+  });
+
+  it("٤٠١ و٤٠٣ = المفتاح", () => {
+    expect(shopifyHttpError(401)).toContain("رفضت المفتاح");
+    expect(shopifyHttpError(403)).toContain("رفضت المفتاح");
+  });
+
+  it("٤٠٤ = المتجر مش موجود", () => {
+    expect(shopifyHttpError(404)).toContain("مش موجود");
+  });
+
+  it("٤٢٩ = زحمة مش عطل", () => {
+    expect(shopifyHttpError(429)).toContain("مزحومة");
+  });
+
+  it("⚠️ الكود اللي مش معروف بيرجّع رد شوبيفاي زي ما هو — مش رسالة مخترعة", () => {
+    expect(shopifyHttpError(500, "boom")).toBe("boom");
+    expect(shopifyHttpError(500)).toContain("500");
   });
 });
