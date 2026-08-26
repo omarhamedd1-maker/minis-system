@@ -28,7 +28,7 @@ export default async function HealthPage() {
     );
   }
 
-  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts, codGap } = r;
+  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts, codGap, prepaid } = r;
   const verdict = discountVerdict(discounts);
 
   return (
@@ -336,6 +336,65 @@ export default async function HealthPage() {
         الاتنين صح (شحنة جزئية)، وبوسطة بتحدّد عدد مرات تعديل التحصيل
         فالأوتوماتيك بياكلهم.
       */}
+      {/*
+        الدفع المقدم بيوفّر كام.
+
+        ⚠️⚠️ **الرقم من رجوع الدفع عند الاستلام مش من مقارنة الطريقتين.**
+        عدد الأوردرات المدفوعة مقدم صغير جدًا (٦ عند مينيز)، و«صفر رجوع»
+        عليهم مش دليل — ده نفس فخ «١٠٠٪ على أوردر واحد».
+      */}
+      {prepaid.codReturnRate !== null && prepaid.lossPerCod !== null && (
+        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-bold text-gray-900">
+              الدفع المقدم بيوفّر كام
+            </h2>
+            <span className="text-xs text-gray-500">
+              {prepaid.prepaidCount} أوردر مدفوع مقدم
+            </span>
+          </div>
+
+          <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            <span className="font-medium text-gray-900">
+              {prepaid.codReturnRate}%
+            </span>{" "}
+            من أوردرات الدفع عند الاستلام بترجع. يعني كل أوردر بيتدفع عند
+            الاستلام شايل خسارة متوقعة{" "}
+            <span className="font-medium text-gray-900">
+              {formatMoney(Math.round(prepaid.lossPerCod))}
+            </span>{" "}
+            شحن — والمدفوع مقدم مابيشلهاش، الفلوس معاك قبل ما الشحنة تتحرك.
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-gray-50 px-3 py-2">
+              <p className="text-[11px] text-gray-500">اتحرق على الراجع</p>
+              <p className="text-sm font-bold tabular-nums text-red-600">
+                {formatMoney(prepaid.burned)}
+              </p>
+            </div>
+            <div className="rounded-lg bg-gray-50 px-3 py-2">
+              <p className="text-[11px] text-gray-500">خصم يستاهل تديه</p>
+              <p className="text-sm font-bold tabular-nums text-gray-900">
+                {prepaid.worthDiscount === null
+                  ? "—"
+                  : formatMoney(prepaid.worthDiscount)}
+                {prepaid.worthPercent !== null && (
+                  <span className="mr-1 text-xs font-normal text-gray-400">
+                    ({prepaid.worthPercent}%)
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
+            الخصم ده هو اللي بتوفّره بالظبط — أكبر منه بيبقى أغلى من المشكلة.
+            والرقم محسوب من رجوع الدفع عند الاستلام على مئات الأوردرات، مش من
+            مقارنة بالمدفوع مقدم (عددهم لسه صغير).
+          </p>
+        </div>
+      )}
       {codGap.rows.length > 0 && (
         <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
