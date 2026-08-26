@@ -68,16 +68,26 @@ export type SyncHealth =
   /** الجدول لسه مااتعملش — مش معناها إن كل حاجة تمام */
   | { state: "unknown" };
 
+/**
+ * صحة المزامنة لمصدر معيّن.
+ *
+ * ⚠️⚠️ **الفلتر على `source` إجباري.** الجدول ده بقى فيه مصدرين —
+ * `bosta` و`shopify` — ومن غير الفلتر، «آخر صف» ممكن يبقى بتاع
+ * المصدر التاني. يعني استيراد شوبيفاي الناجح كان هيخلّي مزامنة بوسطة
+ * الواقفة تبان سليمة، والعكس.
+ */
 export async function readSyncHealth(
   db: SupabaseClient,
   tenantId: string,
-  now: Date = new Date()
+  now: Date = new Date(),
+  source: "bosta" | "shopify" = "bosta"
 ): Promise<SyncHealth> {
   const { data, error } = await db
     .from("sync_runs")
     .select("ok, dry, fetched, matched, changed, unmatched, errors, created_at")
     .eq("tenant_id", tenantId)
     .eq("dry", false)
+    .eq("source", source)
     .order("created_at", { ascending: false })
     .limit(1);
 

@@ -28,6 +28,7 @@ import {
 import { seasonAlerts, seasonMessage } from "@/lib/seasons";
 import { runAutomation } from "@/lib/automation-run";
 import { notifyAll } from "@/lib/push/notify";
+import { recordSyncRun } from "@/lib/bosta/sync-runs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -163,6 +164,31 @@ export async function GET(request: Request) {
           await runProductImport({ db, tenantId, dry });
 
           const r = await runOrderImport({ db, tenantId, dry });
+
+          /**
+           * ⚠️⚠️ **أثر دائم لكل محاولة استيراد.**
+           *
+           * لما أوردرات ٢ سِك وقفت (٢٤ و٢٦ أغسطس)، ماكانش فيه أي سجل
+           * يقول **الاستيراد بيحاول ولا لأ** — فالتشخيص كان تخمين: هل
+           * المتجر هادي، ولا المفتاح باظ، ولا الكرون واقف؟ الثلاثة
+           * شكلهم واحد من برّه: صفر أوردرات جديدة.
+           *
+           * دلوقتي كل لفة بتسيب أثر. الفرق بين «حاول ونجح ومالقاش جديد»
+           * و«حاول وفشل» و«ماحاولش أصلًا» بقى مكتوب.
+           *
+           * ⚠️ **بيفشل بهدوء** — سطر سجل عمره ما يوقّف استيراد.
+           */
+          if (!dry) {
+            await recordSyncRun(db, {
+              tenantId,
+              source: "shopify",
+              ok: r.ok,
+              dry: false,
+              fetched: r.ok ? r.plan.toImport.length : undefined,
+              changed: r.ok ? (r.added?.orders ?? 0) : undefined,
+              errors: r.ok ? null : r.error,
+            });
+          }
 
           // **الإلغاء بيتقال في الحالتين** — سواء فيه أوردر جديد أو لأ.
           // في التجربة الجافة بيوري اللي **كان** هيتقفل.

@@ -20,22 +20,31 @@ const run = (over: Partial<SyncRun> = {}): SyncRun => ({
   ...over,
 });
 
-function fakeDb(rows: SyncRun[] | null, error = false): SupabaseClient {
-  return {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            order: () => ({
-              limit: async () => ({
-                data: rows,
-                error: error ? { message: "الجدول مش موجود" } : null,
-              }),
-            }),
-          }),
-        }),
-      }),
+/**
+ * قاعدة بيانات وهمية بتسجّل الفلاتر اللي اتطلبت.
+ *
+ * ⚠️ **بتقبل أي عدد `eq`** — النسخة القديمة كانت مثبّتة على اتنين، فأول
+ * ما اتضاف فلتر `source` الاختبارات وقعت كلها بـ«مش دالة». التثبيت على
+ * عدد بيخلّي الاختبار يقيس شكل الاستعلام بدل ما يقيس النتيجة.
+ */
+function fakeDb(
+  rows: SyncRun[] | null,
+  error = false,
+  filters: Record<string, unknown> = {}
+): SupabaseClient {
+  const chain = {
+    eq: (col: string, val: unknown) => {
+      filters[col] = val;
+      return chain;
+    },
+    order: () => chain,
+    limit: async () => ({
+      data: rows,
+      error: error ? { message: "الجدول مش موجود" } : null,
     }),
+  };
+  return {
+    from: () => ({ select: () => chain }),
   } as unknown as SupabaseClient;
 }
 
@@ -93,5 +102,28 @@ describe("صحة المزامنة", () => {
       NOW
     );
     expect(over.state).toBe("stale");
+  });
+});
+
+describe("⚠️⚠️ الفلتر على المصدر", () => {
+  it("بوسطة هي الافتراضي", async () => {
+    const filters: Record<string, unknown> = {};
+    await readSyncHealth(fakeDb([run()], false, filters), "t1", NOW);
+    expect(filters.source).toBe("bosta");
+  });
+
+  it("وشوبيفاي بتتطلب بالاسم", async () => {
+    const filters: Record<string, unknown> = {};
+    await readSyncHealth(fakeDb([run()], false, filters), "t1", NOW, "shopify");
+    expect(filters.source).toBe("shopify");
+  });
+
+  it("⚠️ من غير الفلتر ده، استيراد شوبيفاي الناجح كان بيخفي مزامنة بوسطة الواقفة", async () => {
+    const filters: Record<string, unknown> = {};
+    await readSyncHealth(fakeDb([run()], false, filters), "t1", NOW);
+    // الجدول فيه مصدرين — الفلتر هو اللي بيفصل بينهم
+    expect(filters.tenant_id).toBe("t1");
+    expect(filters.dry).toBe(false);
+    expect(filters.source).toBeDefined();
   });
 });
