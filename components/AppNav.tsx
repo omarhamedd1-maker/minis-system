@@ -35,6 +35,7 @@ const ITEMS: Item[] = [
       { href: "/orders/returns", label: "المرتجعات", perm: "orders.view" },
       { href: "/orders/carts", label: "سلات متروكة", perm: "orders.view" },
       { href: "/orders/followup", label: "اسأل بعد التسليم", perm: "orders.view" },
+      { href: "/orders/ratings", label: "التقييمات", perm: "orders.view" },
     ],
   },
   { href: "/tasks", label: "التاسكات", perm: "tasks.view" },

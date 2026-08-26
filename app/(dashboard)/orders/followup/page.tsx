@@ -4,6 +4,7 @@ import { requirePagePermission, can } from "@/lib/permissions";
 import { followupQueue, ASK_AFTER_DAYS, ASK_BEFORE_DAYS } from "@/lib/followup";
 import { FollowupList } from "@/components/FollowupList";
 import { trackingLink } from "@/lib/tracking-view";
+import { ratingLink } from "@/lib/rating";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { markFollowedUp, saveFollowupTemplate } from "./actions";
@@ -116,6 +117,7 @@ export default async function FollowupPage({
         ),
       ].filter(Boolean),
       trackLink: trackingLink(o.id, origin),
+      rateLink: ratingLink(o.id, origin),
     })),
     new Date(),
     storeName,
