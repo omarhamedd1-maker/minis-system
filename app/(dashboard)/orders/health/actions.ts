@@ -15,12 +15,15 @@ import { priceTests, type PriceTest } from "@/lib/price-tests";
 import { shippingByDay, type TimingReport } from "@/lib/shipping-timing";
 import { discountImpact, type DiscountReport } from "@/lib/discount-impact";
 import { codGaps, type GapReport } from "@/lib/cod-gap";
+import { prepaidValue } from "@/lib/prepaid-value";
 import { fetchShopifyOrders } from "@/lib/shopify/orders";
 import { resolveShopifyToken } from "@/lib/shopify/token";
 
 export type HealthReport =
   | {
       ok: true;
+      /** الدفع المقدم بيوفّر كام — من رجوع الدفع عند الاستلام */
+      prepaid: ReturnType<typeof prepaidValue>;
       rates: ReturnType<typeof carrierRates>;
       lead: ReturnType<typeof leadTime>;
       aging: Aging;
@@ -66,6 +69,7 @@ export async function loadHealth(): Promise<HealthReport> {
       `order_number, order_status, order_date, delivered_at, bosta_tracking,
        bosta_created_at, bosta_cod, bosta_collected, cash_received_at,
        return_reason, discount, shipping_price, customer_id,
+       amount_paid, bosta_fees_real, bosta_shipping_cost,
        customers(full_name),
        order_items(quantity, sale_price_at_order, variant_id,
          product_variants(variant_name, products(name_ar, name)))`
@@ -79,8 +83,76 @@ export async function loadHealth(): Promise<HealthReport> {
 
   const codes = await loadDiscountCodes(db, me.tenantId);
 
+  /**
+   * ⚠️⚠️ **قيمة الدفع المقدم بتتحسب من رجوع الاستلام، مش من مقارنة
+   * الطريقتين.** عند مينيز فيه ٦ أوردرات مدفوعة مقدم بس — «صفر رجوع»
+   * عليهم مش دليل، ده نفس فخ «١٠٠٪ على أوردر واحد».
+   *
+   * الرقم القوي هو رجوع الدفع عند الاستلام على مئات الأوردرات.
+   */
+  const money = rows as unknown as {
+    order_status: string | null;
+    amount_paid: number | null;
+    discount: number | null;
+    shipping_price: number | null;
+    bosta_fees_real: number | null;
+    bosta_shipping_cost: number | null;
+    order_items: { quantity: number; sale_price_at_order: number }[] | null;
+  }[];
+
+  const SETTLED = ["delivered", "returned", "returned_after_delivery"];
+  const RETURNED = ["returned", "returned_after_delivery"];
+
+  let codSettled = 0;
+  let codReturned = 0;
+  let prepaidCount = 0;
+  let deliveredTotal = 0;
+  let deliveredCount = 0;
+  const returnFees: number[] = [];
+
+  for (const o of money) {
+    const status = String(o.order_status);
+    const paid = Number(o.amount_paid ?? 0) > 0;
+    if (paid) prepaidCount++;
+
+    const total =
+      (o.order_items ?? []).reduce(
+        (a, i) => a + Number(i.quantity) * Number(i.sale_price_at_order),
+        0
+      ) -
+      Number(o.discount ?? 0) +
+      Number(o.shipping_price ?? 0);
+
+    if (status === "delivered" && total > 0) {
+      deliveredTotal += total;
+      deliveredCount++;
+    }
+
+    if (!paid && SETTLED.includes(status)) {
+      codSettled++;
+      if (RETURNED.includes(status)) {
+        codReturned++;
+        // ⚠️ الرسوم الحقيقية لو موجودة، والتقديرية لو لسه — مش صفر
+        const fee = Number(o.bosta_fees_real ?? o.bosta_shipping_cost ?? 0);
+        if (fee > 0) returnFees.push(fee);
+      }
+    }
+  }
+
+  const avgReturnFee =
+    returnFees.length > 0
+      ? returnFees.reduce((a, b) => a + b, 0) / returnFees.length
+      : 0;
+
   return {
     ok: true,
+    prepaid: prepaidValue({
+      codSettled,
+      codReturned,
+      prepaidCount,
+      returnShippingCost: avgReturnFee,
+      averageOrder: deliveredCount > 0 ? deliveredTotal / deliveredCount : 0,
+    }),
     rates: carrierRates(rows),
     lead: leadTime(rows),
     aging: collectionAging(rows as never, cairoToday()),
