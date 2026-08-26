@@ -29,6 +29,9 @@ import { seasonAlerts, seasonMessage } from "@/lib/seasons";
 import { runAutomation } from "@/lib/automation-run";
 import { notifyAll } from "@/lib/push/notify";
 import { recordSyncRun } from "@/lib/bosta/sync-runs";
+import { registerShopifyWebhooks } from "@/lib/shopify/register-webhooks";
+import { webhookCallbackUrl } from "@/lib/shopify/webhook-url";
+import { resolveShopifyToken } from "@/lib/shopify/token";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -162,6 +165,40 @@ export async function GET(request: Request) {
           // **والتشغيل ده مالوش ضرر**: الجلب بيقارن برقم المنتج عند شوبيفاي
           // ومابيكرّرش، فاللفة اللي مالقتش جديد مابتكتبش حاجة.
           await runProductImport({ db, tenantId, dry });
+
+          /**
+           * ⚠️⚠️ **الويب هوك بيتأكد لوحده كل لفة.**
+           *
+           * كان بيتسجّل **مرة واحدة بس** — وقت ما صاحب المتجر يدوس «اربط».
+           * لو فشل ساعتها، أو المتجر شال التطبيق ورجّعه، أو العنوان كان
+           * معاينة فيرسل ماتت — الويب هوك بيفضل ميت **والأوردرات تستنى
+           * اللفة ربع ساعة**، وده بيبان كأن كل حاجة تمام.
+           *
+           * الأرقام على الإنتاج (٢٦ أغسطس): مينيز **٥٥ من ٥٨ أوردر في ٦
+           * ثواني**، و٢ سِك **٥ من ١٢** والوسيط **٣ ساعات**.
+           *
+           * ⚠️ **والتسجيل بيتعاد من غير ضرر** — بيقرا الموجود الأول
+           * ومابيلمسش اللي متسجّل على نفس المسار، ومابيمسحش اللي على
+           * مسار تاني (ممكن يكون تطبيق تاني على نفس المتجر).
+           *
+           * ⚠️ **وبيفشل بهدوء** — اللفة الدورية شبكة الأمان تحته.
+           */
+          if (!dry) {
+            try {
+              const auth = await resolveShopifyToken(db, tenantId);
+              if (auth.ok) {
+                await registerShopifyWebhooks({
+                  shop: auth.shop,
+                  token: auth.token,
+                  callbackUrl: webhookCallbackUrl({
+                    configured: process.env.NEXT_PUBLIC_SITE_URL,
+                  }),
+                });
+              }
+            } catch {
+              // الاستيراد أهم من تسجيل الويب هوك
+            }
+          }
 
           const r = await runOrderImport({ db, tenantId, dry });
 

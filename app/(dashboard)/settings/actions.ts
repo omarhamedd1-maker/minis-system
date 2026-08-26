@@ -18,6 +18,7 @@ import { loadTenantCredentials } from "@/lib/tenant-settings";
 import { readShopifyApp } from "@/lib/shopify/app";
 import { resolveShopifyToken } from "@/lib/shopify/token";
 import { registerShopifyWebhooks } from "@/lib/shopify/register-webhooks";
+import { webhookCallbackUrl } from "@/lib/shopify/webhook-url";
 import { headers } from "next/headers";
 import { randomUUID } from "node:crypto";
 import { listShopifyWebhooks } from "@/lib/shopify/register-webhooks";
@@ -224,12 +225,16 @@ export async function saveShopify(formData: FormData) {
   // بتقول إيه اللي حصل من غير ما تخوّف.
   let hooks = "";
   if (token) {
+    // ⚠️⚠️ **العنوان كان بيتاخد من الصفحة اللي إنت فاتحها** — يعني الربط
+    // من معاينة فيرسل كان بيسجّل الويب هوك على نشرة مؤقتة، والنشرة بتموت
+    // والويب هوك يفضل يضرب في الفاضي. `webhookOrigin` بترفض المعاينات.
     const r = await registerShopifyWebhooks({
       shop,
       token,
-      callbackUrl: `https://${
-        (await headers()).get("host") ?? "minis-system.vercel.app"
-      }/api/shopify/webhooks`,
+      callbackUrl: webhookCallbackUrl({
+        configured: process.env.NEXT_PUBLIC_SITE_URL,
+        host: (await headers()).get("host"),
+      }),
     });
     if (r.created.length > 0) hooks = " · والأوردر الجديد هييجي فورًا";
     else if (r.alreadyOk.length > 0) hooks = " · الأوردر الفوري شغّال خلاص";
