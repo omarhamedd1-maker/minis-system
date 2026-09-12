@@ -25,6 +25,11 @@ import { StatusBox } from "@/components/StatusBox";
 import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
 import { BackLink } from "@/components/BackLink";
+import TemplateEditor from "@/components/TemplateEditor";
+import { renderTemplate } from "@/lib/message-template";
+import { kindInfo, templateFor } from "@/lib/message-kinds";
+import { loadStoredTemplates } from "@/lib/message-templates-db";
+import { saveMessageTemplate } from "../template-actions";
 import { OrderItemRow } from "@/components/OrderItemRow";
 import { OrderItemCard } from "@/components/OrderItemCard";
 import { ReturnPanel } from "@/components/ReturnPanel";
@@ -443,7 +448,22 @@ export default async function OrderDetailsPage({
       ? rawPhone
       : "20" + rawPhone.replace(/^0+/, "")
     : null;
-  const whatsappLink = intlPhone ? `https://wa.me/${intlPhone}` : null;
+  // ⚠️ **الرسالة بتتبعت مع اللينك.** الزرار ده كان بيفتح واتساب **فاضي**،
+  // فصاحب المتجر بيكتب من أول السطر كل مرة والنص بيطلع مختلف في كل مكالمة.
+  //
+  // **والقالب بمفتاح الأدمن** — الجدول مقفول في الـRLS، والفشل هنا معناه
+  // النص الافتراضي مش شاشة واقعة.
+  const messageTemplate = templateFor(
+    "general",
+    await loadStoredTemplates(createAdminClient(), user.tenantId)
+  );
+  const waText = renderTemplate(messageTemplate, {
+    "الاسم": order.customers?.full_name?.split(" ")[0] ?? null,
+    "رقم الأوردر": order.order_number,
+  });
+  const whatsappLink = intlPhone
+    ? `https://wa.me/${intlPhone}?text=${encodeURIComponent(waText)}`
+    : null;
 
   // نعمل إيه في الأوردر الواقف — بتتحدد من سبب بوسطة نفسه
   const advice = exceptionAdvice(order.bosta_exception);
@@ -848,6 +868,22 @@ export default async function OrderDetailsPage({
             )}
           </dl>
         </div>
+
+        {/*
+          الرسالة اللي بتفتح مع واتساب.
+
+          ⚠️ **مكانها هنا مش في الإعدادات** (قرار عمر) — بتتقري وبتتعدّل
+          في نفس الشاشة اللي بتتبعت منها. ونفس القالب بيتستخدم في زرار
+          واتساب اللي في قايمة الأوردرات.
+        */}
+        {isAdmin && (
+          <TemplateEditor
+            info={kindInfo("general")!}
+            value={messageTemplate}
+            back={`/orders/${id}`}
+            action={saveMessageTemplate}
+          />
+        )}
 
         <div className="rounded-xl bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-sm font-bold text-gray-900">الشحن</h2>

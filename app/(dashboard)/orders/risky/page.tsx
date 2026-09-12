@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
 import { createClient } from "@/lib/supabase/server";
-import { requirePagePermission } from "@/lib/permissions";
+import { requirePagePermission, can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/format";
 import { orderFlags, worthChecking, flagLine } from "@/lib/order-flags";
 import { whatsappLink } from "@/lib/followup";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { renderTemplate } from "@/lib/message-template";
+import { kindInfo, templateFor } from "@/lib/message-kinds";
+import { loadStoredTemplates } from "@/lib/message-templates-db";
+import TemplateEditor from "@/components/TemplateEditor";
+import { saveMessageTemplate } from "../template-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +45,31 @@ type Row = {
  * ⚠️ **والعنوان القصير لوحده مش سبب.** بيرن على نُص الأوردرات، فلو دخل
  * القايمة تبقى هي قايمة الأوردرات كلها.
  */
-export default async function RiskyPage() {
-  await requirePagePermission("orders.view");
+export default async function RiskyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string; error?: string }>;
+}) {
+  const { saved, error: saveError } = await searchParams;
+  const user = await requirePagePermission("orders.view");
+  const canEdit = can(user, "admin.settings");
   const supabase = await createClient();
+
+  // ⚠️ **القالب واسم المتجر بمفتاح الأدمن** — الجدولين مقفولين في الـRLS،
+  // والفشل هنا معناه القالب الافتراضي مش شاشة واقعة.
+  const admin = createAdminClient();
+  const [storeName, stored] = await Promise.all([
+    (async () => {
+      const { data } = await admin
+        .from("tenants")
+        .select("name")
+        .eq("id", user.tenantId)
+        .maybeSingle();
+      return (data as { name: string | null } | null)?.name ?? null;
+    })(),
+    loadStoredTemplates(admin, user.tenantId),
+  ]);
+  const template = templateFor("confirm", stored);
 
   const { data, error } = await supabase
     .from("orders")
@@ -158,6 +186,26 @@ export default async function RiskyPage() {
         دي مش أوردرات غلط — دي أوردرات وراها حاجة في تاريخها. مكالمة قبل الشحن
         بتوفّر شحنة رايحة جاية، والقرار قرارك.
       </p>
+      {saveError && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </p>
+      )}
+      {saved && (
+        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          الرسالة اتحفظت
+        </p>
+      )}
+
+      {canEdit && (
+        <TemplateEditor
+          info={kindInfo("confirm")!}
+          value={template}
+          back="/orders/risky"
+          action={saveMessageTemplate}
+        />
+      )}
+
 
       {flagged.length === 0 ? (
         <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
@@ -194,11 +242,12 @@ export default async function RiskyPage() {
                   <a
                     href={whatsappLink(
                       o.customers.phone,
-                      `أهلًا${
-                        o.customers.full_name
-                          ? " " + o.customers.full_name.split(" ")[0]
-                          : ""
-                      } — بنأكّد أوردرك رقم ${o.order_number ?? ""} قبل ما نشحنه.`
+                      renderTemplate(template, {
+                        "الاسم": o.customers?.full_name?.split(" ")[0] ?? null,
+                        "رقم الأوردر": o.order_number,
+                        "المتجر": storeName,
+                        "المبلغ": total > 0 ? formatMoney(total) : null,
+                      })
                     )}
                     target="_blank"
                     rel="noreferrer"
