@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { upcomingSeasons } from "@/lib/seasons";
+import { upcomingSeasons, remainingText } from "@/lib/seasons";
 import { createClient } from "@/lib/supabase/server";
 import {
   EXCLUDED_STATUSES,
@@ -593,11 +593,7 @@ export default async function StatsPage({
               {i > 0 && " · "}
               <span className="text-gray-900">{s.name}</span>{" "}
               <span className="text-gray-400">
-                {s.daysAway === 0
-                  ? "النهاردة"
-                  : s.daysAway === 1
-                    ? "بكرة"
-                    : `بعد ${s.daysAway} يوم`}
+                {remainingText(s.daysAway)}
               </span>
             </span>
           ))}

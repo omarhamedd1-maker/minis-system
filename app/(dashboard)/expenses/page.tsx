@@ -11,6 +11,7 @@ import {
 import { ExpenseRow } from "@/components/ExpenseRow";
 import { ExpenseCard } from "@/components/ExpenseCard";
 import { can, requirePagePermission } from "@/lib/permissions";
+import { SubmitOnce } from "@/components/SubmitOnce";
 import { addExpense, deleteExpense, updateExpense } from "./actions";
 
 type ExpenseRow = {
@@ -260,12 +261,9 @@ export default async function ExpensesPage({
               </select>
             </div>
           )}
-          <button
-            type="submit"
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
-          >
+          <SubmitOnce className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
             تسجيل المصروف
-          </button>
+          </SubmitOnce>
           <p className="w-full text-xs text-gray-400">
             لو اخترت مورد، المصروف ده بيتسجّل دفعة في حسابه وبيقلّل اللي عليك
             له. فواتير البضاعة بالأجل بتتسجّل من صفحة المورد نفسه ومابتتحسبش

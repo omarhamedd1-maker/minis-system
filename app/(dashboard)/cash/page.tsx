@@ -3,6 +3,7 @@ import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { CashManualRow } from "@/components/CashManualRow";
 import { CashCard } from "@/components/CashCard";
 import { can, requirePagePermission } from "@/lib/permissions";
+import { SubmitOnce } from "@/components/SubmitOnce";
 import {
   addCashTransaction,
   deleteCashTransaction,
@@ -193,12 +194,9 @@ export default async function CashPage({
               className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
             />
           </div>
-          <button
-            type="submit"
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
-          >
+          <SubmitOnce className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
             تسجيل
-          </button>
+          </SubmitOnce>
         </form>
       )}
 

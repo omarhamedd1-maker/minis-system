@@ -74,11 +74,37 @@ export async function recordPrepaidCash(opts: {
 
   if (orders.length === 0) return out;
 
-  const { data: cashRows } = await db
+  /**
+   * ⚠️⚠️ **القراية دي لو فشلت، لازم نقف — مش نكمّل.**
+   *
+   * الصفوف دي هي اللي بتقول «الأوردر ده اتسجّل خلاص». لو رجعت فاضية
+   * بسبب عطل، السيستم بيشوف إن مافيش حاجة متسجّلة **ويكتب كل حاجة من
+   * أول وجديد** — يعني فلوس بتتولد من عطل قراية.
+   *
+   * ده حصل فعلًا عند مينيز بين ٩ و١٢ سبتمبر ٢٠٢٦: **٦٠ حركة مقدم على
+   * ٥ أوردرات بس**، بدفعات من ٥ في لفّات كرون متفرقة —
+   * **١٨٨٬٥٢٩ جنيه وهميين في الخزنة**. والنسخة القديمة كانت بتتجاهل
+   * `error` تمامًا.
+   *
+   * ⚠️ **والقيد في الداتابيز هو الضمان التاني** (`sql/prepaid-once.sql`)
+   * — الكود ممكن يغلط تاني، والقيد مش بيغلط.
+   */
+  const { data: cashRows, error: cashError } = await db
     .from("cash_transactions")
     .select("id, direction, amount, description, related_order_id, transaction_date")
     .eq("tenant_id", tenantId)
     .limit(5000);
+
+  if (cashError || !cashRows) {
+    out.review.push({
+      orderNumber: null,
+      amount: 0,
+      cashDescription:
+        "معرفناش نقرا الخزنة، فوقفنا من غير ما نسجّل حاجة: " +
+        (cashError?.message ?? "الرد رجع فاضي"),
+    });
+    return out;
+  }
 
   const cash: CashRow[] = (
     (cashRows ?? []) as {

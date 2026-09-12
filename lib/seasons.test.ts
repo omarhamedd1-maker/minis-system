@@ -5,6 +5,7 @@ import {
   seasonMessage,
   lastKnownSeason,
   NOTICE_DAYS,
+  remainingText,
 } from "./seasons";
 
 /** يوم بتوقيت مصر — الظهر عشان التوقيت مايزحلقش اليوم */
@@ -83,9 +84,13 @@ describe("المواسم", () => {
     const [a] = seasonAlerts(at("2026-08-21"));
     const text = seasonMessage(a.season, a.daysAway);
     expect(text).toContain("دخول المدارس");
-    expect(text).toContain("30");
+    expect(text).toContain("فاضل شهر");
     expect(text).not.toContain("لازم");
     expect(text).not.toContain("اطلب");
+    // ⚠️⚠️ **مافيش وصف** — الوصف بتاع دخول المدارس كان «الشنط والأدوات»
+    expect(text).not.toContain("الشنط");
+    // سطر واحد بس — مافيش سطر وصف تحته
+    expect(text.includes("\n")).toBe(false);
   });
 
   it("«بكرة» بدل «فاضل يوم»", () => {
@@ -94,7 +99,42 @@ describe("المواسم", () => {
     );
   });
 
-  it("التنبيهين بس — شهر وأسبوع", () => {
-    expect([...NOTICE_DAYS]).toEqual([30, 7]);
+  it("ست محطات — شهر وأسبوعين وأسبوع و٥ و٣ ويوم", () => {
+    expect([...NOTICE_DAYS]).toEqual([30, 14, 7, 5, 3, 1]);
+  });
+
+  it("⚠️ كل محطة بترن في ميعادها", () => {
+    // دخول المدارس ٢٠ سبتمبر ٢٠٢٦
+    for (const [day, mark] of [
+      ["2026-08-21", 30],
+      ["2026-09-06", 14],
+      ["2026-09-13", 7],
+      ["2026-09-15", 5],
+      ["2026-09-17", 3],
+      ["2026-09-19", 1],
+    ] as [string, number][]) {
+      const hit = seasonAlerts(at(day)).find(
+        (a) => a.season.key === "back-to-school-2026"
+      );
+      expect(hit, `محطة ${mark}`).toBeDefined();
+      expect(hit!.daysAway).toBe(mark);
+    }
+  });
+
+  it("⚠️⚠️ ويوم الموسم نفسه وبعده مافيهمش تنبيه", () => {
+    for (const day of ["2026-09-20", "2026-09-21"]) {
+      expect(
+        seasonAlerts(at(day)).map((a) => a.season.key)
+      ).not.toContain("back-to-school-2026");
+    }
+  });
+
+  it("صياغة الوقت الفاضل", () => {
+    expect(remainingText(30)).toBe("فاضل شهر");
+    expect(remainingText(14)).toBe("فاضل أسبوعين");
+    expect(remainingText(7)).toBe("فاضل أسبوع");
+    expect(remainingText(5)).toBe("فاضل 5 أيام");
+    expect(remainingText(2)).toBe("فاضل يومين");
+    expect(remainingText(1)).toBe("بكرة");
   });
 });
