@@ -40,11 +40,17 @@ function currentMs() {
 }
 
 // لينك واتساب العميل بصيغة مصر الدولية (20)
-function waLink(phone: string | null) {
+//
+// ⚠️ **والرسالة بتتبعت معاه.** الزرار ده كان بيفتح واتساب **فاضي** — يعني
+// صاحب المتجر بيكتب من أول السطر كل مرة، والنص بيطلع مختلف في كل مكالمة.
+function waLink(phone: string | null, message?: string) {
   const digits = (phone ?? "").replace(/\D/g, "");
   if (!digits) return null;
   const intl = digits.startsWith("20") ? digits : "20" + digits.replace(/^0+/, "");
-  return `https://wa.me/${intl}`;
+  const text = String(message ?? "").trim();
+  return text
+    ? `https://wa.me/${intl}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/${intl}`;
 }
 import {
   addOrderComment,
@@ -61,6 +67,9 @@ import { ImportShopifyOrders } from "@/components/ImportShopifyOrders";
 import { importShopifyOrders } from "./actions";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { renderTemplate } from "@/lib/message-template";
+import { templateFor } from "@/lib/message-kinds";
+import { loadStoredTemplates } from "@/lib/message-templates-db";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { approveDeletion, rejectDeletion } from "./[id]/actions";
 
@@ -169,6 +178,13 @@ export default async function OrdersPage({
   const canPrint = can(user, "ship.print");
   const canSend = can(user, "ship.send");
   const canComments = can(user, "orders.comments");
+
+  // ⚠️ **القالب بمفتاح الأدمن** — الجدول مقفول في الـRLS، والفشل هنا
+  // معناه النص الافتراضي مش شاشة واقعة.
+  const messageTemplate = templateFor(
+    "general",
+    await loadStoredTemplates(createAdminClient(), user.tenantId)
+  );
   const supabase = await createClient();
 
   // طلبات الحذف المستنية موافقة الأدمن (مبدأ الشخصين)
@@ -541,7 +557,13 @@ export default async function OrdersPage({
                 (!order.cancelled_at ||
                   nowMs - new Date(order.cancelled_at).getTime() >
                     CANCEL_LOCK_MS);
-              const wa = waLink(order.customers?.phone ?? null);
+              const wa = waLink(
+                order.customers?.phone ?? null,
+                renderTemplate(messageTemplate, {
+                  "الاسم": order.customers?.full_name?.split(" ")[0] ?? null,
+                  "رقم الأوردر": order.order_number,
+                })
+              );
               return (
                 <SelectableOrderCard
                   key={order.id}
@@ -781,7 +803,17 @@ export default async function OrdersPage({
                         </Link>
                         {waLink(order.customers?.phone ?? null) && (
                           <a
-                            href={waLink(order.customers?.phone ?? null)!}
+                            href={
+                              waLink(
+                                order.customers?.phone ?? null,
+                                renderTemplate(messageTemplate, {
+                                  "الاسم":
+                                    order.customers?.full_name?.split(" ")[0] ??
+                                    null,
+                                  "رقم الأوردر": order.order_number,
+                                })
+                              )!
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                             title="واتساب العميل"

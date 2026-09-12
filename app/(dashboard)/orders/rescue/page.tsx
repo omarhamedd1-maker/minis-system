@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { BackLink } from "@/components/BackLink";
 import { createClient } from "@/lib/supabase/server";
-import { requirePagePermission } from "@/lib/permissions";
+import { requirePagePermission, can } from "@/lib/permissions";
 import { formatMoney } from "@/lib/format";
 import { rescueQueue, rescueValue, RESCUE_WINDOW_DAYS } from "@/lib/rescue";
 import { whatsappLink } from "@/lib/followup";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { renderTemplate } from "@/lib/message-template";
+import { kindInfo, templateFor } from "@/lib/message-kinds";
+import { loadStoredTemplates } from "@/lib/message-templates-db";
+import TemplateEditor from "@/components/TemplateEditor";
+import { saveMessageTemplate } from "../template-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +23,31 @@ export const dynamic = "force-dynamic";
  * ⚠️⚠️ **والوقت ضيق**: بوسطة بتحاول تاني بعد يوم أو يومين وبعدها بترجّع،
  * فالترتيب هنا **بالأحدث** — عكس باقي القوايم بقصد.
  */
-export default async function RescuePage() {
-  await requirePagePermission("orders.view");
+export default async function RescuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string; error?: string }>;
+}) {
+  const { saved, error: saveError } = await searchParams;
+  const user = await requirePagePermission("orders.view");
+  const canEdit = can(user, "admin.settings");
   const supabase = await createClient();
+
+  // ⚠️ **القالب واسم المتجر بمفتاح الأدمن** — الجدولين مقفولين في الـRLS،
+  // والفشل هنا معناه القالب الافتراضي مش شاشة واقعة.
+  const admin = createAdminClient();
+  const [storeName, stored] = await Promise.all([
+    (async () => {
+      const { data } = await admin
+        .from("tenants")
+        .select("name")
+        .eq("id", user.tenantId)
+        .maybeSingle();
+      return (data as { name: string | null } | null)?.name ?? null;
+    })(),
+    loadStoredTemplates(admin, user.tenantId),
+  ]);
+  const template = templateFor("rescue", stored);
 
   type Row = {
     id: string;
@@ -87,6 +115,26 @@ export default async function RescuePage() {
         يستلم» و«طلب التأجيل» — والاتنين مكالمة بتقلبهم. اللي عدّى على محاولته
         أكتر من {RESCUE_WINDOW_DAYS} أيام بيخرج من القايمة، فات وقته.
       </p>
+      {saveError && (
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </p>
+      )}
+      {saved && (
+        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+          الرسالة اتحفظت
+        </p>
+      )}
+
+      {canEdit && (
+        <TemplateEditor
+          info={kindInfo("rescue")!}
+          value={template}
+          back="/orders/rescue"
+          action={saveMessageTemplate}
+        />
+      )}
+
 
       {queue.length === 0 ? (
         <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
@@ -128,7 +176,12 @@ export default async function RescuePage() {
                 <a
                   href={whatsappLink(
                     r.customerPhone,
-                    `أهلًا${r.customerName ? " " + r.customerName.split(" ")[0] : ""} — بخصوص شحنتك اللي مع المندوب، إمتى يناسبك نبعتها؟`
+                    renderTemplate(template, {
+                      "الاسم": r.customerName?.split(" ")[0] ?? null,
+                      "رقم الأوردر": r.orderNumber,
+                      "المتجر": storeName,
+                      "المبلغ": r.cod > 0 ? formatMoney(r.cod) : null,
+                    })
                   )}
                   target="_blank"
                   rel="noreferrer"

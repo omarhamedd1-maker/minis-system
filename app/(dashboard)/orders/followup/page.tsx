@@ -7,12 +7,11 @@ import { trackingLink } from "@/lib/tracking-view";
 import { ratingLink } from "@/lib/rating";
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { markFollowedUp, saveFollowupTemplate } from "./actions";
-import {
-  DEFAULT_FOLLOWUP_TEMPLATE,
-  MAX_TEMPLATE_LENGTH,
-  PLACEHOLDERS,
-} from "@/lib/message-template";
+import { markFollowedUp } from "./actions";
+import { saveMessageTemplate } from "../template-actions";
+import { kindInfo, templateFor } from "@/lib/message-kinds";
+import { loadStoredTemplates } from "@/lib/message-templates-db";
+import TemplateEditor from "@/components/TemplateEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +35,7 @@ export default async function FollowupPage({
   // ⚠️ **القالب واسم المتجر بمفتاح الأدمن** — الجدولين دول مقفولين في
   // الـRLS، والفشل هنا معناه القالب الافتراضي مش شاشة واقعة.
   const admin = createAdminClient();
-  const [storeName, template] = await Promise.all([
+  const [storeName, stored] = await Promise.all([
     (async () => {
       const { data } = await admin
         .from("tenants")
@@ -45,17 +44,9 @@ export default async function FollowupPage({
         .maybeSingle();
       return (data as { name: string | null } | null)?.name ?? null;
     })(),
-    (async () => {
-      const { data, error } = await admin
-        .from("tenant_credentials")
-        .select("followup_template")
-        .eq("tenant_id", user.tenantId)
-        .maybeSingle();
-      if (error) return null;
-      return (data as { followup_template: string | null } | null)
-        ?.followup_template ?? null;
-    })(),
+    loadStoredTemplates(admin, user.tenantId),
   ]);
+  const template = templateFor("followup", stored);
 
   type Row = {
     id: string;
@@ -157,37 +148,12 @@ export default async function FollowupPage({
         لوحة المفاتيح في نص الجملة.
       */}
       {canMark && (
-        <details className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <summary className="cursor-pointer text-sm font-bold text-gray-900">
-            الرسالة اللي بتتبعت
-          </summary>
-          <form action={saveFollowupTemplate} className="mt-3 space-y-2">
-            <textarea
-              name="followup_template"
-              rows={4}
-              defaultValue={template ?? DEFAULT_FOLLOWUP_TEMPLATE}
-              maxLength={MAX_TEMPLATE_LENGTH}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              {PLACEHOLDERS.map((ph) => (
-                <span
-                  key={ph.token}
-                  title={ph.hint}
-                  className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600"
-                >
-                  {"{" + ph.token + "}"}
-                </span>
-              ))}
-            </div>
-            <button
-              type="submit"
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
-            >
-              احفظ الرسالة
-            </button>
-          </form>
-        </details>
+        <TemplateEditor
+          info={kindInfo("followup")!}
+          value={template}
+          back="/orders/followup"
+          action={saveMessageTemplate}
+        />
       )}
 
       {queue.length === 0 ? (

@@ -25,6 +25,7 @@ export const PLACEHOLDERS = [
   { token: "المتجر", hint: "اسم متجرك" },
   { token: "لينك التتبع", hint: "صفحة التتبع باسم متجرك" },
   { token: "لينك التقييم", hint: "نجمة لـ٥ على الأوردر" },
+  { token: "المبلغ", hint: "المطلوب عند الاستلام" },
 ] as const;
 
 export type TemplateVars = Partial<Record<string, string | null | undefined>>;
