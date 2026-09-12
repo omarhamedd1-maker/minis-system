@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser, requirePermission } from "@/lib/permissions";
+import { resyncOrder } from "@/lib/shopify/order-resync-run";
 import { logActivity } from "@/lib/activity";
 import {
   loadBostaCities,
@@ -1726,4 +1727,40 @@ export async function restockReturn(formData: FormData) {
   await logActivity(me, "order.restock", restockSummary(plan.items), orderId);
   revalidatePath(`/orders/${orderId}`);
   redirect(`/orders/${orderId}?saved=` + encodeURIComponent(restockSummary(plan.items)));
+}
+
+/**
+ * بيرجّع الأوردر زي ما هو عند شوبيفاي.
+ *
+ * ⚠️⚠️ **بالضغط بس** — الاستيراد بيضيف الجديد ويزامن الإلغاء بس بقصد،
+ * والتحديث التلقائي بيمسح تعديلات الموظفين من ورا ظهرهم.
+ *
+ * ⚠️ **والأوردر اللي راح لبوسطة مايتلمسش** — الشحنة اتعملت بمبلغ تحصيل
+ * وبوسطة شايلاه، فتغيير البنود بيخلّي رقمنا يختلف عن اللي هيتحصّل.
+ */
+export async function resyncFromShopify(formData: FormData) {
+  const me = await requirePermission("orders.items");
+  const orderId = String(formData.get("order_id") ?? "").trim();
+  if (!orderId) redirect("/orders");
+
+  const result = await resyncOrder({
+    db: createAdminClient(),
+    tenantId: me.tenantId,
+    orderId,
+  });
+
+  if (!result.ok) {
+    redirect(`/orders/${orderId}?error=` + encodeURIComponent(result.error));
+  }
+
+  await logActivity(
+    me,
+    "order.resync",
+    `رجّع أوردر من شوبيفاي — ${result.summary}`
+  );
+  revalidatePath(`/orders/${orderId}`);
+  redirect(
+    `/orders/${orderId}?saved=` +
+      encodeURIComponent("اتظبّط من شوبيفاي — " + result.summary)
+  );
 }

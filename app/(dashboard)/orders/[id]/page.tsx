@@ -15,6 +15,7 @@ import {
 import { shippingSettlement } from "@/lib/dashboard-stats";
 import { shortLogText } from "@/lib/log-text";
 import { orderFlags } from "@/lib/order-flags";
+import { resyncOrder } from "@/lib/shopify/order-resync-run";
 import { trackingLink } from "@/lib/tracking-view";
 import { CopyLink } from "@/components/CopyLink";
 import { headers } from "next/headers";
@@ -64,6 +65,7 @@ import {
   confirmRefund,
   undoRefund,
   restockReturn,
+  resyncFromShopify,
 } from "./actions";
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
@@ -270,6 +272,36 @@ export default async function OrderDetailsPage({
    * ⚠️ **بالتليفون مش بالعنوان** — العنوان بيتكتب بألف طريقة («٩ شارع
    * المعادي» و«٩ ش المعادى») فمقارنته حرف بحرف بتفوّت أغلب التكرار.
    */
+  /**
+   * الأوردر ده مختلف عن شوبيفاي؟
+   *
+   * ⚠️⚠️ **بيسأل شوبيفاي بس لما الأوردر لسه ينفع يتعدّل** — بعد ما
+   * الشحنة تروح لبوسطة أو الأوردر يخلص، الفرق مالوش لازمة والنداء على
+   * شوبيفاي بيبقى تأخير على كل فتحة صفحة من غير فايدة.
+   *
+   * ⚠️ **وبيفشل بهدوء** — شوبيفاي لو مارّدتش، الصفحة بتفتح عادي من غير
+   * الشريط ده.
+   */
+  const shopifyDiff = await (async () => {
+    const open = ["new", "confirmed", "packed"].includes(
+      String(order.order_status)
+    );
+    if (!canItems || !open || String(order.bosta_tracking ?? "").trim()) {
+      return null;
+    }
+    try {
+      const r = await resyncOrder({
+        db: createAdminClient(),
+        tenantId: user.tenantId,
+        orderId: order.id,
+        dry: true,
+      });
+      if (!r.ok) return null;
+      return { ours: r.before, theirs: r.after };
+    } catch {
+      return null;
+    }
+  })();
   const sameDayOthers = await (async () => {
     const phone = String(order.customers?.phone ?? "").trim();
     const day = String(order.order_date ?? "").slice(0, 10);
@@ -570,6 +602,41 @@ export default async function OrderDetailsPage({
         </div>
       )}
 
+      {/*
+        الأوردر اتعدّل عند شوبيفاي.
+
+        ⚠️⚠️ **الاستيراد بيضيف الجديد ويزامن الإلغاء بس** — قرار قديم
+        مكتوب في `order-import-plan.ts`. يعني لو حد زوّد صنف أو غيّر كمية
+        عند شوبيفاي بعد ما الأوردر دخل، السيستم مايعرفش.
+
+        حالة حقيقية عند ٢ سِك (١٢ سبتمبر ٢٠٢٦): أوردر #1447 عندنا ٧٢٩
+        وعند شوبيفاي ١٢٢٨.
+
+        ⚠️ **والزرار بيظهر بس لما فيه فرق فعلًا** — وبيتنفّذ بالضغط،
+        عشان التحديث التلقائي مايمسحش تعديلات الموظفين من ورا ظهرهم.
+      */}
+      {canItems && shopifyDiff !== null && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-amber-900">
+                الأوردر ده مختلف عن شوبيفاي
+              </div>
+              <div className="mt-0.5 text-[11px] leading-relaxed text-amber-700/80">
+                عندنا {formatMoney(Math.round(shopifyDiff.ours))} وعند شوبيفاي{" "}
+                {formatMoney(Math.round(shopifyDiff.theirs))} — يعني حد عدّله
+                هناك بعد ما دخل عندنا.
+              </div>
+            </div>
+            <form action={resyncFromShopify}>
+              <input type="hidden" name="order_id" value={order.id} />
+              <button className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
+                ظبّطه من شوبيفاي
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       {/*
         بوسطة واقفة ومحتاجة تصرّف.
 
