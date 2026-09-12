@@ -91,7 +91,7 @@ export async function recordPrepaidCash(opts: {
    */
   const { data: cashRows, error: cashError } = await db
     .from("cash_transactions")
-    .select("id, direction, amount, description, related_order_id, transaction_date")
+    .select("id, direction, amount, description, related_order_id, transaction_date, source_type")
     .eq("tenant_id", tenantId)
     .limit(5000);
 
@@ -122,9 +122,29 @@ export async function recordPrepaidCash(opts: {
     relatedOrderId: c.related_order_id,
   }));
 
-  // **أقدم حركة في الخزنة = الرصيد الافتتاحي.** أي أوردر قبلها فلوسه
-  // جوّاه خلاص، وتسجيله تاني بيعدّه مرتين
-  const dates = ((cashRows ?? []) as { transaction_date: string | null }[])
+  /**
+   * **أقدم حركة في الخزنة = الرصيد الافتتاحي.** أي أوردر قبلها فلوسه
+   * جوّاه خلاص، وتسجيله تاني بيعدّه مرتين.
+   *
+   * ⚠️⚠️ **والسطور اللي السيستم كتبها مستثناة من الحسبة دي.**
+   *
+   * الحارس ده كان بيقارن بأقدم صف **أيًا كان مصدره** — يعني لو السيستم
+   * كتب صفًا لأوردر قديم بالغلط، الصف ده بيبقى هو أقدم حركة، فالحارس
+   * **بيقارن نفسه بنفسه** ويعدّي.
+   *
+   * حصل فعلًا عند مينيز: أوردر ١٣٣٦ (انستا ١١٬٩٧٨) من ٨ يوليو، والرصيد
+   * الافتتاحي (٢٣٬٢٥٠) من ١٨ يوليو وشامله. الصف الوهمي بتاريخ ٨ يوليو
+   * بقى أقدم حاجة في الجدول، فالحارس اتعطّل **والفلوس اتعدّت مرتين**.
+   *
+   * والرصيد الافتتاحي بطبيعته بيتكتب بالإيد — فالاستثناء ده مايضرّش.
+   */
+  const dates = (
+    (cashRows ?? []) as {
+      transaction_date: string | null;
+      source_type?: string | null;
+    }[]
+  )
+    .filter((c) => c.source_type !== "prepaid")
     .map((c) => String(c.transaction_date ?? "").slice(0, 10))
     .filter(Boolean)
     .sort();
