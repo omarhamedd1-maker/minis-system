@@ -83,21 +83,21 @@ export default async function ActivityPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">سجل النشاط</h1>
+        <h1 className="text-xl font-bold text-ink">سجل النشاط</h1>
         <BackLink href="/users" label="الرجوع للمستخدمين" />
       </div>
 
       {/* فلاتر */}
       <form
         action="/users/activity"
-        className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
+        className="card flex flex-wrap items-end gap-3 p-4"
       >
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500">المستخدم</label>
+          <label className="text-xs text-ink-muted">المستخدم</label>
           <select
             name="actor"
             defaultValue={actor ?? ""}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="field w-auto"
           >
             <option value="">الكل</option>
             {(appUsers ?? []).map((u) => (
@@ -108,11 +108,11 @@ export default async function ActivityPage({
           </select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-gray-500">نوع العملية</label>
+          <label className="text-xs text-ink-muted">نوع العملية</label>
           <select
             name="type"
             defaultValue={typeValid ?? ""}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="field w-auto"
           >
             <option value="">الكل</option>
             {CATEGORIES.map((c) => (
@@ -124,38 +124,38 @@ export default async function ActivityPage({
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+          className="btn btn-primary"
         >
           فلترة
         </button>
         {(actor || typeValid) && (
           <Link
             href="/users/activity"
-            className="rounded-lg bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-control bg-sunken px-4 py-1.5 text-sm font-medium text-ink-body hover:bg-line"
           >
             مسح الفلتر
           </Link>
         )}
-        <span className="ms-auto text-sm text-gray-500">{activity.length} عملية</span>
+        <span className="ms-auto text-sm text-ink-muted">{activity.length} عملية</span>
       </form>
 
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+      <div className="card overflow-hidden">
         {activity.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-gray-500">
+          <p className="px-5 py-10 text-center text-sm text-ink-muted">
             مفيش نشاط بالفلاتر دي.
           </p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-line">
             {activity.map((a) => (
               <li
                 key={a.id}
                 className="flex items-center justify-between gap-4 px-5 py-2.5 text-sm"
               >
-                <span className="text-gray-900">
+                <span className="text-ink">
                   <span className="font-medium">{a.actor_name ?? "غير معروف"}</span>{" "}
-                  <span className="text-gray-600">{a.summary ?? a.action}</span>
+                  <span className="text-ink-muted">{a.summary ?? a.action}</span>
                 </span>
-                <span className="shrink-0 text-xs text-gray-400">
+                <span className="shrink-0 text-xs text-ink-faint">
                   {whenText(a.created_at)}
                 </span>
               </li>
@@ -168,7 +168,7 @@ export default async function ActivityPage({
         <div className="flex justify-center">
           <Link
             href={params({ limit: String(limit + 100) })}
-            className="rounded-lg bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100"
+            className="btn btn-secondary px-6"
           >
             عرض المزيد
           </Link>

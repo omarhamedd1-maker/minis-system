@@ -65,29 +65,29 @@ export default async function NewOrderPage({
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">إضافة أوردر يدوي</h1>
+        <h1 className="text-xl font-bold text-ink">إضافة أوردر يدوي</h1>
         <BackLink href="/orders" label="الرجوع للأوردرات" />
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
 
       <form action={createOrder} className="space-y-4">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">العميل</h2>
+        <div className="card p-5">
+          <h2 className="mb-3 text-sm font-bold text-ink">العميل</h2>
           <div className="space-y-3">
             <div className="flex flex-col gap-1">
-              <label htmlFor="customer_id" className="text-xs text-gray-500">
+              <label htmlFor="customer_id" className="text-xs text-ink-muted">
                 عميل موجود (اختياري)
               </label>
               <select
                 id="customer_id"
                 name="customer_id"
                 defaultValue=""
-                className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="field w-auto"
               >
                 <option value="">— عميل جديد —</option>
                 {customers.map((customer) => (
@@ -98,47 +98,47 @@ export default async function NewOrderPage({
                 ))}
               </select>
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               لو اخترت عميل موجود، سيب الخانات اللي تحت فاضية
             </p>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="full_name" className="text-xs text-gray-500">
+                <label htmlFor="full_name" className="text-xs text-ink-muted">
                   اسم العميل الجديد
                 </label>
                 <input
                   id="full_name"
                   name="full_name"
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="field w-auto"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="phone" className="text-xs text-gray-500">
+                <label htmlFor="phone" className="text-xs text-ink-muted">
                   التليفون
                 </label>
                 <input
                   id="phone"
                   name="phone"
                   dir="ltr"
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="field w-auto"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="address" className="text-xs text-gray-500">
+                <label htmlFor="address" className="text-xs text-ink-muted">
                   العنوان
                 </label>
                 <input
                   id="address"
                   name="address"
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="field w-auto"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">المنتجات</h2>
+        <div className="card p-5">
+          <h2 className="mb-3 text-sm font-bold text-ink">المنتجات</h2>
           <div className="space-y-2">
             {Array.from({ length: ITEM_ROWS }, (_, i) => (
               <div key={i} className="flex items-start gap-3">
@@ -151,34 +151,34 @@ export default async function NewOrderPage({
                   defaultValue={1}
                   min={1}
                   step={1}
-                  className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="field w-20 px-2"
                   aria-label={`كمية منتج ${i + 1}`}
                 />
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs text-gray-400">
+          <p className="mt-2 text-xs text-ink-faint">
             سيب الصفوف اللي مش محتاجها فاضية — السعر بيتاخد من سعر البيع الحالي،
             والمخزون بيتخصم تلقائياً
           </p>
         </div>
 
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">بيانات الأوردر</h2>
+        <div className="card p-5">
+          <h2 className="mb-3 text-sm font-bold text-ink">بيانات الأوردر</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
-              <label htmlFor="order_number" className="text-xs text-gray-500">
+              <label htmlFor="order_number" className="text-xs text-ink-muted">
                 رقم الأوردر (اختياري — لو سبته فاضي هيتولد تلقائياً)
               </label>
               <input
                 id="order_number"
                 name="order_number"
                 dir="ltr"
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="field w-auto"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label htmlFor="order_date" className="text-xs text-gray-500">
+              <label htmlFor="order_date" className="text-xs text-ink-muted">
                 تاريخ الأوردر
               </label>
               <input
@@ -187,11 +187,11 @@ export default async function NewOrderPage({
                 type="date"
                 defaultValue={today}
                 required
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="field w-auto"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label htmlFor="shipping_price" className="text-xs text-gray-500">
+              <label htmlFor="shipping_price" className="text-xs text-ink-muted">
                 سعر الشحن من العميل (جنيه)
               </label>
               <input
@@ -201,16 +201,16 @@ export default async function NewOrderPage({
                 defaultValue={0}
                 min={0}
                 step="0.01"
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="field w-auto"
               />
             </div>
           </div>
-          <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+          <label className="mt-3 flex items-center gap-2 text-sm text-ink-body">
             <input
               type="checkbox"
               name="skip_stock"
               value="1"
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded border-line-strong"
             />
             أوردر قديم (من قبل السيستم) — متخصمش من المخزون
           </label>
@@ -219,7 +219,7 @@ export default async function NewOrderPage({
         <div className="flex justify-end">
           <button
             type="submit"
-            className="rounded-lg bg-primary px-6 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            className="btn btn-primary px-6"
           >
             تسجيل الأوردر
           </button>
