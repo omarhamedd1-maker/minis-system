@@ -10,6 +10,7 @@ import {
   formatMoney,
   lastMove,
   orderStatusBadge,
+  orderStatusClass,
   paymentMethodLabel,
 } from "@/lib/format";
 import { shippingSettlement } from "@/lib/dashboard-stats";
@@ -549,7 +550,7 @@ export default async function OrderDetailsPage({
             أوردر {order.order_number ?? "بدون رقم"}
           </h1>
           <span
-            className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
+            className={`shrink-0 ${orderStatusClass(order.order_status)}`}
           >
             {badge.label}
           </span>
@@ -755,7 +756,7 @@ export default async function OrderDetailsPage({
             orderId={order.id}
             currentStatus={order.order_status ?? "new"}
             badgeLabel={badge.label}
-            badgeClass={badge.className}
+            badgeClass={orderStatusClass(order.order_status)}
             returnTo={`/orders/${order.id}`}
             // جوّه الأوردر القايمة كاملة — "مرتجع بعد التسليم" موجودة هنا
             // لأن ساعات المرتجع بيتعمل في بوسطة بالإيد ولازم تظبّطها بنفسك.

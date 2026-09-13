@@ -16,20 +16,20 @@ const SHOPIFY_STATUS: Record<
   string,
   { label: string; className: string }
 > = {
-  active: { label: "نشط", className: "bg-green-50 text-green-700" },
-  draft: { label: "مسودة", className: "bg-gray-100 text-gray-600" },
-  archived: { label: "مؤرشف", className: "bg-orange-50 text-orange-700" },
+  active: { label: "نشط", className: "bg-success-soft text-success" },
+  draft: { label: "مسودة", className: "bg-sunken text-ink-muted" },
+  archived: { label: "مؤرشف", className: "bg-warning-soft text-warning" },
 };
 
 function shopifyStatusBadge(status: string | null) {
-  if (!status) return <span className="text-xs text-gray-300">—</span>;
+  if (!status) return <span className="text-xs text-ink-faint">—</span>;
   const s = SHOPIFY_STATUS[status.toLowerCase()] ?? {
     label: status,
-    className: "bg-gray-100 text-gray-600",
+    className: "bg-sunken text-ink-muted",
   };
   return (
     <span
-      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}
+      className={`badge ${s.className}`}
     >
       {s.label}
     </span>
@@ -87,7 +87,7 @@ export default async function ProductsPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل المنتجات: {error.message}
       </div>
     );
@@ -226,9 +226,9 @@ export default async function ProductsPage({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">المنتجات والمخزون</h1>
+        <h1 className="text-xl font-bold text-ink">المنتجات والمخزون</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-ink-muted">
             {products.length} منتج / {variantCount} شكل
           </span>
           <form action="/products" className="flex items-center gap-1">
@@ -236,7 +236,7 @@ export default async function ProductsPage({
               name="q"
               defaultValue={searchTerm}
               placeholder="دور بالاسم أو الكود"
-              className="w-52 rounded-full border-0 bg-white px-3 py-1 text-xs text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="w-52 rounded-full border-0 bg-surface px-3 py-1 text-xs text-ink shadow-card placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
               type="submit"
@@ -247,7 +247,7 @@ export default async function ProductsPage({
             {searchTerm && (
               <Link
                 href="/products"
-                className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 shadow-sm hover:bg-gray-100"
+                className="rounded-full bg-surface px-2 py-1 text-xs text-ink-muted shadow-card hover:bg-sunken"
               >
                 ✕
               </Link>
@@ -268,7 +268,7 @@ export default async function ProductsPage({
         صفر. بيتعرض كخبر هادي عشان التنبيه يفضل معناه «اتصرّف».
       */}
       {untracked.length > 0 && (
-        <div className="rounded-lg bg-gray-50 px-4 py-2.5 text-sm text-gray-600">
+        <div className="rounded-control bg-sunken px-4 py-2.5 text-sm text-ink-muted">
           <span className="font-medium">
             {untracked.length} شكل بيتباع ومخزونه مكتوب صفر
           </span>
@@ -285,17 +285,17 @@ export default async function ProductsPage({
         ⚠️ **القيمة بالتكلفة مش بسعر البيع** — اللي متجمّد هو اللي دفعته.
       */}
       {dead.length > 0 && (
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">
+            <h2 className="text-sm font-bold text-ink">
               بضاعة واقفة من {DEAD_AFTER_DAYS} يوم
             </h2>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-ink-muted">
               {frozenValue(dead) > 0 &&
                 `${formatMoney(frozenValue(dead))} متجمّدة`}
             </span>
           </div>
-          <p className="mt-0.5 text-[11px] text-gray-400">
+          <p className="mt-0.5 text-[11px] text-ink-faint">
             القيمة بالتكلفة اللي دفعتها، مش بسعر البيع.
             {withoutCost(dead) > 0 &&
               ` و${withoutCost(dead)} منهم تكلفتهم مش متسجّلة، فالرقم أقل من الحقيقة.`}
@@ -306,10 +306,10 @@ export default async function ProductsPage({
                 key={r.id}
                 className="flex items-baseline justify-between gap-3 text-sm"
               >
-                <span className="min-w-0 flex-1 truncate text-gray-900">
+                <span className="min-w-0 flex-1 truncate text-ink">
                   {r.name}
                 </span>
-                <span className="shrink-0 tabular-nums text-xs text-gray-500">
+                <span className="shrink-0 tabular-nums text-xs text-ink-muted">
                   {r.value !== null ? formatMoney(r.value) : `${r.onHand} قطعة`}
                   {" · "}
                   {r.days === null ? "عمره ما اتباع" : `${r.days} يوم`}
@@ -321,10 +321,10 @@ export default async function ProductsPage({
       )}
 
       {lowStock.length > 0 && (
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">قرّب يخلص</h2>
-            <span className="text-xs text-gray-500">
+            <h2 className="text-sm font-bold text-ink">قرّب يخلص</h2>
+            <span className="text-xs text-ink-muted">
               على معدّل بيع آخر {WINDOW_DAYS} يوم
             </span>
           </div>
@@ -334,18 +334,18 @@ export default async function ProductsPage({
                 key={r.id}
                 className="flex items-baseline justify-between gap-3 text-sm"
               >
-                <span className="min-w-0 flex-1 truncate text-gray-900">
+                <span className="min-w-0 flex-1 truncate text-ink">
                   {r.name}
                 </span>
                 <span className="shrink-0 tabular-nums">
                   <span
                     className={
-                      (r.daysLeft ?? 0) <= 3 ? "text-red-600" : "text-amber-700"
+                      (r.daysLeft ?? 0) <= 3 ? "text-danger" : "text-warning"
                     }
                   >
                     {r.daysLeft} يوم
                   </span>{" "}
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-ink-faint">
                     (فاضل {r.onHand} · باع {r.soldInWindow})
                   </span>
                 </span>
@@ -356,14 +356,14 @@ export default async function ProductsPage({
       )}
 
       {onlyMissingCost && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-warning-soft px-4 py-2.5 text-sm text-warning">
           <span>
             بنعرض المنتجات اللي فيها شكل بتكلفة صفر بس — الربح فيها بيطلع أكبر
             من الحقيقة.
           </span>
           <Link
             href="/products"
-            className="shrink-0 font-medium underline hover:text-amber-950"
+            className="shrink-0 font-medium underline hover:text-ink"
           >
             اعرض الكل
           </Link>
@@ -371,22 +371,22 @@ export default async function ProductsPage({
       )}
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم حفظ التعديل
         </div>
       )}
       {deleted && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم مسح المنتج
         </div>
       )}
       {products.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
+        <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
           {searchTerm
             ? `مفيش منتجات فيها "${searchTerm}".`
             : "لسه مفيش منتجات. المنتجات بتتسجل هنا تلقائياً مع أول أوردر ييجي من شوبيفاي."}
@@ -405,7 +405,7 @@ export default async function ProductsPage({
               <Link
                 key={product.id}
                 href={`/products/${product.id}`}
-                className="block rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
+                className="block rounded-card bg-surface p-3 shadow-card transition-colors active:bg-sunken"
               >
                 <div className="flex items-start justify-between gap-2">
                   {/* ⚠️ صورة شوبيفاي — الاسم لوحده مابيفرقش بين ١٠٠ منتج */}
@@ -414,14 +414,14 @@ export default async function ProductsPage({
                     <img
                       src={product.image_url}
                       alt=""
-                      className="h-11 w-11 shrink-0 rounded-lg bg-gray-50 object-cover"
+                      className="h-11 w-11 shrink-0 rounded-control bg-sunken object-cover"
                     />
                   )}
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-bold text-gray-900">
+                    <div className="truncate text-sm font-bold text-ink">
                       {product.name_ar ?? product.name ?? "بدون اسم"}
                     </div>
-                    <div className="mt-0.5 text-xs text-gray-400" dir="ltr">
+                    <div className="mt-0.5 text-xs text-ink-faint" dir="ltr">
                       {v0?.sku ?? "—"}
                       {product.product_variants.length > 1 &&
                         ` · ${product.product_variants.length} أشكال`}
@@ -430,31 +430,31 @@ export default async function ProductsPage({
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     {shopifyStatusBadge(product.shopify_status)}
                     {product.deleted_in_shopify && (
-                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700">
+                      <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-medium text-danger">
                         اتمسح من شوبيفاي
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="mt-2 grid grid-cols-3 gap-2 border-t border-gray-100 pt-2 text-xs">
-                  <span className="text-gray-600">
+                <div className="mt-2 grid grid-cols-3 gap-2 border-t border-line pt-2 text-xs">
+                  <span className="text-ink-muted">
                     البيع:{" "}
-                    <span className="font-medium text-gray-900">
+                    <span className="font-medium text-ink">
                       {v0 ? formatMoney(v0.sale_price) : "—"}
                     </span>
                   </span>
-                  <span className="text-gray-600">
+                  <span className="text-ink-muted">
                     التكلفة:{" "}
                     <span
-                      className={`font-medium ${v0 && v0.cost_price > 0 ? "text-gray-900" : "text-red-600"}`}
+                      className={`font-medium ${v0 && v0.cost_price > 0 ? "text-ink" : "text-danger"}`}
                     >
                       {v0 ? formatMoney(v0.cost_price) : "—"}
                     </span>
                   </span>
-                  <span className="text-gray-600">
+                  <span className="text-ink-muted">
                     المخزون:{" "}
                     <span
-                      className={`font-medium ${stock > 0 ? "text-gray-900" : "text-red-600"}`}
+                      className={`font-medium ${stock > 0 ? "text-ink" : "text-danger"}`}
                     >
                       {stock}
                     </span>
@@ -466,10 +466,10 @@ export default async function ProductsPage({
         </div>
 
         {/* ===== كمبيوتر: جدول ===== */}
-        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+        <div className="hidden overflow-x-auto rounded-card bg-surface shadow-card md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-right text-gray-500">
+              <tr className="border-b border-line text-right text-ink-muted">
                 <th className="w-12 px-2 py-3"></th>
                 <th className="px-4 py-3 font-medium">الكود</th>
                 <th className="px-4 py-3 font-medium">المنتج</th>
@@ -487,7 +487,7 @@ export default async function ProductsPage({
                 product.product_variants.map((variant, index) => (
                   <tr
                     key={variant.id}
-                    className="border-b border-gray-100 last:border-0"
+                    className="border-b border-line last:border-0"
                   >
                     {/*
                       ⚠️ **الصورة أول السطر من اليمين** — العين بتمسك الصورة
@@ -500,38 +500,38 @@ export default async function ProductsPage({
                         <img
                           src={product.image_url}
                           alt=""
-                          className="h-9 w-9 rounded bg-gray-50 object-cover"
+                          className="h-9 w-9 rounded bg-sunken object-cover"
                         />
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-700" dir="ltr">
+                    <td className="px-4 py-3 text-ink-body" dir="ltr">
                       {variant.sku ?? "—"}
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-ink">
                       {index === 0 && (
                         <span className="flex items-center gap-2">
                           {product.name_ar ?? product.name ?? "بدون اسم"}
                           {product.deleted_in_shopify && (
-                            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                            <span className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">
                               اتمسح من شوبيفاي
                             </span>
                           )}
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-500" dir="ltr">
+                    <td className="px-4 py-3 text-right text-ink-muted" dir="ltr">
                       {index === 0 ? product.name ?? "—" : ""}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {variant.variant_name ?? "افتراضي"}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {formatMoney(variant.sale_price)}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {formatMoney(variant.cost_price)}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {variant.quantity_on_hand}
                     </td>
                     <td className="px-4 py-3">
@@ -541,7 +541,7 @@ export default async function ProductsPage({
                       {index === 0 && (
                         <Link
                           href={`/products/${product.id}`}
-                          className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                          className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
                         >
                           فتح
                         </Link>

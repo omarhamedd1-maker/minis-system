@@ -41,14 +41,14 @@ describe("آخر حركة", () => {
       order_date: "2026-08-05T09:00:00Z",
       created_at: "2026-08-05T09:00:00Z",
     };
-    expect(lastMove(stuck, now).className).toContain("amber");
+    expect(lastMove(stuck, now).className).toContain("warning");
 
     const worse = {
       ...base,
       order_date: "2026-07-30T09:00:00Z",
       created_at: "2026-07-30T09:00:00Z",
     };
-    expect(lastMove(worse, now).className).toContain("red");
+    expect(lastMove(worse, now).className).toContain("danger");
   });
 
   it("اللي خلص مايولّعش — قعاده مش مشكلة", () => {
@@ -60,9 +60,9 @@ describe("آخر حركة", () => {
       created_at: "2026-07-01T09:00:00Z",
       delivered_at: "2026-07-05T09:00:00Z",
     };
-    expect(lastMove(delivered, now).className).toBe("text-gray-500");
+    expect(lastMove(delivered, now).className).toBe("text-ink-muted");
     expect(lastMove({ ...delivered, order_status: "cancelled" }, now).className).toBe(
-      "text-gray-500"
+      "text-ink-muted"
     );
   });
 

@@ -202,7 +202,7 @@ export default async function StatsPage({
 
   if (ordersResult.error || expensesResult.error || variantsResult.error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل الداشبورد:{" "}
         {ordersResult.error?.message ??
           expensesResult.error?.message ??
@@ -575,7 +575,7 @@ export default async function StatsPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">الداشبورد</h1>
+        <h1 className="text-xl font-bold text-ink">الداشبورد</h1>
 
       </div>
 
@@ -586,13 +586,13 @@ export default async function StatsPage({
         بيعدّي. الكارت بياخد مساحة الأرقام اللي بتتبص كل صباح.
       */}
       {seasons.length > 0 && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-muted">
           جاي:{" "}
           {seasons.map((s, i) => (
             <span key={s.key}>
               {i > 0 && " · "}
-              <span className="text-gray-900">{s.name}</span>{" "}
-              <span className="text-gray-400">
+              <span className="text-ink">{s.name}</span>{" "}
+              <span className="text-ink-faint">
                 {remainingText(s.daysAway)}
               </span>
             </span>
@@ -603,8 +603,8 @@ export default async function StatsPage({
       <section>
         {/* الفترة المختارة على اليمين، والاختيارات التانية جنبها على الشمال */}
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <h2 className="text-sm font-bold text-gray-900">{periodLabel}</h2>
-          <span className="h-4 w-px bg-gray-300"></span>
+          <h2 className="text-sm font-bold text-ink">{periodLabel}</h2>
+          <span className="h-4 w-px bg-line-strong"></span>
           {Object.entries(PERIODS)
             // نخفي الفترة المتحددة بالفعل — اسمها ظاهر على اليمين
             .filter(([key]) => hasRange || period !== key)
@@ -612,7 +612,7 @@ export default async function StatsPage({
               <Link
                 key={key}
                 href={`/?period=${key}`}
-                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-600 shadow-sm hover:bg-gray-100"
+                className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-ink-muted shadow-card hover:bg-sunken"
               >
                 {p.label}
               </Link>
@@ -637,99 +637,99 @@ export default async function StatsPage({
           **مابنغيّرش الرقم** — إحنا مانعرفش التكلفة. بنقول إنه مش ربح.
         */}
         {costNote && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+          <p className="mt-3 rounded-control bg-warning-soft px-4 py-2.5 text-xs text-warning">
             {costNote}
           </p>
         )}
         {/* 5 كروت نِسَب — صف واحد كامل على الكمبيوتر */}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">نسبة التسليم</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-emerald-600">
+          <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+            <p className="text-sm text-ink-muted">نسبة التسليم</p>
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-success">
               {deliveryRate}%
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               {deliveredCount} من {periodOrders.length} أوردر
             </p>
           </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">نسبة الإلغاء والمرتجع</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-orange-600">
+          <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+            <p className="text-sm text-ink-muted">نسبة الإلغاء والمرتجع</p>
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-warning">
               {cancelRate}%
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               {excludedOrders.length} من {periodOrders.length} أوردر
             </p>
           </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">العملاء المكررين</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-sky-600">
+          <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+            <p className="text-sm text-ink-muted">العملاء المكررين</p>
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-info">
               {repeatRate}%
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               {repeatCustomers} من {totalCustomers} عميل اشتروا أكتر من مرة
             </p>
           </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">فرص ضايعة (ملغي ومرتجع)</p>
-            <p className="mt-1 text-xl font-bold sm:text-2xl text-red-600">
+          <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+            <p className="text-sm text-ink-muted">فرص ضايعة (ملغي ومرتجع)</p>
+            <p className="mt-1 text-xl font-bold sm:text-2xl text-danger">
               {formatMoney(lostValue)}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               {excludedOrders.length} أوردر ضاعوا
             </p>
           </div>
-          <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
-            <p className="text-sm text-gray-500">متوسط زمن التوصيل</p>
+          <div className="col-span-2 rounded-card bg-surface p-4 shadow-card sm:p-5 lg:col-span-1">
+            <p className="text-sm text-ink-muted">متوسط زمن التوصيل</p>
             {avgDeliveryDays === null ? (
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="mt-1 text-sm text-ink-faint">
                 لسه مفيش تسليمات كفاية نحسب منها
               </p>
             ) : (
-              <p className="mt-1 text-xl font-bold sm:text-2xl text-gray-900">
+              <p className="mt-1 text-xl font-bold sm:text-2xl text-ink">
                 {avgDeliveryDays < 1
                   ? "أقل من يوم"
                   : `${avgDeliveryDays.toFixed(1)} يوم`}
               </p>
             )}
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               من يوم الأوردر ليوم التسليم ({deliveryDurations.length} أوردر)
             </p>
           </div>
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">نمو المبيعات الشهري</p>
+          <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+            <p className="text-sm text-ink-muted">نمو المبيعات الشهري</p>
             {monthGrowth === null ? (
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="mt-1 text-sm text-ink-faint">
                 محتاجين شهر كامل قبله عشان نقارن
               </p>
             ) : (
               <p
                 className={`mt-1 text-2xl font-bold ${
-                  monthGrowth >= 0 ? "text-green-600" : "text-red-600"
+                  monthGrowth >= 0 ? "text-success" : "text-danger"
                 }`}
               >
                 {monthGrowth >= 0 ? "↑" : "↓"} {Math.abs(monthGrowth)}%
               </p>
             )}
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               الشهر ده مقارنة بالشهر اللي فات
             </p>
           </div>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm text-gray-500">توقع قفلة الشهر</p>
+          <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+            <p className="text-sm text-ink-muted">توقع قفلة الشهر</p>
             {currentMonthSales <= 0 ? (
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="mt-1 text-sm text-ink-faint">
                 لسه مفيش مبيعات الشهر ده نتوقع منها
               </p>
             ) : (
               <>
-                <p className="mt-1 text-xl font-bold sm:text-2xl text-sky-600">
+                <p className="mt-1 text-xl font-bold sm:text-2xl text-info">
                   ~{formatMoney(projectedMonthSales)}
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-ink-faint">
                   لو كملت بنفس المعدل ({formatMoney(Math.round(monthDailyRate))}{" "}
                   في اليوم) — فات {todayDayOfMonth} يوم من {daysInMonth}
                 </p>
@@ -739,15 +739,15 @@ export default async function StatsPage({
         </div>
       </section>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-3 text-sm font-bold text-gray-900">
+      <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+        <h2 className="mb-3 text-sm font-bold text-ink">
           المبيعات {daily ? "يوم بيوم" : "شهر بشهر"} ({periodLabel})
         </h2>
         <LineChart points={timePoints} valueSuffix=" جنيه" />
       </div>
 
-      <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-3 text-sm font-bold text-gray-900">
+      <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+        <h2 className="mb-3 text-sm font-bold text-ink">
           {comparisonTitle}
         </h2>
         <GroupedBars groups={monthGroups} aLabel="المبيعات" bLabel="الأرباح" />
@@ -759,11 +759,11 @@ export default async function StatsPage({
         الشارت فوق بيوري الشكل، والجدول ده بيوري الأرقام اللي بتتقال لشريك
         أو محاسب: بعت كام، صافي كام، رجع كام، والفرق عن الشهر اللي فات.
       */}
-      <div className="overflow-x-auto rounded-xl bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-3 text-sm font-bold text-gray-900">آخر ٦ شهور</h2>
+      <div className="overflow-x-auto rounded-card bg-surface p-4 shadow-card sm:p-5">
+        <h2 className="mb-3 text-sm font-bold text-ink">آخر ٦ شهور</h2>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-right text-gray-500">
+            <tr className="border-b border-line text-right text-ink-muted">
               <th className="px-3 py-2 font-medium">الشهر</th>
               <th className="px-3 py-2 font-medium">المبيعات</th>
               <th className="px-3 py-2 font-medium">صافي الربح</th>
@@ -774,25 +774,25 @@ export default async function StatsPage({
           </thead>
           <tbody>
             {months.map((m) => (
-              <tr key={m.month} className="border-b border-gray-100 last:border-0">
-                <td className="px-3 py-2 font-medium text-gray-900">{m.label}</td>
-                <td className="px-3 py-2 tabular-nums text-gray-700">{formatMoney(m.head.sales)}</td>
-                <td className={`px-3 py-2 tabular-nums font-medium ${m.head.netProfit < 0 ? "text-red-600" : "text-green-700"}`}>
+              <tr key={m.month} className="border-b border-line last:border-0">
+                <td className="px-3 py-2 font-medium text-ink">{m.label}</td>
+                <td className="px-3 py-2 tabular-nums text-ink-body">{formatMoney(m.head.sales)}</td>
+                <td className={`px-3 py-2 tabular-nums font-medium ${m.head.netProfit < 0 ? "text-danger" : "text-success"}`}>
                   {formatMoney(m.head.netProfit)}
                 </td>
                 <td className="px-3 py-2 tabular-nums text-xs">
                   {m.profitDelta === null ? (
-                    <span className="text-gray-300">—</span>
+                    <span className="text-ink-faint">—</span>
                   ) : (
-                    <span className={m.profitDelta < 0 ? "text-red-600" : "text-green-700"}>
+                    <span className={m.profitDelta < 0 ? "text-danger" : "text-success"}>
                       {m.profitDelta > 0 ? "+" : ""}
                       {formatMoney(m.profitDelta)}
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-2 tabular-nums text-gray-700">{m.head.orderCount}</td>
-                <td className="px-3 py-2 tabular-nums text-gray-700">
-                  {m.returnRate}% <span className="text-xs text-gray-400">({m.returned})</span>
+                <td className="px-3 py-2 tabular-nums text-ink-body">{m.head.orderCount}</td>
+                <td className="px-3 py-2 tabular-nums text-ink-body">
+                  {m.returnRate}% <span className="text-xs text-ink-faint">({m.returned})</span>
                 </td>
               </tr>
             ))}
@@ -801,35 +801,35 @@ export default async function StatsPage({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-sm font-bold text-gray-900">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+          <h2 className="mb-4 text-sm font-bold text-ink">
             مبيعات أيام الأسبوع ({periodLabel})
           </h2>
           <HBarList items={weekdayItems} />
-          <p className="mt-3 text-xs text-gray-400">
+          <p className="mt-3 text-xs text-ink-faint">
             يفيدك في توقيت الإعلانات والعروض
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+          <h2 className="mb-3 text-sm font-bold text-ink">
             الأوردرات حسب ساعات اليوم ({periodLabel})
           </h2>
           <LineChart points={hourPoints} valueSuffix=" أوردر" />
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-ink-faint">
             بتوقيت مصر — يفيدك في توقيت البوستات والإعلانات
           </p>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-sm font-bold text-gray-900">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+          <h2 className="mb-4 text-sm font-bold text-ink">
             حالات الأوردرات ({periodLabel})
           </h2>
           <HBarList items={statusItems} />
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-sm font-bold text-gray-900">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+          <h2 className="mb-4 text-sm font-bold text-ink">
             المصاريف بالنوع ({periodLabel})
           </h2>
           <HBarList items={expenseItems} />
@@ -837,18 +837,18 @@ export default async function StatsPage({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-          <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
+        <div className="overflow-x-auto rounded-card bg-surface shadow-card">
+          <h2 className="border-b border-line px-5 py-4 text-sm font-bold text-ink">
             أفضل المنتجات ({periodLabel})
           </h2>
           {topProducts.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-gray-400">
+            <p className="px-5 py-8 text-center text-sm text-ink-faint">
               مفيش مبيعات في الفترة دي
             </p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-right text-gray-500">
+                <tr className="border-b border-line text-right text-ink-muted">
                   <th className="px-4 py-2.5 font-medium">المنتج</th>
                   <th className="px-4 py-2.5 font-medium">الكمية</th>
                   <th className="px-4 py-2.5 font-medium">المبيعات</th>
@@ -860,19 +860,19 @@ export default async function StatsPage({
                 {topProducts.map(([name, stats]) => (
                   <tr
                     key={name}
-                    className="border-b border-gray-100 last:border-0"
+                    className="border-b border-line last:border-0"
                   >
-                    <td className="px-4 py-2.5 font-medium text-gray-900">
+                    <td className="px-4 py-2.5 font-medium text-ink">
                       {name}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-700">{stats.qty}</td>
-                    <td className="px-4 py-2.5 text-gray-700">
+                    <td className="px-4 py-2.5 text-ink-body">{stats.qty}</td>
+                    <td className="px-4 py-2.5 text-ink-body">
                       {formatMoney(stats.revenue)}
                     </td>
-                    <td className="px-4 py-2.5 text-green-700">
+                    <td className="px-4 py-2.5 text-success">
                       {formatMoney(stats.profit)}
                     </td>
-                    <td className="px-4 py-2.5 font-medium text-gray-900">
+                    <td className="px-4 py-2.5 font-medium text-ink">
                       {stats.revenue > 0
                         ? Math.round((stats.profit / stats.revenue) * 100)
                         : 0}
@@ -885,18 +885,18 @@ export default async function StatsPage({
           )}
         </div>
 
-        <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-          <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
+        <div className="overflow-x-auto rounded-card bg-surface shadow-card">
+          <h2 className="border-b border-line px-5 py-4 text-sm font-bold text-ink">
             أفضل العملاء ({periodLabel})
           </h2>
           {topCustomers.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-gray-400">
+            <p className="px-5 py-8 text-center text-sm text-ink-faint">
               مفيش عملاء في الفترة دي
             </p>
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-right text-gray-500">
+                <tr className="border-b border-line text-right text-ink-muted">
                   <th className="px-4 py-2.5 font-medium">العميل</th>
                   <th className="px-4 py-2.5 font-medium">الأوردرات</th>
                   <th className="px-4 py-2.5 font-medium">إجمالي المشتريات</th>
@@ -906,13 +906,13 @@ export default async function StatsPage({
                 {topCustomers.map(([name, stats]) => (
                   <tr
                     key={name}
-                    className="border-b border-gray-100 last:border-0"
+                    className="border-b border-line last:border-0"
                   >
-                    <td className="px-4 py-2.5 font-medium text-gray-900">
+                    <td className="px-4 py-2.5 font-medium text-ink">
                       {name}
                     </td>
-                    <td className="px-4 py-2.5 text-gray-700">{stats.count}</td>
-                    <td className="px-4 py-2.5 text-gray-700">
+                    <td className="px-4 py-2.5 text-ink-body">{stats.count}</td>
+                    <td className="px-4 py-2.5 text-ink-body">
                       {formatMoney(stats.revenue)}
                     </td>
                   </tr>
@@ -924,23 +924,23 @@ export default async function StatsPage({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-sm text-gray-500">قيمة المخزون الحالي (بالتكلفة)</p>
-          <p className="mt-1 text-xl font-bold sm:text-2xl text-gray-900">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+          <p className="text-sm text-ink-muted">قيمة المخزون الحالي (بالتكلفة)</p>
+          <p className="mt-1 text-xl font-bold sm:text-2xl text-ink">
             {formatMoney(stockCostValue)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-sm text-gray-500">
+        <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
+          <p className="text-sm text-ink-muted">
             قيمة المخزون لو اتباع كله (بسعر البيع)
           </p>
-          <p className="mt-1 text-xl font-bold sm:text-2xl text-gray-900">
+          <p className="mt-1 text-xl font-bold sm:text-2xl text-ink">
             {formatMoney(stockSaleValue)}
           </p>
         </div>
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-ink-faint">
         كل الأرقام محسوبة لايف من الأوردرات والمصاريف — صافي الربح = أرباح
         المنتجات + الشحن المحصّل من العملاء − المصاريف − تكلفة شحن بوسطة
         الحقيقية. الأوردرات الملغية والمرتجعة مستبعدة من المبيعات والأرباح،

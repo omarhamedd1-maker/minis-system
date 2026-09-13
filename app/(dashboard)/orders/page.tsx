@@ -10,6 +10,7 @@ import {
   formatMoney,
   lastMove,
   orderStatusBadge,
+  orderStatusClass,
 } from "@/lib/format";
 import { dailyBoard, boardIsClear } from "@/lib/daily-board";
 
@@ -273,7 +274,7 @@ export default async function OrdersPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل الأوردرات: {error.message}
       </div>
     );
@@ -299,9 +300,9 @@ export default async function OrdersPage({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">الأوردرات</h1>
+        <h1 className="text-xl font-bold text-ink">الأوردرات</h1>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{orders.length} أوردر</span>
+          <span className="text-sm text-ink-muted">{orders.length} أوردر</span>
           {/* زرار "مطابقة" اتشال — الصفحة نفسها لسه موجودة على
               /orders/reconcile لو احتجتها، بس مش بتاخد مكان في الشاشة */}
           {/* السلات المتروكة وصحة التشغيل بقوا في القايمة الجانبية —
@@ -310,7 +311,7 @@ export default async function OrdersPage({
           {canCreate && (
             <Link
               href="/orders/new"
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+              className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
             >
               إضافة أوردر
             </Link>
@@ -333,10 +334,10 @@ export default async function OrdersPage({
               <Link
                 key={row.key}
                 href={row.href}
-                className={"flex items-baseline gap-2 rounded-lg px-3 py-1.5 text-sm hover:brightness-95 " +
+                className={"flex items-baseline gap-2 rounded-control px-3 py-1.5 text-sm hover:brightness-95 " +
                   (row.urgent
-                    ? "bg-amber-50 text-amber-900"
-                    : "bg-white text-gray-600 shadow-sm")}
+                    ? "bg-warning-soft text-warning"
+                    : "bg-surface text-ink-muted shadow-card")}
               >
                 <span className="font-bold tabular-nums">
                   {row.money === undefined
@@ -350,17 +351,17 @@ export default async function OrdersPage({
       )}
 
       {deleted && (
-        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mb-4 rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم مسح الأوردر ورجّعنا مخزونه
         </div>
       )}
       {saved && (
-        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mb-4 rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           {saved === "1" ? "تم حفظ الحالة الجديدة" : saved}
         </div>
       )}
       {bulk && (
-        <div className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="mb-4 rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم تغيير حالة {bulk} أوردر
         </div>
       )}
@@ -370,7 +371,7 @@ export default async function OrdersPage({
 
       {/* جاي من إشعار: بنقول له إنه شايف جزء بس، وإزاي يرجع للكل */}
       {onlyIds.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-800">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-control bg-info-soft px-4 py-3 text-sm text-info">
           <span>
             بتشوف {orders.length === 1 ? "أوردر واحد" : `${orders.length} أوردر`} جايين من إشعار
           </span>
@@ -381,19 +382,19 @@ export default async function OrdersPage({
       )}
 
       {pendingDeletions.length > 0 && (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="mb-2 text-sm font-bold text-amber-800">
+        <div className="mb-4 rounded-card border border-warning-line bg-warning-soft p-4">
+          <div className="mb-2 text-sm font-bold text-warning">
             طلبات حذف مستنية موافقتك ({pendingDeletions.length})
           </div>
           <ul className="space-y-2">
             {pendingDeletions.map((r) => (
               <li
                 key={r.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-control bg-surface px-3 py-2 text-sm"
               >
-                <span className="text-gray-800">
+                <span className="text-ink-body">
                   أوردر <span className="font-medium">{r.order_number ?? "—"}</span>{" "}
-                  <span className="text-gray-500">
+                  <span className="text-ink-muted">
                     (طلبه {r.requested_by_name ?? "غير معروف"})
                   </span>
                 </span>
@@ -402,7 +403,7 @@ export default async function OrdersPage({
                     <input type="hidden" name="request_id" value={r.id} />
                     <ConfirmButton
                       message={`متأكد إنك عايز تمسح أوردر ${r.order_number ?? ""} نهائياً؟`}
-                      className="rounded-lg bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
+                      className="rounded-control bg-danger px-3 py-1 text-xs font-medium text-white hover:opacity-90"
                     >
                       وافق وامسح
                     </ConfirmButton>
@@ -411,7 +412,7 @@ export default async function OrdersPage({
                     <input type="hidden" name="request_id" value={r.id} />
                     <button
                       type="submit"
-                      className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                      className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
                     >
                       ارفض
                     </button>
@@ -426,7 +427,7 @@ export default async function OrdersPage({
       <div className="mb-4 space-y-2">
         {/* فلتر الوقت */}
         <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
-          <span className="shrink-0 text-xs text-gray-500">الفترة:</span>
+          <span className="shrink-0 text-xs text-ink-muted">الفترة:</span>
           {Object.entries(ORDER_PERIODS).map(([key, label]) => {
             const p = new URLSearchParams();
             if (status) p.set("status", status);
@@ -440,7 +441,7 @@ export default async function OrdersPage({
                 className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
                   period === key
                     ? "bg-primary text-white"
-                    : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                    : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
                 }`}
               >
                 {label}
@@ -455,7 +456,7 @@ export default async function OrdersPage({
             className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
               !status && !showArchived
                 ? "bg-primary text-white"
-                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
             }`}
           >
             الكل
@@ -467,19 +468,19 @@ export default async function OrdersPage({
               className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
                 status === option.value && !showArchived
                   ? "bg-primary text-white"
-                  : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                  : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
               }`}
             >
               {option.label}
             </Link>
           ))}
-          <span className="mx-1 h-4 w-px shrink-0 bg-gray-300"></span>
+          <span className="mx-1 h-4 w-px shrink-0 bg-line-strong"></span>
           <Link
             href={showArchived ? periodQS("") : periodQS("archived=1")}
             className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
               showArchived
-                ? "bg-amber-600 text-white"
-                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                ? "bg-warning text-white"
+                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
             }`}
           >
             الأرشيف
@@ -496,7 +497,7 @@ export default async function OrdersPage({
             name="q"
             defaultValue={searchTerm}
             placeholder="دور برقم الأوردر أو اسم العميل أو تليفونه"
-            className="w-full flex-1 rounded-full border-0 bg-white px-4 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 sm:max-w-xs"
+            className="w-full flex-1 rounded-full border-0 bg-surface px-4 py-2 text-sm text-ink shadow-card placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-primary sm:max-w-xs"
           />
           <button
             type="submit"
@@ -507,7 +508,7 @@ export default async function OrdersPage({
           {searchTerm && (
             <Link
               href={returnTo}
-              className="shrink-0 rounded-full bg-white px-3 py-2 text-sm text-gray-500 shadow-sm hover:bg-gray-100"
+              className="shrink-0 rounded-full bg-surface px-3 py-2 text-sm text-ink-muted shadow-card hover:bg-sunken"
             >
               ✕
             </Link>
@@ -516,7 +517,7 @@ export default async function OrdersPage({
       </div>
 
       {orders.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
+        <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
           {searchTerm
             ? `مفيش أوردرات فيها "${searchTerm}".`
             : showArchived
@@ -571,12 +572,12 @@ export default async function OrdersPage({
                   hasAwb={Boolean(order.bosta_tracking)}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 text-base font-bold text-gray-900">
+                    <div className="min-w-0 text-base font-bold text-ink">
                       {order.customers?.full_name ?? "بدون اسم"}
                     </div>
                     {!canStatus || NOT_IN_LIST.includes(st) || cancelLocked ? (
                       <span
-                        className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusBadge(st).className}`}
+                        className={`shrink-0 ${orderStatusClass(st)}`}
                       >
                         {orderStatusBadge(st).label}
                       </span>
@@ -593,11 +594,11 @@ export default async function OrdersPage({
                     )}
                   </div>
 
-                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-600">
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-ink-muted">
                     <span>التاريخ: {formatDate(order.order_date)}</span>
                     <span>
                       الإجمالي:{" "}
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-bold text-ink">
                         {formatMoney(total)}
                       </span>
                     </span>
@@ -610,7 +611,7 @@ export default async function OrdersPage({
                     </span>
                   </div>
 
-                  <div className="mt-2 flex items-center gap-3 border-t border-gray-100 pt-2">
+                  <div className="mt-2 flex items-center gap-3 border-t border-line pt-2">
                   <div className="relative z-10 flex w-fit items-center gap-3">
                     {wa && (
                       <a
@@ -618,7 +619,7 @@ export default async function OrdersPage({
                         target="_blank"
                         rel="noopener noreferrer"
                         title="واتساب العميل"
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-50 text-green-600"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"
                       >
                         <svg
                           viewBox="0 0 448 512"
@@ -636,7 +637,7 @@ export default async function OrdersPage({
                         target="_blank"
                         rel="noopener noreferrer"
                         title="اطبع البوليصة"
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted"
                       >
                         <svg
                           viewBox="0 0 24 24"
@@ -668,7 +669,7 @@ export default async function OrdersPage({
                     />
                   </div>
                   {/* رقم الأوردر في نفس سطر الأيقونات على الشمال */}
-                  <span className="ms-auto shrink-0 text-xs text-gray-500">
+                  <span className="ms-auto shrink-0 text-xs text-ink-muted">
                     {order.order_number ?? "بدون رقم"}
                   </span>
                   </div>
@@ -678,10 +679,10 @@ export default async function OrdersPage({
           </div>
 
           {/* ===== كمبيوتر: جدول ===== */}
-          <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+          <div className="hidden overflow-x-auto rounded-card bg-surface shadow-card md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-right text-gray-500">
+              <tr className="border-b border-line text-right text-ink-muted">
                 <th className="px-4 py-3 font-medium">
                   <SelectAllCheckbox />
                 </th>
@@ -722,7 +723,7 @@ export default async function OrdersPage({
                 return (
                   <tr
                     key={order.id}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                    className="border-b border-line last:border-0 hover:bg-sunken"
                   >
                     <td className="px-4 py-3">
                       <input
@@ -731,24 +732,24 @@ export default async function OrdersPage({
                         data-has-awb={order.bosta_tracking ? "1" : "0"}
                         value={order.id}
                         aria-label="تحديد الأوردر"
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="h-4 w-4 rounded border-line-strong"
                       />
                     </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/orders/${order.id}`}
-                        className="font-medium text-gray-900 hover:underline"
+                        className="font-medium text-ink hover:underline"
                       >
                         {order.order_number ?? "بدون رقم"}
                       </Link>
                     </td>
-                    <td className="w-full px-4 py-3 text-gray-700">
+                    <td className="w-full px-4 py-3 text-ink-body">
                       {order.customers?.full_name ?? "—"}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-gray-700">
+                    <td className="whitespace-nowrap px-4 py-3 text-ink-body">
                       {formatDate(order.order_date)}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {formatMoney(total)}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
@@ -756,7 +757,7 @@ export default async function OrdersPage({
                         {lastMove(order).label}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-gray-700">
+                    <td className="whitespace-nowrap px-4 py-3 text-ink-body">
                       {pieces} قطعة
                     </td>
                     <td className="px-4 py-3">
@@ -775,7 +776,7 @@ export default async function OrdersPage({
                         ) {
                           return (
                             <span
-                              className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${orderStatusBadge(st).className}`}
+                              className={orderStatusClass(st)}
                               title="التعديل من جوّه الأوردر بس"
                             >
                               {orderStatusBadge(st).label}
@@ -797,7 +798,7 @@ export default async function OrdersPage({
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/orders/${order.id}`}
-                          className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                          className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
                         >
                           فتح
                         </Link>
@@ -817,7 +818,7 @@ export default async function OrdersPage({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="واتساب العميل"
-                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success-soft text-success hover:bg-success-line"
                           >
                             <svg
                               viewBox="0 0 448 512"
@@ -835,7 +836,7 @@ export default async function OrdersPage({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="اطبع البوليصة"
-                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted hover:bg-line"
                           >
                             <svg
                               viewBox="0 0 24 24"
@@ -884,7 +885,7 @@ export default async function OrdersPage({
                   params.set("show", String(showCount + 50));
                   return `/orders?${params.toString()}`;
                 })()}
-                className="rounded-lg bg-white px-6 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100"
+                className="rounded-control bg-surface px-6 py-2 text-sm font-medium text-ink-body shadow-card hover:bg-sunken"
               >
                 عرض المزيد
               </Link>

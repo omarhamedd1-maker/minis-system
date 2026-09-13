@@ -71,7 +71,7 @@ export default async function CashPage({
 
   if (totalsResult.error || rowsResult.error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل الخزنة:{" "}
         {totalsResult.error?.message ?? rowsResult.error?.message}
       </div>
@@ -90,46 +90,46 @@ export default async function CashPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-gray-900">الخزنة</h1>
+      <h1 className="text-xl font-bold text-ink">الخزنة</h1>
 
       {/* الرصيد بالعرض فوق، والداخل والخارج تحته اتنين جنب بعض */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
-          <p className="text-sm text-gray-500">الرصيد الحالي</p>
+        <div className="col-span-2 rounded-card bg-surface p-4 shadow-card sm:p-5 lg:col-span-1">
+          <p className="text-sm text-ink-muted">الرصيد الحالي</p>
           <p
             className={`mt-1 text-2xl font-bold ${
-              balance >= 0 ? "text-gray-900" : "text-red-600"
+              balance >= 0 ? "text-ink" : "text-danger"
             }`}
           >
             {formatMoney(balance)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">إجمالي الداخل</p>
-          <p className="mt-1 text-2xl font-bold text-green-600">
+        <div className="rounded-card bg-surface p-5 shadow-card">
+          <p className="text-sm text-ink-muted">إجمالي الداخل</p>
+          <p className="mt-1 text-2xl font-bold text-success">
             {formatMoney(totalIn)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">إجمالي الخارج</p>
-          <p className="mt-1 text-2xl font-bold text-red-600">
+        <div className="rounded-card bg-surface p-5 shadow-card">
+          <p className="text-sm text-ink-muted">إجمالي الخارج</p>
+          <p className="mt-1 text-2xl font-bold text-danger">
             {formatMoney(totalOut)}
           </p>
         </div>
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم حفظ الحركة في الخزنة
         </div>
       )}
       {deleted && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم مسح الحركة من الخزنة
         </div>
       )}
@@ -137,10 +137,10 @@ export default async function CashPage({
       {isAdmin && (
         <form
           action={addCashTransaction}
-          className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
+          className="flex flex-wrap items-end gap-3 rounded-card bg-surface p-4 shadow-card"
         >
           <div className="flex flex-col gap-1">
-            <label htmlFor="direction" className="text-xs text-gray-500">
+            <label htmlFor="direction" className="text-xs text-ink-muted">
               النوع
             </label>
             <select
@@ -148,7 +148,7 @@ export default async function CashPage({
               name="direction"
               required
               defaultValue=""
-              className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-32 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             >
               <option value="" disabled>
                 اختار
@@ -158,7 +158,7 @@ export default async function CashPage({
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="amount" className="text-xs text-gray-500">
+            <label htmlFor="amount" className="text-xs text-ink-muted">
               المبلغ (جنيه)
             </label>
             <input
@@ -168,21 +168,21 @@ export default async function CashPage({
               min="0.01"
               step="0.01"
               required
-              className="w-28 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-28 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
           <div className="flex min-w-48 flex-1 flex-col gap-1">
-            <label htmlFor="description" className="text-xs text-gray-500">
+            <label htmlFor="description" className="text-xs text-ink-muted">
               الوصف (زي: إيداع شريك، سحب أرباح...)
             </label>
             <input
               id="description"
               name="description"
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="transaction_date" className="text-xs text-gray-500">
+            <label htmlFor="transaction_date" className="text-xs text-ink-muted">
               التاريخ
             </label>
             <input
@@ -191,17 +191,17 @@ export default async function CashPage({
               type="date"
               defaultValue={cairoToday()}
               required
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
-          <SubmitOnce className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
+          <SubmitOnce className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
             تسجيل
           </SubmitOnce>
         </form>
       )}
 
       {transactions.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
+        <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
           لسه مفيش حركة فلوس في الخزنة.
         </div>
       ) : (
@@ -225,10 +225,10 @@ export default async function CashPage({
         </div>
 
         {/* ===== كمبيوتر: جدول ===== */}
-        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+        <div className="hidden overflow-x-auto rounded-card bg-surface shadow-card md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-right text-gray-500">
+              <tr className="border-b border-line text-right text-ink-muted">
                 <th className="px-4 py-3 font-medium">التاريخ</th>
                 <th className="px-4 py-3 font-medium">الاتجاه</th>
                 <th className="px-4 py-3 font-medium">المصدر</th>
@@ -254,30 +254,30 @@ export default async function CashPage({
                 ) : (
                   <tr
                     key={row.id}
-                    className="border-b border-gray-100 last:border-0"
+                    className="border-b border-line last:border-0"
                   >
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {formatDate(row.transaction_date)}
                     </td>
                     <td className="px-4 py-3">
                       {row.direction === "in" ? (
-                        <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                        <span className="inline-block rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
                           داخل
                         </span>
                       ) : (
-                        <span className="inline-block rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                        <span className="inline-block rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-medium text-danger">
                           خارج
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {sourceLabel(row)}
                     </td>
                     <td
                       className={`px-4 py-3 font-medium ${
                         row.direction === "in"
-                          ? "text-green-700"
-                          : "text-red-700"
+                          ? "text-success"
+                          : "text-danger"
                       }`}
                     >
                       {formatMoney(row.amount)}

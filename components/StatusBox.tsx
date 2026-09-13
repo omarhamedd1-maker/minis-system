@@ -28,7 +28,7 @@ export function StatusBox({
     return (
       <div className="flex items-center gap-2">
         <span
-          className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}
+          className={badgeClass}
         >
           {badgeLabel}
         </span>

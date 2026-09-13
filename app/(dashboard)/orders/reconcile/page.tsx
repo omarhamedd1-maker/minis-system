@@ -6,6 +6,7 @@ import {
   formatDate,
   formatMoney,
   orderStatusBadge,
+  orderStatusClass,
 } from "@/lib/format";
 import { BackLink } from "@/components/BackLink";
 import { LinkMissingShipments } from "@/components/LinkMissingShipments";
@@ -363,7 +364,7 @@ export default async function ReconcilePage() {
                         {formatDate(i.order.order_date)}
                       </span>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${orderStatusBadge(i.order.order_status).className}`}
+                        className={orderStatusClass(i.order.order_status)}
                       >
                         {orderStatusBadge(i.order.order_status).label}
                       </span>
