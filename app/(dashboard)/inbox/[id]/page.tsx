@@ -122,31 +122,31 @@ export default async function ThreadPage({
       <BackLink href="/inbox" label="صندوق الرسايل" />
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        <span className="text-xs text-gray-500">
+        <h1 className="text-2xl font-bold text-ink">{title}</h1>
+        <span className="text-xs text-ink-muted">
           {channelLabel(channel)} · {thread.external_id}
         </span>
       </div>
 
       {actionError && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </p>
       )}
       {saved && (
-        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <p className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           اتحفظ
         </p>
       )}
 
       {/* العميل وأوردراته — نفس الشاشة، عشان محدش يدوّر في تاب تاني */}
-      <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+      <div className="card p-4 sm:p-5">
         {thread.customer_id ? (
           <div className="space-y-2 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Link
                 href={`/customers/${thread.customer_id}`}
-                className="font-medium text-gray-900 hover:underline"
+                className="font-medium text-ink hover:underline"
               >
                 {thread.customers?.full_name ?? "العميل"}
               </Link>
@@ -154,14 +154,14 @@ export default async function ThreadPage({
                 <form action={linkCustomer}>
                   <input type="hidden" name="id" value={id} />
                   <input type="hidden" name="customerId" value="" />
-                  <SubmitOnce className="text-xs text-gray-400 hover:text-gray-600">
+                  <SubmitOnce className="text-xs text-ink-faint hover:text-ink-muted">
                     فُك الربط
                   </SubmitOnce>
                 </form>
               )}
             </div>
             {orders.length === 0 ? (
-              <p className="text-xs text-gray-500">مالوش أوردرات لسه.</p>
+              <p className="text-xs text-ink-muted">مالوش أوردرات لسه.</p>
             ) : (
               <ul className="space-y-1">
                 {orders.map((o) => {
@@ -175,10 +175,10 @@ export default async function ThreadPage({
                     <li key={row.id}>
                       <Link
                         href={`/orders/${row.id}`}
-                        className="flex justify-between gap-3 rounded-lg px-2 py-1 text-xs hover:bg-gray-50"
+                        className="flex justify-between gap-3 rounded-control px-2 py-1 text-xs hover:bg-sunken"
                       >
-                        <span className="text-gray-900">#{row.order_number}</span>
-                        <span className="text-gray-500">
+                        <span className="text-ink">#{row.order_number}</span>
+                        <span className="text-ink-muted">
                           {row.order_status} ·{" "}
                           {formatMoney(Number(row.bosta_cod ?? 0))}
                         </span>
@@ -192,7 +192,7 @@ export default async function ThreadPage({
         ) : (
           <form action={linkCustomer} className="space-y-2">
             <input type="hidden" name="id" value={id} />
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-ink-muted">
               المحادثة دي مش مربوطة بعميل، فأوردراته مش ظاهرة هنا.
               {channel !== "whatsapp" &&
                 " إنستجرام وماسنجر مابيدّوش تليفون، فالربط بإيدك."}
@@ -202,10 +202,10 @@ export default async function ThreadPage({
                 <input
                   name="customerId"
                   placeholder="رقم العميل في السيستم"
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
+                  className="field flex-1"
                   dir="ltr"
                 />
-                <SubmitOnce className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
+                <SubmitOnce className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
                   اربط
                 </SubmitOnce>
               </div>
@@ -217,7 +217,7 @@ export default async function ThreadPage({
       {/* الكلام */}
       <div className="space-y-2">
         {messages.length === 0 ? (
-          <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+          <p className="card empty">
             مافيش كلام في المحادثة دي.
           </p>
         ) : (
@@ -226,19 +226,19 @@ export default async function ThreadPage({
             return (
               <div
                 key={m.id}
-                className={`max-w-[85%] rounded-xl p-3 text-sm shadow-sm ${
-                  mine ? "ms-auto bg-primary/10" : "bg-white"
+                className={`max-w-[85%] rounded-card p-3 text-sm shadow-card ${
+                  mine ? "ms-auto bg-primary/10" : "bg-surface"
                 }`}
               >
-                <p className="whitespace-pre-wrap text-gray-900" dir="auto">
+                <p className="whitespace-pre-wrap text-ink" dir="auto">
                   {m.body ??
                     (m.attachment_type ? `[${m.attachment_type}]` : "—")}
                 </p>
-                <p className="mt-1 flex flex-wrap gap-2 text-[11px] text-gray-400">
+                <p className="mt-1 flex flex-wrap gap-2 text-[11px] text-ink-faint">
                   <span>{sinceText(m.created_at, now)}</span>
                   {mine && m.sent_by_name && <span>· {m.sent_by_name}</span>}
                   {m.status === "failed" && (
-                    <span className="text-red-600">· مابعتتش{m.error ? `: ${m.error}` : ""}</span>
+                    <span className="text-danger">· مابعتتش{m.error ? `: ${m.error}` : ""}</span>
                   )}
                 </p>
               </div>
@@ -249,24 +249,24 @@ export default async function ThreadPage({
 
       {/* الرد */}
       {canReply && !thread.archived && (
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <div className="card p-4 sm:p-5">
           {notConnected ? (
-            <p className="text-sm text-amber-700">{notConnected}</p>
+            <p className="text-sm text-warning">{notConnected}</p>
           ) : !win.open ? (
-            <p className="text-sm text-gray-500">{win.note}</p>
+            <p className="text-sm text-ink-muted">{win.note}</p>
           ) : (
             <form action={replyToThread} className="space-y-2">
               <input type="hidden" name="id" value={id} />
               {win.note && (
-                <p className="text-xs text-amber-700">{win.note}</p>
+                <p className="text-xs text-warning">{win.note}</p>
               )}
               <textarea
                 name="body"
                 rows={3}
                 placeholder="اكتب ردك"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                className="field"
               />
-              <SubmitOnce className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
+              <SubmitOnce className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
                 ابعت
               </SubmitOnce>
             </form>
@@ -278,7 +278,7 @@ export default async function ThreadPage({
         {thread.unread > 0 && (
           <form action={markRead}>
             <input type="hidden" name="id" value={id} />
-            <SubmitOnce className="rounded-lg bg-white px-4 py-1.5 text-sm text-gray-600 shadow-sm hover:bg-gray-50">
+            <SubmitOnce className="btn btn-secondary btn-sm px-4">
               علّمها مقروءة
             </SubmitOnce>
           </form>
@@ -286,7 +286,7 @@ export default async function ThreadPage({
         {canReply && !thread.archived && (
           <form action={archiveThread}>
             <input type="hidden" name="id" value={id} />
-            <SubmitOnce className="rounded-lg bg-white px-4 py-1.5 text-sm text-gray-600 shadow-sm hover:bg-gray-50">
+            <SubmitOnce className="btn btn-secondary btn-sm px-4">
               اقفل المحادثة
             </SubmitOnce>
           </form>
