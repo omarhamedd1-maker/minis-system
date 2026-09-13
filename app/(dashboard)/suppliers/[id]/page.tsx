@@ -134,13 +134,13 @@ export default async function SupplierPage({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <BackLink href="/suppliers" label="الرجوع للموردين" />
-        <h1 className="truncate text-lg font-bold text-gray-900">
+        <h1 className="truncate text-lg font-bold text-ink">
           {supplier.name}
         </h1>
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
@@ -156,15 +156,15 @@ export default async function SupplierPage({
       />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
-          <p className="text-xs text-gray-500 sm:text-sm">اللي عليك للمورد ده</p>
+        <div className="card col-span-2 p-4 sm:p-5 lg:col-span-1">
+          <p className="text-xs text-ink-muted sm:text-sm">اللي عليك للمورد ده</p>
           <p
             className={`mt-1 text-xl font-bold sm:text-2xl lg:text-4xl ${
               balance > 0
-                ? "text-red-600"
+                ? "text-danger"
                 : balance < 0
-                  ? "text-amber-600"
-                  : "text-green-600"
+                  ? "text-warning"
+                  : "text-success"
             }`}
           >
             {balance > 0
@@ -174,15 +174,15 @@ export default async function SupplierPage({
                 : "متسوّي"}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-xs text-gray-500 sm:text-sm">إجمالي الفواتير</p>
-          <p className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+        <div className="card p-4 sm:p-5">
+          <p className="text-xs text-ink-muted sm:text-sm">إجمالي الفواتير</p>
+          <p className="mt-1 text-xl font-bold text-ink sm:text-2xl">
             {formatMoney(purchases)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-xs text-gray-500 sm:text-sm">إجمالي المدفوع</p>
-          <p className="mt-1 text-xl font-bold text-green-600 sm:text-2xl">
+        <div className="card p-4 sm:p-5">
+          <p className="text-xs text-ink-muted sm:text-sm">إجمالي المدفوع</p>
+          <p className="mt-1 text-xl font-bold text-success sm:text-2xl">
             {formatMoney(payments)}
           </p>
         </div>
@@ -199,7 +199,7 @@ export default async function SupplierPage({
       )}
 
       {txns.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
+        <div className="card empty p-12">
           لسه مفيش حركات مع المورد ده.
         </div>
       ) : (
@@ -209,40 +209,40 @@ export default async function SupplierPage({
             {txns.map((t) => {
               const isPayment = t.kind === "payment";
               return (
-                <div key={t.id} className="rounded-xl bg-white p-3 shadow-sm">
+                <div key={t.id} className="card p-3">
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-ink">
                         {isPayment ? "دفعة" : "فاتورة بضاعة"}
                         {t.related_cash_id && (
-                          <span className="ms-1 text-[11px] text-gray-400">
+                          <span className="ms-1 text-[11px] text-ink-faint">
                             (من الخزنة)
                           </span>
                         )}
                         {t.related_expense_id && (
-                          <span className="ms-1 text-[11px] text-gray-400">
+                          <span className="ms-1 text-[11px] text-ink-faint">
                             (مصروف)
                           </span>
                         )}
                       </div>
                       {t.description && (
-                        <div className="mt-0.5 truncate text-xs text-gray-600">
+                        <div className="mt-0.5 truncate text-xs text-ink-muted">
                           {t.description}
                         </div>
                       )}
-                      <div className="mt-0.5 text-[11px] text-gray-400">
+                      <div className="mt-0.5 text-[11px] text-ink-faint">
                         {formatDate(t.txn_date)} · الرصيد بعدها{" "}
                         {formatMoney(running.get(t.id) ?? 0)}
                       </div>
                       {t.supplier_invoice_items?.length > 0 && (
-                        <ul className="mt-1.5 space-y-0.5 border-t border-gray-100 pt-1.5">
+                        <ul className="mt-1.5 space-y-0.5 border-t border-line pt-1.5">
                           {t.supplier_invoice_items.map((it) => (
                             <li
                               key={it.id}
-                              className="flex justify-between gap-2 text-[11px] text-gray-600"
+                              className="flex justify-between gap-2 text-[11px] text-ink-muted"
                             >
                               <span className="truncate">{it.item_name}</span>
-                              <span className="shrink-0 text-gray-400">
+                              <span className="shrink-0 text-ink-faint">
                                 {it.quantity} × {formatMoney(Number(it.unit_cost))}
                               </span>
                             </li>
@@ -252,7 +252,7 @@ export default async function SupplierPage({
                     </div>
                     <div
                       className={`shrink-0 text-base font-bold ${
-                        isPayment ? "text-green-700" : "text-red-700"
+                        isPayment ? "text-success" : "text-danger"
                       }`}
                     >
                       {isPayment ? "−" : "+"} {formatMoney(Number(t.amount))}
@@ -275,10 +275,10 @@ export default async function SupplierPage({
           </div>
 
           {/* ===== كمبيوتر: جدول ===== */}
-          <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+          <div className="card hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-right text-gray-500">
+                <tr className="border-b border-line text-right text-ink-muted">
                   <th className="px-4 py-3 font-medium">التاريخ</th>
                   <th className="px-4 py-3 font-medium">النوع</th>
                   <th className="px-4 py-3 font-medium">الوصف</th>
@@ -293,30 +293,30 @@ export default async function SupplierPage({
                   return (
                     <tr
                       key={t.id}
-                      className="border-b border-gray-100 last:border-0"
+                      className="border-b border-line last:border-0"
                     >
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-ink-body">
                         {formatDate(t.txn_date)}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">
+                      <td className="px-4 py-3 font-medium text-ink">
                         {isPayment ? "دفعة" : "فاتورة بضاعة"}
                         {t.related_cash_id && (
-                          <span className="ms-1 text-xs text-gray-400">
+                          <span className="ms-1 text-xs text-ink-faint">
                             (من الخزنة)
                           </span>
                         )}
                         {t.related_expense_id && (
-                          <span className="ms-1 text-xs text-gray-400">
+                          <span className="ms-1 text-xs text-ink-faint">
                             (مصروف)
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">
+                      <td className="px-4 py-3 text-ink-muted">
                         {t.description ?? "—"}
                         {t.supplier_invoice_items?.length > 0 && (
                           <ul className="mt-1 space-y-0.5">
                             {t.supplier_invoice_items.map((it) => (
-                              <li key={it.id} className="text-xs text-gray-500">
+                              <li key={it.id} className="text-xs text-ink-muted">
                                 {it.item_name} — {it.quantity} ×{" "}
                                 {formatMoney(Number(it.unit_cost))}
                               </li>
@@ -326,12 +326,12 @@ export default async function SupplierPage({
                       </td>
                       <td
                         className={`px-4 py-3 font-medium ${
-                          isPayment ? "text-green-700" : "text-red-700"
+                          isPayment ? "text-success" : "text-danger"
                         }`}
                       >
                         {isPayment ? "−" : "+"} {formatMoney(Number(t.amount))}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-ink-body">
                         {formatMoney(running.get(t.id) ?? 0)}
                       </td>
                       {canEdit && (
@@ -368,7 +368,7 @@ function DeleteButton() {
     <button
       type="submit"
       title="مسح الحركة"
-      className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600"
+      className="btn btn-sm h-7 w-7 bg-danger-soft px-0 text-danger"
     >
       <svg
         viewBox="0 0 24 24"
