@@ -48,7 +48,7 @@ export function CategoryPicker({
         <button
           type="button"
           onClick={() => setIsNew(false)}
-          className="shrink-0 rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+          className="shrink-0 rounded-control px-2 py-1 text-xs text-ink-muted hover:bg-sunken"
           aria-label="رجوع للقايمة"
         >
           ✕

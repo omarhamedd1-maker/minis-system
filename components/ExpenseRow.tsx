@@ -33,22 +33,22 @@ export function ExpenseRow({
 
   if (!editing) {
     return (
-      <tr className="border-b border-gray-100 last:border-0">
-        <td className="whitespace-nowrap px-4 py-3 text-gray-700">
+      <tr className="border-b border-line last:border-0">
+        <td className="whitespace-nowrap px-4 py-3 text-ink-body">
           {formatDate(expense.expense_date)}
         </td>
-        <td className="px-4 py-3 font-medium text-gray-900">
+        <td className="px-4 py-3 font-medium text-ink">
           {expense.category}
         </td>
-        <td className="px-4 py-3 text-gray-700">
+        <td className="px-4 py-3 text-ink-body">
           {expense.description ?? "—"}
           {supplier && (
-            <span className="ms-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+            <span className="ms-2 rounded-full bg-sunken px-2 py-0.5 text-xs text-ink-muted">
               مورد: {supplier}
             </span>
           )}
         </td>
-        <td className="whitespace-nowrap px-4 py-3 text-gray-700">
+        <td className="whitespace-nowrap px-4 py-3 text-ink-body">
           {formatMoney(expense.amount)}
         </td>
         <td className="px-4 py-3">
@@ -56,7 +56,7 @@ export function ExpenseRow({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+              className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
             >
               تعديل
             </button>
@@ -64,7 +64,7 @@ export function ExpenseRow({
               <input type="hidden" name="expense_id" value={expense.id} />
               <ConfirmButton
                 message="متأكد إنك عايز تمسح المصروف ده؟ هيتشال من الخزنة كمان."
-                className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                className="rounded-control bg-danger-soft px-3 py-1 text-xs font-medium text-danger hover:bg-danger-line"
               >
                 مسح
               </ConfirmButton>
@@ -76,7 +76,7 @@ export function ExpenseRow({
   }
 
   return (
-    <tr className="border-b border-gray-100 bg-yellow-50 last:border-0">
+    <tr className="border-b border-line bg-warning-soft last:border-0">
       <td className="px-4 py-3">
         <form id={formId} action={updateAction}>
           <input type="hidden" name="expense_id" value={expense.id} />
@@ -87,7 +87,7 @@ export function ExpenseRow({
           form={formId}
           defaultValue={expense.expense_date}
           required
-          className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          className="rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
         />
       </td>
       <td className="px-4 py-3">
@@ -98,7 +98,7 @@ export function ExpenseRow({
           defaultValue={expense.category}
           required
           autoComplete="off"
-          className="w-32 rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          className="w-32 rounded-control border border-line-strong bg-surface px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
         />
         <datalist id={`cats-${expense.id}`}>
           {catOptions.map((c) => (
@@ -111,7 +111,7 @@ export function ExpenseRow({
           name="description"
           form={formId}
           defaultValue={expense.description ?? ""}
-          className="w-full min-w-32 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          className="w-full min-w-32 rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
         />
       </td>
       <td className="px-4 py-3">
@@ -123,7 +123,7 @@ export function ExpenseRow({
           min="0.01"
           step="0.01"
           required
-          className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          className="w-28 rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
         />
       </td>
       <td className="px-4 py-3">
@@ -131,14 +131,14 @@ export function ExpenseRow({
           <button
             type="submit"
             form={formId}
-            className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
+            className="rounded-control bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
           >
             حفظ
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
           >
             إلغاء
           </button>
