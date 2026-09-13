@@ -95,57 +95,57 @@ export default async function OrderLinksPage({
   return (
     <div className="space-y-4">
       <BackLink href="/products" label="المنتجات" />
-      <h1 className="text-2xl font-bold text-gray-900">لينكات الطلب</h1>
-      <p className="text-sm text-gray-500">
+      <h1 className="text-2xl font-bold text-ink">لينكات الطلب</h1>
+      <p className="text-sm text-ink-muted">
         اختار المنتجات، خد اللينك، وابعته في رسالة أو ستوري. العميل يملا عنوانه
         بنفسه والأوردر ييجي عندك في «محتاج تأكيد».
       </p>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+        <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>
       )}
 
       {created && (
-        <div className="rounded-xl bg-emerald-50 p-4">
-          <p className="text-sm font-bold text-emerald-900">اللينك جاهز</p>
+        <div className="rounded-card bg-success-soft p-4">
+          <p className="text-sm font-bold text-success">اللينك جاهز</p>
           <CopyLink url={`${origin}/o/${created}`} href={`/o/${created}`} />
         </div>
       )}
 
       {/* ===== لينك جديد ===== */}
-      <form action={createOrderLink} className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+      <form action={createOrderLink} className="card p-4 sm:p-5">
         <input
           name="title"
           placeholder="اسم اللينك — «عرض الستوري» (اختياري)"
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-900 focus:outline-none"
+          className="field"
         />
 
-        <div className="mt-3 max-h-72 space-y-1 overflow-y-auto rounded-lg border border-gray-100 p-2">
+        <div className="mt-3 max-h-72 space-y-1 overflow-y-auto rounded-control border border-line p-2">
           {options.length === 0 ? (
-            <p className="p-4 text-center text-sm text-gray-400">
+            <p className="p-4 text-center text-sm text-ink-faint">
               مفيش منتجات بسعر لسه.
             </p>
           ) : (
             options.map((o) => (
               <label
                 key={o.id}
-                className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-gray-50"
+                className="flex cursor-pointer items-center gap-3 rounded-control px-2 py-1.5 text-sm hover:bg-sunken"
               >
                 <input
                   type="checkbox"
                   name="variant"
                   value={o.id}
-                  className="h-4 w-4 shrink-0 rounded border-gray-300"
+                  className="h-4 w-4 shrink-0 rounded border-line-strong"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-gray-900">{o.label}</span>
+                  <span className="block truncate text-ink">{o.label}</span>
                   {o.second && (
-                    <span className="block truncate text-[11px] text-gray-400" dir="ltr">
+                    <span className="block truncate text-[11px] text-ink-faint" dir="ltr">
                       {o.second}
                     </span>
                   )}
                 </span>
-                <span className="shrink-0 tabular-nums text-xs text-gray-400">
+                <span className="shrink-0 tabular-nums text-xs text-ink-faint">
                   {formatMoney(o.price)}
                 </span>
               </label>
@@ -155,7 +155,7 @@ export default async function OrderLinksPage({
 
         <button
           type="submit"
-          className="mt-3 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+          className="mt-3 btn btn-primary px-5"
         >
           اعمل اللينك
         </button>
@@ -163,7 +163,7 @@ export default async function OrderLinksPage({
 
       {/* ===== اللينكات الموجودة ===== */}
       {recent.length > 0 && (
-        <div className="divide-y divide-gray-100 rounded-xl bg-white shadow-sm">
+        <div className="card divide-y divide-line">
           {recent.map((l) => (
             <LinkRow key={l.id} link={l} origin={origin} />
           ))}
@@ -171,11 +171,11 @@ export default async function OrderLinksPage({
       )}
 
       {older.length > 0 && (
-        <details className="rounded-xl bg-white shadow-sm">
-          <summary className="cursor-pointer px-4 py-3 text-sm text-gray-500">
+        <details className="card">
+          <summary className="cursor-pointer px-4 py-3 text-sm text-ink-muted">
             لينكات أقدم ({older.length})
           </summary>
-          <div className="divide-y divide-gray-100 border-t border-gray-100">
+          <div className="divide-y divide-line border-t border-line">
             {older.map((l) => (
               <LinkRow key={l.id} link={l} origin={origin} />
             ))}
@@ -209,13 +209,13 @@ function LinkRow({
   return (
     <div className="px-4 py-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium text-gray-900">
+        <span className="text-sm font-medium text-ink">
           {link.title || "من غير اسم"}
           {!link.active && (
-            <span className="mr-2 text-[11px] font-normal text-gray-400">مقفول</span>
+            <span className="mr-2 text-[11px] font-normal text-ink-faint">مقفول</span>
           )}
         </span>
-        <span className="text-[11px] text-gray-400">
+        <span className="text-[11px] text-ink-faint">
           {(link.order_link_items ?? []).length} منتج
           {link.orders_count > 0 && ` · ${link.orders_count} أوردر`}
         </span>
@@ -228,7 +228,7 @@ function LinkRow({
         <input type="hidden" name="active" value={link.active ? "0" : "1"} />
         <button
           type="submit"
-          className="mt-1 text-[11px] text-gray-400 underline hover:text-gray-600"
+          className="mt-1 text-[11px] text-ink-faint underline hover:text-ink-muted"
         >
           {link.active ? "اقفله" : "افتحه"}
         </button>
