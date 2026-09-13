@@ -11,6 +11,8 @@ import {
   saveFlatShipping,
   checkIntegrations,
   saveBackupGroup,
+  saveMetaAccounts,
+  disconnectMeta,
 } from "./actions";
 import { EnablePush } from "@/components/EnablePush";
 import { IntegrationHealth } from "@/components/IntegrationHealth";
@@ -84,6 +86,29 @@ export default async function SettingsPage({
     return { token: row?.telegram_bot_token ?? null, chat: row?.telegram_chat_id ?? null };
   })();
   const hasBackup = Boolean(backup.token && backup.chat);
+
+  // ⚠️ قراية لوحدها — أعمدة ميتا لسه ممكن ماتكونش اتعملت (sql/inbox.sql)،
+  // والفشل هنا معناه الكارت بيقول «لسه» مش الصفحة كلها تقع
+  const meta = await (async () => {
+    const { data, error } = await db
+      .from("tenant_credentials")
+      .select(
+        "meta_page_id, meta_page_token, whatsapp_phone_id, whatsapp_token, instagram_account_id"
+      )
+      .eq("tenant_id", me.tenantId)
+      .maybeSingle();
+    if (error) return null;
+    return data as {
+      meta_page_id: string | null;
+      meta_page_token: string | null;
+      whatsapp_phone_id: string | null;
+      whatsapp_token: string | null;
+      instagram_account_id: string | null;
+    } | null;
+  })();
+  const hasMeta = Boolean(
+    meta?.meta_page_token || meta?.whatsapp_token
+  );
 
   const importRuns = (await listImportRuns(db, me.tenantId)).map((run) => ({
     id: run.id,
@@ -371,6 +396,134 @@ export default async function SettingsPage({
             </p>
             <CopyLink url={bostaHook} />
           </div>
+        )}
+      </div>
+
+      {/* ===== صندوق الرسايل — حسابات ميتا ===== */}
+      <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-gray-900">صندوق الرسايل</h2>
+          <Badge on={hasMeta} />
+        </div>
+        <p className="mt-1 text-xs text-gray-400">
+          واتساب وإنستجرام وماسنجر في مكان واحد جنب أوردرات العميل.
+        </p>
+
+        {meta === null ? (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            الجداول لسه مااتعملتش — شغّل{" "}
+            <code className="rounded bg-amber-100 px-1">sql/inbox.sql</code>
+          </p>
+        ) : (
+          <>
+            <form action={saveMetaAccounts} className="mt-3 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-medium text-gray-700">
+                    معرّف صفحة فيسبوك
+                  </span>
+                  <input
+                    name="meta_page_id"
+                    defaultValue={meta.meta_page_id ?? ""}
+                    placeholder="Page ID"
+                    dir="ltr"
+                    className={input}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-gray-700">
+                    معرّف حساب إنستجرام
+                  </span>
+                  <input
+                    name="instagram_account_id"
+                    defaultValue={meta.instagram_account_id ?? ""}
+                    placeholder="Instagram Account ID"
+                    dir="ltr"
+                    className={input}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-gray-700">
+                    معرّف رقم الواتساب
+                  </span>
+                  <input
+                    name="whatsapp_phone_id"
+                    defaultValue={meta.whatsapp_phone_id ?? ""}
+                    placeholder="Phone Number ID"
+                    dir="ltr"
+                    className={input}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-gray-700">
+                    توكن الصفحة (فيسبوك وإنستجرام)
+                  </span>
+                  <input
+                    name="meta_page_token"
+                    type="password"
+                    autoComplete="off"
+                    placeholder={meta.meta_page_token ? "••••••••••••" : "Page Access Token"}
+                    dir="ltr"
+                    className={input}
+                  />
+                </label>
+                <label className="block sm:col-span-2">
+                  <span className="text-xs font-medium text-gray-700">
+                    توكن واتساب
+                  </span>
+                  <input
+                    name="whatsapp_token"
+                    type="password"
+                    autoComplete="off"
+                    placeholder={meta.whatsapp_token ? "••••••••••••" : "WhatsApp Access Token"}
+                    dir="ltr"
+                    className={input}
+                  />
+                </label>
+              </div>
+
+              {/*
+                ⚠️ **التوكن الفاضي معناه «سيبه زي ما هو»** — والجملة دي
+                لازم تتقال، وإلا اللي بيعدّل معرّف الصفحة بيفتكر إنه
+                لازم يكتب التوكن تاني وهو مش شايفه.
+              */}
+              <p className="text-[11px] text-gray-400">
+                التوكن اللي سايبه فاضي بيفضل زي ما هو.
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                >
+                  احفظ
+                </button>
+              </div>
+            </form>
+
+            {/*
+              رابط الويب هوك — ده اللي بيتحط عند ميتا عشان الرسايل توصل.
+              ⚠️ **ثابت لكل البيزنسات** (التطبيق عند ميتا واحد)، والبيزنس
+              بيتعرف من معرّف الحساب اللي فوق مش من الرابط.
+            */}
+            <div className="mt-4 border-t border-gray-100 pt-3">
+              <p className="text-xs font-medium text-gray-700">
+                رابط الويب هوك — بيتحط في إعدادات التطبيق عند ميتا
+              </p>
+              <CopyLink url={origin + "/api/meta/webhook"} />
+            </div>
+
+            {hasMeta && (
+              <form action={disconnectMeta} className="mt-3">
+                <button
+                  type="submit"
+                  className="text-xs text-gray-400 hover:text-red-600"
+                >
+                  افصل الربط
+                </button>
+              </form>
+            )}
+          </>
         )}
       </div>
 

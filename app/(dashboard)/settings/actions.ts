@@ -337,6 +337,80 @@ export async function saveShopifyApp(formData: FormData) {
   back("تمام — التطبيق اتظبّط. دلوقتي أي بيزنس يقدر يربط متجره بضغطة", true);
 }
 
+/**
+ * ربط حسابات ميتا — واتساب وإنستجرام وماسنجر.
+ *
+ * ⚠️⚠️ **التوكن بيتعرض كنقط، والفاضي معناه «سيبه زي ما هو»** — مش
+ * «امسحه». من غير القاعدة دي، أي حفظ لتعديل صغير (زي تغيير معرّف الصفحة)
+ * بيمسح التوكن ويقطع القناة، والسبب مابيبانش.
+ *
+ * ⚠️ **ومعرّفات الحسابات هي اللي بتقول الرسالة الجاية تخص مين** — فلو
+ * اتكتبت غلط، كلام العملاء بيوصل ومايلاقيش بيزنس ويترمي.
+ */
+export async function saveMetaAccounts(formData: FormData) {
+  const me = await requirePermission("admin.settings");
+  const db = createAdminClient();
+  const existing = await loadTenantCredentials(db, me.tenantId);
+
+  const field = (name: string) => String(formData.get(name) ?? "").trim();
+  const digits = (v: string) => v.replace(/\D/g, "");
+
+  const pageId = digits(field("meta_page_id"));
+  const waPhoneId = digits(field("whatsapp_phone_id"));
+  const igId = digits(field("instagram_account_id"));
+
+  // الفاضي = سيبه، مش امسحه
+  const pageToken = field("meta_page_token") || existing.metaPageToken;
+  const waToken = field("whatsapp_token") || existing.whatsappToken;
+
+  const { error } = await db
+    .from("tenant_credentials")
+    .update({
+      meta_page_id: pageId || null,
+      meta_page_token: pageToken || null,
+      whatsapp_phone_id: waPhoneId || null,
+      whatsapp_token: waToken || null,
+      instagram_account_id: igId || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) {
+    back(
+      "معرفناش نحفظ: " +
+        error.message +
+        " — لو الأعمدة لسه مااتعملتش شغّل sql/inbox.sql"
+    );
+  }
+
+  await logActivity(me, "settings.meta", "ظبّط حسابات ميتا");
+  revalidatePath("/settings");
+  revalidatePath("/inbox");
+  back("حسابات ميتا اتحفظت", true);
+}
+
+/** بيفصل الصندوق عن ميتا — المحادثات بتفضل مكانها */
+export async function disconnectMeta() {
+  const me = await requirePermission("admin.settings");
+  const { error } = await createAdminClient()
+    .from("tenant_credentials")
+    .update({
+      meta_page_id: null,
+      meta_page_token: null,
+      whatsapp_phone_id: null,
+      whatsapp_token: null,
+      instagram_account_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) back("معرفناش نفصل الربط: " + error.message);
+
+  await logActivity(me, "settings.meta", "فصل حسابات ميتا");
+  revalidatePath("/settings");
+  back("الربط اتفصل — والمحادثات القديمة مكانها", true);
+}
+
 /** بيفصل ربط المتجر (مش بيلغي التطبيق) */
 export async function disconnectShopify() {
   const me = await requirePermission("admin.settings");

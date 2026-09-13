@@ -15,6 +15,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { parseMetaWebhook } from "@/lib/inbox/meta-payload";
 import { verifySignature } from "@/lib/inbox/signature";
 import { recordIncoming, applyStatuses } from "@/lib/inbox/store";
+import { notifyAll } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,25 @@ export async function POST(req: Request) {
     const stored = await recordIncoming(db, parsed.messages);
     const statuses = await applyStatuses(db, parsed.statuses);
 
-    return NextResponse.json({ ok: true, ...stored, statuses });
+    // ⚠️ **الإشعار على المحادثة اللي بدأت تستنى بس** — مش على كل رسالة.
+    // والتاج بالساعة حاجز تاني: لو العميل بعت وقفل وبعت تاني في نفس
+    // الساعة، التليفون بيرن مرة واحدة.
+    const hour = new Date().toISOString().slice(0, 13);
+    for (const n of stored.notify) {
+      await notifyAll(db, n.tenantId, `رسالة جديدة من ${n.title}`, {
+        url: `/inbox/${n.conversationId}`,
+        tag: `inbox-${n.conversationId}-${hour}`,
+      });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      stored: stored.stored,
+      duplicate: stored.duplicate,
+      noTenant: stored.noTenant,
+      notified: stored.notify.length,
+      statuses,
+    });
   } catch (e) {
     console.error("[meta/webhook]", e);
     // ⚠️ ٢٠٠ بقصد — اقرا الملاحظة فوق

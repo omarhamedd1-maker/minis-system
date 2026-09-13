@@ -74,6 +74,16 @@ export type RecordResult = {
   stored: number;
   duplicate: number;
   noTenant: number;
+  /**
+   * المحادثات اللي **بدأت** تستنى رد دلوقتي.
+   *
+   * ⚠️⚠️ **مش كل رسالة جاية.** العميل اللي بيبعت خمس رسايل ورا بعض
+   * محتاج إشعار واحد — الخمسة إشعارات بتخلّي الإشعارات كلها تتقفل من
+   * التليفون، وساعتها بتخسر اللي فيه خبر كمان.
+   *
+   * فالسطر بيتزوّد هنا لما المحادثة تكون **مقروءة قبلها** بس.
+   */
+  notify: { tenantId: string; conversationId: string; title: string }[];
 };
 
 /**
@@ -88,7 +98,7 @@ export async function recordIncoming(
   messages: IncomingMessage[],
   now = new Date()
 ): Promise<RecordResult> {
-  const out: RecordResult = { stored: 0, duplicate: 0, noTenant: 0 };
+  const out: RecordResult = { stored: 0, duplicate: 0, noTenant: 0, notify: [] };
 
   for (const msg of messages) {
     const tenantId = await tenantForAccount(db, msg.accountId);
@@ -99,6 +109,9 @@ export async function recordIncoming(
 
     const conversationId = await upsertConversation(db, tenantId, msg, now);
     if (!conversationId) continue;
+
+    // العدّاد **قبل** الكتابة — هو اللي بيقول المحادثة كانت مقروءة ولا لأ
+    const before = await currentUnread(db, tenantId, conversationId);
 
     const { error } = await db.from("conversation_messages").insert({
       tenant_id: tenantId,
@@ -127,26 +140,36 @@ export async function recordIncoming(
       .update({
         last_message_at: msg.at,
         last_inbound_at: msg.at,
-        unread: await nextUnread(db, conversationId),
+        unread: before + 1,
         archived: false,
       })
       .eq("tenant_id", tenantId)
       .eq("id", conversationId);
+
+    if (before === 0) {
+      out.notify.push({
+        tenantId,
+        conversationId,
+        title: msg.displayName ?? msg.externalId,
+      });
+    }
   }
 
   return out;
 }
 
-async function nextUnread(
+async function currentUnread(
   db: SupabaseClient,
+  tenantId: string,
   conversationId: string
 ): Promise<number> {
   const { data } = await db
     .from("conversations")
     .select("unread")
+    .eq("tenant_id", tenantId)
     .eq("id", conversationId)
     .maybeSingle();
-  return Number((data as { unread: number } | null)?.unread ?? 0) + 1;
+  return Number((data as { unread: number } | null)?.unread ?? 0);
 }
 
 async function upsertConversation(
