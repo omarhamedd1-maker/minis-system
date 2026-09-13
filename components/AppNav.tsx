@@ -81,6 +81,23 @@ const ITEMS: Item[] = [
   { href: "/platform", label: "البيزنسات", perm: "platform" },
 ];
 
+/**
+ * الرقم الأحمر جنب البند.
+ *
+ * ⚠️ **بيظهر لما يكون فيه رقم بس** — الصفر بيتقري كأن فيه حاجة
+ * والعين بتتعوّد عليه فتبطّل تشوفه لما يبقى فيه فعلًا.
+ */
+function Badge({ n, className }: { n: number; className?: string }) {
+  if (!n || n < 1) return null;
+  return (
+    <span
+      className={`inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-[18px] text-white ${className ?? ""}`}
+    >
+      {n > 99 ? "99+" : n}
+    </span>
+  );
+}
+
 // أيقونة كل صفحة (خط بسيط)
 function Icon({ href, className }: { href: string; className?: string }) {
   const paths: Record<string, string> = {
@@ -135,10 +152,13 @@ export function AppNav({
   isAdmin,
   permissions,
   isPlatformAdmin,
+  inboxWaiting = 0,
 }: {
   isAdmin: boolean;
   permissions: string[];
   isPlatformAdmin: boolean;
+  /** محادثات مستنية رد — بتبان كرقم أحمر جنب «الرسايل» */
+  inboxWaiting?: number;
 }) {
   const pathname = usePathname();
   const expanded = useStoredFlag("navExpanded");
@@ -237,6 +257,9 @@ export function AppNav({
                       {i.label}
                     </span>
                   )}
+                  {i.href === "/inbox" && (
+                    <Badge n={inboxWaiting} className="ms-auto" />
+                  )}
                 </Link>
 
                 {kids.map((c) => {
@@ -300,13 +323,16 @@ export function AppNav({
                 href={i.href}
                 title={i.label}
                 aria-label={i.label}
-                className={`flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-[0.88] ${
+                className={`relative flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-[0.88] ${
                   active
                     ? "bg-primary text-white active:bg-primary-dark"
                     : "text-gray-500 active:bg-gray-200"
                 }`}
               >
                 <Icon href={i.href} className="h-5 w-5" />
+                {i.href === "/inbox" && inboxWaiting > 0 && (
+                  <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+                )}
               </Link>
             );
           })}
@@ -316,8 +342,15 @@ export function AppNav({
               onClick={() => setMoreOpen(true)}
               title="المزيد"
               aria-label="المزيد"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-transform active:scale-[0.88] active:bg-gray-200"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-transform active:scale-[0.88] active:bg-gray-200"
             >
+              {/*
+                ⚠️ **النقطة على «المزيد» كمان.** «الرسايل» مش في الشريط
+                السفلي، فمن غيرها الرقم بيتخبّى ورا قايمة ومحدش بيشوفه.
+              */}
+              {overflow.some((o) => o.href === "/inbox") && inboxWaiting > 0 && (
+                <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+              )}
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -360,7 +393,10 @@ export function AppNav({
                     }`}
                   >
                     <Icon href={i.href} className="h-6 w-6" />
-                    <span>{i.label}</span>
+                    <span className="flex items-center gap-1.5">
+                      {i.label}
+                      {i.href === "/inbox" && <Badge n={inboxWaiting} />}
+                    </span>
                   </Link>
                 );
               })}

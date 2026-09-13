@@ -92,6 +92,25 @@ export default async function DashboardLayout({
     }
   }
 
+  // عدّاد المحادثات المستنية رد — الرقم اللي بيبان جنب «الرسايل».
+  //
+  // ⚠️ **فشله مايوقفش الصفحة**: لو جداول الصندوق لسه مااتعملتش،
+  // القايمة بتظهر من غير رقم — مش السيستم كله يقع.
+  let inboxWaiting = 0;
+  if (can(user, "inbox.view")) {
+    try {
+      const { count } = await createAdminClient()
+        .from("conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", user.tenantId)
+        .eq("archived", false)
+        .gt("unread", 0);
+      inboxWaiting = count ?? 0;
+    } catch {
+      inboxWaiting = 0;
+    }
+  }
+
   return (
     <div className="min-h-screen">
       {/* هيدر التليفون — اللوجو + الإشعارات + ترحيب باسم المستخدم */}
@@ -131,7 +150,12 @@ export default async function DashboardLayout({
       </header>
 
       <div className="flex">
-        <AppNav isAdmin={user.isAdmin} permissions={user.permissions} isPlatformAdmin={user.isPlatformAdmin} />
+        <AppNav
+          isAdmin={user.isAdmin}
+          permissions={user.permissions}
+          isPlatformAdmin={user.isPlatformAdmin}
+          inboxWaiting={inboxWaiting}
+        />
         <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 pb-28 md:pb-8">
           {/* ترحيب على الكمبيوتر (على التليفون بيظهر في الهيدر فوق) */}
           <div className="mb-4 hidden items-center justify-between gap-3 text-sm text-gray-500 md:flex">
