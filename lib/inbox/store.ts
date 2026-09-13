@@ -113,15 +113,19 @@ export async function recordIncoming(
     // العدّاد **قبل** الكتابة — هو اللي بيقول المحادثة كانت مقروءة ولا لأ
     const before = await currentUnread(db, tenantId, conversationId);
 
+    const outbound = msg.direction === "out";
+
     const { error } = await db.from("conversation_messages").insert({
       tenant_id: tenantId,
       conversation_id: conversationId,
-      direction: "in",
+      direction: msg.direction,
       body: msg.body,
       attachment_url: msg.attachmentUrl,
       attachment_type: msg.attachmentType,
       external_id: msg.messageId,
-      status: "delivered",
+      // الصدى معناه إنها اتبعتت فعلًا من التطبيق
+      status: outbound ? "sent" : "delivered",
+      sent_by_name: outbound ? "من الموبايل" : null,
       created_at: msg.at,
     });
 
@@ -135,18 +139,32 @@ export async function recordIncoming(
 
     // ⚠️ **العدّاد والوقت بيتحدّثوا بعد ما الرسالة تتخزّن بنجاح بس** —
     // لو اتحدّثوا قبلها، الرسالة المكررة بتزوّد «غير مقروء» من غير رسالة.
+    /**
+     * ⚠️⚠️ **الصادر مابيلمسش `last_inbound_at` ولا عدّاد «غير مقروء».**
+     *
+     * نافذة الـ٢٤ ساعة بتتحسب من آخر رسالة **من العميل**. لو ردنا إحنا
+     * فتحها، السيستم بيقول «مفتوحة» وميتا بترفض الرسالة — والرد بيضيع
+     * والسبب مابيبانش.
+     *
+     * والرد من الموبايل معناه إن المحادثة **اترد عليها**، فبيصفّر
+     * العدّاد بدل ما يزوّده.
+     */
     await db
       .from("conversations")
-      .update({
-        last_message_at: msg.at,
-        last_inbound_at: msg.at,
-        unread: before + 1,
-        archived: false,
-      })
+      .update(
+        outbound
+          ? { last_message_at: msg.at, unread: 0, archived: false }
+          : {
+              last_message_at: msg.at,
+              last_inbound_at: msg.at,
+              unread: before + 1,
+              archived: false,
+            }
+      )
       .eq("tenant_id", tenantId)
       .eq("id", conversationId);
 
-    if (before === 0) {
+    if (!outbound && before === 0) {
       out.notify.push({
         tenantId,
         conversationId,
@@ -216,7 +234,8 @@ async function upsertConversation(
       customer_id: customerId,
       display_name: msg.displayName,
       last_message_at: msg.at,
-      last_inbound_at: msg.at,
+      // الصدى مش رسالة من العميل — فمابيفتحش نافذة رد
+      last_inbound_at: msg.direction === "out" ? null : msg.at,
       unread: 0,
       created_at: now.toISOString(),
     })
