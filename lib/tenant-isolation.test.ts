@@ -48,7 +48,51 @@ const GLOBAL_TABLES = new Set([
   "shopify_installs",
 ]);
 
+/**
+ * ⚠️⚠️ **دوال Supabase قديمة — قايمة متجمّدة، والعدد بيقل بس.**
+ *
+ * الحارس اتوسّع يمسح `supabase/functions` (١٣ سبتمبر) بعد ما
+ * `bosta-cashout` طلعت بتكتب حركة خزنة من غير `tenant_id` ومحدش شافها.
+ * أول تشغيل مسك **٣٤ موضع في ٨ دوال**. موضعين `bosta-cashout` اتصلّحوا،
+ * والباقي هنا بعدده المقاس.
+ *
+ * الدوال دي نسخ بتتلزق في Supabase بالإيد، واتكتبت قبل عزل البيزنسات —
+ * والتطبيق دلوقتي بيستقبل أوردرات شوبيفاي من `app/api/shopify/webhooks`.
+ * **القرار (تصليح ولا مسح) عند عمر.**
+ *
+ * القايمة مش استثناء مفتوح:
+ * - موضع جديد من غير `tenant_id` في نفس الملف → الحارس بيقع
+ * - دالة جديدة مش في القايمة → الحارس بيقع
+ * - موضع اتصلّح → الحارس بيقع لحد ما الرقم ينزل
+ */
+const LEGACY_EDGE_FUNCTIONS = new Map<string, number>([
+  ["supabase/functions/bosta-audit/index.ts", 1],
+  ["supabase/functions/bosta-create/index.ts", 1],
+  ["supabase/functions/bosta-return/index.ts", 1],
+  ["supabase/functions/bright-endpoint/index.ts", 2],
+  ["supabase/functions/shopify-order-update/index.ts", 10],
+  ["supabase/functions/shopify-product/index.ts", 8],
+  ["supabase/functions/shopify-sync/index.ts", 9],
+]);
+
 type Hit = { file: string; line: number; table: string };
+
+/** المسح بطيء (بيقرا المشروع كله) — بيتعمل مرة واحدة للاختبارات كلها */
+let cachedHits: Hit[] | null = null;
+function allHits(): Hit[] {
+  if (!cachedHits) cachedHits = unfilteredAdminReads();
+  return cachedHits;
+}
+
+function legacyCounts(hits: Hit[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const h of hits) {
+    if (LEGACY_EDGE_FUNCTIONS.has(h.file)) {
+      counts.set(h.file, (counts.get(h.file) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
 
 /** قراية آمنة — ملف قارناه مش نص أو مرفوض مايوقّعش الحارس نفسه */
 function safeRead(f: string): string {
@@ -80,13 +124,14 @@ function unfilteredAdminReads(): Hit[] {
       return e.isDirectory() ? walk(p) : [p];
     });
   }
-  const files = ["app", "lib", "components"]
+  const files = ["app", "lib", "components", "supabase/functions"]
     .flatMap(walk)
     .filter(
       (f) =>
         !f.endsWith("supabase/admin.ts") &&
         !f.includes(".test.") &&
-        /createAdminClient|SupabaseClient/.test(safeRead(f))
+        /\.(ts|tsx)$/.test(f) &&
+        /createAdminClient|SupabaseClient|SERVICE_ROLE/.test(safeRead(f))
     );
 
   const hits: Hit[] = [];
@@ -97,7 +142,8 @@ function unfilteredAdminReads(): Hit[] {
     // أسماء المتغيرات اللي شايلة مفتاح الأدمن في الملف ده — عشان
     // `createClient()` المحمي بالـRLS مايتحسبش غلط
     const adminVars = new Set<string>();
-    for (const l of lines) {
+    for (let k = 0; k < lines.length; k++) {
+      const l = lines[k];
       const m = l.match(
         /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?createAdminClient\(\)/
       );
@@ -105,6 +151,14 @@ function unfilteredAdminReads(): Hit[] {
       // والعميل اللي بييجي كمعامل — ده اللي كان بيفلت
       const p = l.match(/([A-Za-z_$][\w$]*)\s*:\s*SupabaseClient/);
       if (p) adminVars.add(p[1]);
+      // ⚠️⚠️ **ودوال Supabase (Deno)** — بتعمل العميل بـ`createClient` ومفتاح
+      // الخدمة من البيئة، مش بـ`createAdminClient`. من غير السطر ده كانت برّه
+      // الحارس كلها: `bosta-cashout` كانت بتكتب حركة خزنة من غير `tenant_id`
+      // ومحدش شافها (١٣ سبتمبر).
+      const svc = l.match(/(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*createClient\(/);
+      if (svc && lines.slice(k, k + 4).join("\n").includes("SERVICE_ROLE")) {
+        adminVars.add(svc[1]);
+      }
     }
     // ⚠️⚠️ **الملف اللي بينده `createAdminClient()` مباشرة كان بيتخطّى كله.**
     //
@@ -250,7 +304,7 @@ function unfilteredAdminReads(): Hit[] {
 
 describe("عزل البيزنسات", () => {
   it("مفيش قراءة بمفتاح الأدمن من غير فلتر بيزنس", () => {
-    const hits = unfilteredAdminReads();
+    const hits = allHits().filter((h) => !LEGACY_EDGE_FUNCTIONS.has(h.file));
     const report = hits
       .map((h) => `  ${h.file}:${h.line} → ${h.table}`)
       .join("\n");
@@ -271,5 +325,23 @@ describe("عزل البيزنسات", () => {
     // اتمسك بتشغيل السويت ٦ مرات (١٨ أغسطس): وقع مرة بـ٥٥٧٤ مللي، وعدّى
     // ٨ مرات لوحده في ٢٥٠ مللي. والفشل العشوائي أوحش من البطء، لأنه
     // بيخلّي الحارس نفسه مش موثوق فحد يعدّي عليه.
+  }, 30_000);
+
+  it("⚠️⚠️ الدوال القديمة: العدد بيقل بس", () => {
+    const counts = legacyCounts(allHits());
+    const drift: string[] = [];
+    for (const [file, frozen] of LEGACY_EDGE_FUNCTIONS) {
+      const now = counts.get(file) ?? 0;
+      if (now > frozen) drift.push(`${file}: ${now} موضع — كان ${frozen}. موضع جديد من غير tenant_id`);
+      else if (now < frozen) drift.push(`${file}: ${now} موضع — اتصلّح حاجة، نزّل الرقم في القايمة لـ${now}`);
+    }
+    expect(drift).toEqual([]);
+  }, 30_000);
+
+  it("الحارس بيشوف دوال Supabase فعلًا — و bosta-cashout نضيفة", () => {
+    const hits = allHits();
+    // لو المسح وقف يقرا المجلد، القايمة كلها هتبان صفر — ده اللي بيمسكه
+    expect(legacyCounts(hits).size).toBe(LEGACY_EDGE_FUNCTIONS.size);
+    expect(hits.filter((h) => h.file.includes("bosta-cashout"))).toEqual([]);
   }, 30_000);
 });

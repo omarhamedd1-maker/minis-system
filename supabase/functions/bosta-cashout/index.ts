@@ -3,7 +3,19 @@
 // --------------------------------------------------------------------------
 // اعمل دالة جديدة في Supabase اسمها bosta-cashout والصق الكود ده، و Verify JWT = OFF
 //
-// بتتنادى: GET /functions/v1/bosta-cashout?key=<BOSTA_WEBHOOK_KEY>
+// بتتنادى: GET /functions/v1/bosta-cashout?key=<bosta_webhook_token بتاع البيزنس>
+//
+// ⚠️⚠️ **البيزنس بيتحدد من المفتاح — مش مفتاح عام للسيستم كله.**
+// النسخة القديمة كانت بتتحمى بمفتاح واحد (`BOSTA_WEBHOOK_KEY`) وبتكلّم بوسطة
+// بمفتاح واحد (`BOSTA_API_KEY`)، وبتكتب حركة الخزنة وسجل التحويل **من غير
+// `tenant_id`**. الإضافة بمفتاح الخدمة من غير الخانة بتنزل على بيزنس مينيز
+// الثابت (`sql/tenants-02-auto-fill.sql` بتقرا `auth.uid()` ومفتاح الخدمة
+// مالوش مستخدم). ماضربتش لأنها عمرها ما سجّلت تحويل (صفر صف في
+// `bosta_cashouts`) — بس لو اشتغلت لبيزنس تاني كانت هتنزل فلوسه عند مينيز.
+// اتصلّحت ١٣ سبتمبر بنفس طريقة `app/api/bosta/webhook/route.ts`.
+//
+// ⚠️ **الدالة دي بتتلزق في Supabase بالإيد** — التعديل هنا مابيوصلش للدالة
+// المنشورة لحد ما الكود يتلزق تاني.
 //          &dry=1 للتجربة من غير ما تسجّل حاجة
 //
 // بتعمل إيه: بتجيب معاملات محفظة بوسطة، وتاخد بس حركات "Cash Out"
@@ -13,8 +25,6 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const BOSTA_API_KEY = Deno.env.get("BOSTA_API_KEY")!;
-const GUARD_KEY = Deno.env.get("BOSTA_WEBHOOK_KEY") ?? "";
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -34,9 +44,19 @@ function toDate(v: unknown): string | null {
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
-  if (!GUARD_KEY || url.searchParams.get("key") !== GUARD_KEY) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  // البيزنس ومفتاح بوسطة بتاعه من مفتاح الويب هوك — مفتاح مالوش بيزنس = رفض.
+  // ⚠️ مافيش رجوع لمفتاح عام: المفتاح العام مايعرّفش بيزنس، والكتابة من غير
+  // بيزنس هي نفس الباج اللي اتصلّح.
+  const key = url.searchParams.get("key") ?? "";
+  if (!key) return new Response("Unauthorized", { status: 401 });
+  const { data: cred } = await supabase
+    .from("tenant_credentials")
+    .select("tenant_id, bosta_api_key")
+    .eq("bosta_webhook_token", key)
+    .maybeSingle();
+  const tenantId = String((cred as { tenant_id?: string } | null)?.tenant_id ?? "");
+  const bostaKey = String((cred as { bosta_api_key?: string } | null)?.bosta_api_key ?? "");
+  if (!tenantId || !bostaKey) return new Response("Unauthorized", { status: 401 });
   const dry = url.searchParams.get("dry") === "1";
   const json = (b: unknown, s = 200) =>
     new Response(JSON.stringify(b, null, 2), {
@@ -45,7 +65,7 @@ Deno.serve(async (req) => {
     });
 
   const headers = {
-    Authorization: BOSTA_API_KEY,
+    Authorization: bostaKey,
     "X-Requested-By": "minis",
     "Content-Type": "application/json",
   };
@@ -170,6 +190,7 @@ Deno.serve(async (req) => {
     const { data: exists } = await supabase
       .from("bosta_cashouts")
       .select("id")
+      .eq("tenant_id", tenantId)
       .eq("cashout_id", cashoutId)
       .maybeSingle();
     if (exists) {
@@ -185,6 +206,7 @@ Deno.serve(async (req) => {
 
     // إيداع في الخزنة
     const { error: cashErr } = await supabase.from("cash_transactions").insert({
+      tenant_id: tenantId,
       direction: "in",
       amount,
       source_type: "manual",
@@ -194,6 +216,7 @@ Deno.serve(async (req) => {
     if (cashErr) continue;
 
     await supabase.from("bosta_cashouts").insert({
+      tenant_id: tenantId,
       cashout_id: cashoutId,
       amount,
       cashout_date: date,
