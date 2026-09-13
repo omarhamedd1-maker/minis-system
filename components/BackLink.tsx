@@ -16,7 +16,7 @@ export function BackLink({
       href={href}
       title={label ?? "رجوع"}
       aria-label={label ?? "رجوع"}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 active:scale-95 active:bg-gray-200"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-sunken hover:text-ink active:scale-95 active:bg-line"
     >
       <svg
         viewBox="0 0 24 24"
