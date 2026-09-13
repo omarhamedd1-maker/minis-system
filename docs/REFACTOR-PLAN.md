@@ -47,14 +47,38 @@
 ⚠️ **الـgrep على المشروع كله مش شرط هنا** — المرحلة بتوحّد خمس صفحات،
 والباقي لسه بالألوان القديمة بقصد. الشرط ده مكانه آخر ١ج.
 
-### ١ج. باقي الصفحات
+### ١ج. باقي الصفحات والمكوّنات
 
-بعد ما عمر يوافق على الخمسة، وحّد الباقي — **٥ صفحات في كل PR**، مش كلهم مرة واحدة.
+⚠️ **الترتيب (قرار المشرف، ١٤ سبتمبر): `components/` الأول، وبعدين باقي صفحات `app/`.**
+المكوّنات زي `AppNav` و`BostaMark` و`SendBostaRowButton` بتظهر في كل صفحة — طول ما هي
+بألوان خام، أي صفحة بتتوحّد بتفضل نصها موحّد ونصها لأ، ومحدش يقدر يحكم على النتيجة.
+والمكوّن اللي بيتصلح بيتصلح في كل الصفحات مرة واحدة.
 
-### قبول ١ج (بعد آخر دفعة)
+- الدفعات **٥ ملفات في كل PR**
+- البوابة اتقفلت بعد `.table` (#157): الأربع قطع اتجربوا في صفحات حقيقية، فمافيش قياس لكل دفعة
+- اتعمل قبل تغيير الترتيب: ١٥ صفحة (#156 · #157 · #158)
 
-- صفر ألوان Tailwind مباشرة في `app/` و`components/`
-  (`grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" app/ components/` يرجع فاضي)
+### قبول ١ج — شرطين، كل واحد بيخضر لوحده
+
+⚠️ grep واحد على الاتنين مع بعض ماكانش هيخضر غير في آخر يوم — يعني مفيش إشارة تقدّم طول الطريق.
+
+**١ج-أ — `components/` نضيفة**
+
+```
+grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" components/
+```
+
+**١ج-ب — `app/` نضيفة**
+
+```
+grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" app/
+```
+
+⚠️ **الـgrep ده مابيمسكش `emerald` ولا `yellow` ولا `divide` ولا `ring`** — واتلقوا فعلًا في الشغل (`text-emerald-900` · `divide-gray-50` · `focus:ring-gray-900`). النسخة الأوسع اللي بيتشتغل بيها:
+
+```
+grep -rE "(bg|text|border|ring|divide)-(gray|slate|zinc|neutral|stone|green|emerald|lime|teal|red|rose|pink|blue|sky|cyan|amber|yellow|orange|purple|indigo|violet|fuchsia)-[0-9]" components/ app/
+```
 - صور قبل/بعد في كل PR
 
 ### ممنوع في المرحلة دي
