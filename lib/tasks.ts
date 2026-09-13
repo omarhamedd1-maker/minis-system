@@ -9,9 +9,9 @@ export type TaskStatus = "open" | "doing" | "done";
 export type TaskPriority = "urgent" | "normal";
 
 export const TASK_STATUSES: { key: TaskStatus; label: string; className: string }[] = [
-  { key: "open", label: "مفتوح", className: "bg-gray-100 text-gray-700" },
-  { key: "doing", label: "شغال عليه", className: "bg-sky-100 text-sky-800" },
-  { key: "done", label: "خلص", className: "bg-green-100 text-green-800" },
+  { key: "open", label: "مفتوح", className: "bg-sunken text-ink-body" },
+  { key: "doing", label: "شغال عليه", className: "bg-info-soft text-info" },
+  { key: "done", label: "خلص", className: "bg-success-soft text-success" },
 ];
 
 export const TASK_PRIORITIES: { key: TaskPriority; label: string }[] = [
@@ -24,7 +24,7 @@ export function taskStatusBadge(status: string | null | undefined) {
     TASK_STATUSES.find((s) => s.key === status) ?? {
       key: "open" as TaskStatus,
       label: String(status ?? "مفتوح"),
-      className: "bg-gray-100 text-gray-600",
+      className: "bg-sunken text-ink-muted",
     }
   );
 }

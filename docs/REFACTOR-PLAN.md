@@ -70,11 +70,15 @@
 grep -E "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" components/AppNav.tsx components/BackLink.tsx
 ```
 
-**١ج-ب — باقي `app/` و`components/` نضاف**
+**١ج-ب — باقي `app/` و`components/` و`lib/` نضاف**
 
 ```
-grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" app/ components/
+grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" app/ components/ lib/ --exclude=*.test.ts
 ```
+
+⚠️ **`lib/` لازم يبقى في الشرط** — فيه دوال بترجّع `className` بتترسم في الصفحات:
+`riskBadge` في `lib/customer-history.ts` (شارة العميل في صفحة الأوردر) و`TASK_STATUSES` في `lib/tasks.ts`
+(شارة التاسك). الـgrep على `app/` و`components/` بس كان هيخضر والشارات دي لسه خام. اتصلحوا مع صفحة الأوردر.
 
 ⚠️ **الـgrep ده مابيمسكش `emerald` ولا `yellow` ولا `divide` ولا `ring`** — واتلقوا فعلًا في الشغل (`text-emerald-900` · `divide-gray-50` · `focus:ring-gray-900`). النسخة الأوسع اللي بيتشتغل بيها:
 

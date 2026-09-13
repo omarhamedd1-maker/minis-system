@@ -136,22 +136,22 @@ export function riskBadge(risk: CustomerRisk): {
     case "bad":
       return {
         label: "بيرجّع كتير",
-        className: "bg-red-100 text-red-800",
+        className: "bg-danger-soft text-danger",
       };
     case "watch":
       return {
         label: "خد بالك",
-        className: "bg-amber-100 text-amber-800",
+        className: "bg-warning-soft text-warning",
       };
     case "good":
       return {
         label: "عميل منتظم",
-        className: "bg-green-50 text-green-700",
+        className: "bg-success-soft text-success",
       };
     default:
       return {
         label: "لسه مافيش تاريخ",
-        className: "bg-gray-100 text-gray-600",
+        className: "bg-sunken text-ink-muted",
       };
   }
 }
