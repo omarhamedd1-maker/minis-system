@@ -32,22 +32,22 @@ export function ExpenseCard({
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50">
+    <div className="rounded-card bg-surface p-3 shadow-card transition-colors active:bg-sunken">
       <div className="flex items-start gap-3">
         {/* النوع والوصف والتاريخ */}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-sm font-bold text-gray-900">
+            <span className="text-sm font-bold text-ink">
               {expense.description || expense.category}
             </span>
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-ink-faint">
               {formatDate(expense.expense_date)}
             </span>
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
             {expense.description && <span>{expense.category}</span>}
             {supplier && (
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] text-gray-600">
+              <span className="rounded-full bg-sunken px-2 py-0.5 text-[11px] text-ink-muted">
                 مورد: {supplier}
               </span>
             )}
@@ -55,7 +55,7 @@ export function ExpenseCard({
         </div>
 
         {/* المبلغ */}
-        <div className="shrink-0 text-base font-bold text-red-700">
+        <div className="shrink-0 text-base font-bold text-danger">
           {formatMoney(expense.amount)}
         </div>
 
@@ -66,7 +66,7 @@ export function ExpenseCard({
               type="button"
               onClick={() => setEditing((v) => !v)}
               title="تعديل"
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-600"
+              className="flex h-7 w-7 items-center justify-center rounded-control bg-sunken text-ink-muted"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -89,7 +89,7 @@ export function ExpenseCard({
                   if (!confirm("متأكد إنك عايز تمسح المصروف ده؟"))
                     e.preventDefault();
                 }}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600"
+                className="flex h-7 w-7 items-center justify-center rounded-control bg-danger-soft text-danger"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -114,7 +114,7 @@ export function ExpenseCard({
             await updateAction(fd);
             setEditing(false);
           }}
-          className="minis-in mt-2 space-y-2 border-t border-gray-100 pt-2"
+          className="minis-in mt-2 space-y-2 border-t border-line pt-2"
         >
           <input type="hidden" name="expense_id" value={expense.id} />
           <div className="flex gap-2">
@@ -123,7 +123,7 @@ export function ExpenseCard({
                 required
                 categories={categories}
                 defaultValue={expense.category}
-                className="w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm"
+                className="w-full rounded-control border border-line-strong bg-surface px-2 py-1.5 text-sm"
               />
             </div>
             <input
@@ -132,7 +132,7 @@ export function ExpenseCard({
               defaultValue={expense.amount}
               min="0.01"
               step="0.01"
-              className="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-24 rounded-control border border-line-strong px-2 py-1.5 text-sm"
               aria-label="المبلغ"
             />
           </div>
@@ -140,19 +140,19 @@ export function ExpenseCard({
             name="description"
             defaultValue={expense.description ?? ""}
             placeholder="الوصف"
-            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded-control border border-line-strong px-2 py-1.5 text-sm"
           />
           <div className="flex items-center gap-2">
             <input
               type="date"
               name="expense_date"
               defaultValue={expense.expense_date}
-              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              className="flex-1 rounded-control border border-line-strong px-2 py-1.5 text-sm"
               aria-label="التاريخ"
             />
             <button
               type="submit"
-              className="rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-white"
+              className="rounded-control bg-primary px-4 py-1.5 text-xs font-medium text-white"
             >
               حفظ
             </button>

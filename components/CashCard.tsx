@@ -29,18 +29,18 @@ export function CashCard({
   const isIn = direction === "in";
 
   return (
-    <div className="rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50">
+    <div className="rounded-card bg-surface p-3 shadow-card transition-colors active:bg-sunken">
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-gray-900">{label}</div>
-          <div className="mt-0.5 text-[11px] text-gray-400">
+          <div className="text-sm font-medium text-ink">{label}</div>
+          <div className="mt-0.5 text-[11px] text-ink-faint">
             {formatDate(transactionDate)}
           </div>
         </div>
 
         <div
           className={`shrink-0 text-base font-bold ${
-            isIn ? "text-green-700" : "text-red-700"
+            isIn ? "text-success" : "text-danger"
           }`}
         >
           {isIn ? "+" : "−"} {formatMoney(amount)}
@@ -52,7 +52,7 @@ export function CashCard({
               type="button"
               onClick={() => setEditing((v) => !v)}
               title="تعديل"
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-600"
+              className="flex h-7 w-7 items-center justify-center rounded-control bg-sunken text-ink-muted"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -75,7 +75,7 @@ export function CashCard({
                   if (!confirm("متأكد إنك عايز تمسح الحركة دي من الخزنة؟"))
                     e.preventDefault();
                 }}
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-600"
+                className="flex h-7 w-7 items-center justify-center rounded-control bg-danger-soft text-danger"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -100,14 +100,14 @@ export function CashCard({
             await updateAction(fd);
             setEditing(false);
           }}
-          className="minis-in mt-2 space-y-2 border-t border-gray-100 pt-2"
+          className="minis-in mt-2 space-y-2 border-t border-line pt-2"
         >
           <input type="hidden" name="transaction_id" value={id} />
           <div className="flex gap-2">
             <select
               name="direction"
               defaultValue={direction}
-              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              className="flex-1 rounded-control border border-line-strong px-2 py-1.5 text-sm"
               aria-label="النوع"
             >
               <option value="in">إيداع</option>
@@ -119,7 +119,7 @@ export function CashCard({
               defaultValue={amount}
               min="0.01"
               step="0.01"
-              className="w-24 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-24 rounded-control border border-line-strong px-2 py-1.5 text-sm"
               aria-label="المبلغ"
             />
           </div>
@@ -127,19 +127,19 @@ export function CashCard({
             name="description"
             defaultValue={description ?? ""}
             placeholder="الوصف"
-            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+            className="w-full rounded-control border border-line-strong px-2 py-1.5 text-sm"
           />
           <div className="flex items-center gap-2">
             <input
               type="date"
               name="transaction_date"
               defaultValue={(transactionDate ?? "").slice(0, 10)}
-              className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              className="flex-1 rounded-control border border-line-strong px-2 py-1.5 text-sm"
               aria-label="التاريخ"
             />
             <button
               type="submit"
-              className="rounded-lg bg-primary px-4 py-1.5 text-xs font-medium text-white"
+              className="rounded-control bg-primary px-4 py-1.5 text-xs font-medium text-white"
             >
               حفظ
             </button>
