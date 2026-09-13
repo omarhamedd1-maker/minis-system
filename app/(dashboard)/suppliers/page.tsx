@@ -35,14 +35,14 @@ export default async function SuppliersPage({
   if (error) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-bold text-gray-900">الموردين</h1>
-        <div className="rounded-xl bg-amber-50 p-5 text-sm text-amber-900">
+        <h1 className="text-xl font-bold text-ink">الموردين</h1>
+        <div className="rounded-card bg-warning-soft p-5 text-sm text-warning">
           <p className="font-bold">الصفحة محتاجة جدولين في الداتابيز الأول.</p>
           <p className="mt-1">
             افتح Supabase → SQL Editor وشغّل السكريبت اللي في الشات، وبعدها افتح
             الصفحة دي تاني.
           </p>
-          <p className="mt-2 text-xs text-amber-700">({error.message})</p>
+          <p className="mt-2 text-xs text-warning">({error.message})</p>
         </div>
       </div>
     );
@@ -68,46 +68,46 @@ export default async function SuppliersPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold text-gray-900">الموردين</h1>
+        <h1 className="text-xl font-bold text-ink">الموردين</h1>
         {canEdit && <AddSupplier action={addSupplier} />}
-        <span className="ms-auto text-sm text-gray-500">
+        <span className="ms-auto text-sm text-ink-muted">
           {suppliers.length} مورد
         </span>
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <div className="col-span-2 rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:col-span-1">
-          <p className="text-xs text-gray-500 sm:text-sm">اللي عليك للموردين</p>
+        <div className="card col-span-2 p-4 sm:p-5 lg:col-span-1">
+          <p className="text-xs text-ink-muted sm:text-sm">اللي عليك للموردين</p>
           <p
             className={`mt-1 text-xl font-bold sm:text-2xl lg:text-4xl ${
-              totalDue > 0 ? "text-red-600" : "text-green-600"
+              totalDue > 0 ? "text-danger" : "text-success"
             }`}
           >
             {formatMoney(totalDue)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-xs text-gray-500 sm:text-sm">إجمالي الفواتير</p>
-          <p className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+        <div className="card p-4 sm:p-5">
+          <p className="text-xs text-ink-muted sm:text-sm">إجمالي الفواتير</p>
+          <p className="mt-1 text-xl font-bold text-ink sm:text-2xl">
             {formatMoney(totalPurchases)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-xs text-gray-500 sm:text-sm">إجمالي المدفوع</p>
-          <p className="mt-1 text-xl font-bold text-green-600 sm:text-2xl">
+        <div className="card p-4 sm:p-5">
+          <p className="text-xs text-ink-muted sm:text-sm">إجمالي المدفوع</p>
+          <p className="mt-1 text-xl font-bold text-success sm:text-2xl">
             {formatMoney(totalPayments)}
           </p>
         </div>
       </div>
 
       {suppliers.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
+        <div className="card empty p-12">
           لسه مفيش موردين — ضيف أول واحد من فوق.
         </div>
       ) : (
@@ -118,26 +118,26 @@ export default async function SuppliersPage({
               <Link
                 key={s.id}
                 href={`/suppliers/${s.id}`}
-                className="block rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
+                className="card block p-3 transition-colors active:bg-sunken"
               >
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-bold text-gray-900">
+                    <div className="truncate text-sm font-bold text-ink">
                       {s.name}
                     </div>
-                    <div className="mt-0.5 text-[11px] text-gray-400">
+                    <div className="mt-0.5 text-[11px] text-ink-faint">
                       {s.phone || "بدون تليفون"}
                     </div>
                   </div>
                   <div className="shrink-0 text-end">
                     <div
                       className={`text-base font-bold ${
-                        s.balance > 0 ? "text-red-700" : "text-green-700"
+                        s.balance > 0 ? "text-danger" : "text-success"
                       }`}
                     >
                       {s.balance > 0 ? formatMoney(s.balance) : "متسوّي"}
                     </div>
-                    <div className="text-[11px] text-gray-400">
+                    <div className="text-[11px] text-ink-faint">
                       فواتير {formatMoney(s.purchases)}
                     </div>
                   </div>
@@ -147,10 +147,10 @@ export default async function SuppliersPage({
           </div>
 
           {/* ===== كمبيوتر: جدول ===== */}
-          <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
-            <table className="w-full text-sm">
+          <div className="card hidden overflow-x-auto md:block">
+            <table className="table">
               <thead>
-                <tr className="border-b border-gray-200 text-right text-gray-500">
+                <tr className="border-b border-line text-right text-ink-muted">
                   <th className="px-4 py-3 font-medium">المورد</th>
                   <th className="px-4 py-3 font-medium">التليفون</th>
                   <th className="px-4 py-3 font-medium">الفواتير</th>
@@ -162,23 +162,23 @@ export default async function SuppliersPage({
                 {suppliers.map((s) => (
                   <tr
                     key={s.id}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                    className="border-b border-line last:border-0 hover:bg-sunken"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-ink">
                       <Link href={`/suppliers/${s.id}`} className="hover:underline">
                         {s.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{s.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-muted">{s.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-body">
                       {formatMoney(s.purchases)}
                     </td>
-                    <td className="px-4 py-3 text-green-700">
+                    <td className="px-4 py-3 text-success">
                       {formatMoney(s.payments)}
                     </td>
                     <td
                       className={`px-4 py-3 font-bold ${
-                        s.balance > 0 ? "text-red-700" : "text-green-700"
+                        s.balance > 0 ? "text-danger" : "text-success"
                       }`}
                     >
                       {s.balance > 0 ? formatMoney(s.balance) : "متسوّي"}
@@ -191,7 +191,7 @@ export default async function SuppliersPage({
         </>
       )}
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-ink-faint">
         الفاتورة = بضاعة أخدتها بالأجل — بتزوّد اللي عليك للمورد بس، مش مصروف
         ومش بتلمس الخزنة. الدفعة = فلوس دفعتها فعلاً، ودي اللي بتتسجّل مصروف
         وبتتخصم من الخزنة وبتقلّل اللي عليك.

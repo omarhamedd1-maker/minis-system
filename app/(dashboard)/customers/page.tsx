@@ -64,7 +64,7 @@ export default async function CustomersPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل العملاء: {error.message}
       </div>
     );
@@ -147,13 +147,13 @@ export default async function CustomersPage({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">العملاء</h1>
+        <h1 className="text-xl font-bold text-ink">العملاء</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-gray-500">{rows.length} عميل</span>
+          <span className="text-sm text-ink-muted">{rows.length} عميل</span>
           {/* الشرايح — «مين يستاهل معاملة مختلفة» بدل رقم واحد */}
           <Link
             href="/customers/segments"
-            className="rounded-lg px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-sunken hover:text-ink"
           >
             الشرايح
           </Link>
@@ -165,7 +165,7 @@ export default async function CustomersPage({
               name="q"
               defaultValue={searchTerm}
               placeholder="دور بالاسم أو التليفون"
-              className="w-52 rounded-full border-0 bg-white px-3 py-1 text-xs text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="w-52 rounded-full border-0 bg-surface px-3 py-1 text-xs text-ink shadow-card placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <button
               type="submit"
@@ -176,7 +176,7 @@ export default async function CustomersPage({
             {searchTerm && (
               <Link
                 href="/customers"
-                className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 shadow-sm hover:bg-gray-100"
+                className="rounded-full bg-surface px-2 py-1 text-xs text-ink-muted shadow-card hover:bg-sunken"
               >
                 ✕
               </Link>
@@ -186,7 +186,7 @@ export default async function CustomersPage({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-gray-500">ترتيب حسب:</span>
+        <span className="text-xs text-ink-muted">ترتيب حسب:</span>
         {Object.entries(SORTS).map(([key, label]) => (
           <Link
             key={key}
@@ -194,7 +194,7 @@ export default async function CustomersPage({
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               sort === key
                 ? "bg-primary text-white"
-                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
             }`}
           >
             {label}
@@ -203,28 +203,28 @@ export default async function CustomersPage({
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم حفظ بيانات العميل
         </div>
       )}
       {deleted && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم مسح العميل
         </div>
       )}
 
       {/* عملاء مشتبه إنهم مكررين — نفس التليفون بأسماء/بيانات مختلفة */}
       {canEdit && duplicateGroups.length > 0 && (
-        <details className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <summary className="cursor-pointer text-sm font-bold text-amber-800">
+        <details className="rounded-card border border-warning-line bg-warning-soft p-4">
+          <summary className="cursor-pointer text-sm font-bold text-warning">
             عملاء مكررين ({duplicateGroups.length} مجموعة) — دوس للدمج
           </summary>
-          <p className="mt-2 text-xs text-amber-700">
+          <p className="mt-2 text-xs text-warning">
             دول عملاء بنفس رقم التليفون. اختار اللي تسيبه، والباقي هيتدمج فيه
             (أوردراتهم هتتنقل له).
           </p>
@@ -233,16 +233,16 @@ export default async function CustomersPage({
               <form
                 key={g.phone}
                 action={mergeCustomers}
-                className="rounded-lg bg-white p-3"
+                className="rounded-control bg-surface p-3"
               >
-                <div className="mb-2 text-xs text-gray-500" dir="ltr">
+                <div className="mb-2 text-xs text-ink-muted" dir="ltr">
                   {g.phone}
                 </div>
                 <div className="space-y-1.5">
                   {g.members.map((m, i) => (
                     <label
                       key={m.id}
-                      className="flex items-center gap-2 text-sm text-gray-800"
+                      className="flex items-center gap-2 text-sm text-ink-body"
                     >
                       <input
                         type="radio"
@@ -252,7 +252,7 @@ export default async function CustomersPage({
                         className="h-4 w-4"
                       />
                       <span className="min-w-0 flex-1 truncate">{m.name}</span>
-                      <span className="shrink-0 text-xs text-gray-500">
+                      <span className="shrink-0 text-xs text-ink-muted">
                         {m.ordersCount} أوردر
                       </span>
                     </label>
@@ -269,7 +269,7 @@ export default async function CustomersPage({
                 ))}
                 <button
                   type="submit"
-                  className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
+                  className="mt-2 btn btn-primary btn-sm"
                 >
                   ادمج المجموعة
                 </button>
@@ -280,7 +280,7 @@ export default async function CustomersPage({
       )}
 
       {rows.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
+        <div className="card empty p-12">
           {searchTerm
             ? `مفيش عملاء فيهم "${searchTerm}".`
             : "لسه مفيش عملاء — بيتسجلوا تلقائياً مع الأوردرات."}
@@ -293,22 +293,22 @@ export default async function CustomersPage({
             <Link
               key={row.id}
               href={`/customers/${row.id}`}
-              className="block rounded-xl bg-white p-3 shadow-sm transition-colors active:bg-gray-50"
+              className="card block p-3 transition-colors active:bg-sunken"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-bold text-gray-900">
+                  <div className="truncate text-sm font-bold text-ink">
                     {row.name}
                   </div>
-                  <div className="mt-0.5 text-xs text-gray-500" dir="ltr">
+                  <div className="mt-0.5 text-xs text-ink-muted" dir="ltr">
                     {row.phone ?? "—"}
                   </div>
                 </div>
-                <div className="shrink-0 text-sm font-bold text-gray-900">
+                <div className="shrink-0 text-sm font-bold text-ink">
                   {formatMoney(row.total)}
                 </div>
               </div>
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-gray-100 pt-2 text-xs text-gray-600">
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-2 text-xs text-ink-muted">
                 <span>{row.ordersCount} أوردر</span>
                 <span>آخر أوردر: {formatDate(row.lastOrderDate)}</span>
               </div>
@@ -317,10 +317,10 @@ export default async function CustomersPage({
         </div>
 
         {/* ===== كمبيوتر: جدول ===== */}
-        <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+        <div className="card hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-right text-gray-500">
+              <tr className="border-b border-line text-right text-ink-muted">
                 <th className="px-4 py-3 font-medium">العميل</th>
                 <th className="px-4 py-3 font-medium">التليفون</th>
                 <th className="px-4 py-3 font-medium">العنوان</th>

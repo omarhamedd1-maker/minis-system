@@ -65,24 +65,24 @@ export default async function SegmentsPage() {
     <div className="space-y-4">
       <BackLink href="/customers" label="العملاء" />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">شرايح العملاء</h1>
-        <span className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-ink">شرايح العملاء</h1>
+        <span className="text-sm text-ink-muted">
           {stats.length} عميل · متوسط الأوردر {formatMoney(aov)}
         </span>
       </div>
 
       {segments.map((s) => (
-        <div key={s.key} className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <div key={s.key} className="card p-4 sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">{s.label}</h2>
-            <span className="text-sm tabular-nums text-gray-500">
+            <h2 className="text-sm font-bold text-ink">{s.label}</h2>
+            <span className="text-sm tabular-nums text-ink-muted">
               {s.customers.length} عميل · {formatMoney(s.spend)}
             </span>
           </div>
-          <p className="mt-0.5 text-xs text-gray-400">{s.play}</p>
+          <p className="mt-0.5 text-xs text-ink-faint">{s.play}</p>
 
           {s.customers.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-400">مفيش حد في الشريحة دي.</p>
+            <p className="mt-3 text-sm text-ink-faint">مفيش حد في الشريحة دي.</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-sm">
@@ -92,20 +92,20 @@ export default async function SegmentsPage() {
                   {s.customers.slice(0, 10).map((c) => {
                     const p = nameOf.get(c.customerId);
                     return (
-                      <tr key={c.customerId} className="border-t border-gray-100">
+                      <tr key={c.customerId} className="border-t border-line">
                         <td className="p-2">
                           <Link
                             href={`/customers/${c.customerId}`}
-                            className="text-gray-900 hover:underline"
+                            className="text-ink hover:underline"
                           >
                             {p?.name ?? "بدون اسم"}
                           </Link>
                         </td>
-                        <td className="p-2 text-gray-500">{c.orders} أوردر</td>
-                        <td className="p-2 tabular-nums text-gray-900">
+                        <td className="p-2 text-ink-muted">{c.orders} أوردر</td>
+                        <td className="p-2 tabular-nums text-ink">
                           {formatMoney(c.spend)}
                         </td>
-                        <td className="p-2 text-xs text-gray-400">
+                        <td className="p-2 text-xs text-ink-faint">
                           {c.daysSinceLast === null
                             ? "—"
                             : c.daysSinceLast === 0
@@ -118,7 +118,7 @@ export default async function SegmentsPage() {
                 </tbody>
               </table>
               {s.customers.length > 10 && (
-                <p className="mt-2 text-xs text-gray-400">
+                <p className="mt-2 text-xs text-ink-faint">
                   و{s.customers.length - 10} غيرهم
                 </p>
               )}

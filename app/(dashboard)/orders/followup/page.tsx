@@ -78,7 +78,7 @@ export default async function FollowupPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         {/* الخانة لسه مااتعملتش؟ ده بيبان هنا بدل ما الصفحة تقع */}
         معرفناش نقرا الأوردرات: {error.message}
       </div>
@@ -119,23 +119,23 @@ export default async function FollowupPage({
     <div className="space-y-4">
       <BackLink href="/orders" label="الأوردرات" />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">اسأل بعد التسليم</h1>
-        <span className="text-xs text-gray-500">{queue.length} عميل</span>
+        <h1 className="text-2xl font-bold text-ink">اسأل بعد التسليم</h1>
+        <span className="text-xs text-ink-muted">{queue.length} عميل</span>
       </div>
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-ink-muted">
         العميل اللي عنده مشكلة بيسكت وبعدين يعمل مرتجع. السؤال بعد{" "}
         {ASK_AFTER_DAYS} أيام بيخلّي المشكلة توصلك قبل ما تتحوّل لشحنة عكسية.
         بعد {ASK_BEFORE_DAYS} أيام بيخرج من القايمة — السؤال ساعتها اتأخّر.
       </p>
 
       {saveError && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {saveError}
         </p>
       )}
       {saved && (
-        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <p className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           الرسالة اتحفظت
         </p>
       )}
@@ -157,7 +157,7 @@ export default async function FollowupPage({
       )}
 
       {queue.length === 0 ? (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+        <p className="card empty">
           مفيش حد مستني سؤال دلوقتي.
         </p>
       ) : (
