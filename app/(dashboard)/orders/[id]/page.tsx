@@ -172,7 +172,7 @@ export default async function OrderDetailsPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل الأوردر: {error.message}
       </div>
     );
@@ -414,7 +414,7 @@ export default async function OrderDetailsPage({
       at: order.order_date,
       text: "اتعمل الأوردر",
       when: fmtWhen(order.order_date),
-      dot: "bg-blue-500",
+      dot: "bg-info",
     });
   }
   for (const l of orderLog ?? []) {
@@ -428,8 +428,8 @@ export default async function OrderDetailsPage({
       dot: l.action.startsWith("bosta")
         ? "bg-[#E30613]"
         : l.action.includes("delete")
-          ? "bg-red-500"
-          : "bg-gray-400",
+          ? "bg-danger"
+          : "bg-ink-faint",
     });
   }
   if (order.delivered_at) {
@@ -437,7 +437,7 @@ export default async function OrderDetailsPage({
       at: order.delivered_at,
       text: "اتسلّم للعميل",
       when: fmtWhen(order.delivered_at),
-      dot: "bg-green-600",
+      dot: "bg-success",
     });
   }
   timeline.sort((a, b) => a.at.localeCompare(b.at));
@@ -546,7 +546,7 @@ export default async function OrderDetailsPage({
       <AutoRefresh seconds={30} />
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-lg font-bold text-gray-900 sm:text-xl">
+          <h1 className="truncate text-lg font-bold text-ink sm:text-xl">
             أوردر {order.order_number ?? "بدون رقم"}
           </h1>
           <span
@@ -555,7 +555,7 @@ export default async function OrderDetailsPage({
             {badge.label}
           </span>
           {order.archived && (
-            <span className="inline-block shrink-0 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+            <span className="inline-block shrink-0 rounded-full bg-warning-soft px-2.5 py-0.5 text-xs font-medium text-warning">
               مؤرشف
             </span>
           )}
@@ -566,14 +566,14 @@ export default async function OrderDetailsPage({
             <Link
               href={`/orders/${nextOrder.id}`}
               title="السابق (الأقدم)"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 active:scale-95"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-control bg-sunken text-ink-muted transition-colors hover:bg-line active:scale-95"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
                 <path d="M9 6l6 6-6 6" />
               </svg>
             </Link>
           ) : (
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-300">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-control bg-sunken text-ink-faint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
                 <path d="M9 6l6 6-6 6" />
               </svg>
@@ -584,14 +584,14 @@ export default async function OrderDetailsPage({
             <Link
               href={`/orders/${prevOrder.id}`}
               title="التالي (الأجدد)"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200 active:scale-95"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-control bg-sunken text-ink-muted transition-colors hover:bg-line active:scale-95"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
                 <path d="M15 6l-6 6 6 6" />
               </svg>
             </Link>
           ) : (
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-300">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-control bg-sunken text-ink-faint">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
                 <path d="M15 6l-6 6 6 6" />
               </svg>
@@ -608,14 +608,14 @@ export default async function OrderDetailsPage({
         بيتقال مرة قبل ما البوليصة تتطبع، وبيختفي بعدها لوحده.
       */}
       {flags.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+        <div className="rounded-card border border-warning-line bg-warning-soft/60 p-4">
           <div className="space-y-1.5">
             {flags.map((f) => (
               <div key={f.key} className="flex items-start gap-2">
                 <span className="mt-0.5 text-xs leading-none">⚠️</span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm text-amber-900">{f.text}</div>
-                  <div className="text-[11px] text-amber-700/80">{f.why}</div>
+                  <div className="text-sm text-warning">{f.text}</div>
+                  <div className="text-[11px] text-warning/80">{f.why}</div>
                 </div>
               </div>
             ))}
@@ -637,13 +637,13 @@ export default async function OrderDetailsPage({
         عشان التحديث التلقائي مايمسحش تعديلات الموظفين من ورا ظهرهم.
       */}
       {canItems && shopifyDiff !== null && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+        <div className="rounded-card border border-warning-line bg-warning-soft/60 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-sm font-bold text-amber-900">
+              <div className="text-sm font-bold text-warning">
                 الأوردر ده مختلف عن شوبيفاي
               </div>
-              <div className="mt-0.5 text-[11px] leading-relaxed text-amber-700/80">
+              <div className="mt-0.5 text-[11px] leading-relaxed text-warning/80">
                 عندنا {formatMoney(Math.round(shopifyDiff.ours))} وعند شوبيفاي{" "}
                 {formatMoney(Math.round(shopifyDiff.theirs))} — يعني حد عدّله
                 هناك بعد ما دخل عندنا.
@@ -651,7 +651,7 @@ export default async function OrderDetailsPage({
             </div>
             <form action={resyncFromShopify}>
               <input type="hidden" name="order_id" value={order.id} />
-              <button className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
+              <button className="btn btn-primary btn-sm px-4">
                 ظبّطه من شوبيفاي
               </button>
             </form>
@@ -670,19 +670,19 @@ export default async function OrderDetailsPage({
         بيرد عنوانه مظبوط، فمالوش لازمة يشوف زرار "عدّل العنوان".
       */}
       {order.order_status === "awaiting_action" && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+        <div className="rounded-card border border-warning-line bg-warning-soft p-4">
           <div className="flex items-start gap-2">
             <span className="mt-0.5 text-lg leading-none">⚠️</span>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-bold text-amber-900">
+              <div className="text-sm font-bold text-warning">
                 {advice.title}
               </div>
               {order.bosta_exception && (
-                <div className="mt-0.5 text-sm text-amber-800" dir="auto">
+                <div className="mt-0.5 text-sm text-warning" dir="auto">
                   السبب: {order.bosta_exception}
                 </div>
               )}
-              <div className="mt-1 text-sm text-amber-800">{advice.hint}</div>
+              <div className="mt-1 text-sm text-warning">{advice.hint}</div>
               {isAdmin && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {advice.actions.includes("whatsapp") && whatsappLink && (
@@ -690,7 +690,7 @@ export default async function OrderDetailsPage({
                       href={whatsappLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white"
+                      className="rounded-control bg-green-600 px-3 py-1.5 text-xs font-medium text-white"
                     >
                       كلّم العميل واتساب
                     </a>
@@ -698,7 +698,7 @@ export default async function OrderDetailsPage({
                   {advice.actions.includes("address") && order.customers?.id && (
                     <Link
                       href={`/customers/${order.customers.id}`}
-                      className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm"
+                      className="rounded-control bg-surface px-3 py-1.5 text-xs font-medium text-ink-body shadow-card"
                     >
                       عدّل العنوان
                     </Link>
@@ -706,7 +706,7 @@ export default async function OrderDetailsPage({
                   {advice.actions.includes("phone") && order.customers?.id && (
                     <Link
                       href={`/customers/${order.customers.id}`}
-                      className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm"
+                      className="rounded-control bg-surface px-3 py-1.5 text-xs font-medium text-ink-body shadow-card"
                     >
                       صحّح رقم التليفون
                     </Link>
@@ -722,7 +722,7 @@ export default async function OrderDetailsPage({
                       />
                       <ConfirmButton
                         message="تلغي الأوردر ده؟ (بلّغ بوسطة كمان إنك عايز ترجّع الشحنة)"
-                        className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700"
+                        className="rounded-control bg-danger-soft px-3 py-1.5 text-xs font-medium text-danger"
                       >
                         ألغِ الأوردر
                       </ConfirmButton>
@@ -736,20 +736,20 @@ export default async function OrderDetailsPage({
       )}
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           {saved === "1" ? "تم حفظ الحالة الجديدة" : saved}
         </div>
       )}
 
       {/* التغيير اليدوي للحالة من جوّه الأوردر: للأدمن بس */}
       {isAdmin && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
-          <span className="text-sm font-medium text-gray-700">
+        <div className="card flex flex-wrap items-center gap-3 p-4">
+          <span className="text-sm font-medium text-ink-body">
             تغيير حالة الأوردر
           </span>
           <StatusBox
@@ -768,17 +768,17 @@ export default async function OrderDetailsPage({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="card p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-gray-900">بيانات العميل</h2>
+              <h2 className="text-sm font-bold text-ink">بيانات العميل</h2>
               {/*
                 **مابنحكمش على حد من غير أساس.** الشارة مابتظهرش غير لما يبقى
                 عنده أوردرين خلصوا على الأقل — قبل كده الجملة تحت بتقول اللي
                 نعرفه من غير ما نلزقله وصف.
               */}
               {history.total === 0 ? (
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                <span className="rounded-full bg-sunken px-2 py-0.5 text-xs font-medium text-ink-muted">
                   أول أوردر ليه
                 </span>
               ) : history.risk !== "new" ? (
@@ -792,7 +792,7 @@ export default async function OrderDetailsPage({
             {order.customers?.id && (
               <Link
                 href={`/customers/${order.customers.id}`}
-                className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 active:scale-95"
+                className="rounded-control bg-sunken px-2.5 py-1 text-xs font-medium text-ink-body transition-colors hover:bg-line active:scale-95"
               >
                 صفحة العميل
               </Link>
@@ -800,14 +800,14 @@ export default async function OrderDetailsPage({
           </div>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">الاسم</dt>
-              <dd className="text-gray-900">
+              <dt className="text-ink-muted">الاسم</dt>
+              <dd className="text-ink">
                 {order.customers?.full_name ?? "—"}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">التليفون</dt>
-              <dd className="flex items-center gap-2 text-gray-900" dir="ltr">
+              <dt className="text-ink-muted">التليفون</dt>
+              <dd className="flex items-center gap-2 text-ink" dir="ltr">
                 {order.customers?.phone ?? "—"}
                 {whatsappLink && (
                   <a
@@ -822,14 +822,14 @@ export default async function OrderDetailsPage({
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="shrink-0 text-gray-500">العنوان</dt>
-              <dd className="text-left text-gray-900">
+              <dt className="shrink-0 text-ink-muted">العنوان</dt>
+              <dd className="text-left text-ink">
                 {order.customers?.address ?? "—"}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">تاريخ الأوردر</dt>
-              <dd className="text-gray-900">{formatDate(order.order_date)}</dd>
+              <dt className="text-ink-muted">تاريخ الأوردر</dt>
+              <dd className="text-ink">{formatDate(order.order_date)}</dd>
             </div>
 
             {/*
@@ -839,13 +839,13 @@ export default async function OrderDetailsPage({
             */}
             {history.total > 0 && (
               <div className="flex justify-between gap-4">
-                <dt className="shrink-0 text-gray-500">طلباته قبل كده</dt>
+                <dt className="shrink-0 text-ink-muted">طلباته قبل كده</dt>
                 <dd className="text-left">
-                  <span className="text-gray-900">
+                  <span className="text-ink">
                     {orderCountWord(history.total)}
                   </span>
                   {historyParts.length > 0 && (
-                    <span className="block text-[11px] text-gray-400">
+                    <span className="block text-[11px] text-ink-faint">
                       {historyParts.map((part, i) => (
                         <span key={part.text}>
                           {i > 0 && " · "}
@@ -853,8 +853,8 @@ export default async function OrderDetailsPage({
                             className={
                               part.highlight
                                 ? history.risk === "bad"
-                                  ? "font-medium text-red-600"
-                                  : "font-medium text-amber-600"
+                                  ? "font-medium text-danger"
+                                  : "font-medium text-warning"
                                 : undefined
                             }
                           >
@@ -886,27 +886,27 @@ export default async function OrderDetailsPage({
           />
         )}
 
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">الشحن</h2>
+        <div className="card p-5">
+          <h2 className="mb-3 text-sm font-bold text-ink">الشحن</h2>
 
           {order.bosta_state ? (
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-gray-500">حالة بوسطة</dt>
-                <dd className="text-gray-900" dir="ltr">
+                <dt className="text-ink-muted">حالة بوسطة</dt>
+                <dd className="text-ink" dir="ltr">
                   {order.bosta_state}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-gray-500">رقم التتبع (بوسطة)</dt>
-                <dd className="text-gray-900" dir="ltr">
+                <dt className="text-ink-muted">رقم التتبع (بوسطة)</dt>
+                <dd className="text-ink" dir="ltr">
                   {order.bosta_tracking ?? "—"}
                 </dd>
               </div>
 
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-gray-500">الدفع عند الاستلام (COD)</dt>
-                <dd className="text-gray-900">{formatMoney(order.bosta_cod)}</dd>
+                <dt className="text-ink-muted">الدفع عند الاستلام (COD)</dt>
+                <dd className="text-ink">{formatMoney(order.bosta_cod)}</dd>
               </div>
               {/* تسوية الشحن: اللي بوسطة خدته − اللي العميل دفعه = الباقي */}
               {/* ⚠️ **والحساب مابيبانش غير لما بوسطة تستلم الشحنة فعلاً.** الشحنة
@@ -948,10 +948,10 @@ export default async function OrderDetailsPage({
 
                   const tone =
                     s.net === 0
-                      ? { box: "bg-gray-100", label: "text-gray-700", value: "text-gray-800" }
+                      ? { box: "bg-sunken", label: "text-ink-body", value: "text-ink-body" }
                       : s.net < 0
-                        ? { box: "bg-green-50", label: "text-green-800", value: "text-green-700" }
-                        : { box: "bg-red-50", label: "text-red-800", value: "text-red-700" };
+                        ? { box: "bg-success-soft", label: "text-success", value: "text-success" }
+                        : { box: "bg-danger-soft", label: "text-danger", value: "text-danger" };
 
                   return (
                     /* **الخلاصة فوق والبنود تحتها** — اللي بيفتح الأوردر عايز
@@ -961,16 +961,16 @@ export default async function OrderDetailsPage({
                     /* **مفيش جدول ولا خطوط** — عمر قال الشكل ده متداخل.
                        رجعت لسطور بسيطة زي أول مرة، بس متباعدة وكل سطر
                        شرحه تحته مش جنبه. */
-                    <div className="mt-2 space-y-2.5 rounded-lg bg-gray-50 p-3">
+                    <div className="mt-2 space-y-2.5 rounded-control bg-sunken p-3">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-xs text-gray-600">
+                        <span className="text-xs text-ink-muted">
                           اللي بوسطة خدته
                         </span>
-                        <span className="text-xs font-medium text-gray-900">
+                        <span className="text-xs font-medium text-ink">
                           {formatMoney(s.cost)}
                         </span>
                       </div>
-                      <p className="-mt-2 text-[10px] leading-relaxed text-gray-400">
+                      <p className="-mt-2 text-[10px] leading-relaxed text-ink-faint">
                         {detail}
                       </p>
 
@@ -980,34 +980,34 @@ export default async function OrderDetailsPage({
                       {s.bundleShare > 0 && (
                         <>
                           <div className="flex items-baseline justify-between gap-3">
-                            <span className="text-xs text-gray-600">
+                            <span className="text-xs text-ink-muted">
                               نصيبها من الباقة
                             </span>
-                            <span className="text-xs font-medium text-gray-900">
+                            <span className="text-xs font-medium text-ink">
                               {formatMoney(s.bundleShare)}
                             </span>
                           </div>
-                          <p className="-mt-2 text-[10px] leading-relaxed text-gray-400">
+                          <p className="-mt-2 text-[10px] leading-relaxed text-ink-faint">
                             الشحن اللي الباقة دفعته بدالك
                           </p>
                         </>
                       )}
 
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-xs text-gray-600">دفعه العميل</span>
-                        <span className="text-xs font-medium text-gray-700">
+                        <span className="text-xs text-ink-muted">دفعه العميل</span>
+                        <span className="text-xs font-medium text-ink-body">
                           − {formatMoney(s.paidByCustomer)}
                         </span>
                       </div>
                       {!received && order.shipping_price > 0 && (
-                        <p className="-mt-2 text-[10px] leading-relaxed text-gray-400">
+                        <p className="-mt-2 text-[10px] leading-relaxed text-ink-faint">
                           ماستلمش، فشحن الأوردر ({formatMoney(order.shipping_price)})
                           ماتحصّلش
                         </p>
                       )}
 
                       <div
-                        className={`flex items-baseline justify-between gap-3 rounded-lg px-2.5 py-2 ${tone.box}`}
+                        className={`flex items-baseline justify-between gap-3 rounded-control px-2.5 py-2 ${tone.box}`}
                       >
                         <span className={`text-xs font-medium ${tone.label}`}>
                           {s.net === 0
@@ -1030,10 +1030,10 @@ export default async function OrderDetailsPage({
                   );
                 })()}
               <div className="flex items-center justify-between gap-4">
-                <dt className="text-gray-500">آخر حركة</dt>
+                <dt className="text-ink-muted">آخر حركة</dt>
                 <dd>
                   <span
-                    className={`rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium ${lastMove(order).className}`}
+                    className={`rounded-full bg-sunken px-2.5 py-0.5 text-xs font-medium ${lastMove(order).className}`}
                   >
                     {lastMove(order).label}
                   </span>
@@ -1045,8 +1045,8 @@ export default async function OrderDetailsPage({
               */}
               {order.bosta_exception && order.order_status !== "awaiting_action" && (
                 <div className="flex items-start justify-between gap-4">
-                  <dt className="text-gray-500">آخر ملاحظة من بوسطة</dt>
-                  <dd className="text-end text-xs text-gray-600" dir="auto">
+                  <dt className="text-ink-muted">آخر ملاحظة من بوسطة</dt>
+                  <dd className="text-end text-xs text-ink-muted" dir="auto">
                     {order.bosta_exception}
                   </dd>
                 </div>
@@ -1058,7 +1058,7 @@ export default async function OrderDetailsPage({
                   href={`/orders/${order.id}/awb`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
+                  className="mt-1 flex items-center justify-center gap-2 rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -1075,7 +1075,7 @@ export default async function OrderDetailsPage({
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">لسه مفيش شحنة للأوردر ده.</p>
+            <p className="text-sm text-ink-muted">لسه مفيش شحنة للأوردر ده.</p>
           )}
 
           {/* مافيش زرار تأكيد مخصوص — تغيير الحالة العادي بيعمل نفس الحاجة،
@@ -1084,11 +1084,11 @@ export default async function OrderDetailsPage({
           {/* الشحنة ماتت عند بوسطة؟ لازم نقولها بصريح العبارة — قبل كده كنت
               بتشوف رقم تتبع وتفتكره شغال، والأوردر يقعد مقفول عليك */}
           {shipmentDead && (
-            <div className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3">
-              <p className="text-xs font-bold text-red-800">
+            <div className="mt-3 rounded-card border border-danger-line bg-danger-soft p-3">
+              <p className="text-xs font-bold text-danger">
                 ⚠️ الشحنة دي ماتت عند بوسطة ({order.bosta_state})
               </p>
-              <p className="mt-1 text-[11px] leading-5 text-red-700">
+              <p className="mt-1 text-[11px] leading-5 text-danger">
                 مفيش طريقة ترجّعها — بوسطة مابتديش مسار لإحياء شحنة مؤرشفة.
                 اعمل شحنة جديدة من الزرار تحت، ورقم التتبع القديم يفضل في السجل.
                 والبوليصة القديمة ارميها واطبع الجديدة.
@@ -1098,11 +1098,11 @@ export default async function OrderDetailsPage({
 
           {/* الشحنة قاعدة والمندوب مجاش — تنبيه بدري قبل ما بوسطة تأرشفها */}
           {shipmentAge !== null && shipmentAge >= 3 && !shipmentDead && (
-            <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
-              <p className="text-xs font-bold text-amber-900">
+            <div className="mt-3 rounded-card border border-warning-line bg-warning-soft p-3">
+              <p className="text-xs font-bold text-warning">
                 🕗 الشحنة قاعدة {shipmentAge} يوم والمندوب مجاش
               </p>
-              <p className="mt-1 text-[11px] leading-5 text-amber-800">
+              <p className="mt-1 text-[11px] leading-5 text-warning">
                 كلّم بوسطة واطلب المندوب. لو وصلت أسبوعين بوسطة بتأرشف الشحنة
                 وساعتها لازم تعمل واحدة جديدة.
               </p>
@@ -1113,17 +1113,17 @@ export default async function OrderDetailsPage({
           {(!order.bosta_tracking || shipmentDead) && canSend && (
             <form
               action={sendOrderToBosta}
-              className="mt-3 border-t border-gray-100 pt-3"
+              className="mt-3 border-t border-line pt-3"
             >
               <input type="hidden" name="order_id" value={order.id} />
               <ConfirmButton
                 message={`متأكد إنك عايز تبعت أوردر ${order.order_number ?? ""} لبوسطة كشحنة؟`}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+                className="flex w-full items-center justify-center gap-2 rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"
               >
                 <BostaMark className="h-4 w-4" />
                 ابعت لبوسطة كشحنة
               </ConfirmButton>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-ink-faint">
                 هنعمل الشحنة في بوسطة تلقائياً ونجيب رقم التتبع. لو معرفناش نحدد
                 المدينة من العنوان هنوقف ونقوللك تراجعه.
               </p>
@@ -1133,10 +1133,10 @@ export default async function OrderDetailsPage({
           {canLink && (
             <form
               action={linkBostaShipment}
-              className="mt-3 border-t border-gray-100 pt-3"
+              className="mt-3 border-t border-line pt-3"
             >
               <input type="hidden" name="order_id" value={order.id} />
-              <label className="text-xs text-gray-500">
+              <label className="text-xs text-ink-muted">
                 ربط شحنة يدوي (لإعادة استخدام شحنة عميل لغى)
               </label>
               <div className="mt-1 flex items-center gap-2">
@@ -1144,16 +1144,16 @@ export default async function OrderDetailsPage({
                   name="tracking"
                   placeholder="رقم التتبع بتاع بوسطة"
                   dir="ltr"
-                  className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="flex-1 rounded-control border border-line-strong px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
+                  className="rounded-control bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
                 >
                   ربط
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-ink-faint">
                 هيربط الشحنة دي بالأوردر، والمزامنة تجيب باقي التفاصيل تلقائياً
               </p>
             </form>
@@ -1163,24 +1163,24 @@ export default async function OrderDetailsPage({
 
       {/* الدفع والمرتجع بعد التسليم */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">الدفع</h2>
+        <div className="card p-5">
+          <h2 className="mb-3 text-sm font-bold text-ink">الدفع</h2>
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">الطريقة</dt>
-              <dd className="text-gray-900">
+              <dt className="text-ink-muted">الطريقة</dt>
+              <dd className="text-ink">
                 {paymentMethodLabel(order.payment_method)}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">مدفوع مقدماً</dt>
-              <dd className="text-gray-900">
+              <dt className="text-ink-muted">مدفوع مقدماً</dt>
+              <dd className="text-ink">
                 {formatMoney(order.amount_paid ?? 0)}
               </dd>
             </div>
-            <div className="flex justify-between gap-4 border-t border-gray-100 pt-2">
-              <dt className="font-medium text-gray-700">المطلوب تحصيله</dt>
-              <dd className="font-bold text-gray-900">
+            <div className="flex justify-between gap-4 border-t border-line pt-2">
+              <dt className="font-medium text-ink-body">المطلوب تحصيله</dt>
+              <dd className="font-bold text-ink">
                 {formatMoney(Math.max(0, grandTotal - (order.amount_paid ?? 0)))}
               </dd>
             </div>
@@ -1188,15 +1188,15 @@ export default async function OrderDetailsPage({
           {canItems && (
             <form
               action={updatePayment}
-              className="mt-3 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-3"
+              className="mt-3 flex flex-wrap items-end gap-2 border-t border-line pt-3"
             >
               <input type="hidden" name="order_id" value={order.id} />
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500">طريقة الدفع</label>
+                <label className="text-xs text-ink-muted">طريقة الدفع</label>
                 <select
                   name="payment_method"
                   defaultValue={order.payment_method ?? "cod"}
-                  className="rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="rounded-control border border-line-strong px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
                 >
                   {PAYMENT_METHODS.map((m) => (
                     <option key={m.value} value={m.value}>
@@ -1206,7 +1206,7 @@ export default async function OrderDetailsPage({
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500">مدفوع مقدماً</label>
+                <label className="text-xs text-ink-muted">مدفوع مقدماً</label>
                 <input
                   key={`paid-${order.amount_paid}`}
                   type="number"
@@ -1214,12 +1214,12 @@ export default async function OrderDetailsPage({
                   defaultValue={order.amount_paid ?? 0}
                   min={0}
                   step="0.01"
-                  className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="w-24 rounded-control border border-line-strong px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
                 />
               </div>
               <button
                 type="submit"
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
+                className="rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
               >
                 حفظ
               </button>
@@ -1250,9 +1250,9 @@ export default async function OrderDetailsPage({
             الرقم لوحده (نسبة رجوع ١٧٪) مابيقولش تعمل إيه، والسبب هو اللي
             بيقول: عنوان مش واضح غير عميل مش بيرد غير غيّر رأيه. */}
         {RETURNED_STATUSES.includes(order.order_status ?? "") && canStatus && (
-          <div className="mt-4 rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <p className="text-sm font-medium text-gray-900">رجع ليه؟</p>
-            <p className="mt-1 text-xs text-gray-500">
+          <div className="card mt-4 p-4 sm:p-5">
+            <p className="text-sm font-medium text-ink">رجع ليه؟</p>
+            <p className="mt-1 text-xs text-ink-muted">
               السبب بيخلّي سؤال «بنخسر ليه» له إجابة بالأرقام بدل تخمين.
             </p>
             <form action={updateReturnReason} className="mt-3 flex flex-wrap items-center gap-2">
@@ -1260,7 +1260,7 @@ export default async function OrderDetailsPage({
               <select
                 name="return_reason"
                 defaultValue={order.return_reason ?? ""}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
               >
                 <option value="">— اختار السبب —</option>
                 {RETURN_REASONS.map((r) => (
@@ -1271,7 +1271,7 @@ export default async function OrderDetailsPage({
               </select>
               <button
                 type="submit"
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                className="btn btn-primary px-4"
               >
                 حفظ
               </button>
@@ -1297,9 +1297,9 @@ export default async function OrderDetailsPage({
 
         {/* تاسكات الأوردر ده — «كلّم العميل» وكده */}
         {orderTasks && (
-          <div className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+          <div className="card mt-4 p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-bold text-gray-900">تاسكات الأوردر</h2>
+              <h2 className="text-sm font-bold text-ink">تاسكات الأوردر</h2>
               {orderTasks.canEdit && (
                 <AddTask
                   team={orderTasks.team}
@@ -1310,14 +1310,14 @@ export default async function OrderDetailsPage({
               )}
             </div>
             {orderTasks.list.length === 0 ? (
-              <p className="text-xs text-gray-400">مفيش تاسكات على الأوردر ده</p>
+              <p className="text-xs text-ink-faint">مفيش تاسكات على الأوردر ده</p>
             ) : (
               <ul className="space-y-1.5">
                 {orderTasks.list.map((t) => (
                   <li key={t.id}>
                     <Link
                       href={`/tasks/${t.id}`}
-                      className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2 hover:bg-gray-100"
+                      className="flex items-center gap-2 rounded-control bg-sunken px-2.5 py-2 hover:bg-sunken"
                     >
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] ${taskStatusBadge(t.status).className}`}
@@ -1326,13 +1326,13 @@ export default async function OrderDetailsPage({
                       </span>
                       <span
                         className={`min-w-0 flex-1 truncate text-xs ${
-                          t.status === "done" ? "text-gray-400 line-through" : "text-gray-800"
+                          t.status === "done" ? "text-ink-faint line-through" : "text-ink-body"
                         }`}
                       >
                         {t.title}
                       </span>
                       {(t.task_assignees ?? []).length > 0 && (
-                        <span className="shrink-0 text-[10px] text-gray-500">
+                        <span className="shrink-0 text-[10px] text-ink-muted">
                           {(t.task_assignees ?? [])
                             .map((a) => a.user_name)
                             .filter(Boolean)
@@ -1352,18 +1352,18 @@ export default async function OrderDetailsPage({
             وبيسجّل إنك حوّلت، والتنبيهات بتوقف أول ما تأكّد. */}
         {order.order_status === "returned_after_delivery" && refundAmount > 0 && (
           <div
-            className={`mt-4 rounded-xl border p-4 ${
+            className={`mt-4 rounded-card border p-4 ${
               order.refunded_at
-                ? "border-green-300 bg-green-50"
-                : "border-rose-300 bg-rose-50"
+                ? "border-success-line bg-success-soft"
+                : "border-danger-line bg-danger-soft"
             }`}
           >
             {order.refunded_at ? (
               <>
-                <p className="text-sm font-bold text-green-900">
+                <p className="text-sm font-bold text-success">
                   ✅ الفلوس رجعت للعميل
                 </p>
-                <p className="mt-1 text-xs text-green-800">
+                <p className="mt-1 text-xs text-success">
                   {formatMoney(order.refunded_amount ?? refundAmount)} —{" "}
                   {formatDate(order.refunded_at)}
                 </p>
@@ -1371,7 +1371,7 @@ export default async function OrderDetailsPage({
                   <input type="hidden" name="order_id" value={order.id} />
                   <button
                     type="submit"
-                    className="text-[11px] text-green-800 underline"
+                    className="text-[11px] text-success underline"
                   >
                     اتحطت بالغلط؟ ألغِ التأكيد
                   </button>
@@ -1379,10 +1379,10 @@ export default async function OrderDetailsPage({
               </>
             ) : (
               <>
-                <p className="text-sm font-bold text-rose-900">
+                <p className="text-sm font-bold text-danger">
                   💸 لازم ترجّع فلوس العميل
                 </p>
-                <p className="mt-1 text-xs leading-6 text-rose-800">
+                <p className="mt-1 text-xs leading-6 text-danger">
                   المبلغ المحسوب من البنود الراجعة:{" "}
                   <b>{formatMoney(refundAmount)}</b>
                   <br />
@@ -1394,7 +1394,7 @@ export default async function OrderDetailsPage({
                   <div className="flex-1">
                     <label
                       htmlFor="refund_amount"
-                      className="text-[11px] text-rose-700"
+                      className="text-[11px] text-danger"
                     >
                       المبلغ اللي حوّلته
                     </label>
@@ -1405,12 +1405,12 @@ export default async function OrderDetailsPage({
                       step="0.01"
                       min="0"
                       defaultValue={refundAmount}
-                      className="w-full rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-rose-500 focus:outline-none"
+                      className="w-full rounded-control border border-danger-line bg-surface px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none"
                     />
                   </div>
                   <ConfirmButton
                     message="متأكد إنك حوّلت الفلوس للعميل؟"
-                    className="shrink-0 rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white"
+                    className="shrink-0 rounded-control bg-danger px-4 py-2 text-sm font-medium text-white"
                   >
                     أكّد إني حوّلت
                   </ConfirmButton>
@@ -1421,8 +1421,8 @@ export default async function OrderDetailsPage({
         )}
       </div>
 
-      <div className="rounded-xl bg-white shadow-sm">
-        <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
+      <div className="card">
+        <h2 className="border-b border-line px-5 py-4 text-sm font-bold text-ink">
           بنود الأوردر
         </h2>
 
@@ -1444,24 +1444,24 @@ export default async function OrderDetailsPage({
           ))}
 
           {/* الملخص */}
-          <div className="space-y-1 rounded-xl bg-white px-1 pt-2 text-sm">
-            <div className="flex justify-between text-gray-600">
+          <div className="space-y-1 rounded-card bg-surface px-1 pt-2 text-sm">
+            <div className="flex justify-between text-ink-muted">
               <span>إجمالي المنتجات</span>
               <span>{formatMoney(itemsTotal)}</span>
             </div>
             {!isCancelled && (
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-ink-muted">
                 <span>الشحن</span>
                 <span>{formatMoney(order.shipping_price)}</span>
               </div>
             )}
             {order.discount > 0 && (
-              <div className="flex justify-between text-red-600">
+              <div className="flex justify-between text-danger">
                 <span>الخصم</span>
                 <span>− {formatMoney(order.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between border-t border-gray-100 pt-1 font-bold text-gray-900">
+            <div className="flex justify-between border-t border-line pt-1 font-bold text-ink">
               <span>الإجمالي</span>
               <span>{formatMoney(grandTotal)}</span>
             </div>
@@ -1471,7 +1471,7 @@ export default async function OrderDetailsPage({
         {/* ===== كمبيوتر: جدول ===== */}
         <table className="hidden w-full text-sm md:table">
           <thead>
-            <tr className="border-b border-gray-200 text-right text-gray-500">
+            <tr className="border-b border-line text-right text-ink-muted">
               <th className="px-2 py-3 font-medium sm:px-4">المنتج</th>
               <th className="hidden px-4 py-3 font-medium sm:table-cell">الشكل</th>
               <th className="px-2 py-3 font-medium sm:px-4">الكمية</th>
@@ -1494,18 +1494,18 @@ export default async function OrderDetailsPage({
                   deleteAction={deleteOrderItem}
                 />
               ) : (
-                <tr key={item.id} className="border-b border-gray-100 last:border-0">
-                  <td className="px-4 py-3 text-gray-900">
+                <tr key={item.id} className="border-b border-line last:border-0">
+                  <td className="px-4 py-3 text-ink">
                     {item.product_variants?.products?.name ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-ink-body">
                     {item.product_variants?.variant_name ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{item.quantity}</td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-ink-body">{item.quantity}</td>
+                  <td className="px-4 py-3 text-ink-body">
                     {formatMoney(item.sale_price_at_order)}
                   </td>
-                  <td className="px-4 py-3 text-gray-700">
+                  <td className="px-4 py-3 text-ink-body">
                     {formatMoney(item.quantity * item.sale_price_at_order)}
                   </td>
                 </tr>
@@ -1513,7 +1513,7 @@ export default async function OrderDetailsPage({
             )}
           </tbody>
           <tfoot>
-            <tr className="border-t border-gray-200 text-gray-700">
+            <tr className="border-t border-line text-ink-body">
               <td className="px-4 py-2" colSpan={4}>
                 إجمالي المنتجات
               </td>
@@ -1521,7 +1521,7 @@ export default async function OrderDetailsPage({
             </tr>
             {/* الأوردر الملغي مفيهوش شحن خالص */}
             {!isCancelled && (
-              <tr className="text-gray-700">
+              <tr className="text-ink-body">
                 <td className="px-4 py-2" colSpan={4}>
                   <div className="flex items-center gap-3">
                     <span>الشحن (مدفوع من العميل)</span>
@@ -1538,12 +1538,12 @@ export default async function OrderDetailsPage({
                           defaultValue={order.shipping_price}
                           min={0}
                           step="0.01"
-                          className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                          className="w-24 rounded-control border border-line-strong px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
                           aria-label="سعر الشحن"
                         />
                         <button
                           type="submit"
-                          className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                          className="rounded-control bg-sunken px-2.5 py-1 text-xs font-medium text-ink-body hover:bg-line"
                         >
                           حفظ
                         </button>
@@ -1554,7 +1554,7 @@ export default async function OrderDetailsPage({
                 <td className="px-4 py-2">{formatMoney(order.shipping_price)}</td>
               </tr>
             )}
-            <tr className="text-gray-700">
+            <tr className="text-ink-body">
               <td className="px-4 py-2" colSpan={4}>
                 <div className="flex flex-wrap items-center gap-3">
                   <span>الخصم</span>
@@ -1568,11 +1568,11 @@ export default async function OrderDetailsPage({
                   )}
                 </div>
               </td>
-              <td className="px-4 py-2 text-red-600">
+              <td className="px-4 py-2 text-danger">
                 {order.discount > 0 ? `- ${formatMoney(order.discount)}` : "—"}
               </td>
             </tr>
-            <tr className="border-t border-gray-200 font-bold text-gray-900">
+            <tr className="border-t border-line font-bold text-ink">
               <td className="px-4 py-3" colSpan={4}>
                 إجمالي الأوردر
               </td>
@@ -1591,7 +1591,7 @@ export default async function OrderDetailsPage({
       </div>
 
       {(canArchive || canDelete) && (
-        <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
+        <div className="flex items-center justify-end gap-3 border-t border-line pt-6">
           {canArchive && (
             <form action={toggleOrderArchive}>
               <input type="hidden" name="order_id" value={order.id} />
@@ -1602,7 +1602,7 @@ export default async function OrderDetailsPage({
               />
               <button
                 type="submit"
-                className="rounded-lg bg-amber-50 px-4 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100"
+                className="rounded-control bg-warning-soft px-4 py-1.5 text-sm font-medium text-warning hover:bg-warning-line"
               >
                 {order.archived ? "رجّع من الأرشيف" : "أرشفة الأوردر"}
               </button>
@@ -1617,7 +1617,7 @@ export default async function OrderDetailsPage({
                     ? `متأكد إنك عايز تمسح أوردر ${order.order_number ?? ""} نهائياً؟ هيتمسح ببنوده وشحناته، والمخزون هيرجع زي ما كان.`
                     : `هتبعت طلب حذف لأوردر ${order.order_number ?? ""} للأدمن يوافق عليه. تمام؟`
                 }
-                className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+                className="rounded-control bg-danger-soft px-4 py-1.5 text-sm font-medium text-danger hover:bg-danger-line"
               >
                 {isAdmin ? "مسح الأوردر نهائياً" : "اطلب حذف الأوردر"}
               </ConfirmButton>
@@ -1635,12 +1635,12 @@ export default async function OrderDetailsPage({
         مش رقم التتبع، فالعميل يقدر يطمن قبل ما الشحنة تتعمل.
       */}
       {trackLink && (
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <div className="card p-4 sm:p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">
+            <h2 className="text-sm font-bold text-ink">
               لينك التتبع للعميل
             </h2>
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-ink-faint">
               بيفتح صفحة باسم متجرك
             </span>
           </div>
@@ -1658,18 +1658,18 @@ export default async function OrderDetailsPage({
       {["returned", "returned_after_delivery"].includes(
         order.order_status ?? ""
       ) && (
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <div className="card p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-bold text-gray-900">
+              <h2 className="text-sm font-bold text-ink">
                 البضاعة الراجعة
               </h2>
-              <p className="mt-0.5 text-[11px] text-gray-400">
+              <p className="mt-0.5 text-[11px] text-ink-faint">
                 رجعت لك فعلًا؟ رجّعها للمخزون عشان الرقم يفضل صح.
               </p>
             </div>
             {restocked ? (
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
+              <span className="rounded-full bg-success-soft px-3 py-1 text-xs text-success">
                 رجعت المخزن
               </span>
             ) : (
@@ -1678,7 +1678,7 @@ export default async function OrderDetailsPage({
                   <input type="hidden" name="order_id" value={order.id} />
                   <button
                     type="submit"
-                    className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                    className="btn btn-primary btn-sm px-4"
                   >
                     رجّعها للمخزون
                   </button>
@@ -1690,26 +1690,26 @@ export default async function OrderDetailsPage({
       )}
 
       {/* ===== سجل الأوردر: من أول ما اتعمل لحد آخر حركة ===== */}
-      <div className="rounded-xl bg-white shadow-sm">
-        <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
+      <div className="card">
+        <h2 className="border-b border-line px-5 py-4 text-sm font-bold text-ink">
           سجل الأوردر
         </h2>
         <ol className="space-y-0 px-5 py-4">
           {timeline.length === 0 ? (
-            <li className="text-sm text-gray-400">مفيش حركات مسجّلة.</li>
+            <li className="text-sm text-ink-faint">مفيش حركات مسجّلة.</li>
           ) : (
             timeline.map((t, i) => (
               <li key={i} className="relative flex gap-3 pb-4 last:pb-0">
                 {/* خط رأسي بين النقط */}
                 {i < timeline.length - 1 && (
-                  <span className="absolute start-[5px] top-3 h-full w-px bg-gray-200" />
+                  <span className="absolute start-[5px] top-3 h-full w-px bg-line" />
                 )}
                 <span
                   className={`relative z-10 mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${t.dot}`}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm text-gray-900">{t.text}</div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-sm text-ink">{t.text}</div>
+                  <div className="text-xs text-ink-faint">
                     {t.when}
                     {t.who ? ` · ${t.who}` : ""}
                   </div>
