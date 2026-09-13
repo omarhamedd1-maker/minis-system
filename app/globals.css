@@ -170,6 +170,14 @@
   --font-num: var(--font-num);
 }
 
+/* ⚠️⚠️ **القواعد تحت جوّه @layer بقصد.**
+   Tailwind v4 حاطط الـutilities جوّه `@layer utilities`، وأي قاعدة برّه
+   الطبقات بتغلب على أي طبقة مهما كان الترتيب. قبل اللف ده: `field w-40`
+   كانت بتطلع بعرض الشاشة، و`h2.text-danger` لونه غامق، و`font-medium`
+   على عنوان بيطلع 700. جوّه الطبقات، الـutility بيغلب لما يتكتب، والقطعة
+   بتشتغل لوحدها لما مايتكتبش. */
+
+@layer base {
 /* ==========================================================================
    الأساسيات
    ========================================================================== */
@@ -208,22 +216,12 @@ h4 {
    حطها على أي عمود فلوس أو كمية: <td className="num">
    ========================================================================== */
 
-.num,
 input[type="number"],
 table td,
 table th {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
-}
-
-/* الفلوس — شكل بس.
-   ⚠️ الاتجاه مش شغلها. `ltr()` في lib/format.ts هي المسؤولة عن ده
-   وشغّالة في ٧ ملفات ومتغطية باختبارات. ميكانيزمين لنفس المشكلة =
-   مشاكل. استخدم الاتنين مع بعض: ltr() للنص، money للشكل. */
-.money {
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -336,6 +334,25 @@ details[open] > *:not(summary),
   summary:active {
     transform: none;
   }
+}
+}
+
+@layer components {
+/* الأرقام — كلاس، فمكانه components مش base: بيشتغل افتراضيًا،
+   وأي utility صريح (زي font-mono) بيغلبه عن قصد. */
+.num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* الفلوس — شكل بس.
+   ⚠️ الاتجاه مش شغلها. `ltr()` في lib/format.ts هي المسؤولة عن ده
+   وشغّالة في ٧ ملفات ومتغطية باختبارات. ميكانيزمين لنفس المشكلة =
+   مشاكل. استخدم الاتنين مع بعض: ltr() للنص، money للشكل. */
+.money {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ==========================================================================
@@ -581,4 +598,5 @@ textarea.field {
   margin-bottom: 0.25rem;
   color: var(--ink);
   font-size: 1rem;
+}
 }
