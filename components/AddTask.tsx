@@ -35,8 +35,8 @@ export function AddTask({
         onClick={() => setOpen(true)}
         className={
           compact
-            ? "flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
-            : "rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+            ? "flex w-full items-center justify-center gap-2 rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"
+            : "rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"
         }
       >
         + تاسك جديد
@@ -47,16 +47,16 @@ export function AddTask({
   return (
     <form
       action={action}
-      className="minis-in w-full space-y-2 rounded-xl bg-white p-4 shadow-sm sm:w-96"
+      className="minis-in w-full space-y-2 rounded-card bg-surface p-4 shadow-card sm:w-96"
     >
       {orderId && <input type="hidden" name="order_id" value={orderId} />}
 
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-gray-900">تاسك جديد</h2>
+        <h2 className="text-sm font-bold text-ink">تاسك جديد</h2>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-xs text-gray-400 hover:text-gray-700"
+          className="text-xs text-ink-faint hover:text-ink-body"
         >
           إلغاء
         </button>
@@ -67,31 +67,31 @@ export function AddTask({
         required
         autoFocus
         placeholder="التاسك إيه؟"
-        className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-control border border-line-strong px-2.5 py-2 text-sm text-ink focus:border-primary focus:outline-none"
       />
 
       <textarea
         name="body"
         rows={2}
         placeholder="تفاصيل (اختياري)"
-        className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-control border border-line-strong px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
       />
 
       <div className="grid grid-cols-2 gap-2">
-        <label className="text-[11px] text-gray-500">
+        <label className="text-[11px] text-ink-muted">
           الميعاد
           <input
             name="due_on"
             type="date"
-            className="mt-1 w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="mt-1 w-full rounded-control border border-line-strong px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
           />
         </label>
-        <label className="text-[11px] text-gray-500">
+        <label className="text-[11px] text-ink-muted">
           الأولوية
           <select
             name="priority"
             defaultValue="normal"
-            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="mt-1 w-full rounded-control border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
           >
             <option value="normal">عادي</option>
             <option value="urgent">عاجل</option>
@@ -103,15 +103,15 @@ export function AddTask({
 
       {canAssign && (
         <fieldset>
-          <legend className="text-[11px] text-gray-500">
+          <legend className="text-[11px] text-ink-muted">
             مين عليه التاسك
-            <span className="text-gray-400"> (تقدر تختار أكتر من واحد)</span>
+            <span className="text-ink-faint"> (تقدر تختار أكتر من واحد)</span>
           </legend>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {team.map((m) => (
               <label
                 key={m.id}
-                className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-primary has-checked:text-white"
+                className="flex cursor-pointer items-center gap-1.5 rounded-control bg-sunken px-2.5 py-1.5 text-xs text-ink-body has-checked:bg-primary has-checked:text-white"
               >
                 <input
                   type="checkbox"
@@ -129,7 +129,7 @@ export function AddTask({
               </label>
             ))}
           </div>
-          <span className="mt-1 block text-[10px] text-gray-400">
+          <span className="mt-1 block text-[10px] text-ink-faint">
             هيوصلهم إشعار على الموبايل
           </span>
         </fieldset>
@@ -137,7 +137,7 @@ export function AddTask({
 
       <button
         type="submit"
-        className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+        className="w-full rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"
       >
         أضف التاسك
       </button>
