@@ -60,30 +60,30 @@ export default async function RulesPage({
       <BackLink href="/settings" label="الإعدادات" />
 
       <div>
-        <h1 className="text-lg font-bold text-gray-900">قواعد التنبيه</h1>
-        <p className="mt-1 text-xs text-gray-400">
+        <h1 className="text-lg font-bold text-ink">قواعد التنبيه</h1>
+        <p className="mt-1 text-xs text-ink-faint">
           إنت اللي بتحدد الأرقام — مش الكود.
         </p>
       </div>
 
       {missingTable && (
-        <div className="rounded-xl bg-amber-50 p-5 text-sm text-amber-900">
+        <div className="rounded-card bg-warning-soft p-5 text-sm text-warning">
           <p className="font-bold">الصفحة محتاجة جدول في الداتابيز الأول.</p>
           <p className="mt-1">
             افتح Supabase ← SQL Editor وشغّل{" "}
             <code>sql/automation-rules.sql</code>، وبعدها افتح الصفحة دي تاني.
           </p>
-          <p className="mt-2 text-xs text-amber-700">({readError?.message})</p>
+          <p className="mt-2 text-xs text-warning">({readError?.message})</p>
         </div>
       )}
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800">
+        <p className="rounded-control bg-danger-soft px-4 py-2 text-sm text-danger">
           {error}
         </p>
       )}
       {saved && (
-        <p className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-800">
+        <p className="rounded-control bg-success-soft px-4 py-2 text-sm text-success">
           {saved}
         </p>
       )}
@@ -99,9 +99,9 @@ export default async function RulesPage({
           const below = DIRECTION[t] === "below";
 
           return (
-            <div key={t} className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+            <div key={t} className="card p-4 sm:p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-ink">
                   {TRIGGERS[t]}
                 </span>
                 {rule && (
@@ -112,21 +112,21 @@ export default async function RulesPage({
                       name="active"
                       value={rule.active ? "0" : "1"}
                     />
-                    <button className="rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100">
+                    <button className="btn btn-ghost btn-sm px-2">
                       {rule.active ? "شغّالة — اقفلها" : "مقفولة — شغّلها"}
                     </button>
                   </form>
                 )}
               </div>
 
-              <p className="mt-0.5 text-[11px] text-gray-400">{HINT[t]}</p>
+              <p className="mt-0.5 text-[11px] text-ink-faint">{HINT[t]}</p>
 
               <form
                 action={saveRule}
                 className="mt-3 flex flex-wrap items-center gap-2"
               >
                 <input type="hidden" name="trigger" value={t} />
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-ink-muted">
                   {below ? "نبّهني لما ينزل تحت" : "نبّهني بعد"}
                 </span>
                 <input
@@ -138,12 +138,12 @@ export default async function RulesPage({
                   placeholder="؟"
                   required
                   disabled={missingTable}
-                  className="w-24 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none disabled:bg-gray-50"
+                  className="field w-24"
                 />
-                <span className="text-xs text-gray-500">{UNIT_LABEL[unit]}</span>
+                <span className="text-xs text-ink-muted">{UNIT_LABEL[unit]}</span>
                 <button
                   disabled={missingTable}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+                  className="btn btn-primary btn-sm"
                 >
                   {rule ? "غيّر" : "شغّلها"}
                 </button>
@@ -153,7 +153,7 @@ export default async function RulesPage({
         })}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-gray-400">
+      <p className="text-[11px] leading-relaxed text-ink-faint">
         القواعد دي **بتنبّه بس** — مابتلغيش أوردر ولا بتغيّر حالة ولا بتبعت
         للعميل. وكل حالة بتتقال عليها مرة واحدة، مش كل ربع ساعة لحد ما تتصلّح.
       </p>
