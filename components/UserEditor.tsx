@@ -75,7 +75,7 @@ export function UserEditor({
   }
 
   return (
-    <div className="rounded-xl bg-white shadow-sm">
+    <div className="rounded-card bg-surface shadow-card">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -85,10 +85,10 @@ export function UserEditor({
         <span
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
             !user.active
-              ? "bg-red-100 text-red-700"
+              ? "bg-danger-soft text-danger"
               : user.isAdmin
                 ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-600"
+                : "bg-sunken text-ink-muted"
           }`}
         >
           {(user.fullName ?? user.email ?? "?").trim().charAt(0).toUpperCase()}
@@ -96,7 +96,7 @@ export function UserEditor({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate font-medium text-gray-900">
+            <span className="truncate font-medium text-ink">
               {user.fullName ?? "بدون اسم"}
             </span>
             {user.isAdmin && (
@@ -105,20 +105,20 @@ export function UserEditor({
               </span>
             )}
             {isSelf && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+              <span className="rounded-full bg-info-soft px-2 py-0.5 text-[10px] font-medium text-info">
                 إنت
               </span>
             )}
             {!user.active && (
-              <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700">
+              <span className="rounded-full bg-danger-soft px-2 py-0.5 text-[10px] font-medium text-danger">
                 موقوف
               </span>
             )}
           </div>
-          <div className="truncate text-xs text-gray-500" dir="ltr">
+          <div className="truncate text-xs text-ink-muted" dir="ltr">
             {user.email ?? "—"}
           </div>
-          <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-gray-400">
+          <div className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-ink-faint">
             <span>
               {user.isAdmin ? "كل الصلاحيات" : `${permCount} صلاحية`}
             </span>
@@ -126,7 +126,7 @@ export function UserEditor({
           </div>
         </div>
 
-        <span className="shrink-0 text-gray-400">
+        <span className="shrink-0 text-ink-faint">
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -142,29 +142,29 @@ export function UserEditor({
       </button>
 
       {open && (
-        <div className="space-y-6 border-t border-gray-100 px-5 py-5">
+        <div className="space-y-6 border-t border-line px-5 py-5">
           {/* معلومات وسجل نشاط المستخدم */}
-          <div className="rounded-lg bg-gray-50 p-3 text-sm">
-            <div className="flex flex-wrap gap-x-6 gap-y-1 text-gray-600">
+          <div className="rounded-control bg-sunken p-3 text-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-ink-muted">
               <span>
                 آخر فتح للسيستم:{" "}
-                <span className="text-gray-900">{whenText(user.lastSignInAt)}</span>
+                <span className="text-ink">{whenText(user.lastSignInAt)}</span>
               </span>
               <span>
                 اتعمل الحساب:{" "}
-                <span className="text-gray-900">{whenText(user.createdAt)}</span>
+                <span className="text-ink">{whenText(user.createdAt)}</span>
               </span>
             </div>
             {user.recentActivity.length > 0 && (
               <div className="mt-3">
-                <div className="mb-1 text-xs font-medium text-gray-500">
+                <div className="mb-1 text-xs font-medium text-ink-muted">
                   آخر نشاط ليه:
                 </div>
                 <ul className="space-y-1">
                   {user.recentActivity.map((a, i) => (
-                    <li key={i} className="flex justify-between gap-3 text-gray-700">
+                    <li key={i} className="flex justify-between gap-3 text-ink-body">
                       <span>{a.summary}</span>
-                      <span className="shrink-0 text-xs text-gray-400">{a.when}</span>
+                      <span className="shrink-0 text-xs text-ink-faint">{a.when}</span>
                     </li>
                   ))}
                 </ul>
@@ -173,7 +173,7 @@ export function UserEditor({
           </div>
 
           {user.isAdmin ? (
-            <p className="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">
+            <p className="rounded-control bg-sunken px-4 py-3 text-sm text-ink-muted">
               ده حساب أدمن — عنده كل الصلاحيات تلقائياً ومينفعش يتعدل من هنا.
             </p>
           ) : (
@@ -183,28 +183,28 @@ export function UserEditor({
                 <input type="hidden" name="auth_user_id" value={user.authUserId} />
                 <div className="flex flex-wrap items-end gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">الاسم</label>
+                    <label className="text-xs text-ink-muted">الاسم</label>
                     <input
                       name="full_name"
                       defaultValue={user.fullName ?? ""}
                       required
-                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                      className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
                     />
                   </div>
-                  <label className="flex items-center gap-2 pb-2 text-sm text-gray-700">
+                  <label className="flex items-center gap-2 pb-2 text-sm text-ink-body">
                     <input
                       type="checkbox"
                       name="active"
                       value="1"
                       defaultChecked={user.active}
                       disabled={isSelf}
-                      className="h-4 w-4 rounded border-gray-300"
+                      className="h-4 w-4 rounded border-line-strong"
                     />
                     الحساب مُفعّل
                   </label>
                   <button
                     type="submit"
-                    className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                    className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                   >
                     حفظ البيانات
                   </button>
@@ -215,7 +215,7 @@ export function UserEditor({
               <form action={updatePermissionsAction} className="space-y-4">
                 <input type="hidden" name="auth_user_id" value={user.authUserId} />
                 <div>
-                  <div className="mb-2 text-xs font-medium text-gray-500">
+                  <div className="mb-2 text-xs font-medium text-ink-muted">
                     قوالب جاهزة (بتملأ الاختيارات — تقدر تعدّل بعدها):
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -224,7 +224,7 @@ export function UserEditor({
                         key={p.key}
                         type="button"
                         onClick={() => applyPreset(p.permissions)}
-                        className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        className="rounded-full bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
                       >
                         {p.label}
                       </button>
@@ -232,7 +232,7 @@ export function UserEditor({
                     <button
                       type="button"
                       onClick={() => applyPreset([])}
-                      className="rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                      className="rounded-full bg-danger-soft px-3 py-1 text-xs font-medium text-danger hover:bg-danger-line"
                     >
                       تفريغ الكل
                     </button>
@@ -243,16 +243,16 @@ export function UserEditor({
                   {groups.map((g) => (
                     <div
                       key={g.group}
-                      className="rounded-lg border border-gray-200 p-3"
+                      className="rounded-control border border-line p-3"
                     >
-                      <div className="mb-2 text-sm font-bold text-gray-900">
+                      <div className="mb-2 text-sm font-bold text-ink">
                         {g.group}
                       </div>
                       <div className="space-y-1.5">
                         {g.items.map((item) => (
                           <label
                             key={item.key}
-                            className="flex items-start gap-2 text-sm text-gray-700"
+                            className="flex items-start gap-2 text-sm text-ink-body"
                           >
                             <input
                               type="checkbox"
@@ -260,12 +260,12 @@ export function UserEditor({
                               value={item.key}
                               checked={selected.has(item.key)}
                               onChange={() => toggle(item.key)}
-                              className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                              className="mt-0.5 h-4 w-4 rounded border-line-strong"
                             />
                             <span>
                               {item.label}
                               {item.hint && (
-                                <span className="block text-xs text-gray-400">
+                                <span className="block text-xs text-ink-faint">
                                   {item.hint}
                                 </span>
                               )}
@@ -279,7 +279,7 @@ export function UserEditor({
 
                 <button
                   type="submit"
-                  className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                  className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                 >
                   حفظ الصلاحيات
                 </button>
@@ -288,21 +288,21 @@ export function UserEditor({
           )}
 
           {/* الإيميل والباسورد */}
-          <div className="grid gap-4 border-t border-gray-100 pt-4 sm:grid-cols-2">
+          <div className="grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
             <form action={setEmailAction} className="flex flex-col gap-1">
               <input type="hidden" name="auth_user_id" value={user.authUserId} />
-              <label className="text-xs text-gray-500">تغيير الإيميل</label>
+              <label className="text-xs text-ink-muted">تغيير الإيميل</label>
               <div className="flex items-center gap-2">
                 <input
                   name="email"
                   type="email"
                   defaultValue={user.email ?? ""}
                   dir="ltr"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="flex-1 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                  className="rounded-control bg-sunken px-3 py-1.5 text-sm font-medium text-ink-body hover:bg-line"
                 >
                   حفظ
                 </button>
@@ -311,7 +311,7 @@ export function UserEditor({
 
             <form action={setPasswordAction} className="flex flex-col gap-1">
               <input type="hidden" name="auth_user_id" value={user.authUserId} />
-              <label className="text-xs text-gray-500">
+              <label className="text-xs text-ink-muted">
                 تغيير الباسورد (6 حروف على الأقل)
               </label>
               <div className="flex items-center gap-2">
@@ -320,11 +320,11 @@ export function UserEditor({
                   type="text"
                   placeholder="الباسورد الجديد"
                   dir="ltr"
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="flex-1 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                  className="rounded-control bg-sunken px-3 py-1.5 text-sm font-medium text-ink-body hover:bg-line"
                 >
                   حفظ
                 </button>
@@ -336,7 +336,7 @@ export function UserEditor({
           {!isSelf && !user.isAdmin && user.active && (
             <form
               action={lockAction}
-              className="border-t border-gray-100 pt-4"
+              className="border-t border-line pt-4"
               onSubmit={(e) => {
                 if (
                   !confirm(
@@ -350,11 +350,11 @@ export function UserEditor({
               <input type="hidden" name="auth_user_id" value={user.authUserId} />
               <button
                 type="submit"
-                className="rounded-lg bg-orange-50 px-4 py-1.5 text-sm font-medium text-orange-700 hover:bg-orange-100"
+                className="rounded-control bg-warning-soft px-4 py-1.5 text-sm font-medium text-warning hover:bg-warning-line"
               >
                 اقفل الحساب فوراً (خروج من كل الأجهزة)
               </button>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-ink-faint">
                 بيوقف الحساب فوراً فيتقفل من أي جهاز خلال ثواني. تقدر تفعّله تاني من
                 خانة &quot;الحساب مُفعّل&quot; فوق.
               </p>
@@ -365,7 +365,7 @@ export function UserEditor({
           {!isSelf && !user.isAdmin && (
             <form
               action={deleteAction}
-              className="border-t border-gray-100 pt-4"
+              className="border-t border-line pt-4"
               onSubmit={(e) => {
                 if (
                   !confirm(
@@ -379,7 +379,7 @@ export function UserEditor({
               <input type="hidden" name="auth_user_id" value={user.authUserId} />
               <button
                 type="submit"
-                className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+                className="rounded-control bg-danger-soft px-4 py-1.5 text-sm font-medium text-danger hover:bg-danger-line"
               >
                 مسح اليوزر نهائياً
               </button>

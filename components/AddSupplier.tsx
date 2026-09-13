@@ -47,38 +47,38 @@ export function AddSupplier({
                 setOpen(false);
               }}
               onClick={(e) => e.stopPropagation()}
-              className="minis-in relative w-full max-w-md space-y-2 rounded-t-2xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl sm:pb-4"
+              className="minis-in relative w-full max-w-md space-y-2 rounded-t-2xl bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl sm:pb-4"
             >
-              <h2 className="text-sm font-bold text-gray-900">مورد جديد</h2>
+              <h2 className="text-sm font-bold text-ink">مورد جديد</h2>
               <input
                 name="name"
                 required
                 autoFocus
                 placeholder="اسم المورد"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="w-full rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
               />
               <input
                 name="phone"
                 inputMode="tel"
                 placeholder="التليفون (اختياري)"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="w-full rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
               />
               <input
                 name="notes"
                 placeholder="ملاحظات (اختياري)"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="w-full rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
               />
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
-                  className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-white"
+                  className="flex-1 rounded-control bg-primary py-2 text-sm font-medium text-white"
                 >
                   حفظ
                 </button>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-600"
+                  className="rounded-control bg-sunken px-4 py-2 text-sm font-medium text-ink-muted"
                 >
                   إلغاء
                 </button>

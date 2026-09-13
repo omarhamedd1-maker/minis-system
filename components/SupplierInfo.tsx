@@ -24,14 +24,14 @@ export function SupplierInfo({
   const waPhone = (phone ?? "").replace(/\D/g, "").replace(/^0/, "20");
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+    <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
       {!editing ? (
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-bold text-gray-900">{name}</h2>
+            <h2 className="truncate text-lg font-bold text-ink">{name}</h2>
             {phone ? (
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-sm text-gray-500" dir="ltr">
+                <span className="text-sm text-ink-muted" dir="ltr">
                   {phone}
                 </span>
                 <a
@@ -39,7 +39,7 @@ export function SupplierInfo({
                   target="_blank"
                   rel="noopener noreferrer"
                   title="واتساب"
-                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-50 text-green-600"
+                  className="flex h-7 w-7 items-center justify-center rounded-control bg-success-soft text-success"
                 >
                   <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
                     <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.1.1-.3.3-.1.6.1.3.6 1.1 1.3 1.7.9.8 1.6 1 1.9 1.2.2.1.4.1.5-.1l.7-.8c.2-.2.3-.2.6-.1l1.8.8c.3.1.4.2.5.3 0 .1 0 .6-.2 1.1z" />
@@ -47,10 +47,10 @@ export function SupplierInfo({
                 </a>
               </div>
             ) : (
-              <p className="mt-1 text-sm text-gray-400">بدون تليفون</p>
+              <p className="mt-1 text-sm text-ink-faint">بدون تليفون</p>
             )}
             {notes && (
-              <p className="mt-2 text-sm text-gray-600">{notes}</p>
+              <p className="mt-2 text-sm text-ink-muted">{notes}</p>
             )}
           </div>
 
@@ -60,7 +60,7 @@ export function SupplierInfo({
                 type="button"
                 onClick={() => setEditing(true)}
                 title="تعديل"
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-600"
+                className="flex h-8 w-8 items-center justify-center rounded-control bg-sunken text-ink-muted"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -87,7 +87,7 @@ export function SupplierInfo({
                     )
                       e.preventDefault();
                   }}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600"
+                  className="flex h-8 w-8 items-center justify-center rounded-control bg-danger-soft text-danger"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -119,32 +119,32 @@ export function SupplierInfo({
             defaultValue={name}
             required
             placeholder="اسم المورد"
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+            className="w-full rounded-control border border-line-strong px-3 py-1.5 text-sm"
           />
           <input
             name="phone"
             defaultValue={phone ?? ""}
             inputMode="tel"
             placeholder="التليفون"
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+            className="w-full rounded-control border border-line-strong px-3 py-1.5 text-sm"
           />
           <input
             name="notes"
             defaultValue={notes ?? ""}
             placeholder="ملاحظات"
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+            className="w-full rounded-control border border-line-strong px-3 py-1.5 text-sm"
           />
           <div className="flex gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white"
+              className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white"
             >
               حفظ
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-lg bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-600"
+              className="rounded-control bg-sunken px-4 py-1.5 text-sm font-medium text-ink-muted"
             >
               إلغاء
             </button>
