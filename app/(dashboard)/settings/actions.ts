@@ -25,6 +25,11 @@ import { listShopifyWebhooks } from "@/lib/shopify/register-webhooks";
 import { readSyncHealth } from "@/lib/bosta/sync-runs";
 import { integrationHealth, type LinkCard } from "@/lib/integration-health";
 import { sendTelegramMessage } from "@/lib/telegram";
+import {
+  exchangeCode,
+  subscribeWaba,
+  type SignupAssets,
+} from "@/lib/inbox/meta-oauth";
 
 // بترجّع never لأن redirect بترمي — وده بيخلي TypeScript يفهم إن اللي بعدها
 // مابيتنفذش، فمانحتاجش else في كل مكان
@@ -387,6 +392,81 @@ export async function saveMetaAccounts(formData: FormData) {
   revalidatePath("/settings");
   revalidatePath("/inbox");
   back("حسابات ميتا اتحفظت", true);
+}
+
+/**
+ * الربط بضغطة — اللي جاي من زرار «اربط حساباتك».
+ *
+ * ⚠️⚠️ **الكود بيعيش ٣٠ ثانية** — فالتبديل بيحصل هنا فورًا، ومابيتخزّنش
+ * عشان يتبدّل بعدين.
+ *
+ * ⚠️ **والاشتراك في ويب هوك حساب الواتساب خطوة لوحدها.** التوكن بيخلّيك
+ * **تبعت**، والاشتراك هو اللي بيخلّي ميتا **تبعتلك** — ولو اتنسي، مافيش
+ * رسالة بتوصل والعطل بيبان كأنه في الويب هوك.
+ *
+ * ⚠️ **ومابنمسحش اللي متخزّن باللي رجع فاضي.** البيزنس اللي ربط إنستجرام
+ * بس مش المفروض يخسر ربط الواتساب اللي عمله امبارح.
+ */
+export async function connectMeta(assets: SignupAssets) {
+  const me = await requirePermission("admin.settings");
+
+  const appId = process.env.NEXT_PUBLIC_META_APP_ID;
+  const appSecret = process.env.META_APP_SECRET;
+
+  const exchanged = await exchangeCode(assets.code, appId, appSecret);
+  if (!exchanged.ok) back(exchanged.error);
+
+  const db = createAdminClient();
+  const existing = await loadTenantCredentials(db, me.tenantId);
+
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (assets.phoneNumberId) {
+    patch.whatsapp_phone_id = assets.phoneNumberId;
+    patch.whatsapp_token = exchanged.token;
+  }
+  if (assets.pageId) {
+    patch.meta_page_id = assets.pageId;
+    patch.meta_page_token = exchanged.token;
+  }
+  if (assets.instagramAccountId) {
+    patch.instagram_account_id = assets.instagramAccountId;
+    patch.meta_page_token = exchanged.token;
+  }
+
+  if (Object.keys(patch).length === 1) {
+    back("ماربطتش أي حساب — الشباك اتقفل قبل ما تختار");
+  }
+
+  const { error } = await db
+    .from("tenant_credentials")
+    .update(patch)
+    .eq("tenant_id", me.tenantId);
+
+  if (error) {
+    back(
+      "معرفناش نحفظ الربط: " +
+        error.message +
+        " — لو الأعمدة لسه مااتعملتش شغّل sql/inbox.sql"
+    );
+  }
+
+  // الاشتراك في الويب هوك — الفشل هنا بيتقال، مش بيتساب ساكت
+  let warn = "";
+  if (assets.wabaId) {
+    const sub = await subscribeWaba(assets.wabaId, exchanged.token);
+    if (!sub.ok) warn = " — بس الاشتراك في ويب هوك واتساب فشل: " + sub.error;
+  }
+
+  await logActivity(
+    me,
+    "settings.meta",
+    "ربط حسابات ميتا" + (existing.whatsappToken ? " (تحديث)" : "")
+  );
+  revalidatePath("/settings");
+  revalidatePath("/inbox");
+  back("الحسابات اتربطت" + warn, !warn);
 }
 
 /** بيفصل الصندوق عن ميتا — المحادثات بتفضل مكانها */

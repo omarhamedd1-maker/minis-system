@@ -13,6 +13,7 @@ import {
   saveBackupGroup,
   saveMetaAccounts,
   disconnectMeta,
+  connectMeta,
 } from "./actions";
 import { EnablePush } from "@/components/EnablePush";
 import { IntegrationHealth } from "@/components/IntegrationHealth";
@@ -20,6 +21,7 @@ import { readShopifyApp } from "@/lib/shopify/app";
 import { headers } from "next/headers";
 import { ImportHistory } from "@/components/ImportHistory";
 import { CopyLink } from "@/components/CopyLink";
+import { MetaConnect } from "@/components/MetaConnect";
 import { describeUndo, listImportRuns } from "@/lib/import-runs";
 import { undoImport } from "../orders/actions";
 
@@ -106,6 +108,8 @@ export default async function SettingsPage({
       instagram_account_id: string | null;
     } | null;
   })();
+  const metaAppId = process.env.NEXT_PUBLIC_META_APP_ID ?? null;
+  const metaConfigId = process.env.NEXT_PUBLIC_META_CONFIG_ID ?? null;
   const hasMeta = Boolean(
     meta?.meta_page_token || meta?.whatsapp_token
   );
@@ -416,6 +420,32 @@ export default async function SettingsPage({
           </p>
         ) : (
           <>
+            {/*
+              ⚠️ **الزرار بيظهر لما التطبيق يكون متظبّط بس.** من غير معرّف
+              التطبيق، الضغط عليه بيفتح شباك فاضي ويقفل من غير سبب —
+              والخانات تحت هي الطريق اليدوي للتجربة.
+            */}
+            {metaAppId && metaConfigId ? (
+              <div className="mt-3 space-y-2">
+                <MetaConnect
+                  appId={metaAppId}
+                  configId={metaConfigId}
+                  action={connectMeta}
+                />
+                <p className="text-[11px] text-gray-400">
+                  بتختار الصفحة والحساب من شباك ميتا — من غير ما تكتب توكن.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-[11px] text-gray-400">
+                زرار الربط بضغطة بيظهر لما تطبيق ميتا يتظبّط.
+              </p>
+            )}
+
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-gray-500">
+                الربط اليدوي
+              </summary>
             <form action={saveMetaAccounts} className="mt-3 space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
@@ -500,6 +530,7 @@ export default async function SettingsPage({
                 </button>
               </div>
             </form>
+            </details>
 
             {/*
               رابط الويب هوك — ده اللي بيتحط عند ميتا عشان الرسايل توصل.

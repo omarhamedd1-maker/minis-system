@@ -20,6 +20,15 @@ import type { Channel } from "./channel";
 
 export type IncomingMessage = {
   channel: Channel;
+  /**
+   * `in` من العميل · `out` مننا.
+   *
+   * ⚠️⚠️ **`out` مش دايمًا يعني إن السيستم هو اللي بعت.** في Coexistence
+   * الرد اللي صاحب المتجر بيكتبه **من موبايله** بيوصلنا كصدى
+   * (`smb_message_echoes`) — ولو اترمى، المحادثة في السيستم بتبان
+   * كأنها من غير رد وهو رد فعلًا.
+   */
+  direction: "in" | "out";
   /** معرّف الطرف التاني — رقم الواتساب أو IGSID أو PSID */
   externalId: string;
   /** معرّف الرسالة عند ميتا — ده اللي بيمنع التكرار */
@@ -111,11 +120,44 @@ export function parseMetaWebhook(payload: unknown): ParsedWebhook {
         const media = obj(msg[type]);
         out.messages.push({
           channel: "whatsapp",
+          direction: "in",
           externalId: from,
           messageId: text(msg.id),
           displayName: names.get(from) ?? null,
           body: text(obj(msg.text).body) ?? text(media.caption),
           // ⚠️ ميتا بتدي معرّف الملف مش رابط — التحميل بيحصل بعدين
+          attachmentUrl: type === "text" ? null : text(media.id),
+          attachmentType: type === "text" ? null : type,
+          at: iso(msg.timestamp, "s"),
+          accountId,
+        });
+      }
+
+      /**
+       * ⚠️⚠️ **صدى واتساب = رد صاحب المتجر من موبايله.**
+       *
+       * في Coexistence الرقم شغّال على التطبيق وعلى الـAPI مع بعض،
+       * والرد اللي بيتكتب من التطبيق بيوصل هنا. ده **مش** زي صدى
+       * ماسنجر اللي بنرميه: ده الرد نفسه، ولو اترمى المحادثة بتبان
+       * في السيستم كأنها مستنية رد وهي مردود عليها.
+       */
+      for (const m of arr(value.message_echoes)) {
+        const msg = obj(m);
+        // الصدى بيتبعت لمين — مش مين بعته
+        const to = text(msg.to) ?? text(msg.recipient_id);
+        if (!to) {
+          skip("صدى واتساب من غير مستقبل");
+          continue;
+        }
+        const type = String(msg.type ?? "text");
+        const media = obj(msg[type]);
+        out.messages.push({
+          channel: "whatsapp",
+          direction: "out",
+          externalId: to,
+          messageId: text(msg.id),
+          displayName: names.get(to) ?? null,
+          body: text(obj(msg.text).body) ?? text(media.caption),
           attachmentUrl: type === "text" ? null : text(media.id),
           attachmentType: type === "text" ? null : type,
           at: iso(msg.timestamp, "s"),
@@ -163,6 +205,7 @@ export function parseMetaWebhook(payload: unknown): ParsedWebhook {
       const attachment = obj(arr(message.attachments)[0]);
       out.messages.push({
         channel,
+        direction: "in",
         externalId: senderId,
         messageId: text(message.mid),
         displayName: null,
