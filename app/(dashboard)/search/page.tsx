@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
+import { formatDate, formatMoney, orderStatusBadge, orderStatusClass } from "@/lib/format";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { planSearch, MIN_NAME_LENGTH } from "@/lib/search-query";
 
@@ -199,7 +199,7 @@ export default async function SearchPage({
                     {formatMoney(total)}
                   </span>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${badge.className}`}
+                    className={orderStatusClass(o.order_status)}
                   >
                     {badge.label}
                   </span>

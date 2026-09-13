@@ -104,7 +104,7 @@ export default async function ExpensesPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل المصاريف: {error.message}
       </div>
     );
@@ -125,8 +125,8 @@ export default async function ExpensesPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">المصاريف</h1>
-        <span className="text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-ink">المصاريف</h1>
+        <span className="text-sm text-ink-muted">
           {cat ? `${cat} — ` : ""}
           {PERIODS[period]}: {formatMoney(shownTotal)}
         </span>
@@ -140,19 +140,19 @@ export default async function ExpensesPage({
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               period === key
                 ? "bg-primary text-white"
-                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
             }`}
           >
             {label}
           </Link>
         ))}
-        <span className="mx-1 h-4 w-px bg-gray-300"></span>
+        <span className="mx-1 h-4 w-px bg-line-strong"></span>
         <Link
           href={buildHref({ cat: null })}
           className={`rounded-full px-3 py-1 text-xs font-medium ${
             !cat
               ? "bg-primary text-white"
-              : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+              : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
           }`}
         >
           كل الأنواع
@@ -164,7 +164,7 @@ export default async function ExpensesPage({
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               cat === c
                 ? "bg-primary text-white"
-                : "bg-white text-gray-600 shadow-sm hover:bg-gray-100"
+                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
             }`}
           >
             {c}
@@ -173,17 +173,17 @@ export default async function ExpensesPage({
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم الحفظ وتحديث الخزنة
         </div>
       )}
       {deleted && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم مسح المصروف وحركته من الخزنة
         </div>
       )}
@@ -191,31 +191,31 @@ export default async function ExpensesPage({
       {isAdmin && (
         <form
           action={addExpense}
-          className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
+          className="flex flex-wrap items-end gap-3 rounded-card bg-surface p-4 shadow-card"
         >
           <div className="flex flex-col gap-1">
-            <label htmlFor="category" className="text-xs text-gray-500">
+            <label htmlFor="category" className="text-xs text-ink-muted">
               النوع
             </label>
             <CategoryPicker
               id="category"
               required
               categories={CATEGORY_SUGGESTIONS}
-              className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-40 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
           <div className="flex min-w-48 flex-1 flex-col gap-1">
-            <label htmlFor="description" className="text-xs text-gray-500">
+            <label htmlFor="description" className="text-xs text-ink-muted">
               الوصف (اختياري)
             </label>
             <input
               id="description"
               name="description"
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="amount" className="text-xs text-gray-500">
+            <label htmlFor="amount" className="text-xs text-ink-muted">
               المبلغ (جنيه)
             </label>
             <input
@@ -225,11 +225,11 @@ export default async function ExpensesPage({
               min="0.01"
               step="0.01"
               required
-              className="w-28 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-28 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="expense_date" className="text-xs text-gray-500">
+            <label htmlFor="expense_date" className="text-xs text-ink-muted">
               التاريخ
             </label>
             <input
@@ -238,19 +238,19 @@ export default async function ExpensesPage({
               type="date"
               defaultValue={today}
               required
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
           {suppliers.length > 0 && (
             <div className="flex flex-col gap-1">
-              <label htmlFor="supplier_id" className="text-xs text-gray-500">
+              <label htmlFor="supplier_id" className="text-xs text-ink-muted">
                 المورد (اختياري)
               </label>
               <select
                 id="supplier_id"
                 name="supplier_id"
                 defaultValue=""
-                className="w-40 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="w-40 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
               >
                 <option value="">مش على مورد</option>
                 {suppliers.map((s) => (
@@ -261,10 +261,10 @@ export default async function ExpensesPage({
               </select>
             </div>
           )}
-          <SubmitOnce className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
+          <SubmitOnce className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
             تسجيل المصروف
           </SubmitOnce>
-          <p className="w-full text-xs text-gray-400">
+          <p className="w-full text-xs text-ink-faint">
             لو اخترت مورد، المصروف ده بيتسجّل دفعة في حسابه وبيقلّل اللي عليك
             له. فواتير البضاعة بالأجل بتتسجّل من صفحة المورد نفسه ومابتتحسبش
             مصروف غير لما تحاسبه.
@@ -273,7 +273,7 @@ export default async function ExpensesPage({
       )}
 
       {expenses.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center text-gray-500 shadow-sm">
+        <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
           {cat || period !== "all"
             ? "مفيش مصاريف بالفلتر ده."
             : "لسه مفيش مصاريف مسجلة."}
@@ -300,10 +300,10 @@ export default async function ExpensesPage({
           </div>
 
           {/* ===== كمبيوتر: جدول ===== */}
-          <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm md:block">
+          <div className="hidden overflow-x-auto rounded-card bg-surface shadow-card md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 text-right text-gray-500">
+                <tr className="border-b border-line text-right text-ink-muted">
                   <th className="px-4 py-3 font-medium">التاريخ</th>
                   <th className="px-4 py-3 font-medium">النوع</th>
                   <th className="px-4 py-3 font-medium">الوصف</th>
@@ -329,18 +329,18 @@ export default async function ExpensesPage({
                   ) : (
                     <tr
                       key={expense.id}
-                      className="border-b border-gray-100 last:border-0"
+                      className="border-b border-line last:border-0"
                     >
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-ink-body">
                         {formatDate(expense.expense_date)}
                       </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">
+                      <td className="px-4 py-3 font-medium text-ink">
                         {expense.category}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-ink-body">
                         {expense.description ?? "—"}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
+                      <td className="px-4 py-3 text-ink-body">
                         {formatMoney(expense.amount)}
                       </td>
                     </tr>

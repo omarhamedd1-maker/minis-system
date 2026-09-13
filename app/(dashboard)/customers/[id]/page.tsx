@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { EXCLUDED_STATUSES, formatDate, formatMoney, orderStatusBadge } from "@/lib/format";
+import { EXCLUDED_STATUSES, formatDate, formatMoney, orderStatusBadge, orderStatusClass } from "@/lib/format";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CustomerEdit } from "@/components/CustomerEdit";
 import { CustomerAddress } from "@/components/CustomerAddress";
@@ -298,7 +298,7 @@ export default async function CustomerPage({
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
+                        className={orderStatusClass(order.order_status)}
                       >
                         {badge.label}
                       </span>

@@ -52,49 +52,60 @@ export function formatDate(value: string | null) {
   });
 }
 
-const ORDER_STATUS_LABELS: Record<string, { label: string; className: string }> =
+const ORDER_STATUS_LABELS: Record<string, { label: string }> =
   {
-    new: { label: "جديد", className: "bg-blue-50 text-blue-700" },
-    confirmed: { label: "مؤكد", className: "bg-sky-50 text-sky-700" },
-    packed: { label: "تم التغليف", className: "bg-purple-50 text-purple-700" },
+    new: { label: "جديد" },
+    confirmed: { label: "مؤكد" },
+    packed: { label: "تم التغليف" },
     // الشحنة اتعملت عند بوسطة ومستنية المندوب
-    ready: { label: "جاهز للبيك اب", className: "bg-cyan-50 text-cyan-700" },
+    ready: { label: "جاهز للبيك اب" },
     // بوسطة شايلة الأوردر: المندوب استلمه منّنا، أو هو في مخزنهم، أو بين
     // الفروع. الاسم القديم كان "مع المندوب" وده كان بيكدب — شحنة قاعدة في
     // مخزن بوسطة ماحدش ماشي بيها.
     shipped: {
       label: "استلمه بوسطة",
-      className: "bg-indigo-50 text-indigo-700",
     },
     // خرجت من الفرع وماشية للعميل
     out_for_delivery: {
       label: "في الطريق للعميل",
-      className: "bg-violet-50 text-violet-700",
     },
-    delivered: { label: "تم التسليم", className: "bg-green-50 text-green-700" },
+    delivered: { label: "تم التسليم" },
     // بوسطة واقفة ومحتاجة تصرّف مننا (عنوان مش واضح / العميل مش بيرد...)
     awaiting_action: {
       label: "محتاج تصرّف",
-      className: "bg-amber-100 text-amber-800",
     },
     // ماتسلمتش وراجعة لنا (لسه في الطريق)
     returning: {
       label: "في الطريق ليك",
-      className: "bg-orange-50 text-orange-600",
     },
-    cancelled: { label: "ملغي", className: "bg-red-50 text-red-700" },
+    cancelled: { label: "ملغي" },
     // رجعت لنا فعلاً ومااتسلمتش
     returned: {
       label: "رجع ومتسلمش",
-      className: "bg-orange-100 text-orange-800",
     },
     // اتسلّم فعلاً وبعدين العميل رجّعه (كله أو جزء) — بشحنة عكسية
     // محميّة في الداتابيز بـ trigger عشان مزامنة بوسطة ماترجّعهاش "تم التسليم"
     returned_after_delivery: {
       label: "مرتجع بعد التسليم",
-      className: "bg-rose-50 text-rose-700",
     },
   };
+
+/**
+ * كلاس شارة حالة الأوردر — من نظام التصميم (`app/globals.css`).
+ *
+ * ⚠️ **اسم الكلاس = `badge-` + مفتاح الحالة بالظبط**، وكل حالة ليها
+ * قاعدة في `globals.css`. الاختبار `lib/order-status-class.test.ts` بيقع
+ * لو حالة جديدة اتضافت هنا من غير شكلها هناك — من غيره الشارة بتطلع
+ * نص عادي من غير لون ومحدش بياخد باله.
+ *
+ * ⚠️ **والمجهول بياخد `badge-neutral`** مش `badge-` + القيمة الغريبة.
+ */
+export function orderStatusClass(status: string | null | undefined): string {
+  const key = String(status ?? "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(ORDER_STATUS_LABELS, key)
+    ? `badge badge-dot badge-${key}`
+    : "badge badge-neutral";
+}
 
 // طرق الدفع — كاش عند الاستلام / إنستا باي / فيزا / ديبوزيت (جزء مقدم)
 export const PAYMENT_METHODS: { value: string; label: string }[] = [
@@ -262,7 +273,7 @@ export function lastMove(
     .filter((t) => Number.isFinite(t));
 
   if (stamps.length === 0) {
-    return { label: "—", className: "text-gray-400", days: 0 };
+    return { label: "—", className: "text-ink-faint", days: 0 };
   }
 
   const days = Math.max(
@@ -274,26 +285,25 @@ export function lastMove(
 
   const settled = SETTLED.includes(String(order.order_status ?? ""));
   const className = settled
-    ? "text-gray-500"
+    ? "text-ink-muted"
     : days >= IDLE_BAD_DAYS
-      ? "text-red-700 font-medium"
+      ? "text-danger font-medium"
       : days >= IDLE_WARN_DAYS
-        ? "text-amber-700"
-        : "text-gray-500";
+        ? "text-warning"
+        : "text-ink-muted";
 
   return { label, className, days };
 }
 
-export function orderStatusBadge(status: string | null) {
-  if (!status) {
-    return { label: "غير محدد", className: "bg-gray-100 text-gray-600" };
-  }
-  return (
-    ORDER_STATUS_LABELS[status.toLowerCase()] ?? {
-      label: status,
-      className: "bg-gray-100 text-gray-600",
-    }
-  );
+/** اسم الحالة بالعربي — الشكل من `orderStatusClass` */
+export function orderStatusBadge(status: string | null): { label: string } {
+  if (!status) return { label: "غير محدد" };
+  const key = status.toLowerCase();
+  return {
+    label: Object.prototype.hasOwnProperty.call(ORDER_STATUS_LABELS, key)
+      ? ORDER_STATUS_LABELS[key].label
+      : status,
+  };
 }
 
 /**
