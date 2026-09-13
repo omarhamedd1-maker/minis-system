@@ -64,10 +64,10 @@ export default async function InboxPage({
   if (error) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">صندوق الرسايل</h1>
-        <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <h1 className="text-2xl font-bold text-ink">صندوق الرسايل</h1>
+        <p className="rounded-control bg-warning-soft px-4 py-3 text-sm text-warning">
           الصندوق لسه مااتعملش في الداتابيز — شغّل{" "}
-          <code className="rounded bg-amber-100 px-1">sql/inbox.sql</code> وهو
+          <code className="rounded bg-warning-soft px-1">sql/inbox.sql</code> وهو
           هيشتغل. ({error.message})
         </p>
       </div>
@@ -100,16 +100,16 @@ export default async function InboxPage({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">صندوق الرسايل</h1>
+        <h1 className="text-2xl font-bold text-ink">صندوق الرسايل</h1>
         {waiting > 0 && (
-          <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700">
+          <span className="rounded-full bg-danger-soft px-3 py-1 text-xs font-medium text-danger">
             {waiting} مستني رد
           </span>
         )}
       </div>
 
       {pageError && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {pageError}
         </p>
       )}
@@ -132,14 +132,14 @@ export default async function InboxPage({
       </div>
 
       {threads.length === 0 ? (
-        <div className="rounded-xl bg-white p-6 text-center shadow-sm">
-          <p className="text-sm text-gray-500">
+        <div className="card p-6 text-center">
+          <p className="text-sm text-ink-muted">
             {showArchived
               ? "مافيش محادثات مقفولة."
               : "مافيش رسايل لسه."}
           </p>
           {!showArchived && (
-            <p className="mt-2 text-xs text-gray-400">
+            <p className="mt-2 text-xs text-ink-faint">
               أول ما حساب يتوصّل، كلام العملاء بيبدأ ينزل هنا لوحده.
             </p>
           )}
@@ -150,31 +150,31 @@ export default async function InboxPage({
             <Link
               key={t.id}
               href={`/inbox/${t.id}`}
-              className={`block rounded-xl p-4 shadow-sm transition sm:p-5 ${
-                t.waiting ? "bg-red-50/60 hover:bg-red-50" : "bg-white hover:bg-gray-50"
+              className={`block rounded-card p-4 shadow-card transition sm:p-5 ${
+                t.waiting ? "bg-danger-soft/60 hover:bg-danger-soft" : "bg-surface hover:bg-sunken"
               }`}
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-medium text-gray-900">{t.title}</span>
-                <span className="text-xs text-gray-500">
+                <span className="font-medium text-ink">{t.title}</span>
+                <span className="text-xs text-ink-muted">
                   {channelLabel(t.channel)} · {sinceText(t.lastMessageAt, now)}
                 </span>
               </div>
 
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
                 {t.waiting && (
-                  <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700">
+                  <span className="rounded-full bg-danger-soft px-2 py-0.5 font-medium text-danger">
                     مستني رد
                   </span>
                 )}
                 {!t.canReply && !t.archived && (
                   // ⚠️ ده مش تحذير شكلي — بعد ٢٤ ساعة ميتا بترفض الرد
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">
+                  <span className="rounded-full bg-sunken px-2 py-0.5 text-ink-muted">
                     الرد مقفول
                   </span>
                 )}
                 {!t.customerId && (
-                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
+                  <span className="rounded-full bg-warning-soft px-2 py-0.5 text-warning">
                     مش مربوط بعميل
                   </span>
                 )}
@@ -201,8 +201,8 @@ function Filter({
       href={href}
       className={`rounded-full px-3 py-1 ${
         on
-          ? "bg-gray-900 text-white"
-          : "bg-white text-gray-600 shadow-sm hover:bg-gray-50"
+          ? "bg-primary text-white"
+          : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
       }`}
     >
       {label}

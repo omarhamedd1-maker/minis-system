@@ -86,7 +86,7 @@ export default async function RiskyPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         معرفناش نقرا الأوردرات: {error.message}
       </div>
     );
@@ -174,25 +174,25 @@ export default async function RiskyPage({
       <BackLink href="/orders" label="الأوردرات" />
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">أوردرات محتاجة نظرة</h1>
+        <h1 className="text-2xl font-bold text-ink">أوردرات محتاجة نظرة</h1>
         {flagged.length > 0 && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-ink-muted">
             {flagged.length} من {rows.length} لسه مااتشحنوش
           </span>
         )}
       </div>
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-ink-muted">
         دي مش أوردرات غلط — دي أوردرات وراها حاجة في تاريخها. مكالمة قبل الشحن
         بتوفّر شحنة رايحة جاية، والقرار قرارك.
       </p>
       {saveError && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {saveError}
         </p>
       )}
       {saved && (
-        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <p className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           الرسالة اتحفظت
         </p>
       )}
@@ -208,26 +208,26 @@ export default async function RiskyPage({
 
 
       {flagged.length === 0 ? (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+        <p className="card empty">
           مافيش أوردر محتاج وقفة دلوقتي.
         </p>
       ) : (
         <div className="space-y-2">
           {flagged.map(({ order: o, total, flags }) => (
-            <div key={o.id} className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+            <div key={o.id} className="card p-4 sm:p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <Link
                   href={`/orders/${o.id}`}
-                  className="font-medium text-gray-900 hover:underline"
+                  className="font-medium text-ink hover:underline"
                 >
                   {o.customers?.full_name ?? "بدون اسم"}
                 </Link>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-ink-muted">
                   #{o.order_number} · {formatMoney(Math.round(total))}
                 </span>
               </div>
 
-              <p className="mt-1 text-sm text-amber-700" dir="auto">
+              <p className="mt-1 text-sm text-warning" dir="auto">
                 {flagLine(flags)}
               </p>
 
@@ -235,7 +235,7 @@ export default async function RiskyPage({
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <a
                     href={`tel:${o.customers.phone}`}
-                    className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                    className="btn btn-primary btn-sm px-4"
                   >
                     اتصل
                   </a>
@@ -251,11 +251,11 @@ export default async function RiskyPage({
                     )}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                    className="rounded-control bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                   >
                     واتساب
                   </a>
-                  <span className="text-xs text-gray-400" dir="ltr">
+                  <span className="text-xs text-ink-faint" dir="ltr">
                     {o.customers.phone}
                   </span>
                 </div>

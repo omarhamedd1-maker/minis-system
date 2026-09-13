@@ -73,7 +73,7 @@ export default async function RescuePage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         معرفناش نقرا الأوردرات: {error.message}
       </div>
     );
@@ -102,26 +102,26 @@ export default async function RescuePage({
     <div className="space-y-4">
       <BackLink href="/orders" label="الأوردرات" />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">اتصل قبل ما ترجع</h1>
+        <h1 className="text-2xl font-bold text-ink">اتصل قبل ما ترجع</h1>
         {queue.length > 0 && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-ink-muted">
             {queue.length} شحنة · {formatMoney(Math.round(total))}
           </span>
         )}
       </div>
 
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-ink-muted">
         بوسطة بتحاول تلات مرات وبعدين بترجّع. أكبر سببين للرجوع عندك هما «رفض
         يستلم» و«طلب التأجيل» — والاتنين مكالمة بتقلبهم. اللي عدّى على محاولته
         أكتر من {RESCUE_WINDOW_DAYS} أيام بيخرج من القايمة، فات وقته.
       </p>
       {saveError && (
-        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {saveError}
         </p>
       )}
       {saved && (
-        <p className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <p className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           الرسالة اتحفظت
         </p>
       )}
@@ -137,21 +137,21 @@ export default async function RescuePage({
 
 
       {queue.length === 0 ? (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+        <p className="card empty">
           مافيش شحنة واقفة دلوقتي.
         </p>
       ) : (
         <div className="space-y-2">
           {queue.map((r) => (
-            <div key={r.id} className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+            <div key={r.id} className="card p-4 sm:p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <Link
                   href={`/orders/${r.id}`}
-                  className="font-medium text-gray-900 hover:underline"
+                  className="font-medium text-ink hover:underline"
                 >
                   {r.customerName ?? "بدون اسم"}
                 </Link>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-ink-muted">
                   #{r.orderNumber}
                   {r.cod > 0 && ` · ${formatMoney(r.cod)}`}
                 </span>
@@ -159,7 +159,7 @@ export default async function RescuePage({
 
               <p
                 className={`mt-1 text-sm ${
-                  r.waiting ? "text-red-600" : "text-amber-700"
+                  r.waiting ? "text-danger" : "text-warning"
                 }`}
                 dir="auto"
               >
@@ -169,7 +169,7 @@ export default async function RescuePage({
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <a
                   href={`tel:${r.customerPhone}`}
-                  className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                  className="btn btn-primary btn-sm px-4"
                 >
                   اتصل
                 </a>
@@ -185,11 +185,11 @@ export default async function RescuePage({
                   )}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                  className="rounded-control bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   واتساب
                 </a>
-                <span className="text-xs text-gray-400" dir="ltr">
+                <span className="text-xs text-ink-faint" dir="ltr">
                   {r.customerPhone}
                 </span>
               </div>
