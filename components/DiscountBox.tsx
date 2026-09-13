@@ -20,14 +20,14 @@ export function DiscountBox({
       <input type="hidden" name="order_id" value={orderId} />
       <input type="hidden" name="items_total" value={itemsTotal} />
       <input type="hidden" name="discount_mode" value={mode} />
-      <div className="flex overflow-hidden rounded-lg border border-gray-300">
+      <div className="flex overflow-hidden rounded-control border border-line-strong">
         <button
           type="button"
           onClick={() => setMode("amount")}
           className={`px-2 py-1 text-xs font-medium ${
             mode === "amount"
               ? "bg-primary text-white"
-              : "bg-white text-gray-600"
+              : "bg-surface text-ink-muted"
           }`}
         >
           مبلغ
@@ -38,7 +38,7 @@ export function DiscountBox({
           className={`px-2 py-1 text-xs font-medium ${
             mode === "percent"
               ? "bg-primary text-white"
-              : "bg-white text-gray-600"
+              : "bg-surface text-ink-muted"
           }`}
         >
           نسبة %
@@ -51,12 +51,12 @@ export function DiscountBox({
         min={0}
         step="0.01"
         placeholder={mode === "amount" ? "بالجنيه" : "%"}
-        className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="w-24 rounded-control border border-line-strong px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
         aria-label="قيمة الخصم"
       />
       <button
         type="submit"
-        className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+        className="rounded-control bg-sunken px-2.5 py-1 text-xs font-medium text-ink-body hover:bg-line"
       >
         حفظ
       </button>
