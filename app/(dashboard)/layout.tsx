@@ -114,19 +114,19 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen">
       {/* هيدر التليفون — اللوجو + الإشعارات + ترحيب باسم المستخدم */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 md:hidden">
-        <span className="text-lg font-bold tracking-wide text-gray-900">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface px-4 md:hidden">
+        <span className="text-lg font-bold tracking-wide text-ink">
           Gridpoint
         </span>
         <div className="flex min-w-0 items-center gap-1">
-          <span className="truncate text-sm text-gray-500">
+          <span className="truncate text-sm text-ink-muted">
             {greeting(user.fullName ?? user.email)}
           </span>
           <Link
             href="/search"
             aria-label="بحث"
             title="بحث"
-            className="shrink-0 rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            className="shrink-0 rounded-full p-2 text-ink-muted hover:bg-sunken hover:text-ink"
           >
             <svg
               viewBox="0 0 24 24"
@@ -158,14 +158,14 @@ export default async function DashboardLayout({
         />
         <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 pb-28 md:pb-8">
           {/* ترحيب على الكمبيوتر (على التليفون بيظهر في الهيدر فوق) */}
-          <div className="mb-4 hidden items-center justify-between gap-3 text-sm text-gray-500 md:flex">
+          <div className="mb-4 hidden items-center justify-between gap-3 text-sm text-ink-muted md:flex">
             <span>{greeting(user.fullName ?? user.email)}</span>
             <span className="flex items-center gap-1">
           <Link
             href="/search"
             aria-label="بحث"
             title="بحث"
-            className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            className="rounded-full p-2 text-ink-muted hover:bg-sunken hover:text-ink"
           >
             <svg
               viewBox="0 0 24 24"

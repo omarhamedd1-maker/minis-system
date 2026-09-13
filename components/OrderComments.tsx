@@ -16,7 +16,7 @@ function AddButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-gray-400"
+      className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:bg-ink-faint"
     >
       {pending ? "بيتسجّل..." : "إضافة"}
     </button>
@@ -77,7 +77,7 @@ export function OrderComments({
             ? `${comments.length} تعليق — دوس للعرض`
             : "إضافة تعليق"
         }
-        className="relative rounded-lg bg-gray-100 p-1.5 text-gray-600 hover:bg-gray-200"
+        className="relative rounded-control bg-sunken p-1.5 text-ink-muted hover:bg-line"
         aria-label="تعليقات الأوردر"
       >
         <svg
@@ -93,7 +93,7 @@ export function OrderComments({
           />
         </svg>
         {comments.length > 0 && !hideDot && (
-          <span className="absolute -top-1 -left-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500"></span>
+          <span className="absolute -top-1 -left-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-danger"></span>
         )}
       </button>
 
@@ -109,11 +109,11 @@ export function OrderComments({
           }}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+            className="w-full max-w-md rounded-2xl bg-surface p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900">
+              <h3 className="text-base font-bold text-ink">
                 تعليقات أوردر {orderNumber}
               </h3>
               <button
@@ -122,7 +122,7 @@ export function OrderComments({
                   e.stopPropagation();
                   setOpen(false);
                 }}
-                className="rounded-lg px-2 py-1 text-sm text-gray-500 hover:bg-gray-100"
+                className="rounded-control px-2 py-1 text-sm text-ink-muted hover:bg-sunken"
                 aria-label="إغلاق"
               >
                 ✕
@@ -131,21 +131,21 @@ export function OrderComments({
 
             <div className="mb-4 max-h-64 space-y-3 overflow-y-auto">
               {comments.length === 0 ? (
-                <p className="py-4 text-center text-sm text-gray-400">
+                <p className="py-4 text-center text-sm text-ink-faint">
                   لسه مفيش تعليقات على الأوردر ده
                 </p>
               ) : (
                 comments.map((comment) => (
                   <div
                     key={comment.id}
-                    className="rounded-lg bg-gray-50 px-3 py-2"
+                    className="rounded-control bg-sunken px-3 py-2"
                   >
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-gray-900">
+                      <span className="text-xs font-bold text-ink">
                         {comment.author_name}
                       </span>
                       <span className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-ink-faint">
                           {new Date(comment.created_at).toLocaleDateString(
                             "ar-EG",
                             {
@@ -166,7 +166,7 @@ export function OrderComments({
                             />
                             <ConfirmButton
                               message="متأكد إنك عايز تمسح التعليق ده؟"
-                              className="rounded p-1 text-red-500 hover:bg-red-50 hover:text-red-700"
+                              className="rounded p-1 text-danger hover:bg-danger-soft hover:text-danger"
                               aria-label="مسح التعليق"
                               title="مسح التعليق"
                             >
@@ -176,7 +176,7 @@ export function OrderComments({
                         )}
                       </span>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm text-gray-700">
+                    <p className="whitespace-pre-wrap text-sm text-ink-body">
                       {comment.body}
                     </p>
                   </div>
@@ -198,7 +198,7 @@ export function OrderComments({
                 required
                 rows={2}
                 placeholder="اكتب تعليقك..."
-                className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="flex-1 resize-none rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
               ></textarea>
               <AddButton />
             </form>

@@ -103,9 +103,9 @@ export function SelectableOrderCard({
       onPointerCancel={cancel}
       onClick={onClick}
       onContextMenu={(e) => e.preventDefault()}
-      className={`relative cursor-pointer select-none rounded-xl p-3 shadow-sm transition-colors duration-75 ${
-        pressed ? "bg-gray-200" : "bg-white"
-      } ${selected ? "ring-2 ring-gray-900" : ""}`}
+      className={`relative cursor-pointer select-none rounded-card p-3 shadow-card transition-colors duration-75 ${
+        pressed ? "bg-line" : "bg-surface"
+      } ${selected ? "ring-2 ring-primary" : ""}`}
     >
       {/* الشيك بوكس المخفي — الشريط بيقرأ منه المحدد */}
       <input
@@ -124,8 +124,8 @@ export function SelectableOrderCard({
         <span
           className={`absolute start-3 top-3.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
             selected
-              ? "border-gray-900 bg-primary text-white"
-              : "border-gray-300 bg-white"
+              ? "border-primary bg-primary text-white"
+              : "border-line-strong bg-surface"
           }`}
         >
           {selected && (

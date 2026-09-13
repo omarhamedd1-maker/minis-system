@@ -155,18 +155,18 @@ export function BulkStatusBar({
   if (count === 0) return null;
 
   return (
-    <div className="sticky top-14 z-[35] mb-4 rounded-xl bg-primary p-3 text-white shadow-lg md:top-0">
+    <div className="sticky top-14 z-[35] mb-4 rounded-card bg-primary p-3 text-white shadow-lg md:top-0">
       {/* سطر فوق: العدد + إلغاء */}
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">
-          محدّد {count} <span className="text-gray-400">أوردر</span>
+          محدّد {count} <span className="text-ink-faint">أوردر</span>
         </span>
         <button
           type="button"
           onClick={clearAll}
           title="إلغاء التحديد"
           aria-label="إلغاء التحديد"
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-300 hover:bg-white/10 hover:text-white"
+          className="flex h-7 w-7 items-center justify-center rounded-control text-ink-faint hover:bg-white/10 hover:text-white"
         >
           <svg
             viewBox="0 0 24 24"
@@ -189,7 +189,7 @@ export function BulkStatusBar({
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               aria-label="الحالة الجديدة"
-              className="min-w-0 flex-1 rounded-lg border-0 bg-white px-2 py-1.5 text-xs text-gray-900 focus:outline-none"
+              className="min-w-0 flex-1 rounded-control border-0 bg-surface px-2 py-1.5 text-xs text-ink focus:outline-none"
             >
               {options.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -203,7 +203,7 @@ export function BulkStatusBar({
               disabled={pending}
               title="طبّق الحالة"
               aria-label="طبّق الحالة"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-gray-900 disabled:opacity-60"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface text-ink disabled:opacity-60"
             >
               {pending ? (
                 <span className="text-[10px]">…</span>
@@ -229,7 +229,7 @@ export function BulkStatusBar({
             onClick={printSelected}
             title="طباعة البوالص"
             aria-label="طباعة البوالص"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-white/15 text-white hover:bg-white/25"
           >
             <svg
               viewBox="0 0 24 24"
@@ -251,7 +251,7 @@ export function BulkStatusBar({
             disabled={sending}
             title="ابعت لبوسطة"
             aria-label="ابعت لبوسطة"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E30613] text-white hover:bg-[#b7050f] disabled:opacity-60"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-[#E30613] text-white hover:bg-[#b7050f] disabled:opacity-60"
           >
             {sending ? (
               <span className="text-[10px]">…</span>
@@ -280,7 +280,7 @@ export function SelectAllCheckbox() {
     <input
       type="checkbox"
       aria-label="تحديد الكل"
-      className="h-4 w-4 rounded border-gray-300"
+      className="h-4 w-4 rounded border-line-strong"
       onChange={(e) => {
         const checked = e.target.checked;
         document
