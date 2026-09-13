@@ -121,11 +121,11 @@ export default async function UsersPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">المستخدمون</h1>
-        <div className="flex items-center gap-3 text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-ink">المستخدمون</h1>
+        <div className="flex items-center gap-3 text-sm text-ink-muted">
           <span>{users.filter((u) => u.active).length} نشط</span>
           {users.some((u) => !u.active) && (
-            <span className="text-red-600">
+            <span className="text-danger">
               {users.filter((u) => !u.active).length} موقوف
             </span>
           )}
@@ -133,43 +133,43 @@ export default async function UsersPage({
       </div>
 
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           {saved}
         </div>
       )}
       {error && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}
 
       {/* إنشاء يوزر جديد */}
-      <details className="rounded-xl bg-white p-5 shadow-sm">
-        <summary className="cursor-pointer text-sm font-bold text-gray-900">
+      <details className="card p-5">
+        <summary className="cursor-pointer text-sm font-bold text-ink">
           + إضافة مستخدم جديد
         </summary>
         <form action={createUser} className="mt-4 space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">الاسم</label>
+              <label className="text-xs text-ink-muted">الاسم</label>
               <input
                 name="full_name"
                 required
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="field w-auto"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">الإيميل</label>
+              <label className="text-xs text-ink-muted">الإيميل</label>
               <input
                 name="email"
                 type="email"
                 required
                 dir="ltr"
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="field w-auto"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500">
+              <label className="text-xs text-ink-muted">
                 الباسورد (6 حروف على الأقل)
               </label>
               <input
@@ -177,21 +177,21 @@ export default async function UsersPage({
                 type="text"
                 required
                 dir="ltr"
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="field w-auto"
               />
             </div>
           </div>
 
           {/* اختار قالب جاهز — وتقدر تفصّل الصلاحيات بعد الإنشاء */}
           <div>
-            <div className="mb-2 text-xs font-medium text-gray-500">
+            <div className="mb-2 text-xs font-medium text-ink-muted">
               نوع المستخدم (بيحدّد صلاحياته — تقدر تعدّلها بعد الإنشاء):
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {PRESETS.map((p, i) => (
                 <label
                   key={p.key}
-                  className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 p-3 hover:bg-gray-50 has-checked:border-gray-900 has-checked:bg-gray-50"
+                  className="flex cursor-pointer items-start gap-2 rounded-control border border-line p-3 hover:bg-sunken has-checked:border-primary has-checked:bg-sunken"
                 >
                   <input
                     type="radio"
@@ -201,10 +201,10 @@ export default async function UsersPage({
                     className="mt-0.5 h-4 w-4"
                   />
                   <span className="min-w-0">
-                    <span className="block text-sm font-medium text-gray-900">
+                    <span className="block text-sm font-medium text-ink">
                       {p.label}
                     </span>
-                    <span className="block text-[11px] text-gray-500">
+                    <span className="block text-[11px] text-ink-muted">
                       {p.permissions.length} صلاحية
                     </span>
                   </span>
@@ -215,7 +215,7 @@ export default async function UsersPage({
 
           <button
             type="submit"
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+            className="btn btn-primary"
           >
             إنشاء المستخدم
           </button>
@@ -242,9 +242,9 @@ export default async function UsersPage({
       </div>
 
       {/* سجل النشاط العام — مقفول، بيفتح لما تدوس عليه */}
-      <details className="group rounded-xl bg-white shadow-sm">
+      <details className="card group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -252,42 +252,42 @@ export default async function UsersPage({
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
+              className="h-4 w-4 text-ink-faint transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
             >
               <path d="M9 6l6 6-6 6" />
             </svg>
             سجل النشاط ({activity.length})
           </h2>
-          <span className="text-xs font-medium text-gray-400">
+          <span className="text-xs font-medium text-ink-faint">
             {activity.length > 0 ? "اضغط للعرض" : ""}
           </span>
         </summary>
-        <div className="border-t border-gray-200">
+        <div className="border-t border-line">
           <div className="px-5 py-2">
             <Link
               href="/users/activity"
-              className="text-xs font-medium text-gray-500 hover:text-gray-900"
+              className="text-xs font-medium text-ink-muted hover:text-ink"
             >
               السجل كامل مع الفلترة ←
             </Link>
           </div>
         {activity.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-gray-500">
+          <p className="px-5 py-6 text-sm text-ink-muted">
             لسه مفيش نشاط مسجّل. أول ما حد يعمل حاجة مهمة (تغيير حالة، حذف، إرسال
             لبوسطة، إدارة مستخدمين) هتظهر هنا.
           </p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-line">
             {activity.map((a) => (
               <li
                 key={a.id}
                 className="flex items-center justify-between gap-4 px-5 py-2.5 text-sm"
               >
-                <span className="text-gray-900">
+                <span className="text-ink">
                   <span className="font-medium">{a.actor_name ?? "غير معروف"}</span>{" "}
-                  <span className="text-gray-600">{a.summary ?? a.action}</span>
+                  <span className="text-ink-muted">{a.summary ?? a.action}</span>
                 </span>
-                <span className="shrink-0 text-xs text-gray-400">
+                <span className="shrink-0 text-xs text-ink-faint">
                   {whenText(a.created_at)}
                 </span>
               </li>
@@ -297,7 +297,7 @@ export default async function UsersPage({
         </div>
       </details>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-ink-faint">
         ملاحظة: الأدمن عنده كل الصلاحيات تلقائياً. المستخدمون الجدد بيتعملوا كأعضاء
         (يقدروا يقرأوا حسب صلاحياتهم) ومش أدمن. سجل النشاط بيتسجّل تلقائياً
         للحاجات المهمة.

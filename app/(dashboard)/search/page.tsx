@@ -132,7 +132,7 @@ export default async function SearchPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">بحث</h1>
+      <h1 className="text-2xl font-bold text-ink">بحث</h1>
 
       <form method="get" className="flex gap-2">
         <input
@@ -140,31 +140,31 @@ export default async function SearchPage({
           defaultValue={plan?.text ?? ""}
           autoFocus
           placeholder="رقم أوردر · تليفون · اسم عميل · اسم منتج · رقم تتبع"
-          className="flex-1 rounded-lg border-0 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900"
+          className="flex-1 rounded-control border-0 bg-surface px-4 py-2.5 text-sm text-ink shadow-card placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <button
           type="submit"
-          className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary-dark"
+          className="btn btn-primary px-5"
         >
           دوّر
         </button>
       </form>
 
       {!plan && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           اكتب أي حاجة تعرفها عن اللي بتدوّر عليه — مش لازم تعرف هو في أنهي
           شاشة.
         </p>
       )}
 
       {plan && !plan.name && !plan.orderNumber && !plan.phone && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ink-muted">
           محتاج {MIN_NAME_LENGTH} حروف على الأقل.
         </p>
       )}
 
       {nothing && (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+        <p className="card empty">
           مالقيناش «{plan.text}» في الأوردرات ولا العملاء ولا المنتجات.
         </p>
       )}
@@ -181,21 +181,21 @@ export default async function SearchPage({
               <Link
                 key={o.id}
                 href={`/orders/${o.id}`}
-                className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg px-3 py-2 hover:bg-gray-50"
+                className="flex flex-wrap items-baseline justify-between gap-2 rounded-control px-3 py-2 hover:bg-sunken"
               >
                 <span className="flex items-baseline gap-2">
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-ink">
                     #{o.order_number}
                   </span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-ink-muted">
                     {o.customers?.full_name ?? "—"}
                   </span>
                 </span>
                 <span className="flex items-baseline gap-2 text-sm">
-                  <span className="text-gray-400">
+                  <span className="text-ink-faint">
                     {formatDate(o.order_date)}
                   </span>
-                  <span className="tabular-nums text-gray-600">
+                  <span className="tabular-nums text-ink-muted">
                     {formatMoney(total)}
                   </span>
                   <span
@@ -216,12 +216,12 @@ export default async function SearchPage({
             <Link
               key={c.id}
               href={`/customers/${c.id}`}
-              className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg px-3 py-2 hover:bg-gray-50"
+              className="flex flex-wrap items-baseline justify-between gap-2 rounded-control px-3 py-2 hover:bg-sunken"
             >
-              <span className="font-medium text-gray-900">
+              <span className="font-medium text-ink">
                 {c.full_name ?? "بدون اسم"}
               </span>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-ink-muted">
                 {c.phone ?? "—"}
                 {c.city ? ` · ${c.city}` : ""}
               </span>
@@ -241,12 +241,12 @@ export default async function SearchPage({
               <Link
                 key={p.id}
                 href={`/products/${p.id}`}
-                className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg px-3 py-2 hover:bg-gray-50"
+                className="flex flex-wrap items-baseline justify-between gap-2 rounded-control px-3 py-2 hover:bg-sunken"
               >
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-ink">
                   {p.name_ar || p.name}
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-ink-muted">
                   {(p.product_variants ?? []).length} شكل · مخزون {stock}
                 </span>
               </Link>
@@ -268,12 +268,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-white p-3 shadow-sm sm:p-4">
+    <div className="card p-3 sm:p-4">
       <div className="flex items-baseline justify-between px-1">
-        <h2 className="text-sm font-bold text-gray-900">{title}</h2>
-        <span className="text-xs text-gray-500">{count}</span>
+        <h2 className="text-sm font-bold text-ink">{title}</h2>
+        <span className="text-xs text-ink-muted">{count}</span>
       </div>
-      <div className="mt-1 divide-y divide-gray-50">{children}</div>
+      <div className="mt-1 divide-y divide-line">{children}</div>
     </div>
   );
 }

@@ -60,14 +60,14 @@ export default async function RatingsPage() {
     return (
       <div className="space-y-4">
         <BackLink href="/orders" label="الأوردرات" />
-        <h1 className="text-2xl font-bold text-gray-900">التقييمات</h1>
-        <div className="rounded-xl bg-amber-50 p-5 text-sm text-amber-900">
+        <h1 className="text-2xl font-bold text-ink">التقييمات</h1>
+        <div className="rounded-card bg-warning-soft p-5 text-sm text-warning">
           <p className="font-bold">الصفحة محتاجة جدول في الداتابيز الأول.</p>
           <p className="mt-1">
             افتح Supabase ← SQL Editor وشغّل <code>sql/ratings.sql</code>،
             وبعدها افتح الصفحة دي تاني.
           </p>
-          <p className="mt-2 text-xs text-amber-700">({error.message})</p>
+          <p className="mt-2 text-xs text-warning">({error.message})</p>
         </div>
       </div>
     );
@@ -110,28 +110,28 @@ export default async function RatingsPage() {
       <BackLink href="/orders" label="الأوردرات" />
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">التقييمات</h1>
-        <span className="text-xs text-gray-500">{overall.count} تقييم</span>
+        <h1 className="text-2xl font-bold text-ink">التقييمات</h1>
+        <span className="text-xs text-ink-muted">{overall.count} تقييم</span>
       </div>
 
       {overall.count === 0 ? (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+        <p className="card empty">
           مافيش تقييمات لسه. لينك التقييم بيتبعت مع رسالة «اسأل بعد التسليم» —
           حطّ <code>{"{لينك التقييم}"}</code> في القالب.
         </p>
       ) : (
         <>
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+          <div className="card p-4 sm:p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="text-sm text-gray-500">المتوسط العام</span>
-              <span className="text-lg font-bold tabular-nums text-gray-900">
+              <span className="text-sm text-ink-muted">المتوسط العام</span>
+              <span className="text-lg font-bold tabular-nums text-ink">
                 {overall.average === null ? (
-                  <span className="text-sm font-normal text-gray-400">
+                  <span className="text-sm font-normal text-ink-faint">
                     لسه بدري — {overall.count} من {MIN_RATINGS}
                   </span>
                 ) : (
                   <>
-                    <span className="text-amber-400">
+                    <span className="text-warning">
                       {starsText(overall.average)}
                     </span>{" "}
                     {overall.average}
@@ -140,7 +140,7 @@ export default async function RatingsPage() {
               </span>
             </div>
             {overall.lowRate !== null && overall.low > 0 && (
-              <p className="mt-1 text-[11px] text-gray-400">
+              <p className="mt-1 text-[11px] text-ink-faint">
                 {overall.low} تقييم تحت {LOW_STARS} نجوم ({overall.lowRate}%)
               </p>
             )}
@@ -151,9 +151,9 @@ export default async function RatingsPage() {
             تجربته مش كل منتج لوحده — فالرقم ده تقريب، ومذكور هنا عشان
             يتقرا صح.
           */}
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <h2 className="text-sm font-bold text-gray-900">بالمنتج</h2>
-            <p className="mt-0.5 text-[11px] text-gray-400">
+          <div className="card p-4 sm:p-5">
+            <h2 className="text-sm font-bold text-ink">بالمنتج</h2>
+            <p className="mt-0.5 text-[11px] text-ink-faint">
               الأقل الأول. والأوردر اللي فيه كذا منتج بيدّي نفس النجوم لكلهم —
               العميل بيقيّم تجربته مش كل حاجة لوحدها.
             </p>
@@ -163,12 +163,12 @@ export default async function RatingsPage() {
                   key={p.variantId}
                   className="flex flex-wrap items-baseline justify-between gap-3 text-sm"
                 >
-                  <span className="text-gray-900">
+                  <span className="text-ink">
                     {nameOf.get(p.variantId) ?? "شكل اتمسح"}
                   </span>
-                  <span className="text-xs tabular-nums text-gray-500">
+                  <span className="text-xs tabular-nums text-ink-muted">
                     {p.average === null ? (
-                      <span className="text-gray-300">
+                      <span className="text-ink-faint">
                         {p.count} تقييم — لسه بدري
                       </span>
                     ) : (
@@ -176,14 +176,14 @@ export default async function RatingsPage() {
                         <span
                           className={
                             p.average < LOW_STARS
-                              ? "text-red-600"
-                              : "text-amber-500"
+                              ? "text-danger"
+                              : "text-warning"
                           }
                         >
                           {starsText(p.average)}
                         </span>{" "}
                         {p.average}
-                        <span className="mr-2 text-gray-300">
+                        <span className="mr-2 text-ink-faint">
                           {p.count} تقييم
                         </span>
                       </>
@@ -195,37 +195,37 @@ export default async function RatingsPage() {
           </div>
 
           {withComments.length > 0 && (
-            <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-              <h2 className="text-sm font-bold text-gray-900">اللي كتبوا</h2>
+            <div className="card p-4 sm:p-5">
+              <h2 className="text-sm font-bold text-ink">اللي كتبوا</h2>
               <div className="mt-3 space-y-3">
                 {withComments.slice(0, 30).map((r) => (
                   <div
                     key={r.id}
-                    className="border-b border-gray-50 pb-3 last:border-0 last:pb-0"
+                    className="border-b border-line pb-3 last:border-0 last:pb-0"
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <Link
                         href={`/orders/${r.order_id}`}
-                        className="text-sm text-gray-900 hover:underline"
+                        className="text-sm text-ink hover:underline"
                       >
                         #{r.orders?.order_number ?? "؟"} ·{" "}
                         {r.orders?.customers?.full_name ?? "بدون اسم"}
                       </Link>
                       <span
                         className={`text-xs ${
-                          r.stars < LOW_STARS ? "text-red-600" : "text-amber-500"
+                          r.stars < LOW_STARS ? "text-danger" : "text-warning"
                         }`}
                       >
                         {starsText(r.stars)}
                       </span>
                     </div>
                     <p
-                      className="mt-1 text-sm leading-relaxed text-gray-600"
+                      className="mt-1 text-sm leading-relaxed text-ink-muted"
                       dir="auto"
                     >
                       {r.comment}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-gray-300">
+                    <p className="mt-0.5 text-[11px] text-ink-faint">
                       {formatDate(r.created_at)}
                     </p>
                   </div>

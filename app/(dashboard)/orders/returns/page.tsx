@@ -64,7 +64,7 @@ export default async function ReturnsPage() {
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         معرفناش نقرا المرتجعات: {error.message}
       </div>
     );
@@ -119,12 +119,12 @@ export default async function ReturnsPage() {
       <BackLink href="/orders" label="الأوردرات" />
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">المرتجعات</h1>
-        <span className="text-xs text-gray-500">آخر {WINDOW_DAYS} يوم</span>
+        <h1 className="text-2xl font-bold text-ink">المرتجعات</h1>
+        <span className="text-xs text-ink-muted">آخر {WINDOW_DAYS} يوم</span>
       </div>
 
       {board.count === 0 ? (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+        <p className="card empty">
           مافيش مرتجعات في الفترة دي.
         </p>
       ) : (
@@ -163,11 +163,11 @@ export default async function ReturnsPage() {
             عندك على الرف.
           */}
           {board.notRestocked.length > 0 && (
-            <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-              <h2 className="text-sm font-bold text-gray-900">
+            <div className="card p-4 sm:p-5">
+              <h2 className="text-sm font-bold text-ink">
                 رجعلك ولسه مادخلش المخزن
               </h2>
-              <p className="mt-0.5 text-[11px] text-gray-400">
+              <p className="mt-0.5 text-[11px] text-ink-faint">
                 البضاعة دي في إيدك، والمخزون مش حاسبها. الرجوع بيتعمل من صفحة
                 الأوردر.
               </p>
@@ -179,11 +179,11 @@ export default async function ReturnsPage() {
                   >
                     <Link
                       href={`/orders/${r.id}`}
-                      className="text-gray-900 hover:underline"
+                      className="text-ink hover:underline"
                     >
                       #{r.orderNumber} · {r.customerName ?? "بدون اسم"}
                     </Link>
-                    <span className="tabular-nums text-xs text-gray-500">
+                    <span className="tabular-nums text-xs text-ink-muted">
                       {formatMoney(Math.round(r.itemsTotal))}
                     </span>
                   </div>
@@ -198,26 +198,26 @@ export default async function ReturnsPage() {
             اللي فوق الرقم بيتضاعف تقريبًا وبيبقى إنذار نصّه وهم.
           */}
           {board.outsideStock.length > 0 && (
-            <p className="text-[11px] leading-relaxed text-gray-400">
+            <p className="text-[11px] leading-relaxed text-ink-faint">
               وفيه {board.outsideStock.length} أوردر راجع مالهمش حركة مخزون خالص
               — دول اتسجّلوا من غير ما يخصموا من المخزون، فمفيش حاجة ترجع.
             </p>
           )}
 
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <h2 className="text-sm font-bold text-gray-900">رجعوا ليه؟</h2>
+          <div className="card p-4 sm:p-5">
+            <h2 className="text-sm font-bold text-ink">رجعوا ليه؟</h2>
             <div className="mt-3 space-y-1.5">
               {board.byReason.map((r) => (
                 <div
                   key={r.reason}
                   className="flex items-baseline justify-between gap-3 text-sm"
                 >
-                  <span className="text-gray-900">
+                  <span className="text-ink">
                     {r.reason === "unknown"
                       ? "السبب مش مكتوب"
                       : returnReasonLabel(r.reason)}
                   </span>
-                  <span className="tabular-nums text-xs text-gray-500">
+                  <span className="tabular-nums text-xs text-ink-muted">
                     {r.count} · {formatMoney(Math.round(r.value))}
                   </span>
                 </div>
@@ -225,28 +225,28 @@ export default async function ReturnsPage() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
-            <h2 className="text-sm font-bold text-gray-900">كل الراجع</h2>
+          <div className="card p-4 sm:p-5">
+            <h2 className="text-sm font-bold text-ink">كل الراجع</h2>
             <div className="mt-3 space-y-2">
               {board.rows.map((r) => (
                 <div
                   key={r.id}
-                  className="flex flex-wrap items-baseline justify-between gap-2 border-b border-gray-50 pb-2 last:border-0"
+                  className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2 last:border-0"
                 >
                   <div className="min-w-0">
                     <Link
                       href={`/orders/${r.id}`}
-                      className="text-sm text-gray-900 hover:underline"
+                      className="text-sm text-ink hover:underline"
                     >
                       #{r.orderNumber} · {r.customerName ?? "بدون اسم"}
                     </Link>
-                    <p className="text-[11px] text-gray-400">
+                    <p className="text-[11px] text-ink-faint">
                       {r.reason ? returnReasonLabel(r.reason) : "السبب مش مكتوب"}
                       {r.afterDelivery && " · استلم وبعدين رجّع"}
                       {!r.restocked && " · لسه مادخلش المخزن"}
                     </p>
                   </div>
-                  <span className="tabular-nums text-xs text-gray-500">
+                  <span className="tabular-nums text-xs text-ink-muted">
                     خسّرت {formatMoney(Math.round(r.lost))}
                   </span>
                 </div>
@@ -271,16 +271,16 @@ function Box({
   danger?: boolean;
 }) {
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm">
-      <p className="text-[11px] text-gray-500">{label}</p>
+    <div className="card p-4">
+      <p className="text-[11px] text-ink-muted">{label}</p>
       <p
         className={`mt-0.5 text-lg font-bold tabular-nums ${
-          danger ? "text-red-600" : "text-gray-900"
+          danger ? "text-danger" : "text-ink"
         }`}
       >
         {value}
       </p>
-      {note && <p className="text-[11px] text-gray-400">{note}</p>}
+      {note && <p className="text-[11px] text-ink-faint">{note}</p>}
     </div>
   );
 }

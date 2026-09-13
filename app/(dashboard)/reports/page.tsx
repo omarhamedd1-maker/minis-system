@@ -80,7 +80,7 @@ export default async function ReportsPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         معرفناش نقرا الأوردرات: {error.message}
       </div>
     );
@@ -150,14 +150,14 @@ export default async function ReportsPage({
       <BackLink href="/" label="الداشبورد" />
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">تقارير</h1>
-        <span className="text-xs text-gray-500">
+        <h1 className="text-2xl font-bold text-ink">تقارير</h1>
+        <span className="text-xs text-ink-muted">
           {report.used} أوردر في الحسبة
         </span>
       </div>
 
       {/* ===== اختار ===== */}
-      <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm sm:p-5">
+      <div className="card space-y-3 p-4 sm:p-5">
         <Picker
           label="بتقيس إيه"
           options={MEASURES}
@@ -179,7 +179,7 @@ export default async function ReportsPage({
             <input type="hidden" name="group" value={group} />
           )}
           <div className="flex flex-col gap-1">
-            <label htmlFor="from" className="text-[11px] text-gray-500">
+            <label htmlFor="from" className="text-[11px] text-ink-muted">
               من
             </label>
             <input
@@ -188,11 +188,11 @@ export default async function ReportsPage({
               type="date"
               defaultValue={from ?? ""}
               max={cairoToday()}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="field w-auto"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="to" className="text-[11px] text-gray-500">
+            <label htmlFor="to" className="text-[11px] text-ink-muted">
               لـ
             </label>
             <input
@@ -201,16 +201,16 @@ export default async function ReportsPage({
               type="date"
               defaultValue={to ?? ""}
               max={cairoToday()}
-              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="field w-auto"
             />
           </div>
-          <button className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark">
+          <button className="btn btn-primary btn-sm">
             طبّق
           </button>
           {(from || to) && (
             <a
               href={href({ from: null, to: null })}
-              className="rounded-lg px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100"
+              className="rounded-control px-2 py-1.5 text-xs text-ink-muted hover:bg-sunken"
             >
               كل الفترة
             </a>
@@ -220,18 +220,18 @@ export default async function ReportsPage({
 
       {/* ⚠️ الملاحظات اللي بتخلّي الرقم يتقرا صح */}
       {report.skipped && (
-        <p className="text-[11px] leading-relaxed text-gray-400">
+        <p className="text-[11px] leading-relaxed text-ink-faint">
           {report.skipped}
         </p>
       )}
       {group === "product" && (
-        <p className="text-[11px] leading-relaxed text-gray-400">
+        <p className="text-[11px] leading-relaxed text-ink-faint">
           الأوردر اللي فيه منتجين بيتعدّ في الصفين — فالمجموع هنا أكبر من
           إجماليك الحقيقي. ده صح للسؤال «المنتج ده باع كام».
         </p>
       )}
       {weak > 0 && (
-        <p className="text-[11px] leading-relaxed text-amber-700">
+        <p className="text-[11px] leading-relaxed text-warning">
           {weak} صف وراهم أقل من {MIN_FOR_RATE} أوردرات — النسبة عليهم بتتقلب
           بأوردر واحد.
         </p>
@@ -239,17 +239,17 @@ export default async function ReportsPage({
 
       {/* ===== النتيجة ===== */}
       {report.rows.length === 0 ? (
-        <p className="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
+        <p className="card empty">
           مافيش داتا في الفترة دي.
         </p>
       ) : (
-        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+        <div className="card p-4 sm:p-5">
           {report.total !== null && (
-            <div className="mb-3 flex items-baseline justify-between gap-2 border-b border-gray-50 pb-3">
-              <span className="text-sm text-gray-500">
+            <div className="mb-3 flex items-baseline justify-between gap-2 border-b border-line pb-3">
+              <span className="text-sm text-ink-muted">
                 {MEASURES[measure]} — الإجمالي
               </span>
-              <span className="text-lg font-bold tabular-nums text-gray-900">
+              <span className="text-lg font-bold tabular-nums text-ink">
                 {show(report.total)}
               </span>
             </div>
@@ -259,13 +259,13 @@ export default async function ReportsPage({
             {report.rows.map((r) => (
               <div key={r.label}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-sm text-gray-900">{r.label}</span>
-                  <span className="text-xs tabular-nums text-gray-500">
+                  <span className="text-sm text-ink">{r.label}</span>
+                  <span className="text-xs tabular-nums text-ink-muted">
                     {show(r.value)}
-                    <span className="mr-2 text-gray-300">{r.count} أوردر</span>
+                    <span className="mr-2 text-ink-faint">{r.count} أوردر</span>
                   </span>
                 </div>
-                <div className="mt-1 h-1.5 w-full rounded-full bg-gray-100">
+                <div className="mt-1 h-1.5 w-full rounded-full bg-sunken">
                   <div
                     className="h-1.5 rounded-full bg-primary"
                     style={{
@@ -279,7 +279,7 @@ export default async function ReportsPage({
         </div>
       )}
 
-      <p className="text-[11px] leading-relaxed text-gray-400">
+      <p className="text-[11px] leading-relaxed text-ink-faint">
         الاختيار في اللينك — احفظه في المفضلة أو ابعته لحد، هيفتح على نفس
         التقرير.
       </p>
@@ -300,7 +300,7 @@ function Picker({
 }) {
   return (
     <div>
-      <p className="mb-1.5 text-[11px] text-gray-500">{label}</p>
+      <p className="mb-1.5 text-[11px] text-ink-muted">{label}</p>
       <div className="flex flex-wrap gap-1.5">
         {Object.entries(options).map(([key, text]) => (
           <a
@@ -309,7 +309,7 @@ function Picker({
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               current === key
                 ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                : "bg-sunken text-ink-muted hover:bg-line"
             }`}
           >
             {text}
