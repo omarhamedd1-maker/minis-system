@@ -91,7 +91,7 @@ function Badge({ n, className }: { n: number; className?: string }) {
   if (!n || n < 1) return null;
   return (
     <span
-      className={`inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-[18px] text-white ${className ?? ""}`}
+      className={`inline-flex min-w-[18px] items-center justify-center rounded-full bg-danger px-1.5 text-[11px] font-bold leading-[18px] text-white ${className ?? ""}`}
     >
       {n > 99 ? "99+" : n}
     </span>
@@ -203,13 +203,13 @@ export function AppNav({
     <>
       {/* ===== شريط جانبي (كمبيوتر) — على اليمين ===== */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-e border-gray-200 bg-white transition-[width] duration-200 md:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-e border-line bg-surface transition-[width] duration-200 md:flex ${
           expanded ? "w-56" : "w-16"
         }`}
       >
-        <div className="flex h-14 items-center gap-2 border-b border-gray-100 px-3">
+        <div className="flex h-14 items-center gap-2 border-b border-line px-3">
           {expanded && (
-            <span className="text-lg font-bold tracking-wide text-gray-900">
+            <span className="text-lg font-bold tracking-wide text-ink">
               Gridpoint
             </span>
           )}
@@ -217,7 +217,7 @@ export function AppNav({
             type="button"
             onClick={toggle}
             title={expanded ? "تصغير القائمة" : "توسيع القائمة"}
-            className="ms-auto flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+            className="ms-auto flex h-8 w-8 items-center justify-center rounded-control text-ink-muted hover:bg-sunken"
           >
             <svg
               viewBox="0 0 24 24"
@@ -245,10 +245,10 @@ export function AppNav({
                 <Link
                   href={i.href}
                   title={i.label}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 ${
+                  className={`flex items-center gap-3 rounded-control px-3 py-2 ${
                     active
                       ? "bg-primary text-white"
-                      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                      : "text-ink-muted hover:bg-sunken hover:text-ink"
                   } ${expanded ? "" : "justify-center"}`}
                 >
                   <Icon href={i.href} className="h-5 w-5 shrink-0" />
@@ -268,15 +268,15 @@ export function AppNav({
                     <Link
                       key={c.href}
                       href={c.href}
-                      className={`mt-1 flex items-center gap-2 rounded-lg py-1.5 pe-3 ps-9 text-sm ${
+                      className={`mt-1 flex items-center gap-2 rounded-control py-1.5 pe-3 ps-9 text-sm ${
                         on
-                          ? "bg-gray-100 font-medium text-gray-900"
-                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                          ? "bg-primary-soft font-medium text-ink"
+                          : "text-ink-muted hover:bg-sunken hover:text-ink"
                       }`}
                     >
                       <span
                         className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                          on ? "bg-primary" : "bg-gray-300"
+                          on ? "bg-primary" : "bg-line-strong"
                         }`}
                       />
                       <span className="whitespace-nowrap">{c.label}</span>
@@ -288,11 +288,11 @@ export function AppNav({
           })}
         </nav>
 
-        <form action={logout} className="border-t border-gray-100 p-2">
+        <form action={logout} className="border-t border-line p-2">
           <button
             type="submit"
             title="تسجيل الخروج"
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 ${
+            className={`flex w-full items-center gap-3 rounded-control px-3 py-2 text-ink-muted hover:bg-sunken hover:text-ink ${
               expanded ? "" : "justify-center"
             }`}
           >
@@ -314,7 +314,7 @@ export function AppNav({
 
       {/* ===== قائمة عائمة (تليفون) — على شكل Pill زي شوبيفاي ===== */}
       <nav className="fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 md:hidden">
-        <div className="flex items-center gap-1 rounded-full bg-white p-1.5 shadow-[0_6px_24px_rgba(0,0,0,0.14)] ring-1 ring-black/5">
+        <div className="flex items-center gap-1 rounded-full bg-surface p-1.5 shadow-[0_6px_24px_rgba(0,0,0,0.14)] ring-1 ring-black/5">
           {primary.map((i) => {
             const active = isActive(i.href);
             return (
@@ -326,12 +326,12 @@ export function AppNav({
                 className={`relative flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-[0.88] ${
                   active
                     ? "bg-primary text-white active:bg-primary-dark"
-                    : "text-gray-500 active:bg-gray-200"
+                    : "text-ink-muted active:bg-line"
                 }`}
               >
                 <Icon href={i.href} className="h-5 w-5" />
                 {i.href === "/inbox" && inboxWaiting > 0 && (
-                  <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+                  <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-danger" />
                 )}
               </Link>
             );
@@ -342,14 +342,14 @@ export function AppNav({
               onClick={() => setMoreOpen(true)}
               title="المزيد"
               aria-label="المزيد"
-              className="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-500 transition-transform active:scale-[0.88] active:bg-gray-200"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.88] active:bg-line"
             >
               {/*
                 ⚠️ **النقطة على «المزيد» كمان.** «الرسايل» مش في الشريط
                 السفلي، فمن غيرها الرقم بيتخبّى ورا قايمة ومحدش بيشوفه.
               */}
               {overflow.some((o) => o.href === "/inbox") && inboxWaiting > 0 && (
-                <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500" />
+                <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-danger" />
               )}
               <svg
                 viewBox="0 0 24 24"
@@ -374,10 +374,10 @@ export function AppNav({
         >
           <div className="absolute inset-0 bg-black/30" />
           <div
-            className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+            className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line-strong" />
             <div className="grid grid-cols-3 gap-2">
               {overflow.map((i) => {
                 const active = isActive(i.href);
@@ -386,10 +386,10 @@ export function AppNav({
                     key={i.href}
                     href={i.href}
                     onClick={() => setMoreOpen(false)}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl p-3 text-xs font-medium ${
+                    className={`flex flex-col items-center gap-1.5 rounded-card p-3 text-xs font-medium ${
                       active
                         ? "bg-primary text-white"
-                        : "text-gray-700 hover:bg-gray-100"
+                        : "text-ink-body hover:bg-sunken"
                     }`}
                   >
                     <Icon href={i.href} className="h-6 w-6" />
@@ -404,7 +404,7 @@ export function AppNav({
             <form action={logout} className="mt-3">
               <button
                 type="submit"
-                className="w-full rounded-xl bg-gray-100 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                className="w-full rounded-card bg-sunken py-2.5 text-sm font-medium text-ink-body hover:bg-line"
               >
                 تسجيل الخروج
               </button>

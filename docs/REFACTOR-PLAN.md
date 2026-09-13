@@ -49,29 +49,31 @@
 
 ### ١ج. باقي الصفحات والمكوّنات
 
-⚠️ **الترتيب (قرار المشرف، ١٤ سبتمبر): `components/` الأول، وبعدين باقي صفحات `app/`.**
-المكوّنات زي `AppNav` و`BostaMark` و`SendBostaRowButton` بتظهر في كل صفحة — طول ما هي
-بألوان خام، أي صفحة بتتوحّد بتفضل نصها موحّد ونصها لأ، ومحدش يقدر يحكم على النتيجة.
-والمكوّن اللي بيتصلح بيتصلح في كل الصفحات مرة واحدة.
+⚠️ **الوحدة: الصفحة + مكوّناتها (قرار المشرف، ١٤ سبتمبر — بعد الجرد).**
+الجرد على main: ٨٥١ لون خام في ٥٢ من ٥٨ مكوّن، وأغلبهم بتستخدمهم **صفحة واحدة**. فتوحيد
+مكوّن بعيد عن صفحته بيسيب صفحات نصها موحّد ونصها لأ. اتنين بس بيظهروا في صفحات كتير:
+`AppNav` (في الـlayout) و`BackLink` (٢٣ صفحة) — ودول اتعملوا لوحدهم.
 
-- الدفعات **٥ ملفات في كل PR**
+- الدفعات **٥ ملفات في كل PR** — الصفحة ومكوّناتها في نفس الدفعة
 - البوابة اتقفلت بعد `.table` (#157): الأربع قطع اتجربوا في صفحات حقيقية، فمافيش قياس لكل دفعة
-- اتعمل قبل تغيير الترتيب: ١٥ صفحة (#156 · #157 · #158)
+- اتعمل: ١٥ صفحة (#156 · #157 · #158)
+- ⏸️ `hover:bg-green-700` / `hover:bg-emerald-700` بيفضلوا زي ما هما لحد ما عمر يوافق على `--success-dark`
+  (`hover:opacity-90` بتبهّت الزرار كله بدل ما تغمّقه — عكس `.btn-primary:hover`)
 
 ### قبول ١ج — شرطين، كل واحد بيخضر لوحده
 
-⚠️ grep واحد على الاتنين مع بعض ماكانش هيخضر غير في آخر يوم — يعني مفيش إشارة تقدّم طول الطريق.
+⚠️ grep واحد على الكل ماكانش هيخضر غير في آخر يوم — يعني مفيش إشارة تقدّم طول الطريق.
 
-**١ج-أ — `components/` نضيفة**
-
-```
-grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" components/
-```
-
-**١ج-ب — `app/` نضيفة**
+**١ج-أ — `AppNav` و`BackLink` نضاف**
 
 ```
-grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" app/
+grep -E "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" components/AppNav.tsx components/BackLink.tsx
+```
+
+**١ج-ب — باقي `app/` و`components/` نضاف**
+
+```
+grep -rE "(bg|text|border)-(gray|slate|green|red|blue|amber|orange|purple|indigo|violet|rose|sky|cyan)-[0-9]" app/ components/
 ```
 
 ⚠️ **الـgrep ده مابيمسكش `emerald` ولا `yellow` ولا `divide` ولا `ring`** — واتلقوا فعلًا في الشغل (`text-emerald-900` · `divide-gray-50` · `focus:ring-gray-900`). النسخة الأوسع اللي بيتشتغل بيها:
