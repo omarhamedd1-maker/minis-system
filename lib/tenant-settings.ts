@@ -31,6 +31,17 @@ export type TenantCredentials = {
    * «مافيش رسالة».
    */
   followupTemplate: string | null;
+  /**
+   * حسابات ميتا — واتساب وإنستجرام وماسنجر.
+   *
+   * ⚠️ **سرّ التطبيق مش هنا** — التطبيق عند ميتا واحد للسيستم كله،
+   * فالسرّ في متغيّرات البيئة. اللي هنا معرّفات البيزنس نفسه.
+   */
+  metaPageId: string | null;
+  metaPageToken: string | null;
+  whatsappPhoneId: string | null;
+  whatsappToken: string | null;
+  instagramAccountId: string | null;
 };
 
 /**
@@ -61,6 +72,11 @@ export async function loadTenantCredentials(
     shopifyClientId: data?.shopify_client_id ?? null,
     shopifyClientSecret: data?.shopify_client_secret ?? null,
     followupTemplate: data?.followup_template ?? null,
+    metaPageId: data?.meta_page_id ?? null,
+    metaPageToken: data?.meta_page_token ?? null,
+    whatsappPhoneId: data?.whatsapp_phone_id ?? null,
+    whatsappToken: data?.whatsapp_token ?? null,
+    instagramAccountId: data?.instagram_account_id ?? null,
   };
 }
 
