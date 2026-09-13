@@ -26,6 +26,8 @@ export const PRESETS: Preset[] = [
       "orders.delete",
       "orders.archive",
       "orders.comments",
+      "inbox.view",
+      "inbox.reply",
       "ship.send",
       "ship.print",
       "ship.link",

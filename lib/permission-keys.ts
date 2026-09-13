@@ -14,6 +14,8 @@ export type PermissionKey =
   | "orders.delete"
   | "orders.archive"
   | "orders.comments"
+  | "inbox.view"
+  | "inbox.reply"
   | "ship.send"
   | "ship.print"
   | "ship.link"
@@ -59,6 +61,21 @@ export const PERMISSIONS: PermissionGroup[] = [
       { key: "orders.delete", label: "حذف أوردر" },
       { key: "orders.archive", label: "أرشفة الأوردرات" },
       { key: "orders.comments", label: "التعليقات على الأوردرات" },
+    ],
+  },
+  {
+    group: "صندوق الرسايل",
+    items: [
+      {
+        key: "inbox.view",
+        label: "عرض رسايل العملاء",
+        hint: "واتساب وإنستجرام وماسنجر",
+      },
+      {
+        key: "inbox.reply",
+        label: "الرد على العميل",
+        hint: "الكلام بيروح باسم المتجر",
+      },
     ],
   },
   {
