@@ -27,9 +27,9 @@ export function OrderItemRow({
   const formId = `item-${itemId}`;
 
   return (
-    <tr className={`border-b border-gray-100 last:border-0 ${editing ? "bg-yellow-50" : ""}`}>
-      <td className="px-2 py-3 text-gray-900 sm:px-4">{productName}</td>
-      <td className="hidden px-4 py-3 text-gray-700 sm:table-cell">{variantName}</td>
+    <tr className={`border-b border-line last:border-0 ${editing ? "bg-warning-soft" : ""}`}>
+      <td className="px-2 py-3 text-ink sm:px-4">{productName}</td>
+      <td className="hidden px-4 py-3 text-ink-body sm:table-cell">{variantName}</td>
 
       {editing ? (
         <>
@@ -46,7 +46,7 @@ export function OrderItemRow({
               min={1}
               step={1}
               aria-label="الكمية"
-              className="w-16 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-16 rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </td>
           <td className="px-2 py-3 sm:px-4">
@@ -58,7 +58,7 @@ export function OrderItemRow({
               min={0}
               step="0.01"
               aria-label="سعر البيع"
-              className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-24 rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </td>
           <td className="px-2 py-3 sm:px-4">
@@ -66,14 +66,14 @@ export function OrderItemRow({
               <button
                 type="submit"
                 form={formId}
-                className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white"
+                className="rounded-control bg-primary px-3 py-1 text-xs font-medium text-white"
               >
                 حفظ
               </button>
               <button
                 type="button"
                 onClick={() => setEditing(false)}
-                className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700"
+                className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body"
               >
                 إلغاء
               </button>
@@ -82,17 +82,17 @@ export function OrderItemRow({
         </>
       ) : (
         <>
-          <td className="px-2 py-3 text-gray-700 sm:px-4">{quantity}</td>
-          <td className="px-2 py-3 text-gray-700 sm:px-4">{formatMoney(salePrice)}</td>
+          <td className="px-2 py-3 text-ink-body sm:px-4">{quantity}</td>
+          <td className="px-2 py-3 text-ink-body sm:px-4">{formatMoney(salePrice)}</td>
           <td className="px-2 py-3 sm:px-4">
             <div className="flex items-center gap-2">
-              <span className="text-gray-700">
+              <span className="text-ink-body">
                 {formatMoney(quantity * salePrice)}
               </span>
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700"
+                className="rounded-control bg-sunken px-2.5 py-1 text-xs font-medium text-ink-body"
               >
                 تعديل
               </button>
@@ -105,7 +105,7 @@ export function OrderItemRow({
                     if (!confirm("متأكد إنك عايز تمسح المنتج ده من الأوردر؟"))
                       e.preventDefault();
                   }}
-                  className="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
+                  className="rounded-control bg-danger-soft px-2.5 py-1 text-xs font-medium text-danger"
                 >
                   مسح
                 </button>

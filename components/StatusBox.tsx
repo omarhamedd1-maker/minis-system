@@ -37,7 +37,7 @@ export function StatusBox({
           onClick={() => setEditing(true)}
           title="تعديل الحالة"
           aria-label="تعديل الحالة"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-600"
+          className="flex h-7 w-7 items-center justify-center rounded-control bg-sunken text-ink-muted"
         >
           <svg
             viewBox="0 0 24 24"
@@ -63,7 +63,7 @@ export function StatusBox({
         name="status"
         defaultValue={currentStatus}
         aria-label="حالة الأوردر"
-        className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="rounded-control border border-line-strong bg-surface px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -75,7 +75,7 @@ export function StatusBox({
         type="submit"
         title="حفظ"
         aria-label="حفظ"
-        className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white"
+        className="flex h-7 w-7 items-center justify-center rounded-control bg-primary text-white"
       >
         <svg
           viewBox="0 0 24 24"
@@ -94,7 +94,7 @@ export function StatusBox({
         onClick={() => setEditing(false)}
         title="إلغاء"
         aria-label="إلغاء"
-        className="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-100 text-gray-500"
+        className="flex h-7 w-7 items-center justify-center rounded-control bg-sunken text-ink-muted"
       >
         <svg
           viewBox="0 0 24 24"

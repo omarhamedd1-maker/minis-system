@@ -28,19 +28,19 @@ export function OrderItemCard({
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="rounded-xl bg-gray-50 p-3">
+    <div className="rounded-card bg-sunken p-3">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-gray-900">{productName}</div>
+          <div className="text-sm font-medium text-ink">{productName}</div>
           {variantName && variantName !== "—" && (
-            <div className="text-[11px] text-gray-400">{variantName}</div>
+            <div className="text-[11px] text-ink-faint">{variantName}</div>
           )}
-          <div className="mt-1 text-xs text-gray-600">
+          <div className="mt-1 text-xs text-ink-muted">
             {quantity} × {formatMoney(salePrice)}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span className="text-sm font-bold text-gray-900">
+          <span className="text-sm font-bold text-ink">
             {formatMoney(quantity * salePrice)}
           </span>
           {canEdit && (
@@ -49,7 +49,7 @@ export function OrderItemCard({
                 type="button"
                 onClick={() => setEditing((v) => !v)}
                 title="تعديل"
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-gray-600 shadow-sm"
+                className="flex h-7 w-7 items-center justify-center rounded-control bg-surface text-ink-muted shadow-card"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -72,7 +72,7 @@ export function OrderItemCard({
                   onClick={(e) => {
                     if (!confirm("تمسح المنتج ده من الأوردر؟")) e.preventDefault();
                   }}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-red-600 shadow-sm"
+                  className="flex h-7 w-7 items-center justify-center rounded-control bg-surface text-danger shadow-card"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -98,36 +98,36 @@ export function OrderItemCard({
             await updateAction(fd);
             setEditing(false);
           }}
-          className="minis-in mt-2 flex items-end gap-2 border-t border-gray-200 pt-2"
+          className="minis-in mt-2 flex items-end gap-2 border-t border-line pt-2"
         >
           <input type="hidden" name="order_id" value={orderId} />
           <input type="hidden" name="item_id" value={itemId} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <label className="text-[11px] text-gray-500">الكمية</label>
+            <label className="text-[11px] text-ink-muted">الكمية</label>
             <input
               type="number"
               name="quantity"
               defaultValue={quantity}
               min={1}
               step={1}
-              className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-control border border-line-strong px-2 py-1.5 text-sm"
             />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <label className="text-[11px] text-gray-500">السعر</label>
+            <label className="text-[11px] text-ink-muted">السعر</label>
             <input
               type="number"
               name="sale_price"
               defaultValue={salePrice}
               min={0}
               step="0.01"
-              className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-control border border-line-strong px-2 py-1.5 text-sm"
             />
           </div>
           <button
             type="submit"
             title="حفظ"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-primary text-white"
           >
             <svg
               viewBox="0 0 24 24"
