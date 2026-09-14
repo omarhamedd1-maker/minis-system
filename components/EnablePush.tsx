@@ -118,15 +118,15 @@ export function EnablePush() {
     }
   }
 
-  const box = "rounded-xl border p-3 text-xs leading-6";
+  const box = "rounded-card border p-3 text-xs leading-6";
 
   if (state === "checking") {
-    return <p className="text-xs text-gray-400">بنشوف حالة الإشعارات…</p>;
+    return <p className="text-xs text-ink-faint">بنشوف حالة الإشعارات…</p>;
   }
 
   if (state === "needs_home_screen") {
     return (
-      <div className={`${box} border-amber-300 bg-amber-50 text-amber-900`}>
+      <div className={`${box} border-warning-line bg-warning-soft text-warning`}>
         <b>على الآيفون فيه خطوة واحدة قبل الإشعارات:</b>
         <br />
         من سفاري دوس زرار المشاركة (المربع بسهم لفوق) ← <b>Add to Home
@@ -140,7 +140,7 @@ export function EnablePush() {
 
   if (state === "unsupported") {
     return (
-      <div className={`${box} border-gray-200 bg-gray-50 text-gray-600`}>
+      <div className={`${box} border-line bg-sunken text-ink-muted`}>
         المتصفح ده مابيدعمش الإشعارات. جرّب كروم على أندرويد أو الكمبيوتر، أو
         على الآيفون ضيف البرنامج للشاشة الرئيسية.
       </div>
@@ -149,7 +149,7 @@ export function EnablePush() {
 
   if (state === "blocked") {
     return (
-      <div className={`${box} border-red-300 bg-red-50 text-red-800`}>
+      <div className={`${box} border-danger-line bg-danger-soft text-danger`}>
         <b>الإشعارات مرفوضة من إعدادات المتصفح.</b>
         <br />
         لازم تسمح بيها من إعدادات الموقع في المتصفح، وبعدين ترجع هنا.
@@ -161,13 +161,13 @@ export function EnablePush() {
     <div className="space-y-2">
       {state === "on" ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+          <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
             ✅ الإشعارات شغالة على الموبايل ده
           </span>
           <button
             type="button"
             onClick={disable}
-            className="text-[11px] text-gray-500 underline"
+            className="text-[11px] text-ink-muted underline"
           >
             وقّفها على الجهاز ده
           </button>
@@ -177,15 +177,15 @@ export function EnablePush() {
           type="button"
           onClick={enable}
           disabled={state === "working"}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {state === "working" ? "لحظة…" : "شغّل الإشعارات على الموبايل ده"}
         </button>
       )}
 
-      {note && <p className="text-[11px] text-gray-500">{note}</p>}
+      {note && <p className="text-[11px] text-ink-muted">{note}</p>}
 
-      <p className="text-[11px] leading-5 text-gray-400">
+      <p className="text-[11px] leading-5 text-ink-faint">
         الإشعار بيروح للجهاز مش للحساب — كل واحد لازم يشغّلها من موبايله هو.
       </p>
     </div>

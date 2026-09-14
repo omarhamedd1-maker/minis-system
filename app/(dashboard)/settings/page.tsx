@@ -28,14 +28,14 @@ import { undoImport } from "../orders/actions";
 export const dynamic = "force-dynamic";
 
 const input =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none";
+  "w-full rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none";
 
 /** شارة "مربوط / لسه" — نفس الشكل للاتنين */
 function Badge({ on }: { on: boolean }) {
   return (
     <span
       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        on ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+        on ? "bg-success-soft text-success" : "bg-warning-soft text-warning"
       }`}
     >
       {on ? "مربوط" : "لسه"}
@@ -157,17 +157,17 @@ export default async function SettingsPage({
   return (
     <div className="max-w-2xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-gray-900">الإعدادات</h1>
-        <p className="mt-1 text-xs text-gray-400">{tenant?.name ?? "بيزنسك"}</p>
+        <h1 className="text-lg font-bold text-ink">الإعدادات</h1>
+        <p className="mt-1 text-xs text-ink-faint">{tenant?.name ?? "بيزنسك"}</p>
       </div>
 
       {saved && (
-        <p className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-800">
+        <p className="rounded-control bg-success-soft px-4 py-2 text-sm text-success">
           {saved}
         </p>
       )}
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800">
+        <p className="rounded-control bg-danger-soft px-4 py-2 text-sm text-danger">
           {error}
         </p>
       )}
@@ -175,15 +175,15 @@ export default async function SettingsPage({
       <IntegrationHealth check={checkIntegrations} />
 
       {/* ===== شوبيفاي — ضغطة واحدة ===== */}
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="card p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-gray-900">شوبيفاي</h2>
+          <h2 className="text-sm font-bold text-ink">شوبيفاي</h2>
           <Badge on={hasShopify} />
         </div>
 
         {hasShopify ? (
           <div className="mt-3 flex items-center justify-between gap-3">
-            <span className="text-sm text-gray-900" dir="ltr">
+            <span className="text-sm text-ink" dir="ltr">
               {creds?.shopify_shop}
             </span>
             <div className="flex items-center gap-3">
@@ -191,7 +191,7 @@ export default async function SettingsPage({
                   بيتعمل مرة كل فترة، مش شغل يومي */}
               <ImportShopifyOrders action={importShopifyOrders} />
               <form action={disconnectShopify}>
-                <button type="submit" className="text-xs text-gray-400 underline">
+                <button type="submit" className="text-xs text-ink-faint underline">
                   افصل
                 </button>
               </form>
@@ -211,7 +211,7 @@ export default async function SettingsPage({
                 />
                 <button
                   type="submit"
-                  className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                  className="shrink-0 rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
                 >
                   اربط
                 </button>
@@ -224,44 +224,44 @@ export default async function SettingsPage({
                 لازم يعدّي من هنا، وده بيتطلب توزيع عام من شوبيفاي (بمراجعة
                 منهم) عشان يتغيّر. فالخطوات مكتوبة بالتفصيل عشان صاحب
                 المتجر يعملها بنفسه من غير مبرمج. */}
-            <details className="group mt-3 rounded-lg border border-gray-200" open={!appReady}>
-              <summary className="cursor-pointer px-3 py-2 text-xs font-bold text-gray-900">
+            <details className="group mt-3 rounded-control border border-line" open={!appReady}>
+              <summary className="cursor-pointer px-3 py-2 text-xs font-bold text-ink">
                 {appReady ? "أو اربط بمفاتيح متجرك" : "اربط متجرك بمفاتيحه"}
-                <span className="mt-0.5 block text-[10px] font-normal text-gray-500">
+                <span className="mt-0.5 block text-[10px] font-normal text-ink-muted">
                   بتشتغل مع أي متجر · خمس دقايق · مش محتاجة مبرمج
                 </span>
               </summary>
 
-              <div className="border-t border-gray-100 p-3">
+              <div className="border-t border-line p-3">
                 {/* ⚠️ **شوبيفاي شالت الطريقة دي من متاجر كتير.**
                     متجر ٢ سِك (١٧ أغسطس) صفحة `Develop apps` فيه بتقول
                     «اعمل تطبيقاتك في Dev Dashboard» ومفيهاش زرار إنشاء
                     خالص. فالتعليمات دي بتبعت الناس تدوّر على حاجة مش
                     موجودة — والقسم اللي تحت هو اللي بيشتغل معاهم. */}
-                <p className="mb-3 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] leading-5 text-amber-800">
+                <p className="mb-3 rounded-control bg-warning-soft px-2.5 py-2 text-[11px] leading-5 text-warning">
                   <b>لو متجرك مالوش الخيار ده:</b> شوبيفاي نقلت إنشاء
                   التطبيقات للوحة المطوّرين. ساعتها التطبيق بيدّيك{" "}
                   <span dir="ltr">Client ID</span> و
                   <span dir="ltr"> Secret</span> بدل التوكن — استخدم القسم
                   اللي تحت خالص.
                 </p>
-                <ol className="space-y-2 text-xs text-gray-700">
+                <ol className="space-y-2 text-xs text-ink-body">
                   <li>
                     <b>١.</b> من لوحة متجرك:{" "}
-                    <span dir="ltr" className="text-gray-900">
+                    <span dir="ltr" className="text-ink">
                       Settings ← Apps and sales channels ← Develop apps ← Create
                       an app
                     </span>
                   </li>
                   <li>
                     <b>٢.</b> في{" "}
-                    <span dir="ltr" className="text-gray-900">
+                    <span dir="ltr" className="text-ink">
                       Configuration ← Admin API scopes
                     </span>{" "}
                     علّم الأربعة دول بالظبط:
                     <span
                       dir="ltr"
-                      className="mt-1 block rounded bg-gray-50 px-2 py-1 font-mono text-[11px] text-gray-800"
+                      className="mt-1 block rounded bg-sunken px-2 py-1 font-mono text-[11px] text-ink-body"
                     >
                       read_products, read_orders, write_orders, write_order_edits
                     </span>
@@ -271,11 +271,11 @@ export default async function SettingsPage({
                   </li>
                   <li>
                     <b>٤.</b> من{" "}
-                    <span dir="ltr" className="text-gray-900">
+                    <span dir="ltr" className="text-ink">
                       API credentials
                     </span>{" "}
                     انسخ{" "}
-                    <span dir="ltr" className="text-gray-900">
+                    <span dir="ltr" className="text-ink">
                       Admin API access token
                     </span>{" "}
                     — بيبدأ بـ<span dir="ltr">shpat_</span> وبيتعرض{" "}
@@ -306,7 +306,7 @@ export default async function SettingsPage({
                   />
                   <button
                     type="submit"
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                    className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
                   >
                     اربط بالتوكن
                   </button>
@@ -314,10 +314,10 @@ export default async function SettingsPage({
                   {/* ⚠️ **ده مش قسم نادر، ده اللي بيشتغل مع المتاجر
                       الجديدة.** كان مكتوب بخط رمادي صغير كأنه استثناء،
                       فعمر فتح الخانة الغلط وحط السر مكان التوكن. */}
-                  <details className="rounded-lg border border-gray-200 p-2">
-                    <summary className="cursor-pointer text-xs font-medium text-gray-700">
+                  <details className="rounded-control border border-line p-2">
+                    <summary className="cursor-pointer text-xs font-medium text-ink-body">
                       تطبيقك من لوحة المطوّرين؟ اضغط هنا
-                      <span className="mt-0.5 block text-[10px] font-normal text-gray-500">
+                      <span className="mt-0.5 block text-[10px] font-normal text-ink-muted">
                         ساعتها معاك <span dir="ltr">Client ID</span> و
                         <span dir="ltr"> Secret</span> — مش توكن
                       </span>
@@ -344,7 +344,7 @@ export default async function SettingsPage({
 
                 {/* بنجرّب الاتصال قبل ما نحفظ — فالرد بيقول شغّال ولا لأ
                     على طول بدل ما يكتشفها في أول مزامنة */}
-                <p className="mt-2 text-[10px] text-gray-400">
+                <p className="mt-2 text-[10px] text-ink-faint">
                   هنجرّب الاتصال بمتجرك قبل ما نحفظ — لو المفاتيح غلط هنقولك
                   على طول.
                 </p>
@@ -355,9 +355,9 @@ export default async function SettingsPage({
       </div>
 
       {/* ===== بوسطة — مربع المفتاح وبس ===== */}
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="card p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-gray-900">بوسطة</h2>
+          <h2 className="text-sm font-bold text-ink">بوسطة</h2>
           <Badge on={hasBosta} />
         </div>
 
@@ -371,7 +371,7 @@ export default async function SettingsPage({
           />
           <button
             type="submit"
-            className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            className="shrink-0 rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
           >
             {hasBosta ? "غيّر" : "اربط"}
           </button>
@@ -391,11 +391,11 @@ export default async function SettingsPage({
           شحنة، إحنا بنروح نجيبها من بوسطة بمفتاح البيزنس.
         */}
         {hasBosta && bostaHook && (
-          <div className="mt-4 border-t border-gray-100 pt-3">
-            <p className="text-xs font-medium text-gray-700">
+          <div className="mt-4 border-t border-line pt-3">
+            <p className="text-xs font-medium text-ink-body">
               رابط الويب هوك — الزقه في إعدادات بوسطة
             </p>
-            <p className="mt-0.5 text-[11px] text-gray-400">
+            <p className="mt-0.5 text-[11px] text-ink-faint">
               من غيره حالة الشحنة بتتحدّث كل ربع ساعة بدل ثواني
             </p>
             <CopyLink url={bostaHook} />
@@ -404,19 +404,19 @@ export default async function SettingsPage({
       </div>
 
       {/* ===== صندوق الرسايل — حسابات ميتا ===== */}
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="card p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-gray-900">صندوق الرسايل</h2>
+          <h2 className="text-sm font-bold text-ink">صندوق الرسايل</h2>
           <Badge on={hasMeta} />
         </div>
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="mt-1 text-xs text-ink-faint">
           واتساب وإنستجرام وماسنجر في مكان واحد جنب أوردرات العميل.
         </p>
 
         {meta === null ? (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p className="mt-3 rounded-control bg-warning-soft px-3 py-2 text-xs text-warning">
             الجداول لسه مااتعملتش — شغّل{" "}
-            <code className="rounded bg-amber-100 px-1">sql/inbox.sql</code>
+            <code className="rounded bg-warning-soft px-1">sql/inbox.sql</code>
           </p>
         ) : (
           <>
@@ -432,24 +432,24 @@ export default async function SettingsPage({
                   configId={metaConfigId}
                   action={connectMeta}
                 />
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] text-ink-faint">
                   بتختار الصفحة والحساب من شباك ميتا — من غير ما تكتب توكن.
                 </p>
               </div>
             ) : (
-              <p className="mt-3 text-[11px] text-gray-400">
+              <p className="mt-3 text-[11px] text-ink-faint">
                 زرار الربط بضغطة بيظهر لما تطبيق ميتا يتظبّط.
               </p>
             )}
 
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs text-gray-500">
+              <summary className="cursor-pointer text-xs text-ink-muted">
                 الربط اليدوي
               </summary>
             <form action={saveMetaAccounts} className="mt-3 space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-ink-body">
                     معرّف صفحة فيسبوك
                   </span>
                   <input
@@ -461,7 +461,7 @@ export default async function SettingsPage({
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-ink-body">
                     معرّف حساب إنستجرام
                   </span>
                   <input
@@ -473,7 +473,7 @@ export default async function SettingsPage({
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-ink-body">
                     معرّف رقم الواتساب
                   </span>
                   <input
@@ -485,7 +485,7 @@ export default async function SettingsPage({
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-ink-body">
                     توكن الصفحة (فيسبوك وإنستجرام)
                   </span>
                   <input
@@ -498,7 +498,7 @@ export default async function SettingsPage({
                   />
                 </label>
                 <label className="block sm:col-span-2">
-                  <span className="text-xs font-medium text-gray-700">
+                  <span className="text-xs font-medium text-ink-body">
                     توكن واتساب
                   </span>
                   <input
@@ -517,14 +517,14 @@ export default async function SettingsPage({
                 لازم تتقال، وإلا اللي بيعدّل معرّف الصفحة بيفتكر إنه
                 لازم يكتب التوكن تاني وهو مش شايفه.
               */}
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-ink-faint">
                 التوكن اللي سايبه فاضي بيفضل زي ما هو.
               </p>
 
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+                  className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
                 >
                   احفظ
                 </button>
@@ -537,8 +537,8 @@ export default async function SettingsPage({
               ⚠️ **ثابت لكل البيزنسات** (التطبيق عند ميتا واحد)، والبيزنس
               بيتعرف من معرّف الحساب اللي فوق مش من الرابط.
             */}
-            <div className="mt-4 border-t border-gray-100 pt-3">
-              <p className="text-xs font-medium text-gray-700">
+            <div className="mt-4 border-t border-line pt-3">
+              <p className="text-xs font-medium text-ink-body">
                 رابط الويب هوك — بيتحط في إعدادات التطبيق عند ميتا
               </p>
               <CopyLink url={origin + "/api/meta/webhook"} />
@@ -548,7 +548,7 @@ export default async function SettingsPage({
               <form action={disconnectMeta} className="mt-3">
                 <button
                   type="submit"
-                  className="text-xs text-gray-400 hover:text-red-600"
+                  className="text-xs text-ink-faint hover:text-danger"
                 >
                   افصل الربط
                 </button>
@@ -565,12 +565,12 @@ export default async function SettingsPage({
         نفس الحساب، الحاجة اللي هتوديه هتودّيها معاها — عشان كده بتروح
         على جروب تليجرام برّه السيستم خالص.
       */}
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="card p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-gray-900">النسخة الاحتياطية</h2>
+          <h2 className="text-sm font-bold text-ink">النسخة الاحتياطية</h2>
           <Badge on={hasBackup} />
         </div>
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="mt-1 text-xs text-ink-faint">
           كل يوم بيتبعت ملف CSV لكل جدول على جروب تليجرام — أوردرات وعملاء
           ومنتجات ومصاريف. الملفات دي بتتفتح بإيدك من غير السيستم ده.
         </p>
@@ -590,10 +590,10 @@ export default async function SettingsPage({
             className={input}
             dir="ltr"
           />
-          <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white">
+          <button className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white">
             {hasBackup ? "غيّر الجروب" : "شغّل النسخة"}
           </button>
-          <p className="text-[11px] text-gray-400">
+          <p className="text-[11px] text-ink-faint">
             البوت لازم يكون عضو في الجروب — من غير كده تليجرام بيرفض البعت
             برسالة شكلها كأن التوكن غلط.
           </p>
@@ -601,8 +601,8 @@ export default async function SettingsPage({
       </div>
 
       {/* ===== إشعارات الموبايل ===== */}
-      <div className="rounded-xl bg-white p-5 shadow-sm">
-        <h2 className="mb-3 text-sm font-bold text-gray-900">الإشعارات</h2>
+      <div className="card p-5">
+        <h2 className="mb-3 text-sm font-bold text-ink">الإشعارات</h2>
         <EnablePush />
       </div>
 
@@ -612,9 +612,9 @@ export default async function SettingsPage({
         ⚠️ **نسخة عند صاحب المتجر على جهازه** — مش نسخة احتياطية للسيستم.
         لو حصل حاجة للداتابيز الملفات دي هي اللي في إيده.
       */}
-      <div className="rounded-xl bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-bold text-gray-900">نزّل الداتا</h2>
-        <p className="mt-0.5 text-[11px] text-gray-400">
+      <div className="card p-5">
+        <h2 className="text-sm font-bold text-ink">نزّل الداتا</h2>
+        <p className="mt-0.5 text-[11px] text-ink-faint">
           ملفات إكسيل عندك على جهازك.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -640,9 +640,9 @@ export default async function SettingsPage({
         ⚠️ **رقم واحد لأي مكان** — ده اللي بيتحصّل من العميل، وبيتستخدم في
         أوردرات اللينك المباشر اللي مافيش سلة شوبيفاي بتحسبها.
       */}
-      <div className="rounded-xl bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-bold text-gray-900">الشحن الثابت</h2>
-        <p className="mt-0.5 text-[11px] text-gray-400">
+      <div className="card p-5">
+        <h2 className="text-sm font-bold text-ink">الشحن الثابت</h2>
+        <p className="mt-0.5 text-[11px] text-ink-faint">
           اللي بتحصّله من العميل على أي أوردر جاي من لينك طلب مباشر.
         </p>
         <form action={saveFlatShipping} className="mt-3 flex flex-wrap gap-2">
@@ -651,11 +651,11 @@ export default async function SettingsPage({
             type="number"
             min="0"
             defaultValue={flatShipping}
-            className="w-28 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="w-28 rounded-control border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <button
             type="submit"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
           >
             احفظ
           </button>
@@ -666,16 +666,16 @@ export default async function SettingsPage({
 
       <Link
         href="/orders/reconcile"
-        className="flex items-center justify-between gap-3 rounded-xl bg-white p-5 shadow-sm transition-colors hover:bg-gray-50"
+        className="card flex items-center justify-between gap-3 p-5 transition-colors hover:bg-sunken"
       >
-        <h2 className="text-sm font-bold text-gray-900">مراجعة الداتا</h2>
-        <span className="text-gray-300">←</span>
+        <h2 className="text-sm font-bold text-ink">مراجعة الداتا</h2>
+        <span className="text-ink-faint">←</span>
       </Link>
 
       {/* ===== تطبيق شوبيفاي — لصاحب المنصة بس ===== */}
       {me.isPlatformAdmin && (
-        <div className="rounded-xl border border-gray-300 bg-gray-50 p-5">
-          <h2 className="text-sm font-bold text-gray-900">
+        <div className="rounded-card border border-line-strong bg-sunken p-5">
+          <h2 className="text-sm font-bold text-ink">
             تطبيق شوبيفاي (صاحب المنصة)
           </h2>
 
@@ -698,13 +698,13 @@ export default async function SettingsPage({
             />
             <button
               type="submit"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+              className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
             >
               احفظ
             </button>
           </form>
 
-          <p className="mt-3 text-[11px] leading-6 text-gray-500" dir="ltr">
+          <p className="mt-3 text-[11px] leading-6 text-ink-muted" dir="ltr">
             {origin}/api/shopify/install
             <br />
             {origin}/api/shopify/callback
