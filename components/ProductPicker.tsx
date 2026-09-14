@@ -57,7 +57,7 @@ export function ProductPicker({
         }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
       />
       {open && (
         <>
@@ -66,9 +66,9 @@ export function ProductPicker({
             onClick={() => setOpen(false)}
             aria-hidden="true"
           ></div>
-          <div className="absolute bottom-full z-20 mb-1 max-h-64 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl">
+          <div className="absolute bottom-full z-20 mb-1 max-h-64 w-full overflow-y-auto rounded-control border border-line bg-surface shadow-xl">
             {filtered.length === 0 ? (
-              <p className="px-3 py-3 text-center text-xs text-gray-400">
+              <p className="px-3 py-3 text-center text-xs text-ink-faint">
                 مفيش نتايج
               </p>
             ) : (
@@ -77,18 +77,18 @@ export function ProductPicker({
                   type="button"
                   key={v.id}
                   onClick={() => pick(v)}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-right text-sm hover:bg-gray-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-right text-sm hover:bg-sunken"
                 >
                   <span
-                    className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600"
+                    className="shrink-0 rounded bg-sunken px-1.5 py-0.5 text-xs text-ink-muted"
                     dir="ltr"
                   >
                     {v.sku ?? "—"}
                   </span>
-                  <span className="text-gray-500" dir="ltr">
+                  <span className="text-ink-muted" dir="ltr">
                     {v.name_en ?? "—"}
                   </span>
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-ink">
                     {v.name_ar ?? "—"}
                   </span>
                 </button>

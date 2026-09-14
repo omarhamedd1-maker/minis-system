@@ -51,7 +51,7 @@ export function FollowupList({
   return (
     <div className="space-y-3">
       {items.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-card bg-surface p-4 shadow-card">
           {step === null ? (
             <>
               <button
@@ -60,17 +60,17 @@ export function FollowupList({
                   setStep(0);
                   openFor(items[0]);
                 }}
-                className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                className="rounded-control bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
               >
                 ابعت للكل ({items.length})
               </button>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-ink-muted">
                 بيفتح محادثة كل عميل بالرسالة مكتوبة، وإنت تدوس إرسال.
               </span>
             </>
           ) : (
             <>
-              <span className="text-sm text-gray-900">
+              <span className="text-sm text-ink">
                 {current
                   ? `${step + 1} من ${items.length} — ${current.customerName ?? "بدون اسم"}`
                   : "خلصت الجولة"}
@@ -83,7 +83,7 @@ export function FollowupList({
                     setStep(next);
                     openFor(items[next]);
                   }}
-                  className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                  className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                 >
                   اللي بعده
                 </button>
@@ -91,7 +91,7 @@ export function FollowupList({
               <button
                 type="button"
                 onClick={() => setStep(null)}
-                className="rounded-lg bg-white px-3 py-1.5 text-sm text-gray-500 shadow-sm hover:bg-gray-100"
+                className="rounded-control bg-surface px-3 py-1.5 text-sm text-ink-muted shadow-card hover:bg-sunken"
               >
                 وقّف
               </button>
@@ -103,15 +103,15 @@ export function FollowupList({
       {items.map((it, i) => (
         <div
           key={it.id}
-          className={`rounded-xl bg-white p-4 shadow-sm sm:p-5 ${
-            step === i ? "ring-2 ring-emerald-400" : ""
+          className={`rounded-card bg-surface p-4 shadow-card sm:p-5 ${
+            step === i ? "ring-2 ring-success" : ""
           }`}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="font-medium text-gray-900">
+            <span className="font-medium text-ink">
               {it.customerName ?? "بدون اسم"}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-ink-muted">
               #{it.orderNumber} · اتسلّم من {it.days} يوم
             </span>
           </div>
@@ -122,14 +122,14 @@ export function FollowupList({
               setEdits((prev) => ({ ...prev, [it.id]: e.target.value }))
             }
             rows={3}
-            className="mt-2 w-full rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="mt-2 w-full rounded-control bg-sunken px-3 py-2 text-sm text-ink-body focus:bg-surface focus:outline-none focus:ring-1 focus:ring-primary"
           />
 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => openFor(it)}
-              className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+              className="rounded-control bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
             >
               افتح واتساب
             </button>
@@ -138,13 +138,13 @@ export function FollowupList({
                 <input type="hidden" name="orderId" value={it.id} />
                 <button
                   type="submit"
-                  className="rounded-lg bg-white px-4 py-1.5 text-sm text-gray-600 shadow-sm hover:bg-gray-100"
+                  className="rounded-control bg-surface px-4 py-1.5 text-sm text-ink-muted shadow-card hover:bg-sunken"
                 >
                   اتسأل خلاص
                 </button>
               </form>
             )}
-            <span className="text-xs text-gray-400" dir="ltr">
+            <span className="text-xs text-ink-faint" dir="ltr">
               {it.customerPhone}
             </span>
             {edits[it.id] !== undefined && edits[it.id] !== it.message && (
@@ -157,7 +157,7 @@ export function FollowupList({
                     return next;
                   })
                 }
-                className="text-xs text-gray-400 underline hover:text-gray-600"
+                className="text-xs text-ink-faint underline hover:text-ink-muted"
               >
                 رجّع النص الأصلي
               </button>

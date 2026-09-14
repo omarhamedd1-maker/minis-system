@@ -47,9 +47,9 @@ export function ImportShopifyProducts({
       </button>
 
       {open && (
-        <div className="mt-3 w-full rounded-xl bg-white p-5 shadow-sm">
+        <div className="mt-3 w-full rounded-card bg-surface p-5 shadow-card">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">
+            <h2 className="text-sm font-bold text-ink">
               الجلب من شوبيفاي
             </h2>
             <button
@@ -58,16 +58,16 @@ export function ImportShopifyProducts({
                 setOpen(false);
                 setResult(null);
               }}
-              className="text-xs text-gray-500 hover:text-gray-800"
+              className="text-xs text-ink-muted hover:text-ink-body"
             >
               إخفاء
             </button>
           </div>
 
-          {busy && <p className="text-sm text-gray-500">بنقرا من شوبيفاي…</p>}
+          {busy && <p className="text-sm text-ink-muted">بنقرا من شوبيفاي…</p>}
 
           {result && !result.ok && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
               {result.error}
             </p>
           )}
@@ -75,13 +75,13 @@ export function ImportShopifyProducts({
           {plan && !busy && (
             <div className="space-y-3 text-sm">
               {added && (
-                <p className="rounded-lg bg-green-50 px-3 py-2 font-medium text-green-800">
+                <p className="rounded-control bg-success-soft px-3 py-2 font-medium text-success">
                   اتضاف {added.products} منتج و{added.variants} شكل.
                 </p>
               )}
 
               {toAdd === 0 && !added && (
-                <p className="text-gray-600">
+                <p className="text-ink-muted">
                   كل منتجات شوبيفاي موجودة عندك خلاص.
                 </p>
               )}
@@ -125,11 +125,11 @@ export function ImportShopifyProducts({
 
               {/* الناقص — ده أهم جزء في الشاشة */}
               {plan.needsCost.length > 0 && (
-                <div className="rounded-lg bg-amber-50 p-3">
-                  <p className="text-sm font-bold text-amber-900">
+                <div className="rounded-control bg-warning-soft p-3">
+                  <p className="text-sm font-bold text-warning">
                     {plan.needsCost.length} شكل لسه محتاج تكلفة
                   </p>
-                  <p className="mt-0.5 text-xs text-amber-800">
+                  <p className="mt-0.5 text-xs text-warning">
                     شوبيفاي مافيهاش تكلفة — فيها سعر البيع بس. ولحد ما تملا
                     التكلفة، الربح في الداشبورد بيطلع أكبر من الحقيقة.
                   </p>
@@ -137,21 +137,21 @@ export function ImportShopifyProducts({
                     {plan.needsCost.slice(0, 8).map((v) => (
                       <div
                         key={v.ourVariantId}
-                        className="flex justify-between gap-3 text-xs text-amber-900"
+                        className="flex justify-between gap-3 text-xs text-warning"
                       >
                         <span>{v.name}</span>
                         <span className="font-medium">بيع {v.salePrice}</span>
                       </div>
                     ))}
                     {plan.needsCost.length > 8 && (
-                      <p className="text-xs text-amber-700">
+                      <p className="text-xs text-warning">
                         و{plan.needsCost.length - 8} غيرهم…
                       </p>
                     )}
                   </div>
                   <Link
                     href="/products?missing_cost=1"
-                    className="mt-2 inline-block text-xs font-medium text-amber-900 underline"
+                    className="mt-2 inline-block text-xs font-medium text-warning underline"
                   >
                     اعرضهم كلهم
                   </Link>
@@ -159,7 +159,7 @@ export function ImportShopifyProducts({
               )}
 
               {plan.newNeedingCost > 0 && !added && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-ink-muted">
                   و{plan.newNeedingCost} شكل هيتضاف بتكلفة صفر — هيحتاجوا تكلفة
                   برضه.
                 </p>
@@ -172,7 +172,7 @@ export function ImportShopifyProducts({
                     if (confirm(`تضيف ${toAdd} حاجة جديدة من شوبيفاي؟`)) run(false);
                   }}
                   disabled={busy}
-                  className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                  className="w-full rounded-control bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
                 >
                   ضيف الـ{toAdd} دول
                 </button>
@@ -198,10 +198,10 @@ function Group({
   return (
     <div>
       <div className="mb-1 flex items-center gap-2">
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+        <span className="rounded-full bg-sunken px-2 py-0.5 text-xs font-medium text-ink-body">
           {count}
         </span>
-        <span className="text-xs font-medium text-gray-700">{title}</span>
+        <span className="text-xs font-medium text-ink-body">{title}</span>
       </div>
       <div className="space-y-1">{children}</div>
     </div>
@@ -218,12 +218,12 @@ function Row({
   note?: string;
 }) {
   return (
-    <div className="rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs">
+    <div className="rounded-control bg-sunken px-2.5 py-1.5 text-xs">
       <div className="flex justify-between gap-3">
-        <span className="text-gray-700">{right}</span>
-        <span className="font-medium text-gray-900">{left}</span>
+        <span className="text-ink-body">{right}</span>
+        <span className="font-medium text-ink">{left}</span>
       </div>
-      {note && <span className="block text-[11px] text-gray-400">{note}</span>}
+      {note && <span className="block text-[11px] text-ink-faint">{note}</span>}
     </div>
   );
 }
