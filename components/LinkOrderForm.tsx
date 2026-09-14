@@ -50,12 +50,12 @@ export function LinkOrderForm({
 
   if (result?.ok) {
     return (
-      <div className="mt-8 rounded-2xl bg-emerald-50 p-6 text-center">
-        <p className="text-lg font-bold text-emerald-900">وصلنا طلبك ✅</p>
-        <p className="mt-2 text-sm text-emerald-800">
+      <div className="mt-8 rounded-2xl bg-success-soft p-6 text-center">
+        <p className="text-lg font-bold text-success">وصلنا طلبك ✅</p>
+        <p className="mt-2 text-sm text-success">
           هنكلّمك نأكّد الطلب والعنوان قبل ما نشحنه.
         </p>
-        <p className="mt-3 text-xs text-emerald-700">
+        <p className="mt-3 text-xs text-success">
           رقم الطلب {result.orderNumber}
         </p>
       </div>
@@ -89,8 +89,8 @@ export function LinkOrderForm({
           return (
             <div
               key={i.variantId}
-              className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
-                q > 0 ? "border-gray-900 bg-white" : "border-gray-100 bg-gray-50"
+              className={`flex items-center gap-3 rounded-card border p-3 transition-colors ${
+                q > 0 ? "border-primary bg-surface" : "border-line bg-sunken"
               }`}
             >
               {i.image && (
@@ -98,13 +98,13 @@ export function LinkOrderForm({
                 <img
                   src={i.image}
                   alt={i.title}
-                  className="h-14 w-14 shrink-0 rounded-lg bg-white object-cover"
+                  className="h-14 w-14 shrink-0 rounded-control bg-surface object-cover"
                 />
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-gray-900">{i.title}</p>
-                <p className="text-sm font-bold tabular-nums text-gray-900">
+                <p className="truncate text-sm text-ink">{i.title}</p>
+                <p className="text-sm font-bold tabular-nums text-ink">
                   {money(i.price)} جنيه
                 </p>
               </div>
@@ -118,7 +118,7 @@ export function LinkOrderForm({
                       [i.variantId]: Math.max(0, (s[i.variantId] ?? 0) - 1),
                     }))
                   }
-                  className="h-8 w-8 rounded-full bg-gray-100 text-lg leading-none text-gray-700"
+                  className="h-8 w-8 rounded-full bg-sunken text-lg leading-none text-ink-body"
                 >
                   −
                 </button>
@@ -147,7 +147,7 @@ export function LinkOrderForm({
         name="full_name"
         placeholder="اسمك"
         autoComplete="name"
-        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-card border border-line px-4 py-3 text-sm focus:border-primary focus:outline-none"
       />
       <input
         name="phone"
@@ -155,18 +155,18 @@ export function LinkOrderForm({
         inputMode="tel"
         autoComplete="tel"
         dir="ltr"
-        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-card border border-line px-4 py-3 text-sm focus:border-primary focus:outline-none"
       />
       <textarea
         name="address"
         rows={3}
         placeholder="العنوان بالتفصيل — الشارع ورقم العمارة والدور والشقة وعلامة مميزة"
         autoComplete="street-address"
-        className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-card border border-line px-4 py-3 text-sm focus:border-primary focus:outline-none"
       />
 
       {result && !result.ok && (
-        <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">
+        <p className="rounded-control bg-danger-soft px-4 py-2.5 text-sm text-danger">
           {result.error}
         </p>
       )}
@@ -174,7 +174,7 @@ export function LinkOrderForm({
       <button
         type="submit"
         disabled={pending || chosen.length === 0}
-        className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-40"
+        className="w-full rounded-card bg-primary py-3.5 text-sm font-bold text-white hover:bg-primary-dark disabled:opacity-40"
       >
         {pending
           ? "بنسجّل طلبك…"
@@ -183,7 +183,7 @@ export function LinkOrderForm({
             : `اطلب الآن — ${money(total)} جنيه`}
       </button>
 
-      <p className="text-center text-[11px] text-gray-400">
+      <p className="text-center text-[11px] text-ink-faint">
         {shipping > 0 && chosen.length > 0
           ? `شامل الشحن ${money(shipping)} جنيه · الدفع عند الاستلام`
           : "الدفع عند الاستلام · هنكلّمك نأكّد قبل الشحن"}

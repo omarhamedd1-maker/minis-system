@@ -14,12 +14,12 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-5 py-10">
-      <h1 className="text-xl font-bold text-gray-900">سياسة الخصوصية</h1>
-      <p className="mt-1 text-xs text-gray-400">آخر تحديث: ١٠ أغسطس ٢٠٢٦</p>
+      <h1 className="text-xl font-bold text-ink">سياسة الخصوصية</h1>
+      <p className="mt-1 text-xs text-ink-faint">آخر تحديث: ١٠ أغسطس ٢٠٢٦</p>
 
-      <div className="mt-6 space-y-6 text-sm leading-relaxed text-gray-700">
+      <div className="mt-6 space-y-6 text-sm leading-relaxed text-ink-body">
         <section>
-          <h2 className="mb-1 font-bold text-gray-900">مينيز بيعمل إيه</h2>
+          <h2 className="mb-1 font-bold text-ink">مينيز بيعمل إيه</h2>
           <p>
             مينيز نظام تشغيل لمتاجر التجارة الإلكترونية: بيجمع أوردرات المتجر
             في مكان واحد، وبيوصّلها بشركة الشحن، وبيحسب التكاليف والأرباح.
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-bold text-gray-900">بنقرا إيه من متجرك</h2>
+          <h2 className="mb-1 font-bold text-ink">بنقرا إيه من متجرك</h2>
           <p className="mb-2">
             لما تربط متجرك على شوبيفاي، بنطلب أربع صلاحيات بس:
           </p>
@@ -54,7 +54,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-bold text-gray-900">بنخزّن إيه</h2>
+          <h2 className="mb-1 font-bold text-ink">بنخزّن إيه</h2>
           <p>
             الأوردرات وبنودها، وبيانات العميل اللي الشحنة محتاجاها (الاسم
             والتليفون والعنوان)، والمنتجات وتكاليفها. البيانات دي بتتخزّن عشان
@@ -67,7 +67,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-bold text-gray-900">بنبيع البيانات؟ لأ</h2>
+          <h2 className="mb-1 font-bold text-ink">بنبيع البيانات؟ لأ</h2>
           <p>
             مابنبيعش ولا بنأجّر ولا بنشارك بيانات أي متجر مع أي طرف تالت
             لأغراض تسويق. الأطراف الوحيدة اللي البيانات بتعدّي عليها هي اللي
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-bold text-gray-900">لما تشيل التطبيق</h2>
+          <h2 className="mb-1 font-bold text-ink">لما تشيل التطبيق</h2>
           <p>
             أول ما تشيل مينيز من متجرك، بنمسح <b>مفاتيح الربط فورًا</b> ومابقاش
             نقدر نقرا أي حاجة من متجرك.
@@ -100,7 +100,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-bold text-gray-900">طلبات عملاء المتجر</h2>
+          <h2 className="mb-1 font-bold text-ink">طلبات عملاء المتجر</h2>
           <p>
             لو عميل من عملاء متجرك طلب نسخة من بياناته أو طلب مسحها، شوبيفاي
             بتبلّغنا وبنسجّل الطلب ونبلّغ صاحب المتجر. <b>التنفيذ بيتم منه</b>{" "}
@@ -109,13 +109,13 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-bold text-gray-900">تواصل</h2>
+          <h2 className="mb-1 font-bold text-ink">تواصل</h2>
           <p>
             لأي سؤال عن الخصوصية أو طلب مسح بيانات:{" "}
             <a
               href="mailto:minishomedecoreg@gmail.com"
               dir="ltr"
-              className="text-sky-700 underline"
+              className="text-info underline"
             >
               minishomedecoreg@gmail.com
             </a>

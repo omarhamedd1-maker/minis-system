@@ -2,8 +2,8 @@ import Link from "next/link";
 import { signup } from "./actions";
 
 const field =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none";
-const labelClass = "mb-1 block text-sm font-medium text-gray-700";
+  "w-full rounded-control border border-line-strong px-3 py-2 text-ink focus:border-primary focus:outline-none";
+const labelClass = "mb-1 block text-sm font-medium text-ink-body";
 
 export default async function SignupPage({
   searchParams,
@@ -14,16 +14,16 @@ export default async function SignupPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-8">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-center text-2xl font-bold tracking-wide text-gray-900">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-8 shadow-card">
+        <h1 className="mb-1 text-center text-2xl font-bold tracking-wide text-ink">
           Gridpoint
         </h1>
-        <p className="mb-6 text-center text-sm text-gray-500">
+        <p className="mb-6 text-center text-sm text-ink-muted">
           اعمل حساب بيزنسك في دقيقة
         </p>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -32,7 +32,7 @@ export default async function SignupPage({
             وأول ما يعمل بيزنسه بيتسلّم له. الرقم بيتمرّر مخفي عشان
             مايضيعش لو الصفحة اتعملها تحديث. */}
         {install && shop && (
-          <p className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
+          <p className="mb-4 rounded-control bg-success-soft px-4 py-3 text-sm text-success">
             متجرك <b dir="ltr">{shop}</b> اتوافق عليه ✅ — اعمل بيزنسك دلوقتي
             وهيتربط لوحده.
           </p>
@@ -118,15 +118,15 @@ export default async function SignupPage({
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white transition hover:bg-gray-800"
+            className="w-full rounded-control bg-primary px-4 py-2 font-medium text-white transition hover:bg-primary-dark"
           >
             اعمل الحساب
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-gray-500">
+        <p className="mt-5 text-center text-sm text-ink-muted">
           عندك حساب خلاص؟{" "}
-          <Link href="/login" className="font-medium text-gray-900 underline">
+          <Link href="/login" className="font-medium text-ink underline">
             سجّل دخولك
           </Link>
         </p>
