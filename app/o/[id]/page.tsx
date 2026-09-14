@@ -47,8 +47,8 @@ export default async function OrderLinkPage({
   if (!row) {
     return (
       <div className="mx-auto max-w-md px-6 py-20 text-center">
-        <h1 className="text-xl font-bold text-gray-900">اللينك ده مش موجود</h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <h1 className="text-xl font-bold text-ink">اللينك ده مش موجود</h1>
+        <p className="mt-2 text-sm text-ink-muted">
           اتأكد من اللينك، ولو لسه مش شغّال كلّم المتجر.
         </p>
       </div>
@@ -112,23 +112,23 @@ export default async function OrderLinkPage({
   return (
     <div className="mx-auto max-w-md px-6 py-10">
       {store && (
-        <p className="text-center text-xs font-light tracking-[0.2em] text-gray-500">
+        <p className="text-center text-xs font-light tracking-[0.2em] text-ink-muted">
           {store}
         </p>
       )}
 
       {row.title && (
-        <h1 className="mt-4 text-center text-lg font-bold text-gray-900">
+        <h1 className="mt-4 text-center text-lg font-bold text-ink">
           {row.title}
         </h1>
       )}
 
       {!row.active ? (
-        <p className="mt-8 rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+        <p className="mt-8 rounded-card bg-sunken px-4 py-6 text-center text-sm text-ink-muted">
           العرض ده خلص. كلّم المتجر لو لسه عايزه.
         </p>
       ) : items.length === 0 ? (
-        <p className="mt-8 rounded-xl bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+        <p className="mt-8 rounded-card bg-sunken px-4 py-6 text-center text-sm text-ink-muted">
           مفيش منتجات في اللينك ده.
         </p>
       ) : (

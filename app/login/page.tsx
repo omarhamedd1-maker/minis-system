@@ -26,26 +26,26 @@ export default async function LoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-sm">
-        <h1 className="mb-1 text-2xl font-bold tracking-wide text-gray-900">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-8 text-center shadow-card">
+        <h1 className="mb-1 text-2xl font-bold tracking-wide text-ink">
           Gridpoint
         </h1>
-        <p className="mb-6 text-sm text-gray-500">نظام تشغيل المتاجر</p>
+        <p className="mb-6 text-sm text-ink-muted">نظام تشغيل المتاجر</p>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
             {error}
           </div>
         )}
 
-        <p className="rounded-lg bg-gray-50 px-4 py-5 text-sm leading-relaxed text-gray-600">
-          افتح <span className="font-medium text-gray-900">رابط متجرك</span> اللي
+        <p className="rounded-control bg-sunken px-4 py-5 text-sm leading-relaxed text-ink-muted">
+          افتح <span className="font-medium text-ink">رابط متجرك</span> اللي
           وصلك — كل متجر ليه صفحة دخول باسمه.
         </p>
 
-        <p className="mt-5 text-sm text-gray-500">
+        <p className="mt-5 text-sm text-ink-muted">
           لسه مالكش حساب؟{" "}
-          <Link href="/signup" className="font-medium text-gray-900 underline">
+          <Link href="/signup" className="font-medium text-ink underline">
             اعمل بيزنسك
           </Link>
         </p>

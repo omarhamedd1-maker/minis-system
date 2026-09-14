@@ -29,16 +29,16 @@ export default async function StoreLoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-center text-2xl font-bold tracking-wide text-gray-900">
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-8 shadow-card">
+        <h1 className="mb-1 text-center text-2xl font-bold tracking-wide text-ink">
           {tenant.name}
         </h1>
-        <p className="mb-6 text-center text-sm text-gray-500">
+        <p className="mb-6 text-center text-sm text-ink-muted">
           تسجيل الدخول لنظام التشغيل
         </p>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-4 rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -49,7 +49,7 @@ export default async function StoreLoginPage({
           <div>
             <label
               htmlFor="email"
-              className="mb-1 block text-sm font-medium text-gray-700"
+              className="mb-1 block text-sm font-medium text-ink-body"
             >
               الإيميل
             </label>
@@ -59,7 +59,7 @@ export default async function StoreLoginPage({
               type="email"
               required
               autoComplete="email"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-full rounded-control border border-line-strong px-3 py-2 text-ink focus:border-primary focus:outline-none"
               placeholder="you@example.com"
             />
           </div>
@@ -67,7 +67,7 @@ export default async function StoreLoginPage({
           <div>
             <label
               htmlFor="password"
-              className="mb-1 block text-sm font-medium text-gray-700"
+              className="mb-1 block text-sm font-medium text-ink-body"
             >
               الباسورد
             </label>
@@ -77,14 +77,14 @@ export default async function StoreLoginPage({
               type="password"
               required
               autoComplete="current-password"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-full rounded-control border border-line-strong px-3 py-2 text-ink focus:border-primary focus:outline-none"
               placeholder="••••••••"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white transition hover:bg-gray-800"
+            className="w-full rounded-control bg-primary px-4 py-2 font-medium text-white transition hover:bg-primary-dark"
           >
             دخول {tenant.name}
           </button>
