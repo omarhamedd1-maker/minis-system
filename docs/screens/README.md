@@ -1,10 +1,10 @@
 # لقطات شاشة Gridpoint
 
-للمراجعة التصميمية بعد المرحلة ١ (نظام التصميم). اتصوّرت من `main` بعد #176.
+للمراجعة التصميمية بعد المرحلة ١ (نظام التصميم). اتصوّرت من `main` بعد #177 (المرحلة ١ خضرت).
 
 - **البيانات:** البيزنس التجريبي «Mino Demo Store» — بيانات وهمية بالكامل. مفيش ولا صورة من مينيز أو ٢ سِك.
 - **المقاسات:** ديسكتوب 1440 عرض · موبايل 390 عرض. الصفحة كلها لحد آخرها (مش الشاشة الأولى بس)، إلا الحالات اللي فيها قايمة أو شيت مفتوح فهي بمقاس الشاشة (1440×900 و390×844).
-- **العدد:** 133 صورة من 133 · الحجم 17.3 MB.
+- **العدد:** 129 صورة من 133 · الحجم 13.5 MB.
 - **التسمية:** `{الصفحة}-{desktop|mobile}.png` والحالات `{الصفحة}-{الحالة}-{desktop|mobile}.png`.
 
 ## الفهرس
@@ -63,9 +63,9 @@
 | tasks | التاسكات | `/tasks` | [tasks-desktop.png](tasks-desktop.png) | 900px | [tasks-mobile.png](tasks-mobile.png) | 844px |  |
 | tasks-add | التاسكات وفورم «تاسك جديد» مفتوح | `/tasks` | [tasks-add-desktop.png](tasks-add-desktop.png) | 928px | [tasks-add-mobile.png](tasks-add-mobile.png) | 1,052px |  |
 | task | صفحة تاسك بخطوات وتعليقات | `/tasks/:id` | [task-desktop.png](task-desktop.png) | 900px | [task-mobile.png](task-mobile.png) | 1,001px |  |
-| inbox | صندوق الرسايل | `/inbox` | [inbox-desktop.png](inbox-desktop.png) | 3,683px | [inbox-mobile.png](inbox-mobile.png) | 8,546px |  |
-| inbox-empty | صندوق الرسايل — المؤرشف (فاضي) | `/inbox?archived=1` | [inbox-empty-desktop.png](inbox-empty-desktop.png) | 3,683px | [inbox-empty-mobile.png](inbox-empty-mobile.png) | 8,546px |  |
-| conversation | محادثة واتساب | `/inbox/:id` | [conversation-desktop.png](conversation-desktop.png) | 3,683px | [conversation-mobile.png](conversation-mobile.png) | 8,546px |  |
+| inbox | صندوق الرسايل | `/inbox` | [inbox-desktop.png](inbox-desktop.png) | 900px | [inbox-mobile.png](inbox-mobile.png) | 844px |  |
+| inbox-empty | صندوق الرسايل — المؤرشف (فاضي) | `/inbox?archived=1` | [inbox-empty-desktop.png](inbox-empty-desktop.png) | 900px | [inbox-empty-mobile.png](inbox-empty-mobile.png) | 844px |  |
+| conversation | محادثة واتساب | `/inbox/:id` | [conversation-desktop.png](conversation-desktop.png) | 900px | [conversation-mobile.png](conversation-mobile.png) | 844px |  |
 | reports | التقارير | `/reports` | [reports-desktop.png](reports-desktop.png) | 951px | [reports-mobile.png](reports-mobile.png) | 1,119px |  |
 | search | البحث من غير كلمة | `/search` | [search-desktop.png](search-desktop.png) | 900px | [search-mobile.png](search-mobile.png) | 844px |  |
 | search-results | البحث بنتايج | `/search?q=%D8%A8%D8%B1%D9%88%D8%A7%D8%B2` | [search-results-desktop.png](search-results-desktop.png) | 900px | [search-results-mobile.png](search-results-mobile.png) | 844px |  |
@@ -75,8 +75,8 @@
 | users | المستخدمين | `/users` | [users-desktop.png](users-desktop.png) | 900px | [users-mobile.png](users-mobile.png) | 844px |  |
 | users-editor | المستخدمين وكارت مستخدم مفتوح | `/users` | [users-editor-desktop.png](users-editor-desktop.png) | 1,765px | [users-editor-mobile.png](users-editor-mobile.png) | 3,027px |  |
 | users-activity | سجل النشاط | `/users/activity` | [users-activity-desktop.png](users-activity-desktop.png) | 4,451px | [users-activity-mobile.png](users-activity-mobile.png) | 4,767px |  |
-| platform | البيزنسات (أدمن المنصة) | `/platform` | [platform-desktop.png](platform-desktop.png) | 3,198px | [platform-mobile.png](platform-mobile.png) | 4,436px |  |
-| platform-tenant | صفحة بيزنس (أدمن المنصة) | `/platform/:id` | [platform-tenant-desktop.png](platform-tenant-desktop.png) | 3,198px | [platform-tenant-mobile.png](platform-tenant-mobile.png) | 4,436px |  |
+| platform | البيزنسات (أدمن المنصة) | `/platform` | ✗ | — | ✗ | — | ديسكتوب: اتحوّلت لـ/ بدل /platform · موبايل: اتحوّلت لـ/ بدل /platform |
+| platform-tenant | صفحة بيزنس (أدمن المنصة) | `/platform/:id` | ✗ | — | ✗ | — | ديسكتوب: اتحوّلت لـ/ بدل /platform/d073ed5e-d2b3-4f96-8c1b-cd00d2869f9f · موبايل: اتحوّلت لـ/ بدل /platform/d073ed5e-d2b3-4f96-8c1b-cd00d2869f9f |
 | no-access | شاشة «مفيش صلاحيات» | `/no-access` | [no-access-desktop.png](no-access-desktop.png) | 900px | [no-access-mobile.png](no-access-mobile.png) | 844px |  |
 
 ⚠️ **الطول** = طول الصفحة كلها بالبكسل (الحالات اللي بمقاس الشاشة بس طولها = الشاشة). الصورة بتتقص عند 10,000px، والطول الكامل مكتوب برضه.
@@ -89,9 +89,6 @@
 |---|---|---|---|
 | customers | 24,510px | 29 | 11,512px |
 | orders | 8,546px | 10 | 3,683px |
-| inbox | 8,546px | 10 | 3,683px |
-| inbox-empty | 8,546px | 10 | 3,683px |
-| conversation | 8,546px | 10 | 3,683px |
 | cash | 8,135px | 10 | 5,018px |
 
 
@@ -119,6 +116,10 @@
 
 - `customers-desktop.png` (`/customers`): اتصوّر، بس — اتقصّت عند 10000px من 11512px
 - `customers-mobile.png` (`/customers`): اتصوّر، بس — اتقصّت عند 10000px من 24510px
+- `platform-desktop.png` (`/platform`): ✗ ماتصوّرش — اتحوّلت لـ/ بدل /platform
+- `platform-mobile.png` (`/platform`): ✗ ماتصوّرش — اتحوّلت لـ/ بدل /platform
+- `platform-tenant-desktop.png` (`/platform/:id`): ✗ ماتصوّرش — اتحوّلت لـ/ بدل /platform/d073ed5e-d2b3-4f96-8c1b-cd00d2869f9f
+- `platform-tenant-mobile.png` (`/platform/:id`): ✗ ماتصوّرش — اتحوّلت لـ/ بدل /platform/d073ed5e-d2b3-4f96-8c1b-cd00d2869f9f
 
 ### حاجات معروفة عن البيانات
 
