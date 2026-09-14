@@ -32,27 +32,27 @@ export function LinkMissingShipments({
   const done = result?.ok && !result.dry;
 
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm">
+    <div className="rounded-card bg-surface p-5 shadow-card">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-gray-900">
+        <h2 className="text-sm font-bold text-ink">
           الشحنات اللي ضاع رقم تتبعها
         </h2>
         <button
           type="button"
           onClick={() => run(true)}
           disabled={busy}
-          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+          className="rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-50"
         >
           {busy && !plan ? "بندوّر…" : "دوّر في بوسطة"}
         </button>
       </div>
-      <p className="mb-3 text-xs text-gray-500">
+      <p className="mb-3 text-xs text-ink-muted">
         أوردرات حالتها بتقول إنها عدّت على بوسطة ومالهاش رقم تتبع — يعني رسوم
         شحنها مش داخلة الحسبة والربح بيبان أكبر من الحقيقة.
       </p>
 
       {result && !result.ok && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {result.error}
         </p>
       )}
@@ -60,7 +60,7 @@ export function LinkMissingShipments({
       {plan && (
         <div className="space-y-3 text-sm">
           {done && (
-            <p className="rounded-lg bg-green-50 px-3 py-2 font-medium text-green-800">
+            <p className="rounded-control bg-success-soft px-3 py-2 font-medium text-success">
               اتربط {result.ok && result.linked} شحنة. المزامنة هتجيب رسومها
               وتحصيلها خلال ربع ساعة.
             </p>
@@ -133,7 +133,7 @@ export function LinkMissingShipments({
                   run(false);
               }}
               disabled={busy}
-              className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+              className="w-full rounded-control bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
             >
               {busy ? "بنربط…" : `اربط الـ${plan.links.length} شحنة دول`}
             </button>
@@ -143,7 +143,7 @@ export function LinkMissingShipments({
             plan.nameMismatch.length === 0 &&
             plan.ambiguous.length === 0 &&
             plan.notFound.length === 0 && (
-              <p className="text-gray-500">مفيش أوردرات ناقصة رقم تتبع.</p>
+              <p className="text-ink-muted">مفيش أوردرات ناقصة رقم تتبع.</p>
             )}
         </div>
       )}
@@ -152,9 +152,9 @@ export function LinkMissingShipments({
 }
 
 const TONES = {
-  green: "bg-green-50 text-green-800",
-  amber: "bg-amber-50 text-amber-800",
-  gray: "bg-gray-100 text-gray-700",
+  green: "bg-success-soft text-success",
+  amber: "bg-warning-soft text-warning",
+  gray: "bg-sunken text-ink-body",
 } as const;
 
 function Group({
@@ -175,7 +175,7 @@ function Group({
         <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TONES[tone]}`}>
           {count}
         </span>
-        <span className="text-xs font-medium text-gray-700">{title}</span>
+        <span className="text-xs font-medium text-ink-body">{title}</span>
       </div>
       <div className="space-y-1">{children}</div>
     </div>
@@ -192,14 +192,14 @@ function Row({
   note?: string;
 }) {
   return (
-    <div className="rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs">
+    <div className="rounded-control bg-sunken px-2.5 py-1.5 text-xs">
       <div className="flex justify-between gap-3">
-        <span className="text-gray-700">{right}</span>
-        <span className="font-medium text-gray-900" dir="ltr">
+        <span className="text-ink-body">{right}</span>
+        <span className="font-medium text-ink" dir="ltr">
           {left}
         </span>
       </div>
-      {note && <span className="block text-[11px] text-gray-400">{note}</span>}
+      {note && <span className="block text-[11px] text-ink-faint">{note}</span>}
     </div>
   );
 }

@@ -33,13 +33,13 @@ export function BostaCoverage({
   };
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm">
+    <div className="rounded-card bg-surface p-4 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-bold text-gray-900">
+          <h2 className="text-sm font-bold text-ink">
             فحص التغطية مع بوسطة
           </h2>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <p className="mt-0.5 text-xs text-ink-muted">
             بيقارن كل شحنة عند بوسطة بكل أوردر عندنا — قراية بس، مابيغيّرش
             حاجة.
           </p>
@@ -48,14 +48,14 @@ export function BostaCoverage({
           type="button"
           onClick={run}
           disabled={busy}
-          className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark disabled:bg-gray-300"
+          className="shrink-0 rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark disabled:bg-line-strong"
         >
           {busy ? "بيقارن…" : "افحص"}
         </button>
       </div>
 
       {report && !report.ok && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+        <p className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-xs text-danger">
           {report.error}
         </p>
       )}
@@ -63,10 +63,10 @@ export function BostaCoverage({
       {report?.ok && (
         <div className="mt-3 space-y-3">
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-lg bg-green-50 px-2.5 py-1 text-green-800">
+            <span className="rounded-control bg-success-soft px-2.5 py-1 text-success">
               متطابقة {report.matched}
             </span>
-            <span className="rounded-lg bg-gray-100 px-2.5 py-1 text-gray-700">
+            <span className="rounded-control bg-sunken px-2.5 py-1 text-ink-body">
               شحنات بوسطة {report.bostaTotal}
             </span>
           </div>
@@ -78,21 +78,21 @@ export function BostaCoverage({
             count={report.onlyInBosta.length}
             tone="bad"
           >
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-line">
               {report.onlyInBosta.map((s) => (
                 <li key={s.tracking} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 text-xs">
-                  <span dir="ltr" className="font-medium text-gray-900">
+                  <span dir="ltr" className="font-medium text-ink">
                     {s.tracking ?? "—"}
                   </span>
-                  {s.name && <span className="text-gray-600">{s.name}</span>}
+                  {s.name && <span className="text-ink-muted">{s.name}</span>}
                   {s.phone && (
-                    <span dir="ltr" className="text-gray-500">
+                    <span dir="ltr" className="text-ink-muted">
                       {s.phone}
                     </span>
                   )}
-                  {s.state && <span className="text-gray-400">{s.state}</span>}
+                  {s.state && <span className="text-ink-faint">{s.state}</span>}
                   {s.cod !== null && (
-                    <span className="text-gray-500">تحصيل {s.cod}</span>
+                    <span className="text-ink-muted">تحصيل {s.cod}</span>
                   )}
                 </li>
               ))}
@@ -105,16 +105,16 @@ export function BostaCoverage({
             count={report.onlyInSystem.length}
             tone="warn"
           >
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-line">
               {report.onlyInSystem.map((o) => (
                 <li key={o.id} className="px-3 py-2 text-xs">
                   <a
                     href={`/orders/${o.id}`}
-                    className="font-medium text-sky-700 underline"
+                    className="font-medium text-info underline"
                   >
                     أوردر {o.orderNumber ?? "—"}
                   </a>
-                  <span className="ms-2 text-gray-500">{o.status}</span>
+                  <span className="ms-2 text-ink-muted">{o.status}</span>
                 </li>
               ))}
             </ul>
@@ -140,17 +140,17 @@ function Section({
 }) {
   if (count === 0) {
     return (
-      <p className="rounded-lg bg-green-50 px-3 py-2 text-xs text-green-800">
+      <p className="rounded-control bg-success-soft px-3 py-2 text-xs text-success">
         {title}: مفيش ✅
       </p>
     );
   }
 
   return (
-    <details className="overflow-hidden rounded-lg border border-gray-200">
+    <details className="overflow-hidden rounded-control border border-line">
       <summary
         className={`cursor-pointer px-3 py-2 text-xs font-bold ${
-          tone === "bad" ? "bg-red-50 text-red-800" : "bg-amber-50 text-amber-900"
+          tone === "bad" ? "bg-danger-soft text-danger" : "bg-warning-soft text-warning"
         }`}
       >
         {title} ({count})
