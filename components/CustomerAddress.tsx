@@ -112,12 +112,12 @@ function Box({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-gray-500">{label}</label>
+      <label className="text-xs text-ink-muted">{label}</label>
       <input
         name={name}
         defaultValue={value ?? ""}
         placeholder={placeholder}
-        className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="rounded-control border border-line-strong px-2 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
       />
     </div>
   );
@@ -150,14 +150,14 @@ export function CustomerAddress({
       };
 
   return (
-    <div className="rounded-xl bg-white p-4 shadow-sm">
+    <div className="rounded-card bg-surface p-4 shadow-card">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-gray-900">العنوان</h2>
+        <h2 className="text-sm font-bold text-ink">العنوان</h2>
         {canEdit && !editing && (
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700"
+            className="rounded-control bg-sunken px-2.5 py-1 text-xs font-medium text-ink-body"
           >
             تعديل
           </button>
@@ -166,9 +166,9 @@ export function CustomerAddress({
 
       {!editing ? (
         <>
-          <p className="text-sm text-gray-800">{joined || "مفيش عنوان"}</p>
+          <p className="text-sm text-ink-body">{joined || "مفيش عنوان"}</p>
           {!isSplit && joined && (
-            <p className="mt-1 text-xs text-amber-700">
+            <p className="mt-1 text-xs text-warning">
               العنوان ده نص واحد جاي من شوبيفاي — دوس تعديل، هنقسّمه لك تلقائياً
               وتراجعه وتحفظ.
             </p>
@@ -209,20 +209,20 @@ export function CustomerAddress({
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white"
+              className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white"
             >
               حفظ العنوان
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-lg bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-700"
+              className="rounded-control bg-sunken px-4 py-1.5 text-sm font-medium text-ink-body"
             >
               إلغاء
             </button>
           </div>
           {fields.address && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint">
               العنوان الأصلي من شوبيفاي: {fields.address}
             </p>
           )}

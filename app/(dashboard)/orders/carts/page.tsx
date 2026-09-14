@@ -11,7 +11,7 @@ export default async function CartsPage() {
   return (
     <div className="space-y-4">
       <BackLink href="/orders" label="الأوردرات" />
-      <h1 className="text-2xl font-bold text-gray-900">السلات المتروكة</h1>
+      <h1 className="text-2xl font-bold text-ink">السلات المتروكة</h1>
       <AbandonedCarts action={loadAbandonedCarts} />
     </div>
   );
