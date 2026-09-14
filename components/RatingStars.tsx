@@ -27,7 +27,7 @@ export function RatingStars({
 
   if (done) {
     return (
-      <p className="mt-8 text-sm leading-relaxed text-gray-600">
+      <p className="mt-8 text-sm leading-relaxed text-ink-muted">
         Thank you — we got it.
       </p>
     );
@@ -58,7 +58,7 @@ export function RatingStars({
             onMouseEnter={() => setHover(n)}
             aria-label={`${n} out of 5`}
             className={`text-4xl leading-none transition-transform active:scale-90 ${
-              n <= shown ? "text-amber-400" : "text-gray-200"
+              n <= shown ? "text-warning" : "text-line"
             }`}
           >
             ★
@@ -73,19 +73,19 @@ export function RatingStars({
             rows={3}
             maxLength={500}
             placeholder="Anything you'd like to add? (optional)"
-            className="mt-6 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="mt-6 w-full rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
           />
 
           <button
             disabled={pending}
-            className="mt-3 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="mt-3 rounded-control bg-primary px-5 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {pending ? "Sending…" : "Send"}
           </button>
         </>
       )}
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 text-sm text-danger">{error}</p>}
     </form>
   );
 }

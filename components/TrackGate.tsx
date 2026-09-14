@@ -28,7 +28,7 @@ export function TrackGate({
   if (result?.ok) {
     const d = result;
     return (
-      <div className="mt-10 space-y-5 border-t border-gray-100 pt-8">
+      <div className="mt-10 space-y-5 border-t border-line pt-8">
         <div className="grid grid-cols-2 gap-5">
           {d.orderNumber && <Row label={UI.orderNumber} value={`#${d.orderNumber}`} />}
           {d.placedAt && <Row label={UI.placed} value={day(d.placedAt)} />}
@@ -47,15 +47,15 @@ export function TrackGate({
 
         {d.items.length > 0 && (
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-400">
+            <p className="text-xs uppercase tracking-wide text-ink-faint">
               {UI.items}
             </p>
             <ul className="mt-2 space-y-1">
               {d.items.map((i, n) => (
-                <li key={n} className="text-sm text-gray-900">
+                <li key={n} className="text-sm text-ink">
                   {i.name}
                   {i.quantity > 1 && (
-                    <span className="text-gray-400"> × {i.quantity}</span>
+                    <span className="text-ink-faint"> × {i.quantity}</span>
                   )}
                 </li>
               ))}
@@ -68,13 +68,13 @@ export function TrackGate({
 
   return (
     <form
-      className="mt-10 border-t border-gray-100 pt-8"
+      className="mt-10 border-t border-line pt-8"
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => setResult(await action(tracking, typed)));
       }}
     >
-      <label className="block text-sm leading-relaxed text-gray-600">
+      <label className="block text-sm leading-relaxed text-ink-muted">
         {UI.detailsPrompt}
       </label>
 
@@ -86,19 +86,19 @@ export function TrackGate({
           maxLength={11}
           placeholder={hint ?? UI.detailsPlaceholder}
           dir="ltr"
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          className="flex-1 rounded-control border border-line px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none"
         />
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-primary px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-40"
+          className="rounded-control bg-primary px-6 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark disabled:opacity-40"
         >
           {pending ? "…" : UI.detailsButton}
         </button>
       </div>
 
       {result && !result.ok && (
-        <p className="mt-3 text-sm text-gray-500">{result.error}</p>
+        <p className="mt-3 text-sm text-ink-muted">{result.error}</p>
       )}
     </form>
   );
@@ -118,8 +118,8 @@ function day(iso: string): string {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="mt-0.5 text-sm text-gray-900">{value}</p>
+      <p className="text-xs uppercase tracking-wide text-ink-faint">{label}</p>
+      <p className="mt-0.5 text-sm text-ink">{value}</p>
     </div>
   );
 }

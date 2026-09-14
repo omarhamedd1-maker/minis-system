@@ -48,7 +48,7 @@ export default async function RatingPage({
   return (
     <div className="mx-auto max-w-md px-6 py-16" dir="ltr">
       {store && (
-        <p className="text-sm font-light tracking-[0.2em] text-gray-900">
+        <p className="text-sm font-light tracking-[0.2em] text-ink">
           {store}
         </p>
       )}
@@ -56,28 +56,28 @@ export default async function RatingPage({
       {!row ? (
         // ⚠️ **مانقولش «اللينك ده مش موجود»** بشكل بيفرّق بين لينك حقيقي وغلط
         <>
-          <h1 className="mt-6 text-3xl font-bold leading-tight text-gray-900">
+          <h1 className="mt-6 text-3xl font-bold leading-tight text-ink">
             This link isn&apos;t working
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-gray-500">
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
             Double-check the link from your message.
           </p>
         </>
       ) : already ? (
         <>
-          <h1 className="mt-6 text-3xl font-bold leading-tight text-gray-900">
+          <h1 className="mt-6 text-3xl font-bold leading-tight text-ink">
             Thank you
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-gray-500">
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
             You&apos;ve already rated this order.
           </p>
         </>
       ) : (
         <>
-          <h1 className="mt-6 text-3xl font-bold leading-tight text-gray-900">
+          <h1 className="mt-6 text-3xl font-bold leading-tight text-ink">
             How was your order?
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-gray-600">
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
             It takes a second, and it helps us a lot.
           </p>
 
