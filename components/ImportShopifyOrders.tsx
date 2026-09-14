@@ -46,15 +46,15 @@ export function ImportShopifyOrders({
         type="button"
         onClick={() => run(true)}
         disabled={busy}
-        className="rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-100 disabled:opacity-50"
+        className="rounded-control bg-surface px-3 py-1.5 text-sm font-medium text-ink-body shadow-card transition-colors hover:bg-sunken disabled:opacity-50"
       >
         {busy && !plan ? "بنقرا…" : "جيب من شوبيفاي"}
       </button>
 
       {open && (
-        <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:inset-x-auto sm:left-4 sm:bottom-4 sm:w-[26rem] sm:rounded-2xl">
+        <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-surface p-5 shadow-2xl sm:inset-x-auto sm:left-4 sm:bottom-4 sm:w-[26rem] sm:rounded-2xl">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-gray-900">
+            <h2 className="text-sm font-bold text-ink">
               جلب الأوردرات من شوبيفاي
             </h2>
             <button
@@ -63,16 +63,16 @@ export function ImportShopifyOrders({
                 setOpen(false);
                 setResult(null);
               }}
-              className="text-xs text-gray-500 hover:text-gray-800"
+              className="text-xs text-ink-muted hover:text-ink-body"
             >
               إغلاق
             </button>
           </div>
 
-          {busy && <p className="text-sm text-gray-500">بنقرا من شوبيفاي…</p>}
+          {busy && <p className="text-sm text-ink-muted">بنقرا من شوبيفاي…</p>}
 
           {result && !result.ok && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
               {result.error}
             </p>
           )}
@@ -80,19 +80,19 @@ export function ImportShopifyOrders({
           {plan && !busy && (
             <div className="space-y-3 text-sm">
               {added && (
-                <p className="rounded-lg bg-green-50 px-3 py-2 font-medium text-green-800">
+                <p className="rounded-control bg-success-soft px-3 py-2 font-medium text-success">
                   اتضاف {added.orders} أوردر و{added.customers} عميل.
                 </p>
               )}
 
               {plan.toImport.length === 0 && !added && (
-                <p className="text-gray-600">
+                <p className="text-ink-muted">
                   مفيش أوردرات جديدة — كل اللي عند شوبيفاي موجود عندك.
                 </p>
               )}
 
               {plan.toImport.length > 0 && !added && (
-                <div className="space-y-1 rounded-lg bg-gray-50 p-3 text-xs">
+                <div className="space-y-1 rounded-control bg-sunken p-3 text-xs">
                   <Line
                     label="أوردرات هتتضاف"
                     value={String(plan.toImport.length)}
@@ -117,23 +117,23 @@ export function ImportShopifyOrders({
               )}
 
               {plan.missingProducts.length > 0 && (
-                <div className="rounded-lg bg-amber-50 p-3">
-                  <p className="text-xs font-bold text-amber-900">
+                <div className="rounded-control bg-warning-soft p-3">
+                  <p className="text-xs font-bold text-warning">
                     {plan.missingProducts.length} أوردر مش هيتجلبوا — منتجاتهم
                     مش عندك
                   </p>
-                  <p className="mt-0.5 text-[11px] text-amber-800">
+                  <p className="mt-0.5 text-[11px] text-warning">
                     جيب المنتجات الأول من شاشة المنتجات وبعدين ارجع هنا. أوردر
                     بإجمالي ناقص أسوأ من أوردر ماجاش.
                   </p>
                   <div className="mt-1.5 space-y-0.5">
                     {plan.missingProducts.slice(0, 5).map((m) => (
-                      <p key={m.orderNumber} className="text-[11px] text-amber-900">
+                      <p key={m.orderNumber} className="text-[11px] text-warning">
                         أوردر {m.orderNumber}: {m.missing.join("، ")}
                       </p>
                     ))}
                     {plan.missingProducts.length > 5 && (
-                      <p className="text-[11px] text-amber-700">
+                      <p className="text-[11px] text-warning">
                         و{plan.missingProducts.length - 5} غيرهم…
                       </p>
                     )}
@@ -142,14 +142,14 @@ export function ImportShopifyOrders({
               )}
 
               {plan.noLines.length > 0 && (
-                <p className="rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-600">
+                <p className="rounded-control bg-sunken px-3 py-2 text-xs text-ink-muted">
                   {plan.noLines.length} أوردر من غير بنود — اتعدّوا.
                 </p>
               )}
 
               {!added && plan.toImport.length > 0 && (
                 <>
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-[11px] text-ink-muted">
                     المخزون مش هيتحرّك — دي أوردرات حصلت خلاص ومخزونها اتحرّك
                     في الواقع من زمان.
                   </p>
@@ -160,7 +160,7 @@ export function ImportShopifyOrders({
                         run(false);
                     }}
                     disabled={busy}
-                    className="w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                    className="w-full rounded-control bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
                   >
                     {busy ? "بنجيب…" : `جيب الـ${plan.toImport.length} دول`}
                   </button>
@@ -185,8 +185,8 @@ function Line({
 }) {
   return (
     <div className="flex justify-between gap-3">
-      <span className="text-gray-600">{label}</span>
-      <span className={strong ? "font-bold text-gray-900" : "font-medium text-gray-700"}>
+      <span className="text-ink-muted">{label}</span>
+      <span className={strong ? "font-bold text-ink" : "font-medium text-ink-body"}>
         {value}
       </span>
     </div>

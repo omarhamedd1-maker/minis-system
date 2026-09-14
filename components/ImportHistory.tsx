@@ -57,14 +57,14 @@ export function ImportHistory({
   if (runs.length === 0) return null;
 
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm">
-      <h2 className="text-sm font-bold text-gray-900">سجل الاستيراد</h2>
-      <p className="mt-0.5 text-xs text-gray-500">
+    <div className="rounded-card bg-surface p-5 shadow-card">
+      <h2 className="text-sm font-bold text-ink">سجل الاستيراد</h2>
+      <p className="mt-0.5 text-xs text-ink-muted">
         كل جلب اتعمل، ولو طلع غلط تقدر ترجّعه.
       </p>
 
       {error && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">
           {error}
         </p>
       )}
@@ -73,30 +73,30 @@ export function ImportHistory({
         {runs.map((run) => (
           <div
             key={run.id}
-            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-2.5 py-2 text-xs"
+            className="flex items-center justify-between gap-3 rounded-control bg-sunken px-2.5 py-2 text-xs"
           >
             <div className="min-w-0">
-              <span className="text-gray-900">
+              <span className="text-ink">
                 {KIND_LABEL[run.kind] ?? run.kind}: {run.summary}
               </span>
-              <span className="block text-[11px] text-gray-400">
+              <span className="block text-[11px] text-ink-faint">
                 {run.createdAt}
                 {run.actorName && ` — ${run.actorName}`}
               </span>
             </div>
 
             {run.undoneAt ? (
-              <span className="shrink-0 rounded-full bg-gray-200 px-2 py-0.5 text-[11px] text-gray-600">
+              <span className="shrink-0 rounded-full bg-line px-2 py-0.5 text-[11px] text-ink-muted">
                 اترجع
               </span>
             ) : run.undoLines.length === 0 ? (
-              <span className="shrink-0 text-[11px] text-gray-400">—</span>
+              <span className="shrink-0 text-[11px] text-ink-faint">—</span>
             ) : (
               <button
                 type="button"
                 onClick={() => undo(run)}
                 disabled={busy === run.id}
-                className="shrink-0 rounded-lg bg-white px-2.5 py-1 text-[11px] font-medium text-red-700 shadow-sm transition-colors hover:bg-red-50 disabled:opacity-50"
+                className="shrink-0 rounded-control bg-surface px-2.5 py-1 text-[11px] font-medium text-danger shadow-card transition-colors hover:bg-danger-soft disabled:opacity-50"
               >
                 {busy === run.id ? "بنرجّع…" : "ارجع عنه"}
               </button>

@@ -5,10 +5,10 @@ import type { LinkCard, LinkState } from "@/lib/integration-health";
 import { anyDown, healthLine } from "@/lib/integration-health";
 
 const DOT: Record<LinkState, string> = {
-  ok: "bg-green-500",
-  warn: "bg-amber-500",
-  down: "bg-red-500",
-  off: "bg-gray-300",
+  ok: "bg-success",
+  warn: "bg-warning",
+  down: "bg-danger",
+  off: "bg-line-strong",
 };
 
 const WORD: Record<LinkState, string> = {
@@ -34,11 +34,11 @@ export function IntegrationHealth({
   const [pending, start] = useTransition();
 
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm">
+    <div className="rounded-card bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold text-gray-900">صحة الوصلات</h2>
-          <p className="mt-0.5 text-[11px] text-gray-400">
+          <h2 className="text-sm font-bold text-ink">صحة الوصلات</h2>
+          <p className="mt-0.5 text-[11px] text-ink-faint">
             {cards
               ? healthLine(cards)
               : "«مافيش أوردرات» و«الوصلة مقطوعة» شكلهم واحد لحد ما حد يسأل."}
@@ -56,26 +56,26 @@ export function IntegrationHealth({
             });
           }}
           disabled={pending}
-          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
         >
           {pending ? "بيسأل…" : cards ? "افحص تاني" : "افحص دلوقتي"}
         </button>
       </div>
 
       {failed && (
-        <p className="mt-3 text-xs text-red-600">الفحص نفسه مانفعش يتعمل.</p>
+        <p className="mt-3 text-xs text-danger">الفحص نفسه مانفعش يتعمل.</p>
       )}
 
       {cards && (
         <div className="mt-4 space-y-3">
           {cards.map((c) => (
-            <div key={c.key} className="rounded-lg bg-gray-50 px-3 py-2.5">
+            <div key={c.key} className="rounded-control bg-sunken px-3 py-2.5">
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${DOT[c.state]}`} />
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-ink">
                   {c.label}
                 </span>
-                <span className="text-xs text-gray-500">{WORD[c.state]}</span>
+                <span className="text-xs text-ink-muted">{WORD[c.state]}</span>
               </div>
               <div className="mt-1.5 space-y-0.5 pr-4">
                 {c.checks.map((x) => (
@@ -83,14 +83,14 @@ export function IntegrationHealth({
                     key={x.label}
                     className="flex items-baseline justify-between gap-3 text-xs"
                   >
-                    <span className="text-gray-500">{x.label}</span>
+                    <span className="text-ink-muted">{x.label}</span>
                     <span
                       className={
                         x.state === "down"
-                          ? "text-red-600"
+                          ? "text-danger"
                           : x.state === "warn"
-                            ? "text-amber-700"
-                            : "text-gray-600"
+                            ? "text-warning"
+                            : "text-ink-muted"
                       }
                       dir="auto"
                     >
@@ -103,7 +103,7 @@ export function IntegrationHealth({
           ))}
 
           {anyDown(cards) && (
-            <p className="text-[11px] leading-relaxed text-red-600">
+            <p className="text-[11px] leading-relaxed text-danger">
               الوصلة اللي مش رادّة معناها إن الداتا اللي بتشوفها واقفة عند آخر
               مرة نجحت فيها — مش إن الشغل هدي.
             </p>
