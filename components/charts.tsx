@@ -1,13 +1,14 @@
 // مكونات شارتات خفيفة SVG/HTML — من غير أي مكتبات خارجية
-// الألوان من لوحة محايدة متوافقة مع عمى الألوان (انظر dataviz palette)
+// الألوان من توكنز النظام في globals.css — مش أكواد مكتوبة بإيدك (المرحلة ١)
 
 const COLORS = {
-  series1: "#2a78d6", // أزرق — المبيعات
-  series2: "#1baf7a", // أخضر مائي — الأرباح
-  grid: "#e1e0d9",
-  baseline: "#c3c2b7",
-  muted: "#898781",
-  ink: "#0b0b0b",
+  series1: "var(--info)", // المبيعات جنب الأرباح — أزرق بيانات مش لون واجهة
+  single: "var(--primary)", // رسم بسلسلة واحدة
+  series2: "var(--success)", // الأرباح
+  grid: "var(--line)",
+  baseline: "var(--line-strong)",
+  muted: "var(--ink-muted)",
+  ink: "var(--ink)",
 };
 
 const shortNumber = new Intl.NumberFormat("en", {
@@ -93,11 +94,11 @@ export function LineChart({
         stroke={COLORS.baseline}
         strokeWidth="1"
       />
-      <path d={areaPath} fill={COLORS.series1} opacity="0.08" />
+      <path d={areaPath} fill={COLORS.single} opacity="0.08" />
       <path
         d={linePath}
         fill="none"
-        stroke={COLORS.series1}
+        stroke={COLORS.single}
         strokeWidth="2"
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -108,8 +109,8 @@ export function LineChart({
           cx={x(i)}
           cy={y(p.value)}
           r={points.length > 45 ? 2 : 3}
-          fill={COLORS.series1}
-          stroke="#ffffff"
+          fill={COLORS.single}
+          stroke="var(--surface)"
           strokeWidth="1.5"
         >
           <title>{p.title ?? `${p.label}: ${p.value.toLocaleString("en")}${valueSuffix}`}</title>
@@ -307,7 +308,7 @@ export function HBarList({
               className="h-full rounded"
               style={{
                 width: `${Math.max((item.value / maxValue) * 100, item.value > 0 ? 2 : 0)}%`,
-                backgroundColor: item.color ?? COLORS.series1,
+                backgroundColor: item.color ?? COLORS.single,
               }}
               title={`${item.label}: ${item.display}`}
             ></div>
