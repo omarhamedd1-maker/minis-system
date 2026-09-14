@@ -58,14 +58,14 @@ export default async function TasksPage({
   if (error) {
     return (
       <div className="space-y-4">
-        <h1 className="text-xl font-bold text-gray-900">التاسكات</h1>
-        <div className="rounded-xl bg-amber-50 p-5 text-sm text-amber-900">
+        <h1 className="text-xl font-bold text-ink">التاسكات</h1>
+        <div className="rounded-card bg-warning-soft p-5 text-sm text-warning">
           <p className="font-bold">الشاشة محتاجة جداولها في قاعدة البيانات الأول.</p>
           <p className="mt-1">
             افتح سوبابيز ← SQL Editor وشغّل <code>sql/tasks.sql</code>، وبعدين
             افتح الصفحة تاني.
           </p>
-          <p className="mt-2 text-xs text-amber-700">({error.message})</p>
+          <p className="mt-2 text-xs text-warning">({error.message})</p>
         </div>
       </div>
     );
@@ -109,10 +109,10 @@ export default async function TasksPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-baseline gap-3">
-          <h1 className="text-xl font-bold text-gray-900">التاسكات</h1>
-          <span className="text-sm text-gray-500">{shown.length}</span>
+          <h1 className="text-xl font-bold text-ink">التاسكات</h1>
+          <span className="text-sm text-ink-muted">{shown.length}</span>
           {overdueCount > 0 && (
-            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+            <span className="rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">
               {overdueCount} متأخر
             </span>
           )}
@@ -130,7 +130,7 @@ export default async function TasksPage({
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
@@ -143,7 +143,7 @@ export default async function TasksPage({
             className={`rounded-full px-3 py-1.5 text-xs font-medium ${
               view === v.key
                 ? "bg-primary text-white"
-                : "bg-white text-gray-700 shadow-sm hover:bg-gray-50"
+                : "bg-surface text-ink-body shadow-card hover:bg-sunken"
             }`}
           >
             {v.label}
@@ -153,7 +153,7 @@ export default async function TasksPage({
       </div>
 
       {shown.length === 0 ? (
-        <p className="rounded-xl bg-white p-8 text-center text-sm text-gray-400 shadow-sm">
+        <p className="card empty p-8">
           {view === "mine" ? "مفيش تاسكات عليك — تمام" : "مفيش تاسكات هنا"}
         </p>
       ) : (
@@ -167,26 +167,26 @@ export default async function TasksPage({
               <span
                 className={`h-1.5 w-1.5 rounded-full ${
                   g.tone === "bad"
-                    ? "bg-red-500"
+                    ? "bg-danger"
                     : g.tone === "warn"
-                      ? "bg-amber-500"
+                      ? "bg-warning"
                       : g.tone === "muted"
-                        ? "bg-gray-300"
-                        : "bg-gray-400"
+                        ? "bg-line-strong"
+                        : "bg-ink-faint"
                 }`}
               />
               <h2
                 className={`text-xs font-bold ${
                   g.tone === "bad"
-                    ? "text-red-700"
+                    ? "text-danger"
                     : g.tone === "warn"
-                      ? "text-amber-700"
-                      : "text-gray-700"
+                      ? "text-warning"
+                      : "text-ink-body"
                 }`}
               >
                 {g.label}
               </h2>
-              <span className="rounded-full bg-gray-200/70 px-1.5 text-[10px] font-medium text-gray-600">
+              <span className="rounded-full bg-line/70 px-1.5 text-[10px] font-medium text-ink-muted">
                 {g.items.length}
               </span>
             </div>
@@ -202,9 +202,9 @@ export default async function TasksPage({
 
       {/* اللي خلص — مقفول، بيفتح لما تدوس عليه (نفس سطر سجل النشاط) */}
       {doneTasks.length > 0 && (
-        <details className="group rounded-xl bg-white shadow-sm">
+        <details className="card group">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
-            <h2 className="flex items-center gap-2 text-sm font-bold text-gray-900">
+            <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -212,15 +212,15 @@ export default async function TasksPage({
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
+                className="h-4 w-4 text-ink-faint transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
               >
                 <path d="M9 6l6 6-6 6" />
               </svg>
               {view === "mine" ? "خلصته" : "اللي خلص"} ({doneTasks.length})
             </h2>
-            <span className="text-xs font-medium text-gray-400">اضغط للعرض</span>
+            <span className="text-xs font-medium text-ink-faint">اضغط للعرض</span>
           </summary>
-          <div className="border-t border-gray-100 p-3">
+          <div className="border-t border-line p-3">
             <ul className="space-y-2">
               {doneTasks.map((t) => (
                 <TaskLine key={t.id} t={t} today={today} canEdit={canEdit} view={view} />
@@ -259,8 +259,8 @@ function TaskLine({
 
   return (
     <li
-      className={`rounded-xl bg-white p-3 shadow-sm ${
-        late ? "border-r-4 border-red-400" : ""
+      className={`rounded-card bg-surface p-3 shadow-card ${
+        late ? "border-r-4 border-danger" : ""
       }`}
     >
       <div className="flex items-start gap-2.5">
@@ -278,8 +278,8 @@ function TaskLine({
               aria-label={done ? "رجّعه مفتوح" : "علّم إنه خلص"}
               className={`group/tick flex h-5 w-5 items-center justify-center rounded-full border-2 transition ${
                 done
-                  ? "border-green-600 bg-green-600 text-white"
-                  : "border-gray-300 text-transparent hover:border-green-600 hover:text-green-600"
+                  ? "border-success bg-success text-white"
+                  : "border-line-strong text-transparent hover:border-success hover:text-success"
               }`}
             >
               <svg
@@ -298,7 +298,7 @@ function TaskLine({
         ) : (
           <span
             className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 ${
-              done ? "border-green-600 bg-green-600" : "border-gray-200"
+              done ? "border-success bg-success" : "border-line"
             }`}
           />
         )}
@@ -306,19 +306,19 @@ function TaskLine({
         <Link href={`/tasks/${t.id}`} className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {t.priority === "urgent" && !done && (
-              <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
+              <span className="rounded bg-danger-soft px-1.5 py-0.5 text-[10px] font-bold text-danger">
                 عاجل
               </span>
             )}
             <span
               className={`text-sm font-medium ${
-                done ? "text-gray-400 line-through" : "text-gray-900"
+                done ? "text-ink-faint line-through" : "text-ink"
               }`}
             >
               {t.title}
             </span>
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-muted">
             {/* **«مفتوح» مابيتكتبش** — الدايرة الفاضية بتقولها. اللافتة
                 بتبان لـ«شغال عليه» بس، وهي الحالة اللي فيها معلومة */}
             {t.status === "doing" && (
@@ -335,14 +335,14 @@ function TaskLine({
               </span>
             )}
             {due && !done && (
-              <span className={late ? "font-medium text-red-600" : ""}>{due}</span>
+              <span className={late ? "font-medium text-danger" : ""}>{due}</span>
             )}
             {steps.length > 0 && (
               <span>
                 خطوات {doneSteps}/{steps.length}
               </span>
             )}
-            {t.order_id && <span className="text-sky-600">مربوط بأوردر</span>}
+            {t.order_id && <span className="text-info">مربوط بأوردر</span>}
           </div>
         </Link>
       </div>

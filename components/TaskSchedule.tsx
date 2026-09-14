@@ -5,7 +5,7 @@ import { REPEAT_KINDS, REPEAT_UNITS } from "@/lib/tasks";
 import { REMINDER_UNITS } from "@/lib/task-remind";
 
 const BOX =
-  "rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none";
+  "rounded-control border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none";
 
 /**
  * خانات التكرار والتنبيه — **مكوّن واحد للفورمين** (إضافة تاسك جديد
@@ -42,7 +42,7 @@ export function TaskSchedule({
     <div className="space-y-3">
       {/* ===== تكرار التاسك ===== */}
       <div>
-        <label className="block text-[11px] text-gray-500">
+        <label className="block text-[11px] text-ink-muted">
           بيتكرر؟
           <select
             name="repeat_kind"
@@ -61,7 +61,7 @@ export function TaskSchedule({
 
         {kind === "custom" && (
           <div className="minis-in mt-1.5 flex items-center gap-2">
-            <span className="text-[11px] text-gray-500">كل</span>
+            <span className="text-[11px] text-ink-muted">كل</span>
             <input
               name="repeat_every"
               type="number"
@@ -85,7 +85,7 @@ export function TaskSchedule({
         )}
 
         {kind && (
-          <span className="mt-1 block text-[10px] text-gray-400">
+          <span className="mt-1 block text-[10px] text-ink-faint">
             المتكرر لازم يبقى ليه ميعاد، والنسخة الجاية مابتتعملش غير لما
             اللي قبلها تخلص
           </span>
@@ -94,7 +94,7 @@ export function TaskSchedule({
 
       {/* ===== التنبيه ===== */}
       <div>
-        <label className="block text-[11px] text-gray-500">
+        <label className="block text-[11px] text-ink-muted">
           تنبيه على الموبايل
           <input
             name="remind_at"
@@ -107,7 +107,7 @@ export function TaskSchedule({
 
         {when && (
           <div className="minis-in mt-1.5 space-y-1.5">
-            <label className="flex cursor-pointer items-center gap-2 text-[11px] text-gray-600">
+            <label className="flex cursor-pointer items-center gap-2 text-[11px] text-ink-muted">
               <input
                 type="checkbox"
                 checked={repeats}
@@ -119,7 +119,7 @@ export function TaskSchedule({
 
             {repeats && (
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-gray-500">كل</span>
+                <span className="text-[11px] text-ink-muted">كل</span>
                 <input
                   name="remind_every"
                   type="number"
@@ -145,12 +145,12 @@ export function TaskSchedule({
             {/* **التنبيه بيروح للي التاسك عليه** — من غير مسؤول مافيش
                 حد يتبعتله، وأحسن نقولها قبل ما يستنى تنبيه ماجاش */}
             {hasAssignee === false && (
-              <p className="rounded-lg bg-amber-50 px-2 py-1.5 text-[10px] text-amber-900">
+              <p className="rounded-control bg-warning-soft px-2 py-1.5 text-[10px] text-warning">
                 التنبيه بيروح للي التاسك عليه — اسنده لحد وإلا مش هيوصل حد.
               </p>
             )}
             {repeats && (
-              <p className="text-[10px] text-gray-400">
+              <p className="text-[10px] text-ink-faint">
                 بيقف لوحده أول ما التاسك يخلص، وبعد ٣٠ تنبيه بيسكت.
               </p>
             )}
