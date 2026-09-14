@@ -51,16 +51,16 @@ export function ExchangePanel({
   // الشحنة اتعملت خلاص
   if (exchangeTracking) {
     return (
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900">التبديل</h2>
-        <p className="text-sm text-gray-700">
+      <div className="rounded-card bg-surface p-4 shadow-card">
+        <h2 className="mb-2 text-sm font-bold text-ink">التبديل</h2>
+        <p className="text-sm text-ink-body">
           شحنة التبديل اتعملت — رقم التتبع{" "}
           <span className="font-medium" dir="ltr">
             {exchangeTracking}
           </span>
         </p>
         {exchangeNote && (
-          <p className="mt-1 text-xs text-gray-500">{exchangeNote}</p>
+          <p className="mt-1 text-xs text-ink-muted">{exchangeNote}</p>
         )}
       </div>
     );
@@ -68,12 +68,12 @@ export function ExchangePanel({
 
   if (!open) {
     return (
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-bold text-gray-900">التبديل</h2>
+      <div className="rounded-card bg-surface p-4 shadow-card">
+        <h2 className="mb-3 text-sm font-bold text-ink">التبديل</h2>
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white"
+          className="flex w-full items-center justify-center gap-2 rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"
         >
           <BostaMark className="h-4 w-4" />
           اعمل شحنة تبديل
@@ -90,19 +90,19 @@ export function ExchangePanel({
     prefix: string
   ) => (
     <div>
-      <div className="mb-1.5 text-xs font-bold text-gray-800">
+      <div className="mb-1.5 text-xs font-bold text-ink-body">
         {title}
-        <span className="block text-[10px] font-normal text-gray-400">{hint}</span>
+        <span className="block text-[10px] font-normal text-ink-faint">{hint}</span>
       </div>
       <div className="space-y-1.5">
         {items.map((i) => (
           <div
             key={i.id}
-            className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2"
+            className="flex items-center gap-2 rounded-control bg-sunken px-2.5 py-2"
           >
-            <span className="min-w-0 flex-1 truncate text-xs text-gray-800">
+            <span className="min-w-0 flex-1 truncate text-xs text-ink-body">
               {i.name}
-              <span className="text-gray-400"> (من {i.quantity})</span>
+              <span className="text-ink-faint"> (من {i.quantity})</span>
             </span>
             <input
               type="hidden"
@@ -114,19 +114,19 @@ export function ExchangePanel({
                 type="button"
                 onClick={() => bump(set, i.id, -1, i.quantity)}
                 aria-label="أقل"
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-gray-600 shadow-sm disabled:opacity-40"
+                className="flex h-7 w-7 items-center justify-center rounded-control bg-surface text-ink-muted shadow-card disabled:opacity-40"
                 disabled={(state[i.id] ?? 0) <= 0}
               >
                 −
               </button>
-              <span className="w-7 text-center text-sm font-medium text-gray-900">
+              <span className="w-7 text-center text-sm font-medium text-ink">
                 {state[i.id] ?? 0}
               </span>
               <button
                 type="button"
                 onClick={() => bump(set, i.id, 1, i.quantity)}
                 aria-label="أكتر"
-                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-gray-600 shadow-sm disabled:opacity-40"
+                className="flex h-7 w-7 items-center justify-center rounded-control bg-surface text-ink-muted shadow-card disabled:opacity-40"
                 disabled={(state[i.id] ?? 0) >= i.quantity}
               >
                 +
@@ -139,13 +139,13 @@ export function ExchangePanel({
   );
 
   return (
-    <div className="minis-in rounded-xl bg-white p-4 shadow-sm">
+    <div className="minis-in rounded-card bg-surface p-4 shadow-card">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-gray-900">التبديل</h2>
+        <h2 className="text-sm font-bold text-ink">التبديل</h2>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-xs text-gray-400 hover:text-gray-700"
+          className="text-xs text-ink-faint hover:text-ink-body"
         >
           إلغاء
         </button>
@@ -170,9 +170,9 @@ export function ExchangePanel({
         )}
 
         <div>
-          <label className="mb-1 block text-xs text-gray-600">
+          <label className="mb-1 block text-xs text-ink-muted">
             فرق السعر اللي المندوب يحصّله
-            <span className="block text-[10px] text-gray-400">
+            <span className="block text-[10px] text-ink-faint">
               سيبها صفر لو مفيش فرق — الحاجة القديمة مدفوعة خلاص
             </span>
           </label>
@@ -183,20 +183,20 @@ export function ExchangePanel({
             step="0.01"
             defaultValue={0}
             dir="ltr"
-            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="w-full rounded-control border border-line-strong px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={totalBack === 0 || totalOut === 0}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-control bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
         >
           <BostaMark className="h-4 w-4" />
           اعمل شحنة التبديل ({totalOut} رايح · {totalBack} راجع)
         </button>
         {(totalBack === 0 || totalOut === 0) && (
-          <p className="text-[11px] text-gray-400">
+          <p className="text-[11px] text-ink-faint">
             لازم تحدد الاتنين — رايح وراجع. لو مفيش حاجة رايحة يبقى ده مرتجع
             مش تبديل.
           </p>

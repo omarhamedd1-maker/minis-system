@@ -22,7 +22,7 @@ export function CopyLink({ url, href }: { url: string; href?: string }) {
   };
 
   return (
-    <div className="mt-1.5 flex items-center gap-1 rounded-lg bg-gray-50 px-2 py-1">
+    <div className="mt-1.5 flex items-center gap-1 rounded-control bg-sunken px-2 py-1">
       {/*
         **من غير `href` بيبقى نص مش لينك.** فيه روابط مالهاش لازمة تتفتح —
         زي رابط الويب هوك: هو بيستقبل `POST` بس، فالضغط عليه بيفتح صفحة
@@ -34,7 +34,7 @@ export function CopyLink({ url, href }: { url: string; href?: string }) {
           target="_blank"
           rel="noopener noreferrer"
           dir="ltr"
-          className="min-w-0 flex-1 truncate text-[11px] text-gray-600 hover:text-sky-700 hover:underline"
+          className="min-w-0 flex-1 truncate text-[11px] text-ink-muted hover:text-info hover:underline"
           title={url}
         >
           {url}
@@ -42,7 +42,7 @@ export function CopyLink({ url, href }: { url: string; href?: string }) {
       ) : (
         <span
           dir="ltr"
-          className="min-w-0 flex-1 truncate text-[11px] text-gray-600"
+          className="min-w-0 flex-1 truncate text-[11px] text-ink-muted"
           title={url}
         >
           {url}
@@ -55,8 +55,8 @@ export function CopyLink({ url, href }: { url: string; href?: string }) {
         aria-label="انسخ اللينك"
         className={`shrink-0 rounded-md px-1.5 py-1 transition ${
           copied
-            ? "bg-green-100 text-green-700"
-            : "text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+            ? "bg-success-line text-success"
+            : "text-ink-faint hover:bg-line hover:text-ink-body"
         }`}
       >
         {copied ? (
