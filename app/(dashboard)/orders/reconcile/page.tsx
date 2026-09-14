@@ -105,7 +105,7 @@ export default async function ReconcilePage() {
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ: {error.message}
       </div>
     );
@@ -264,9 +264,9 @@ export default async function ReconcilePage() {
 
   const sevLabel = { high: "مهم", mid: "متوسط", low: "بسيط" };
   const sevClass = {
-    high: "bg-red-50 text-red-700",
-    mid: "bg-amber-50 text-amber-700",
-    low: "bg-gray-100 text-gray-600",
+    high: "bg-danger-soft text-danger",
+    mid: "bg-warning-soft text-warning",
+    low: "bg-sunken text-ink-muted",
   };
 
   // ===== الخلاصة =====
@@ -278,34 +278,34 @@ export default async function ReconcilePage() {
       ? {
           title: `${bySeverity.high} مشكلة محتاجة تتظبط`,
           note: "دي بتأثر على فلوسك أو على حالة أوردراتك — بصّ عليها قبل ما تعتمد الأرقام.",
-          box: "bg-red-50",
-          text: "text-red-900",
-          sub: "text-red-800",
+          box: "bg-danger-soft",
+          text: "text-danger",
+          sub: "text-danger",
         }
       : bySeverity.mid + bySeverity.low > 0
         ? {
             title: "مفيش حاجة خطيرة",
             note: "فاضل حاجات بسيطة تحت — تظبطها وقت ما تحب.",
-            box: "bg-amber-50",
-            text: "text-amber-900",
-            sub: "text-amber-800",
+            box: "bg-warning-soft",
+            text: "text-warning",
+            sub: "text-warning",
           }
         : {
             title: "كل حاجة مظبوطة",
             note: "أوردراتك متطابقة مع بوسطة، والأرقام اللي في الداشبورد تقدر تعتمد عليها.",
-            box: "bg-green-50",
-            text: "text-green-900",
-            sub: "text-green-800",
+            box: "bg-success-soft",
+            text: "text-success",
+            sub: "text-success",
           };
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-gray-900">مراجعة الداتا</h1>
+        <h1 className="text-xl font-bold text-ink">مراجعة الداتا</h1>
         <BackLink href="/orders" label="الرجوع للأوردرات" />
       </div>
 
-      <div className={`rounded-xl p-5 ${verdict.box}`}>
+      <div className={`rounded-card p-5 ${verdict.box}`}>
         <h2 className={`text-lg font-bold ${verdict.text}`}>{verdict.title}</h2>
         <p className={`mt-1 text-sm ${verdict.sub}`}>{verdict.note}</p>
         <p className={`mt-2 text-xs ${verdict.sub} opacity-75`}>
@@ -321,7 +321,7 @@ export default async function ReconcilePage() {
       <BostaCoverage action={checkBostaCoverage} />
 
       {issues.length === 0 ? (
-        <div className="rounded-xl bg-green-50 p-8 text-center text-sm text-green-800">
+        <div className="rounded-card bg-success-soft p-8 text-center text-sm text-success">
           كل الأوردرات مطابقة — مفيش مشاكل 🎉
         </div>
       ) : (
@@ -329,7 +329,7 @@ export default async function ReconcilePage() {
           {sortedGroups.map(([kind, list]) => (
             <details
               key={kind}
-              className="rounded-xl bg-white shadow-sm"
+              className="card"
               open={list[0].severity === "high"}
             >
               <summary className="flex cursor-pointer items-center justify-between gap-3 p-4">
@@ -339,28 +339,28 @@ export default async function ReconcilePage() {
                   >
                     {sevLabel[list[0].severity]}
                   </span>
-                  <span className="truncate text-sm font-bold text-gray-900">
+                  <span className="truncate text-sm font-bold text-ink">
                     {kind}
                   </span>
                 </span>
-                <span className="shrink-0 text-sm text-gray-500">
+                <span className="shrink-0 text-sm text-ink-muted">
                   {list.length}
                 </span>
               </summary>
-              <ul className="divide-y divide-gray-100 border-t border-gray-100">
+              <ul className="divide-y divide-line border-t border-line">
                 {list.slice(0, 100).map((i, idx) => (
                   <li key={idx} className="px-4 py-2.5">
                     <Link
                       href={`/orders/${i.order.id}`}
                       className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
                     >
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium text-ink">
                         {i.order.order_number ?? "بدون رقم"}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-ink-muted">
                         {i.order.customers?.full_name ?? "—"}
                       </span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-ink-faint">
                         {formatDate(i.order.order_date)}
                       </span>
                       <span
@@ -369,11 +369,11 @@ export default async function ReconcilePage() {
                         {orderStatusBadge(i.order.order_status).label}
                       </span>
                     </Link>
-                    <p className="mt-0.5 text-xs text-gray-600">{i.detail}</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">{i.detail}</p>
                   </li>
                 ))}
                 {list.length > 100 && (
-                  <li className="px-4 py-2 text-xs text-gray-400">
+                  <li className="px-4 py-2 text-xs text-ink-faint">
                     و{list.length - 100} أوردر تاني...
                   </li>
                 )}
@@ -383,7 +383,7 @@ export default async function ReconcilePage() {
         </div>
       )}
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-ink-faint">
         شغّل مزامنة بوسطة الأول عشان الأرقام تبقى أحدث، وبعدين راجع الصفحة دي.
       </p>
     </div>
