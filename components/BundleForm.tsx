@@ -58,7 +58,7 @@ export function BundleForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+        className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
       >
         باقة جديدة
       </button>
@@ -66,10 +66,10 @@ export function BundleForm({
   }
 
   return (
-    <form action={create} className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+    <form action={create} className="rounded-card bg-surface p-4 shadow-card sm:p-5">
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-48 flex-1 flex-col gap-1">
-          <label htmlFor="bundle-name" className="text-xs text-gray-500">
+          <label htmlFor="bundle-name" className="text-xs text-ink-muted">
             اسم الباقة
           </label>
           <input
@@ -77,11 +77,11 @@ export function BundleForm({
             name="name"
             required
             placeholder="طقم المطبخ"
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label htmlFor="bundle-price" className="text-xs text-gray-500">
+          <label htmlFor="bundle-price" className="text-xs text-ink-muted">
             سعر الباقة
           </label>
           <input
@@ -93,7 +93,7 @@ export function BundleForm({
             required
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-32 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+            className="w-32 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
           />
         </div>
       </div>
@@ -111,7 +111,7 @@ export function BundleForm({
                   )
                 )
               }
-              className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="min-w-0 flex-1 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             >
               <option value="">اختار منتج</option>
               {variants.map((v) => (
@@ -133,13 +133,13 @@ export function BundleForm({
                   )
                 )
               }
-              className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-16 rounded-control border border-line-strong px-2 py-1.5 text-center text-sm text-ink focus:border-primary focus:outline-none"
             />
             {lines.length > 2 && (
               <button
                 type="button"
                 onClick={() => setLines((x) => x.filter((_, n) => n !== i))}
-                className="shrink-0 rounded-lg px-2 py-1 text-xs text-gray-400 hover:bg-gray-100"
+                className="shrink-0 rounded-control px-2 py-1 text-xs text-ink-faint hover:bg-sunken"
                 aria-label="شيل السطر"
               >
                 ✕
@@ -151,16 +151,16 @@ export function BundleForm({
         <button
           type="button"
           onClick={() => setLines((x) => [...x, { variantId: "", quantity: 1 }])}
-          className="text-xs text-gray-500 hover:text-gray-900"
+          className="text-xs text-ink-muted hover:text-ink"
         >
           + منتج تاني
         </button>
       </div>
 
       {items.length >= 2 && (
-        <div className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5">
+        <div className="mt-4 rounded-control bg-sunken px-3 py-2.5">
           <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
-            <span className="text-gray-500">
+            <span className="text-ink-muted">
               لوحدهم {formatMoney(Math.round(full))}
               {priceNum > 0 && full > priceNum && (
                 <> · العميل بيوفّر {formatMoney(Math.round(full - priceNum))}</>
@@ -169,7 +169,7 @@ export function BundleForm({
             {priceNum > 0 && cost > 0 && (
               <span
                 className={
-                  profit < 0 ? "font-medium text-red-600" : "text-gray-500"
+                  profit < 0 ? "font-medium text-danger" : "text-ink-muted"
                 }
               >
                 ربحك {formatMoney(Math.round(profit))}
@@ -182,7 +182,7 @@ export function BundleForm({
               {preview.map((l) => (
                 <div
                   key={l.variantId}
-                  className="flex items-baseline justify-between gap-3 text-[11px] text-gray-400"
+                  className="flex items-baseline justify-between gap-3 text-[11px] text-ink-faint"
                 >
                   <span>
                     {l.quantity > 1 && `${l.quantity} × `}
@@ -196,7 +196,7 @@ export function BundleForm({
             </div>
           )}
 
-          <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
+          <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
             السعر بيتوزّع بنسبة سعر كل منتج — مش خصم واحد على الكل. كده ربح كل
             منتج بيفضل صح لوحده.
           </p>
@@ -204,20 +204,20 @@ export function BundleForm({
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
+        <button className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark">
           اعمل الباقة
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100"
+          className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-sunken"
         >
           إلغاء
         </button>
         <input
           name="note"
           placeholder="ملاحظة (اختياري)"
-          className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+          className="min-w-0 flex-1 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
         />
       </div>
     </form>
