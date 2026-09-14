@@ -89,7 +89,7 @@ export default async function ProductDetailsPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل المنتج: {error.message}
       </div>
     );
@@ -103,11 +103,11 @@ export default async function ProductDetailsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">
+          <h1 className="text-xl font-bold text-ink">
             {product.name_ar ?? product.name ?? "بدون اسم"}
           </h1>
           {product.name && (
-            <p className="text-sm text-gray-400" dir="ltr">
+            <p className="text-sm text-ink-faint" dir="ltr">
               {product.name}
             </p>
           )}
@@ -118,23 +118,23 @@ export default async function ProductDetailsPage({
       {isAdmin && (
         <form
           action={saveProductName}
-          className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 shadow-sm"
+          className="card flex flex-wrap items-end gap-3 p-4"
         >
           <input type="hidden" name="product_id" value={product.id} />
           <div className="flex flex-col gap-1">
-            <label htmlFor="name_ar" className="text-xs text-gray-500">
+            <label htmlFor="name_ar" className="text-xs text-ink-muted">
               الاسم بالعربي (اللي انت بتعرف بيه المنتج)
             </label>
             <input
               id="name_ar"
               name="name_ar"
               defaultValue={product.name_ar ?? ""}
-              className="w-64 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-64 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
           </div>
           <button
             type="submit"
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+            className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
           >
             حفظ الاسم
           </button>
@@ -142,12 +142,12 @@ export default async function ProductDetailsPage({
       )}
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم حفظ التعديل
         </div>
       )}
@@ -157,10 +157,10 @@ export default async function ProductDetailsPage({
           variant.variant_cost_components.map((c) => [c.component, c.amount])
         );
         return (
-          <div key={variant.id} className="rounded-xl bg-white p-5 shadow-sm">
+          <div key={variant.id} className="card p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-base font-bold text-gray-900">
+                <h2 className="text-base font-bold text-ink">
                   {variant.variant_name ?? "افتراضي"}
                 </h2>
                 {isAdmin ? (
@@ -172,12 +172,12 @@ export default async function ProductDetailsPage({
                       defaultValue={variant.sku ?? ""}
                       placeholder="الكود (SKU)"
                       dir="ltr"
-                      className="w-32 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                      className="w-32 rounded-control border border-line-strong px-2 py-1 text-xs text-ink focus:border-primary focus:outline-none"
                       aria-label="الكود"
                     />
                     <button
                       type="submit"
-                      className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                      className="rounded-control bg-sunken px-2.5 py-1 text-xs font-medium text-ink-body hover:bg-line"
                     >
                       حفظ الكود
                     </button>
@@ -185,7 +185,7 @@ export default async function ProductDetailsPage({
                 ) : (
                   variant.sku && (
                     <span
-                      className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600"
+                      className="rounded-full bg-sunken px-2.5 py-0.5 text-xs text-ink-muted"
                       dir="ltr"
                     >
                       {variant.sku}
@@ -200,25 +200,25 @@ export default async function ProductDetailsPage({
                 >
                   <input type="hidden" name="variant_id" value={variant.id} />
                   <input type="hidden" name="product_id" value={product.id} />
-                  <label className="text-sm text-gray-500">سعر البيع</label>
+                  <label className="text-sm text-ink-muted">سعر البيع</label>
                   <input
                     type="number"
                     name="sale_price"
                     defaultValue={variant.sale_price}
                     min={0}
                     step="0.01"
-                    className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                    className="w-28 rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
                     aria-label="سعر البيع"
                   />
                   <button
                     type="submit"
-                    className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                    className="rounded-control bg-sunken px-2.5 py-1 text-xs font-medium text-ink-body hover:bg-line"
                   >
                     حفظ
                   </button>
                 </form>
               ) : (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-ink-muted">
                   سعر البيع: {formatMoney(variant.sale_price)}
                 </span>
               )}
@@ -226,7 +226,7 @@ export default async function ProductDetailsPage({
 
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
-                <h3 className="mb-3 text-sm font-bold text-gray-700">
+                <h3 className="mb-3 text-sm font-bold text-ink-body">
                   مكونات التكلفة
                 </h3>
                 {isAdmin ? (
@@ -248,7 +248,7 @@ export default async function ProductDetailsPage({
                       >
                         <label
                           htmlFor={`comp-${variant.id}-${component}`}
-                          className="text-sm text-gray-600"
+                          className="text-sm text-ink-muted"
                         >
                           {component}
                         </label>
@@ -259,22 +259,22 @@ export default async function ProductDetailsPage({
                           defaultValue={componentAmounts.get(component) ?? 0}
                           min={0}
                           step="0.01"
-                          className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-left text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                          className="w-28 rounded-control border border-line-strong px-2 py-1 text-left text-sm text-ink focus:border-primary focus:outline-none"
                         />
                       </div>
                     ))}
-                    <div className="flex items-center justify-between border-t border-gray-200 pt-3">
-                      <span className="text-sm font-bold text-gray-900">
+                    <div className="flex items-center justify-between border-t border-line pt-3">
+                      <span className="text-sm font-bold text-ink">
                         إجمالي التكلفة الحالية: {formatMoney(variant.cost_price)}
                       </span>
                       <button
                         type="submit"
-                        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                        className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                       >
                         حفظ المكونات
                       </button>
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-ink-faint">
                       التكلفة الإجمالية بتتحسب تلقائياً من مجموع المكونات
                     </p>
                   </form>
@@ -285,13 +285,13 @@ export default async function ProductDetailsPage({
                         key={component}
                         className="flex items-center justify-between gap-3 text-sm"
                       >
-                        <span className="text-gray-600">{component}</span>
-                        <span className="text-gray-900">
+                        <span className="text-ink-muted">{component}</span>
+                        <span className="text-ink">
                           {formatMoney(componentAmounts.get(component) ?? 0)}
                         </span>
                       </div>
                     ))}
-                    <div className="border-t border-gray-200 pt-3 text-sm font-bold text-gray-900">
+                    <div className="border-t border-line pt-3 text-sm font-bold text-ink">
                       إجمالي التكلفة: {formatMoney(variant.cost_price)}
                     </div>
                   </div>
@@ -306,7 +306,7 @@ export default async function ProductDetailsPage({
                 على اللي وصل.
               */}
               <div className="mb-6">
-                <h3 className="mb-3 text-sm font-bold text-gray-700">
+                <h3 className="mb-3 text-sm font-bold text-ink-body">
                   تقدر تخصم كام
                 </h3>
                 <DiscountCalculator
@@ -319,7 +319,7 @@ export default async function ProductDetailsPage({
               </div>
 
               <div>
-                <h3 className="mb-3 text-sm font-bold text-gray-700">المخزون</h3>
+                <h3 className="mb-3 text-sm font-bold text-ink-body">المخزون</h3>
                 {isAdmin ? (
                   <form
                     action={saveStock}
@@ -341,18 +341,18 @@ export default async function ProductDetailsPage({
                       defaultValue={variant.quantity_on_hand}
                       min={0}
                       step={1}
-                      className="w-24 rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                      className="w-24 rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
                       aria-label="المخزون"
                     />
                     <button
                       type="submit"
-                      className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
+                      className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
                     >
                       حفظ المخزون
                     </button>
                   </form>
                 ) : (
-                  <p className="text-sm text-gray-900">
+                  <p className="text-sm text-ink">
                     {variant.quantity_on_hand} قطعة
                   </p>
                 )}
@@ -363,12 +363,12 @@ export default async function ProductDetailsPage({
       })}
 
       {isAdmin && (
-        <div className="flex justify-end border-t border-gray-200 pt-6">
+        <div className="flex justify-end border-t border-line pt-6">
           <form action={deleteProduct}>
             <input type="hidden" name="product_id" value={product.id} />
             <ConfirmButton
               message={`متأكد إنك عايز تمسح المنتج "${product.name_ar ?? product.name ?? ""}"؟`}
-              className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+              className="rounded-control bg-danger-soft px-4 py-1.5 text-sm font-medium text-danger hover:bg-danger-line"
             >
               مسح المنتج
             </ConfirmButton>
