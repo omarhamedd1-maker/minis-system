@@ -33,10 +33,10 @@ export function DayPicker({
         onClick={() => setOpen((v) => !v)}
         title="اختار يوم أو فترة"
         aria-label="اختار يوم أو فترة من التقويم"
-        className={`rounded-full p-1.5 shadow-sm ${
+        className={`rounded-full p-1.5 shadow-card ${
           active
             ? "bg-primary text-white"
-            : "bg-white text-gray-600 hover:bg-gray-100"
+            : "bg-surface text-ink-muted hover:bg-sunken"
         }`}
       >
         <svg
@@ -58,7 +58,7 @@ export function DayPicker({
           type="button"
           onClick={() => router.push("/")}
           title="إلغاء الفترة المختارة"
-          className="rounded-full bg-white px-2 py-1 text-xs text-gray-500 shadow-sm hover:bg-gray-100"
+          className="rounded-full bg-surface px-2 py-1 text-xs text-ink-muted shadow-card hover:bg-sunken"
         >
           ✕
         </button>
@@ -71,26 +71,26 @@ export function DayPicker({
             onClick={() => setOpen(false)}
             aria-hidden="true"
           ></div>
-          <div className="absolute top-full z-50 mt-2 flex w-max max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-xl ltr:left-0 rtl:left-0">
-            <label className="flex items-center justify-between gap-3 text-xs text-gray-600">
+          <div className="absolute top-full z-50 mt-2 flex w-max max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-card border border-line bg-surface p-3 shadow-xl ltr:left-0 rtl:left-0">
+            <label className="flex items-center justify-between gap-3 text-xs text-ink-muted">
               <span>من</span>
               <input
                 type="date"
                 defaultValue={from ?? ""}
                 onChange={(e) => apply(e.target.value, to ?? "")}
-                className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
               />
             </label>
-            <label className="flex items-center justify-between gap-3 text-xs text-gray-600">
+            <label className="flex items-center justify-between gap-3 text-xs text-ink-muted">
               <span>إلى</span>
               <input
                 type="date"
                 defaultValue={to ?? ""}
                 onChange={(e) => apply(from ?? "", e.target.value)}
-                className="rounded-lg border border-gray-300 px-2 py-1 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+                className="rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
               />
             </label>
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-ink-faint">
               سيب &quot;إلى&quot; فاضية عشان يوم واحد بس
             </p>
           </div>

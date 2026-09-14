@@ -61,13 +61,13 @@ export function SendAnnouncement({
   if (state?.ok) {
     return (
       <div className="space-y-3 p-3">
-        <p className="rounded-lg bg-green-50 px-3 py-2.5 text-xs text-green-800">
+        <p className="rounded-control bg-success-soft px-3 py-2.5 text-xs text-success">
           {state.message}
         </p>
         <button
           type="button"
           onClick={onDone}
-          className="w-full rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white"
+          className="w-full rounded-control bg-primary px-3 py-2 text-xs font-medium text-white"
         >
           تمام
         </button>
@@ -84,7 +84,7 @@ export function SendAnnouncement({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="العنوان — الشحن هيتأخر النهاردة"
-        className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-control border border-line-strong px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
       />
 
       <textarea
@@ -94,7 +94,7 @@ export function SendAnnouncement({
         value={details}
         onChange={(e) => setDetails(e.target.value)}
         placeholder="الكلام (اختياري)"
-        className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+        className="w-full rounded-control border border-line-strong px-2.5 py-2 text-xs text-ink focus:border-primary focus:outline-none"
       />
 
       {/* ===== يوصل لمين ===== */}
@@ -105,7 +105,7 @@ export function SendAnnouncement({
         ].map((o) => (
           <label
             key={o.label}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-2 py-1.5 hover:bg-gray-50 has-checked:border-gray-900 has-checked:bg-gray-50"
+            className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-control border border-line px-2 py-1.5 hover:bg-sunken has-checked:border-primary has-checked:bg-sunken"
           >
             <input
               type="radio"
@@ -115,7 +115,7 @@ export function SendAnnouncement({
               onChange={() => setToAll(o.all)}
               className="h-3.5 w-3.5"
             />
-            <span className="text-[11px] font-medium text-gray-900">
+            <span className="text-[11px] font-medium text-ink">
               {o.label}
             </span>
           </label>
@@ -123,16 +123,16 @@ export function SendAnnouncement({
       </div>
 
       {!toAll && (
-        <div className="max-h-32 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-1.5">
+        <div className="max-h-32 space-y-1 overflow-y-auto rounded-control border border-line p-1.5">
           {team.length === 0 ? (
-            <p className="px-1 py-2 text-[11px] text-gray-400">
+            <p className="px-1 py-2 text-[11px] text-ink-faint">
               مفيش حد في التيم غيرك.
             </p>
           ) : (
             team.map((m) => (
               <label
                 key={m.authUserId}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 hover:bg-gray-50 has-checked:bg-gray-100"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 hover:bg-sunken has-checked:bg-primary-soft"
               >
                 <input
                   type="checkbox"
@@ -142,11 +142,11 @@ export function SendAnnouncement({
                   onChange={() => toggle(m.authUserId)}
                   className="h-3.5 w-3.5"
                 />
-                <span className="min-w-0 flex-1 truncate text-[11px] text-gray-900">
+                <span className="min-w-0 flex-1 truncate text-[11px] text-ink">
                   {m.name}
                 </span>
                 {m.devices === 0 && (
-                  <span className="shrink-0 text-[10px] font-medium text-amber-700">
+                  <span className="shrink-0 text-[10px] font-medium text-warning">
                     مش مفعّل
                   </span>
                 )}
@@ -158,9 +158,9 @@ export function SendAnnouncement({
 
       {/* ===== المعاينة — نفس اللي هيطلع على التليفون ===== */}
       {title.trim() && (
-        <div className="rounded-lg bg-primary p-2">
+        <div className="rounded-control bg-primary p-2">
           <div className="rounded-md bg-white/95 p-2">
-            <div className="mb-0.5 text-[9px] font-medium text-gray-400">
+            <div className="mb-0.5 text-[9px] font-medium text-ink-faint">
               from Gridpoint
             </div>
             {preview
@@ -171,8 +171,8 @@ export function SendAnnouncement({
                   key={i}
                   className={
                     i === 0
-                      ? "text-[11px] font-bold text-gray-900"
-                      : "text-[11px] text-gray-700"
+                      ? "text-[11px] font-bold text-ink"
+                      : "text-[11px] text-ink-body"
                   }
                 >
                   {line}
@@ -183,26 +183,26 @@ export function SendAnnouncement({
       )}
 
       {warning && (
-        <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-[10px] text-amber-900">
+        <p className="rounded-control bg-warning-soft px-2.5 py-1.5 text-[10px] text-warning">
           {warning}
         </p>
       )}
 
       {state && !state.ok && (
-        <p className="rounded-lg bg-red-50 px-2.5 py-1.5 text-[11px] text-red-700">
+        <p className="rounded-control bg-danger-soft px-2.5 py-1.5 text-[11px] text-danger">
           {state.message}
         </p>
       )}
 
       {/* الحصيلة قبل الدوسة */}
-      <p className="text-[10px] text-gray-500">
+      <p className="text-[10px] text-ink-muted">
         {chosen.length === 0 ? (
           "لسه مااخترتش حد"
         ) : (
           <>
-            هيوصل لـ<b className="text-gray-900">{reach}</b> جهاز
+            هيوصل لـ<b className="text-ink">{reach}</b> جهاز
             {silent.length > 0 && (
-              <span className="block pt-0.5 text-amber-700">
+              <span className="block pt-0.5 text-warning">
                 {silent.map((m) => m.name).join("، ")} مفعّلش الإشعارات — مش
                 هيوصله حاجة
               </span>
@@ -215,11 +215,11 @@ export function SendAnnouncement({
       <button
         type="submit"
         disabled={pending || !title.trim() || chosen.length === 0}
-        className="w-full rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-dark disabled:bg-gray-300"
+        className="w-full rounded-control bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-dark disabled:bg-line-strong"
       >
         {pending ? "بيتبعت…" : "ابعت"}
       </button>
-      <p className="text-center text-[10px] text-gray-400">
+      <p className="text-center text-[10px] text-ink-faint">
         مفيش تراجع — أول ما تدوس بيطلع على تليفوناتهم
       </p>
     </form>

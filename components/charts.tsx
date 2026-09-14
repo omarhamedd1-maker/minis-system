@@ -30,7 +30,7 @@ export function LineChart({
 
   if (points.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-gray-400">
+      <p className="py-10 text-center text-sm text-ink-faint">
         مفيش بيانات في الفترة دي
       </p>
     );
@@ -166,7 +166,7 @@ export function GroupedBars({
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-end gap-4 text-xs text-gray-600">
+      <div className="mb-2 flex items-center justify-end gap-4 text-xs text-ink-muted">
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-2.5 w-2.5 rounded-sm"
@@ -289,7 +289,7 @@ export function HBarList({
 }) {
   if (items.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-gray-400">
+      <p className="py-6 text-center text-sm text-ink-faint">
         مفيش بيانات في الفترة دي
       </p>
     );
@@ -299,10 +299,10 @@ export function HBarList({
     <div className="space-y-2.5">
       {items.map((item) => (
         <div key={item.label} className="flex items-center gap-3">
-          <span className="w-28 shrink-0 truncate text-sm text-gray-700">
+          <span className="w-28 shrink-0 truncate text-sm text-ink-body">
             {item.label}
           </span>
-          <div className="h-5 flex-1 overflow-hidden rounded bg-gray-100">
+          <div className="h-5 flex-1 overflow-hidden rounded bg-sunken">
             <div
               className="h-full rounded"
               style={{
@@ -312,7 +312,7 @@ export function HBarList({
               title={`${item.label}: ${item.display}`}
             ></div>
           </div>
-          <span className="w-24 shrink-0 text-left text-sm text-gray-900" dir="ltr">
+          <span className="w-24 shrink-0 text-left text-sm text-ink" dir="ltr">
             {item.display}
           </span>
         </div>
