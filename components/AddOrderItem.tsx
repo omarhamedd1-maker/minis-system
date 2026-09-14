@@ -76,7 +76,7 @@ export function AddOrderItem({
               onClick={() => setOpen(false)}
               aria-hidden="true"
             ></div>
-            <div className="absolute top-full z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-control border border-line bg-surface shadow-xl">
+            <div className="absolute top-full z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-control border border-line bg-surface shadow-pop">
               {filtered.length === 0 ? (
                 <p className="px-3 py-3 text-center text-xs text-ink-faint">
                   مفيش نتايج

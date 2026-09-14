@@ -690,7 +690,7 @@ export default async function OrderDetailsPage({
                       href={whatsappLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-control bg-green-600 px-3 py-1.5 text-xs font-medium text-white"
+                      className="rounded-control bg-success px-3 py-1.5 text-xs font-medium text-white hover:brightness-[0.92]"
                     >
                       كلّم العميل واتساب
                     </a>
@@ -814,7 +814,7 @@ export default async function OrderDetailsPage({
                     href={whatsappLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 hover:bg-green-100"
+                    className="rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success hover:bg-success-line"
                   >
                     واتساب
                   </a>

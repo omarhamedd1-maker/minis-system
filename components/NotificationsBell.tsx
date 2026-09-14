@@ -97,7 +97,7 @@ export function NotificationsBell({
 
       {open && (
         <div
-          className={`absolute end-0 top-full z-50 mt-2 overflow-hidden rounded-card border border-line bg-surface shadow-lg ${
+          className={`absolute end-0 top-full z-50 mt-2 overflow-hidden rounded-card border border-line bg-surface shadow-pop ${
             composing
               ? "w-[min(22rem,calc(100vw-2rem))]"
               : "w-[min(20rem,calc(100vw-2rem))]"

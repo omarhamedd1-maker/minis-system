@@ -60,7 +60,7 @@ export function FollowupList({
                   setStep(0);
                   openFor(items[0]);
                 }}
-                className="rounded-control bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                className="rounded-control bg-success px-4 py-1.5 text-sm font-medium text-white hover:brightness-[0.92]"
               >
                 ابعت للكل ({items.length})
               </button>
@@ -129,7 +129,7 @@ export function FollowupList({
             <button
               type="button"
               onClick={() => openFor(it)}
-              className="rounded-control bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+              className="rounded-control bg-success px-4 py-1.5 text-sm font-medium text-white hover:brightness-[0.92]"
             >
               افتح واتساب
             </button>

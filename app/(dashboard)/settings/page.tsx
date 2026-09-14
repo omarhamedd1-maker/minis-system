@@ -626,7 +626,7 @@ export default async function SettingsPage({
             <a
               key={f.what}
               href={"/export?what=" + f.what}
-              className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700"
+              className="rounded-full bg-success px-3 py-1 text-xs font-medium text-white hover:brightness-[0.92]"
             >
               {f.label}
             </a>

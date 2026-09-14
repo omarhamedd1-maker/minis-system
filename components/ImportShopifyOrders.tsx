@@ -52,7 +52,7 @@ export function ImportShopifyOrders({
       </button>
 
       {open && (
-        <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto rounded-t-2xl bg-surface p-5 shadow-2xl sm:inset-x-auto sm:left-4 sm:bottom-4 sm:w-[26rem] sm:rounded-2xl">
+        <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto rounded-t-sheet bg-surface p-5 shadow-pop sm:inset-x-auto sm:left-4 sm:bottom-4 sm:w-[26rem] sm:rounded-modal">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-sm font-bold text-ink">
               جلب الأوردرات من شوبيفاي
@@ -160,7 +160,7 @@ export function ImportShopifyOrders({
                         run(false);
                     }}
                     disabled={busy}
-                    className="w-full rounded-control bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                    className="w-full rounded-control bg-success px-4 py-2 text-sm font-medium text-white transition-[filter] hover:brightness-[0.92] disabled:opacity-50"
                   >
                     {busy ? "بنجيب…" : `جيب الـ${plan.toImport.length} دول`}
                   </button>
