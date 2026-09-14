@@ -73,7 +73,7 @@ export default async function CustomerPage({
 
   if (error) {
     return (
-      <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
         حصل خطأ أثناء تحميل العميل: {error.message}
       </div>
     );
@@ -121,7 +121,7 @@ export default async function CustomerPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">
+        <h1 className="text-xl font-bold text-ink">
           {customer.full_name ?? "بدون اسم"}
         </h1>
         <BackLink href="/customers" label="الرجوع للعملاء" />
@@ -133,11 +133,11 @@ export default async function CustomerPage({
         ⚠️ **الملغي بره كل الأرقام، والراجع مادفعش** — الأوردر اللي اتلغى
         مش شرا، واللي رجع مش فلوس دخلت.
       */}
-      <div className="rounded-xl bg-white p-4 shadow-sm sm:p-5">
+      <div className="card p-4 sm:p-5">
         {line ? (
-          <p className="text-sm text-gray-900">{line}</p>
+          <p className="text-sm text-ink">{line}</p>
         ) : (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-muted">
             لسه مافيش تاريخ كفاية نقول منه حاجة عن العميل ده.
           </p>
         )}
@@ -166,7 +166,7 @@ export default async function CustomerPage({
         </div>
 
         {profile.favourites.length > 0 && (
-          <p className="mt-3 border-t border-gray-100 pt-2 text-xs text-gray-500">
+          <p className="mt-3 border-t border-line pt-2 text-xs text-ink-muted">
             بيشتري:{" "}
             {profile.favourites
               .slice(0, 3)
@@ -177,12 +177,12 @@ export default async function CustomerPage({
       </div>
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
       {saved && (
-        <div className="rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
           تم حفظ بيانات العميل
         </div>
       )}
@@ -198,17 +198,17 @@ export default async function CustomerPage({
           updateAction={updateCustomer}
         />
       ) : (
-        <div className="rounded-xl bg-white p-5 shadow-sm">
+        <div className="card p-5">
           <dl className="grid gap-3 sm:grid-cols-2">
             <div className="flex justify-between gap-4">
-              <dt className="text-gray-500">التليفون</dt>
-              <dd className="text-gray-900" dir="ltr">
+              <dt className="text-ink-muted">التليفون</dt>
+              <dd className="text-ink" dir="ltr">
                 {customer.phone ?? "—"}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
-              <dt className="shrink-0 text-gray-500">العنوان</dt>
-              <dd className="text-left text-gray-900">
+              <dt className="shrink-0 text-ink-muted">العنوان</dt>
+              <dd className="text-left text-ink">
                 {customer.address ?? "—"}
               </dd>
             </div>
@@ -234,44 +234,44 @@ export default async function CustomerPage({
       />
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">عدد الأوردرات</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+        <div className="card p-5">
+          <p className="text-sm text-ink-muted">عدد الأوردرات</p>
+          <p className="mt-1 text-2xl font-bold text-ink">
             {validOrders.length}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">إجمالي المشتريات</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+        <div className="card p-5">
+          <p className="text-sm text-ink-muted">إجمالي المشتريات</p>
+          <p className="mt-1 text-2xl font-bold text-ink">
             {formatMoney(total)}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">متوسط الأوردر</p>
-          <p className="mt-1 text-2xl font-bold text-gray-900">
+        <div className="card p-5">
+          <p className="text-sm text-ink-muted">متوسط الأوردر</p>
+          <p className="mt-1 text-2xl font-bold text-ink">
             {formatMoney(Math.round(avgOrder))}
           </p>
         </div>
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">أوردرات اتسلمت</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600">
+        <div className="card p-5">
+          <p className="text-sm text-ink-muted">أوردرات اتسلمت</p>
+          <p className="mt-1 text-2xl font-bold text-success">
             {deliveredCount}
           </p>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
-        <h2 className="border-b border-gray-200 px-5 py-4 text-sm font-bold text-gray-900">
+      <div className="card overflow-x-auto">
+        <h2 className="border-b border-line px-5 py-4 text-sm font-bold text-ink">
           أوردرات العميل
         </h2>
         {orders.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-gray-400">
+          <p className="px-5 py-8 text-center text-sm text-ink-faint">
             لسه مفيش أوردرات للعميل ده
           </p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 text-right text-gray-500">
+              <tr className="border-b border-line text-right text-ink-muted">
                 <th className="px-4 py-3 font-medium">رقم الأوردر</th>
                 <th className="px-4 py-3 font-medium">التاريخ</th>
                 <th className="px-4 py-3 font-medium">الإجمالي</th>
@@ -285,15 +285,15 @@ export default async function CustomerPage({
                 return (
                   <tr
                     key={order.id}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+                    className="border-b border-line last:border-0 hover:bg-sunken"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                    <td className="px-4 py-3 font-medium text-ink">
                       {order.order_number ?? "بدون رقم"}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {formatDate(order.order_date)}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">
+                    <td className="px-4 py-3 text-ink-body">
                       {formatMoney(orderTotal(order))}
                     </td>
                     <td className="px-4 py-3">
@@ -306,7 +306,7 @@ export default async function CustomerPage({
                     <td className="px-4 py-3">
                       <Link
                         href={`/orders/${order.id}`}
-                        className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                        className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
                       >
                         فتح
                       </Link>
@@ -320,12 +320,12 @@ export default async function CustomerPage({
       </div>
 
       {isAdmin && (
-        <div className="flex justify-end border-t border-gray-200 pt-6">
+        <div className="flex justify-end border-t border-line pt-6">
           <form action={deleteCustomer}>
             <input type="hidden" name="customer_id" value={customer.id} />
             <ConfirmButton
               message={`متأكد إنك عايز تمسح العميل "${customer.full_name ?? "بدون اسم"}"؟`}
-              className="rounded-lg bg-red-50 px-4 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+              className="rounded-control bg-danger-soft px-4 py-1.5 text-sm font-medium text-danger hover:bg-danger-line"
             >
               مسح العميل
             </ConfirmButton>
@@ -349,16 +349,16 @@ function Stat({
 }) {
   return (
     <div>
-      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-xs text-ink-muted">{label}</p>
       <p
         className={
           "text-lg font-bold tabular-nums " +
-          (danger ? "text-red-600" : "text-gray-900")
+          (danger ? "text-danger" : "text-ink")
         }
       >
         {value}
       </p>
-      {hint && <p className="text-[11px] text-gray-400">{hint}</p>}
+      {hint && <p className="text-[11px] text-ink-faint">{hint}</p>}
     </div>
   );
 }
