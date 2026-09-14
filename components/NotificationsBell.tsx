@@ -7,15 +7,15 @@ import { SendAnnouncement, type NotifyMember } from "./SendAnnouncement";
 import type { AnnounceState } from "@/app/(dashboard)/notify/actions";
 
 const DOT: Record<Notice["level"], string> = {
-  danger: "bg-red-500",
-  warn: "bg-orange-500",
-  info: "bg-sky-500",
+  danger: "bg-danger",
+  warn: "bg-warning",
+  info: "bg-info",
 };
 
 const TEXT: Record<Notice["level"], string> = {
-  danger: "text-red-700",
-  warn: "text-orange-700",
-  info: "text-sky-700",
+  danger: "text-danger",
+  warn: "text-warning",
+  info: "text-info",
 };
 
 /**
@@ -77,7 +77,7 @@ export function NotificationsBell({
       <button
         type="button"
         onClick={() => (open ? close() : setOpen(true))}
-        className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+        className="relative rounded-control p-2 text-ink-muted hover:bg-sunken"
         aria-label={total ? `${total} إشعار` : "الإشعارات"}
         title={total ? `${total} حاجة محتاجة تتحرك` : "مفيش إشعارات"}
       >
@@ -87,7 +87,7 @@ export function NotificationsBell({
         {total > 0 && (
           <span
             className={`absolute -top-0.5 -left-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white ${
-              worst ? DOT[worst] : "bg-gray-400"
+              worst ? DOT[worst] : "bg-ink-faint"
             }`}
           >
             {total > 99 ? "99+" : total}
@@ -97,14 +97,14 @@ export function NotificationsBell({
 
       {open && (
         <div
-          className={`absolute end-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg ${
+          className={`absolute end-0 top-full z-50 mt-2 overflow-hidden rounded-card border border-line bg-surface shadow-lg ${
             composing
               ? "w-[min(22rem,calc(100vw-2rem))]"
               : "w-[min(20rem,calc(100vw-2rem))]"
           }`}
         >
-          <div className="flex items-center justify-between gap-2 border-b border-gray-100 px-3 py-2">
-            <span className="text-xs font-bold text-gray-700">
+          <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
+            <span className="text-xs font-bold text-ink-body">
               {composing ? "ابعت إشعار للتيم" : "الإشعارات"}
             </span>
             {canSend &&
@@ -112,7 +112,7 @@ export function NotificationsBell({
                 <button
                   type="button"
                   onClick={() => setComposing(false)}
-                  className="text-[11px] font-medium text-gray-400 hover:text-gray-700"
+                  className="text-[11px] font-medium text-ink-faint hover:text-ink-body"
                 >
                   رجوع
                 </button>
@@ -122,7 +122,7 @@ export function NotificationsBell({
                   onClick={() => setComposing(true)}
                   title="ابعت إشعار للتيم"
                   aria-label="ابعت إشعار للتيم"
-                  className="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-primary hover:text-white"
+                  className="flex h-6 w-6 items-center justify-center rounded-control bg-sunken text-ink-muted hover:bg-primary hover:text-white"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -146,11 +146,11 @@ export function NotificationsBell({
               onDone={close}
             />
           ) : notices.length === 0 ? (
-            <p className="px-3 py-6 text-center text-xs text-gray-400">
+            <p className="px-3 py-6 text-center text-xs text-ink-faint">
               مفيش حاجة واقفة — كل حاجة تمام
             </p>
           ) : (
-            <ul className="max-h-80 divide-y divide-gray-100 overflow-y-auto">
+            <ul className="max-h-80 divide-y divide-line overflow-y-auto">
               {notices.map((n) => {
                 const body = (
                   <div className="flex items-start gap-2 px-3 py-2.5">
@@ -163,7 +163,7 @@ export function NotificationsBell({
                         {n.count ? ` (${n.count})` : ""}
                       </div>
                       {n.detail && (
-                        <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500">
+                        <p className="mt-0.5 text-[11px] leading-relaxed text-ink-muted">
                           {n.detail}
                         </p>
                       )}
@@ -176,7 +176,7 @@ export function NotificationsBell({
                       <Link
                         href={n.href}
                         onClick={close}
-                        className="block hover:bg-gray-50"
+                        className="block hover:bg-sunken"
                       >
                         {body}
                       </Link>

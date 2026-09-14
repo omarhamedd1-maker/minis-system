@@ -111,26 +111,26 @@ export function PushPrompt() {
   if (!show) return null;
 
   return (
-    <div className="mb-4 rounded-xl border border-gray-900 bg-primary p-3 text-white">
+    <div className="mb-4 rounded-card border border-primary bg-primary p-3 text-white">
       <p className="text-sm font-bold">شغّل إشعارات الموبايل؟</p>
-      <p className="mt-1 text-xs leading-6 text-gray-300">
+      <p className="mt-1 text-xs leading-6 text-primary-line">
         هتوصلك تنبيهات أول ما عميل مايستلمش، أو شحنة تقف، أو أوردر يفضل مش
         مؤكد — على الموبايل ده من غير ما تفتح البرنامج.
       </p>
-      {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
+      {error && <p className="mt-1 text-xs text-danger-soft">{error}</p>}
       <div className="mt-3 flex items-center gap-2">
         <button
           type="button"
           onClick={enable}
           disabled={busy}
-          className="rounded-lg bg-white px-4 py-1.5 text-sm font-medium text-gray-900 disabled:opacity-50"
+          className="rounded-control bg-surface px-4 py-1.5 text-sm font-medium text-ink disabled:opacity-50"
         >
           {busy ? "لحظة…" : "شغّلها"}
         </button>
         <button
           type="button"
           onClick={snooze}
-          className="rounded-lg px-3 py-1.5 text-xs text-gray-300"
+          className="rounded-control px-3 py-1.5 text-xs text-primary-line"
         >
           مش دلوقتي
         </button>
