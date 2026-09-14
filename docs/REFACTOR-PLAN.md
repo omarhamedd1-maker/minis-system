@@ -66,6 +66,25 @@ grep الخطة على `app/` و`components/` و`lib/` = ٠ · النسخة ال
 (`rounded-sm/md/lg/xl/2xl` · `shadow-sm/md/lg/xl/2xl`) = ٠. الحاجات الوحيدة الباقية بقصد: ألوان
 هوية برّه النظام (`#E30613` بوسطة · `#1877F2` فيسبوك).
 
+⚠️ **وبعد ما خضرت اتلقى ثقب في الشرط (المشرف، من اللقطات):** ألوان الرسوم البيانية كانت أكواد
+hex جوّه JS (`components/charts.tsx` ولون المصاريف في `app/(dashboard)/page.tsx`) — الـgrep بيدوّر
+على كلاسات Tailwind بس فماشافهاش. نفس نوع ثقب `lib/`. اتحولت توكنز: رسم بسلسلتين ← المبيعات
+`info` والأرباح `success` · رسم بسلسلة واحدة ← `primary` · الشبكة `line`/`line-strong` · النص
+`ink-muted`/`ink` · بنود المصاريف `primary-mid` (مش أحمر — المصاريف مش خطر).
+
+**فالشرط بقى فيه grep تالت لأكواد hex:**
+
+```
+grep -rnoE "#[0-9a-fA-F]{6}\b" app components lib --include=*.ts --include=*.tsx --exclude=*.test.ts \
+  | grep -viE "#(E30613|b7050f|1877F2|166FE5)\b" \
+  | grep -vE "app/(icon|apple-icon|manifest|layout)\.tsx?|app/api/brand-icon/"
+```
+
+المستثنى من الـgrep: ألوان الهوية (DESIGN.md) · أيقونة التطبيق والـmanifest ولون شريط المتصفح
+(`app/icon.tsx` · `app/apple-icon.tsx` · `app/api/brand-icon` · `app/manifest.ts` · `themeColor` في
+`app/layout.tsx`) — دي بتترسم برّه الصفحة (صورة أو ملف manifest) و`var()` مابيشتغلش فيها.
+⚠️ **سلسلة تالتة في رسم محتاجة لون ومفيش توكن مناسب = قف** — زي أي لون جديد.
+
 ### قبول ١ج — شرطين، كل واحد بيخضر لوحده
 
 ⚠️ grep واحد على الكل ماكانش هيخضر غير في آخر يوم — يعني مفيش إشارة تقدّم طول الطريق.
@@ -188,6 +207,10 @@ grep -rE "(bg|text|border|ring|divide)-(gray|slate|zinc|neutral|stone|green|emer
 - **الصفحات اليتيمة** — الكود نفسه مكتوب فيه مرتين "كانت صفحة يتيمة من غير
   مدخل في القايمة". ضيف اختبار بيتأكد إن كل `page.tsx` في `app/(dashboard)`
   ليها مدخل في `ITEMS` أو متسجّلة كصفحة تفاصيل، وبيقع لو ظهرت صفحة يتيمة جديدة
+- **رفض الصلاحية يقول سببه (المشرف، ١٤ سبتمبر)** — `requirePagePermission` في `lib/permissions.ts`
+  بتحوّل لأول صفحة مسموحة من غير ولا كلمة. اللي مالوش صلاحية بيفتكر إن الصفحة اختفت، وده
+  نفسه اللي خلّى لقطات `/inbox` تطلع صفحة الأوردرات دفعة كاملة من غير ما حد ياخد باله.
+  الحل: الرفض يوصل لمكان بيقول «الصفحة دي محتاجة صلاحية X — كلّم صاحب الحساب». تجربة استخدام مش أمان.
 
 ### القبول
 
@@ -263,6 +286,7 @@ grep -rE "(bg|text|border|ring|divide)-(gray|slate|zinc|neutral|stone|green|emer
 | ٥ | `automation_rules` فيها `trigger` و`threshold` بس — **فين الـaction؟** والقاعدة مالهاش اسم | ضيف `name` و`action` |
 | ٦ | `app_users` فيها `role_id` **و** `permissions` — نظامين صلاحيات مع بعض | **قف واسأل عمر** مين الأصل لو اتعارضوا |
 | ٧ | `customers.shopify_customer_id` مربوط بمنصة واحدة | `external_source` + `external_id` |
+| ٨ | **الصلاحيات لقطة متخزنة وقت إنشاء الحساب** — `app_users.permissions` قايمة ثابتة، فأي صلاحية تتضاف للكتالوج بعد كده مابتوصلش لحد. اتكشف في التجريبي: صاحب الحساب (Owner) معاه ٣١ من ٣٣ — ناقص `inbox.view` و`inbox.reply` — فصندوق الرسايل كان بيحوّله بصمت. مينيز و٢ سِك **مااتقاسوش** | الصلاحيات تتقري من الدور وقت الفحص مش من اللقطة (المشرف). ⚠️ متصلة بالبند ٦ (`role_id` و`permissions` مع بعض) — **قف واسأل عمر** قبل ما أي حساب صلاحياته تتغير فعليًا |
 
 ⚠️ **كان فيه بند تامن اتشال: «`deletion_requests` مفيهاش `tenant_id`»**
 — النقطة دي كانت **غلط**. العمود موجود من `sql/tenants-01-columns.sql`

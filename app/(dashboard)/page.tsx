@@ -495,7 +495,7 @@ export default async function StatsPage({
       label: category,
       value: amount,
       display: formatMoney(amount),
-      color: "#e34948",
+      color: "var(--primary-mid)",
     }));
 
   // أفضل المنتجات
