@@ -25,10 +25,10 @@ export const dynamic = "force-dynamic";
  * بيزنس، ورقم التتبع بيحدد الشحنة لوحده. الحارس بيسمح للملف ده بالاسم.
  */
 const TONE: Record<string, string> = {
-  good: "bg-emerald-500",
+  good: "bg-success",
   moving: "bg-primary",
-  warn: "bg-amber-500",
-  done: "bg-emerald-500",
+  warn: "bg-warning",
+  done: "bg-success",
 };
 
 export default async function TrackPage({
@@ -98,7 +98,7 @@ export default async function TrackPage({
   return (
     <div className="mx-auto max-w-md px-6 py-16" dir="ltr">
       {store && (
-        <p className="text-sm font-light tracking-[0.2em] text-gray-900">
+        <p className="text-sm font-light tracking-[0.2em] text-ink">
           {store}
         </p>
       )}
@@ -106,23 +106,23 @@ export default async function TrackPage({
       {!view ? (
         // ⚠️ **مانقولش «الرقم ده مش موجود»** بشكل بيفرّق بين رقم حقيقي وغلط
         <>
-          <h1 className="mt-6 text-3xl font-bold leading-tight text-gray-900">
+          <h1 className="mt-6 text-3xl font-bold leading-tight text-ink">
             {UI.notFound}
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-gray-500">
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">
             {UI.notFoundHint}
           </p>
         </>
       ) : (
         <>
-          <h1 className="mt-6 text-3xl font-bold leading-tight text-gray-900">
+          <h1 className="mt-6 text-3xl font-bold leading-tight text-ink">
             {view.title}
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-gray-600">{view.now}</p>
+          <p className="mt-3 text-sm leading-relaxed text-ink-muted">{view.now}</p>
 
           {/* ⚠️ مافيش رقم = مافيش سطر — مش رقم افتراضي */}
           {etaText && (
-            <p className="mt-1 text-sm leading-relaxed text-gray-400">{etaText}</p>
+            <p className="mt-1 text-sm leading-relaxed text-ink-faint">{etaText}</p>
           )}
 
           <div className="mt-10 space-y-4">
@@ -140,19 +140,19 @@ export default async function TrackPage({
                   <span
                     className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       passed
-                        ? "bg-emerald-500"
+                        ? "bg-success"
                         : s.current
-                          ? `${TONE[view.tone] ?? "bg-primary"} ring-4 ring-gray-100`
-                          : "bg-gray-200"
+                          ? `${TONE[view.tone] ?? "bg-primary"} ring-4 ring-sunken`
+                          : "bg-line"
                     }`}
                   />
                   <span
                     className={`text-sm ${
                       s.current
-                        ? "font-medium text-gray-900"
+                        ? "font-medium text-ink"
                         : passed
-                          ? "text-gray-700"
-                          : "text-gray-300"
+                          ? "text-ink-body"
+                          : "text-ink-faint"
                     }`}
                   >
                     {s.label}
@@ -166,7 +166,7 @@ export default async function TrackPage({
 
           {/* ⚠️ معرّف الأوردر مالوش معنى للعميل — مايتعرضش */}
           {!looksLikeOrderId(tracking) && (
-            <p className="mt-12 text-xs uppercase tracking-wide text-gray-300">
+            <p className="mt-12 text-xs uppercase tracking-wide text-ink-faint">
               {UI.trackingLabel} {tracking}
             </p>
           )}
