@@ -50,7 +50,7 @@ export function LinkOrderForm({
 
   if (result?.ok) {
     return (
-      <div className="mt-8 rounded-2xl bg-success-soft p-6 text-center">
+      <div className="mt-8 rounded-card bg-success-soft p-6 text-center">
         <p className="text-lg font-bold text-success">وصلنا طلبك ✅</p>
         <p className="mt-2 text-sm text-success">
           هنكلّمك نأكّد الطلب والعنوان قبل ما نشحنه.

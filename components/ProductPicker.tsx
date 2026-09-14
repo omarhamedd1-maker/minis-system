@@ -66,7 +66,7 @@ export function ProductPicker({
             onClick={() => setOpen(false)}
             aria-hidden="true"
           ></div>
-          <div className="absolute bottom-full z-20 mb-1 max-h-64 w-full overflow-y-auto rounded-control border border-line bg-surface shadow-xl">
+          <div className="absolute bottom-full z-20 mb-1 max-h-64 w-full overflow-y-auto rounded-control border border-line bg-surface shadow-pop">
             {filtered.length === 0 ? (
               <p className="px-3 py-3 text-center text-xs text-ink-faint">
                 مفيش نتايج

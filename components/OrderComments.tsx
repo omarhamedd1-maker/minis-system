@@ -109,7 +109,7 @@ export function OrderComments({
           }}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-surface p-5 shadow-xl"
+            className="w-full max-w-md rounded-modal bg-surface p-5 shadow-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">

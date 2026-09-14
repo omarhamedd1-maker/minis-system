@@ -90,7 +90,7 @@ export function SupplierTxnForm({
           onClick={() => setKind("payment")}
           className={`flex-1 rounded-control px-3 py-2 text-sm font-medium transition-colors ${
             isPayment
-              ? "bg-green-600 text-white"
+              ? "bg-success text-white"
               : "bg-sunken text-ink-muted active:bg-line"
           }`}
         >
@@ -318,7 +318,7 @@ export function SupplierTxnForm({
           type="submit"
           className={`rounded-control px-4 py-1.5 text-sm font-medium text-white ${
             isPayment
-              ? "bg-green-600 hover:bg-green-700"
+              ? "bg-success hover:brightness-[0.92]"
               : "bg-primary hover:bg-primary-dark"
           }`}
         >

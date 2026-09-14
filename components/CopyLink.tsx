@@ -53,7 +53,7 @@ export function CopyLink({ url, href }: { url: string; href?: string }) {
         onClick={copy}
         title="انسخ اللينك"
         aria-label="انسخ اللينك"
-        className={`shrink-0 rounded-md px-1.5 py-1 transition ${
+        className={`shrink-0 rounded-chip px-1.5 py-1 transition ${
           copied
             ? "bg-success-line text-success"
             : "text-ink-faint hover:bg-line hover:text-ink-body"

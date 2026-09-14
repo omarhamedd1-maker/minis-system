@@ -29,7 +29,7 @@ export default async function StoreLoginPage({
 
   return (
     <div className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-surface p-8 shadow-card">
+      <div className="w-full max-w-sm rounded-modal bg-surface p-8 shadow-card">
         <h1 className="mb-1 text-center text-2xl font-bold tracking-wide text-ink">
           {tenant.name}
         </h1>

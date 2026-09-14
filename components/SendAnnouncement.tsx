@@ -132,7 +132,7 @@ export function SendAnnouncement({
             team.map((m) => (
               <label
                 key={m.authUserId}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 hover:bg-sunken has-checked:bg-primary-soft"
+                className="flex cursor-pointer items-center gap-2 rounded-chip px-1.5 py-1.5 hover:bg-sunken has-checked:bg-primary-soft"
               >
                 <input
                   type="checkbox"
@@ -159,7 +159,7 @@ export function SendAnnouncement({
       {/* ===== المعاينة — نفس اللي هيطلع على التليفون ===== */}
       {title.trim() && (
         <div className="rounded-control bg-primary p-2">
-          <div className="rounded-md bg-white/95 p-2">
+          <div className="rounded-chip bg-surface/95 p-2">
             <div className="mb-0.5 text-[9px] font-medium text-ink-faint">
               from Gridpoint
             </div>

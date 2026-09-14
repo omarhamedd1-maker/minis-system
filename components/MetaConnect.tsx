@@ -121,7 +121,7 @@ export function MetaConnect({
       type="button"
       onClick={start}
       disabled={!ready || busy}
-      className="rounded-lg bg-[#1877F2] px-4 py-2 text-sm font-medium text-white hover:bg-[#166FE5] disabled:opacity-60"
+      className="rounded-control bg-[#1877F2] px-4 py-2 text-sm font-medium text-white hover:bg-[#166FE5] disabled:opacity-60"
     >
       {busy ? "بيربط…" : ready ? "اربط حساباتك" : "بيحمّل…"}
     </button>

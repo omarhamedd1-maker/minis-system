@@ -47,7 +47,7 @@ export function AddSupplier({
                 setOpen(false);
               }}
               onClick={(e) => e.stopPropagation()}
-              className="minis-in relative w-full max-w-md space-y-2 rounded-t-2xl bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl sm:pb-4"
+              className="minis-in relative w-full max-w-md space-y-2 rounded-t-sheet bg-surface p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-pop sm:rounded-modal sm:pb-4"
             >
               <h2 className="text-sm font-bold text-ink">مورد جديد</h2>
               <input
