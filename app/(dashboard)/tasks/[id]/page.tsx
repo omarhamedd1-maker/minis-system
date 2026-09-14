@@ -131,7 +131,7 @@ export default async function TaskPage({
       <BackLink href="/tasks" label="الرجوع للتاسكات" variant="exit" />
 
       {actionError && (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
           {actionError}
         </div>
       )}
@@ -139,7 +139,7 @@ export default async function TaskPage({
       {/* ===== الرأس: الدايرة والعنوان وكل حاجة عنه في مكان واحد =====
           كان ٣ كروت منفصلة (حالة + تفاصيل + أزرار الحالة) فوق بعض، وكل
           واحد بيقول تلت الحكاية. */}
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <div className="card p-4">
         <div className="flex items-start gap-3">
           {canEdit ? (
             <form action={setTaskStatus} className="shrink-0 pt-1">
@@ -152,8 +152,8 @@ export default async function TaskPage({
                 aria-label={done ? "رجّعه مفتوح" : "علّم إنه خلص"}
                 className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
                   done
-                    ? "border-green-600 bg-green-600 text-white"
-                    : "border-gray-300 text-transparent hover:border-green-600 hover:text-green-600"
+                    ? "border-success bg-success text-white"
+                    : "border-line-strong text-transparent hover:border-success hover:text-success"
                 }`}
               >
                 <svg
@@ -172,7 +172,7 @@ export default async function TaskPage({
           ) : (
             <span
               className={`mt-1 h-6 w-6 shrink-0 rounded-full border-2 ${
-                done ? "border-green-600 bg-green-600" : "border-gray-200"
+                done ? "border-success bg-success" : "border-line"
               }`}
             />
           )}
@@ -180,16 +180,16 @@ export default async function TaskPage({
           <div className="min-w-0 flex-1">
             <h1
               className={`text-lg font-bold ${
-                done ? "text-gray-400 line-through" : "text-gray-900"
+                done ? "text-ink-faint line-through" : "text-ink"
               }`}
             >
               {task.title}
             </h1>
 
             {/* سطر واحد فيه كل اللي تعرفه عن التاسك */}
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-muted">
               {task.priority === "urgent" && !done && (
-                <span className="font-bold text-red-700">عاجل</span>
+                <span className="font-bold text-danger">عاجل</span>
               )}
               {task.status === "doing" && (
                 <span className={`rounded-full px-2 py-0.5 ${badge.className}`}>
@@ -197,7 +197,7 @@ export default async function TaskPage({
                 </span>
               )}
               {due && !done && (
-                <span className={late ? "font-medium text-red-600" : ""}>{due}</span>
+                <span className={late ? "font-medium text-danger" : ""}>{due}</span>
               )}
               {assignees.length > 0 && (
                 <span>
@@ -205,11 +205,11 @@ export default async function TaskPage({
                 </span>
               )}
               {repeatLabel(task) && (
-                <span className="text-violet-700">بيتكرر {repeatLabel(task)}</span>
+                <span className="text-info">بيتكرر {repeatLabel(task)}</span>
               )}
               {/* التنبيه المحجوز — بيختفي أول ما التاسك يخلص لأنه بيسكت */}
               {task.remind_at && !done && (
-                <span className="text-amber-700">
+                <span className="text-warning">
                   ⏰ {cairoTimeText(task.remind_at)}
                   {reminderLabel(task) ? ` · ${reminderLabel(task)}` : ""}
                 </span>
@@ -217,7 +217,7 @@ export default async function TaskPage({
               {task.order_id && (
                 <Link
                   href={`/orders/${task.order_id}`}
-                  className="font-medium text-sky-700 underline"
+                  className="font-medium text-info underline"
                 >
                   افتح الأوردر
                 </Link>
@@ -225,7 +225,7 @@ export default async function TaskPage({
             </div>
 
             {task.body && (
-              <p className="mt-2.5 text-sm whitespace-pre-wrap text-gray-700">
+              <p className="mt-2.5 text-sm whitespace-pre-wrap text-ink-body">
                 {task.body}
               </p>
             )}
@@ -243,10 +243,10 @@ export default async function TaskPage({
               <input type="hidden" name="return_to" value={`/tasks/${task.id}`} />
               <button
                 type="submit"
-                className={`rounded-lg px-2.5 py-1 text-xs font-medium ${
+                className={`rounded-control px-2.5 py-1 text-xs font-medium ${
                   task.status === "doing"
-                    ? "bg-sky-100 text-sky-800 hover:bg-sky-200"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    ? "bg-info-soft text-info hover:bg-info-line"
+                    : "bg-sunken text-ink-body hover:bg-line"
                 }`}
               >
                 {task.status === "doing" ? "وقّفته" : "شغال عليه"}
@@ -257,20 +257,20 @@ export default async function TaskPage({
       </div>
 
       {/* ===== الخطوات ===== */}
-      <div className="rounded-xl bg-white p-4 shadow-sm">
+      <div className="card p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-gray-900">الخطوات</h2>
+          <h2 className="text-sm font-bold text-ink">الخطوات</h2>
           {progress.total > 0 && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-ink-muted">
               {progress.done} من {progress.total}
             </span>
           )}
         </div>
 
         {progress.total > 0 && (
-          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+          <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-sunken">
             <div
-              className="h-full rounded-full bg-green-500 transition-all"
+              className="h-full rounded-full bg-success transition-all"
               style={{ width: `${progress.percent}%` }}
             />
           </div>
@@ -278,7 +278,7 @@ export default async function TaskPage({
 
         <ul className="space-y-1.5">
           {steps.map((s) => (
-            <li key={s.id} className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
+            <li key={s.id} className="flex items-center gap-2 rounded-control bg-sunken px-2.5 py-2">
               {canEdit ? (
                 <form action={toggleStep} className="flex min-w-0 flex-1 items-center gap-2">
                   <input type="hidden" name="task_id" value={task.id} />
@@ -288,8 +288,8 @@ export default async function TaskPage({
                     aria-label={s.done ? "شيل العلامة" : "علّم إنها خلصت"}
                     className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
                       s.done
-                        ? "border-green-500 bg-green-500 text-white"
-                        : "border-gray-300 bg-white"
+                        ? "border-success bg-success text-white"
+                        : "border-line-strong bg-surface"
                     }`}
                   >
                     {s.done && (
@@ -306,14 +306,14 @@ export default async function TaskPage({
                   </button>
                   <span
                     className={`min-w-0 flex-1 truncate text-xs ${
-                      s.done ? "text-gray-400 line-through" : "text-gray-800"
+                      s.done ? "text-ink-faint line-through" : "text-ink-body"
                     }`}
                   >
                     {s.title}
                   </span>
                 </form>
               ) : (
-                <span className="min-w-0 flex-1 truncate text-xs text-gray-800">
+                <span className="min-w-0 flex-1 truncate text-xs text-ink-body">
                   {s.done ? "✓ " : ""}
                   {s.title}
                 </span>
@@ -326,7 +326,7 @@ export default async function TaskPage({
                   <button
                     type="submit"
                     aria-label="امسح الخطوة"
-                    className="text-xs text-gray-300 hover:text-red-600"
+                    className="text-xs text-ink-faint hover:text-danger"
                   >
                     ✕
                   </button>
@@ -343,11 +343,11 @@ export default async function TaskPage({
               name="step_title"
               required
               placeholder="خطوة جديدة"
-              className="min-w-0 flex-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="min-w-0 flex-1 rounded-control border border-line-strong px-2.5 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
             />
             <button
               type="submit"
-              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
+              className="shrink-0 rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               أضف
             </button>
@@ -355,7 +355,7 @@ export default async function TaskPage({
         )}
 
         {steps.length > 0 && (
-          <p className="mt-2 text-[10px] text-gray-400">
+          <p className="mt-2 text-[10px] text-ink-faint">
             أول ما كل الخطوات تتعلّم، التاسك بيقفل لوحده.
           </p>
         )}
@@ -364,7 +364,7 @@ export default async function TaskPage({
       {/* ===== المرفقات — مطوية، بتتفتح لما تحتاجها =====
           كانت كارت مفتوح بخانة رفع ملفات وسطر شروط، وأغلب التاسكات مالهاش
           مرفقات أصلاً — يعني مساحة شاشة بتتاخد عشان تقول «مفيش». */}
-      <details className="group rounded-xl bg-white shadow-sm" open={files.length > 0}>
+      <details className="card group" open={files.length > 0}>
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
           <svg
             viewBox="0 0 24 24"
@@ -373,35 +373,35 @@ export default async function TaskPage({
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
+            className="h-3.5 w-3.5 text-ink-faint transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
           >
             <path d="M9 6l6 6-6 6" />
           </svg>
-          <h2 className="text-sm font-bold text-gray-900">
+          <h2 className="text-sm font-bold text-ink">
             المرفقات{files.length > 0 ? ` (${files.length})` : ""}
           </h2>
         </summary>
         <div className="px-4 pb-4">
         {files.length === 0 ? (
-          <p className="text-xs text-gray-400">مفيش مرفقات</p>
+          <p className="text-xs text-ink-faint">مفيش مرفقات</p>
         ) : (
           <ul className="space-y-1.5">
             {files.map((f) => (
               <li
                 key={f.path}
-                className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2"
+                className="flex items-center gap-2 rounded-control bg-sunken px-2.5 py-2"
               >
                 {f.url ? (
                   <a
                     href={f.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-w-0 flex-1 truncate text-xs text-sky-700 underline"
+                    className="min-w-0 flex-1 truncate text-xs text-info underline"
                   >
                     {f.name}
                   </a>
                 ) : (
-                  <span className="min-w-0 flex-1 truncate text-xs text-gray-400">
+                  <span className="min-w-0 flex-1 truncate text-xs text-ink-faint">
                     {f.name} (الرابط مش متاح)
                   </span>
                 )}
@@ -412,7 +412,7 @@ export default async function TaskPage({
                     <button
                       type="submit"
                       aria-label="امسح المرفق"
-                      className="text-xs text-gray-300 hover:text-red-600"
+                      className="text-xs text-ink-faint hover:text-danger"
                     >
                       ✕
                     </button>
@@ -431,36 +431,36 @@ export default async function TaskPage({
               name="file"
               required
               accept="image/*,application/pdf"
-              className="min-w-0 flex-1 text-xs text-gray-600 file:me-2 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:text-gray-700"
+              className="min-w-0 flex-1 text-xs text-ink-muted file:me-2 file:rounded-control file:border-0 file:bg-sunken file:px-3 file:py-1.5 file:text-xs file:text-ink-body"
             />
             <button
               type="submit"
-              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
+              className="shrink-0 rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               ارفع
             </button>
           </form>
         )}
-        <p className="mt-1 text-[10px] text-gray-400">
+        <p className="mt-1 text-[10px] text-ink-faint">
           صور وPDF بس، وأقصى حجم ٨ ميجا. الروابط موقّتة بساعة.
         </p>
         </div>
       </details>
 
       {/* ===== التعليقات ===== */}
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-sm font-bold text-gray-900">التعليقات</h2>
+      <div className="card p-4">
+        <h2 className="mb-3 text-sm font-bold text-ink">التعليقات</h2>
         {comments.length === 0 ? (
-          <p className="text-xs text-gray-400">مفيش تعليقات لسه</p>
+          <p className="text-xs text-ink-faint">مفيش تعليقات لسه</p>
         ) : (
           <ul className="space-y-2">
             {comments.map((c) => (
-              <li key={c.id} className="rounded-lg bg-gray-50 px-3 py-2">
+              <li key={c.id} className="rounded-control bg-sunken px-3 py-2">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs font-medium text-gray-800">{c.author_name}</span>
-                  <span className="text-[10px] text-gray-400">{formatDate(c.created_at)}</span>
+                  <span className="text-xs font-medium text-ink-body">{c.author_name}</span>
+                  <span className="text-[10px] text-ink-faint">{formatDate(c.created_at)}</span>
                 </div>
-                <p className="mt-0.5 text-xs whitespace-pre-wrap text-gray-700">{c.body}</p>
+                <p className="mt-0.5 text-xs whitespace-pre-wrap text-ink-body">{c.body}</p>
               </li>
             ))}
           </ul>
@@ -473,11 +473,11 @@ export default async function TaskPage({
               name="body"
               required
               placeholder="اكتب تعليق"
-              className="min-w-0 flex-1 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="min-w-0 flex-1 rounded-control border border-line-strong px-2.5 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
             />
             <button
               type="submit"
-              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
+              className="shrink-0 rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               أضف
             </button>
@@ -490,7 +490,7 @@ export default async function TaskPage({
           وتفاصيل، وميعاد، وتكرار، وأولوية، وزرار مسح أحمر. وأنت بتفتح
           التاسك عشان **تشتغل** عليه مش عشان تعدّله. */}
       {canEdit && (
-        <details className="group rounded-xl bg-white shadow-sm">
+        <details className="card group">
           <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3">
             <svg
               viewBox="0 0 24 24"
@@ -499,11 +499,11 @@ export default async function TaskPage({
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-3.5 w-3.5 text-gray-400 transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
+              className="h-3.5 w-3.5 text-ink-faint transition-transform group-open:rotate-90 rtl:-rotate-180 rtl:group-open:-rotate-90"
             >
               <path d="M9 6l6 6-6 6" />
             </svg>
-            <h2 className="text-sm font-bold text-gray-900">
+            <h2 className="text-sm font-bold text-ink">
               تعديل{canAssign ? " وإسناد" : ""}
             </h2>
           </summary>
@@ -514,15 +514,15 @@ export default async function TaskPage({
               <input type="hidden" name="task_id" value={task.id} />
               {/* مربعات مش قايمة — الاختيار المتعدد بقايمة صعب على التليفون */}
               <fieldset className="min-w-40 flex-1">
-                <legend className="text-[11px] text-gray-500">
+                <legend className="text-[11px] text-ink-muted">
                   مين عليه التاسك
-                  <span className="text-gray-400"> (تقدر تختار أكتر من واحد)</span>
+                  <span className="text-ink-faint"> (تقدر تختار أكتر من واحد)</span>
                 </legend>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {members.map((m) => (
                     <label
                       key={m.id}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-50 px-2.5 py-1.5 text-xs text-gray-800 has-checked:bg-primary has-checked:text-white"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-control bg-sunken px-2.5 py-1.5 text-xs text-ink-body has-checked:bg-primary has-checked:text-white"
                     >
                       <input
                         type="checkbox"
@@ -538,7 +538,7 @@ export default async function TaskPage({
               </fieldset>
               <button
                 type="submit"
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
+                className="rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white"
               >
                 اسند
               </button>
@@ -550,31 +550,31 @@ export default async function TaskPage({
             <input
               name="title"
               defaultValue={task.title}
-              className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-full rounded-control border border-line-strong px-2.5 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
             />
             <textarea
               name="body"
               rows={2}
               defaultValue={task.body ?? ""}
               placeholder="تفاصيل"
-              className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+              className="w-full rounded-control border border-line-strong px-2.5 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
             />
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-[11px] text-gray-500">
+              <label className="text-[11px] text-ink-muted">
                 الميعاد
                 <input
                   name="due_on"
                   type="date"
                   defaultValue={task.due_on ?? ""}
-                  className="mt-1 block rounded-lg border border-gray-300 px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="mt-1 block rounded-control border border-line-strong px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
                 />
               </label>
-              <label className="text-[11px] text-gray-500">
+              <label className="text-[11px] text-ink-muted">
                 الأولوية
                 <select
                   name="priority"
                   defaultValue={task.priority ?? "normal"}
-                  className="mt-1 block rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900 focus:border-gray-900 focus:outline-none"
+                  className="mt-1 block rounded-control border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink focus:border-primary focus:outline-none"
                 >
                   {TASK_PRIORITIES.map((p) => (
                     <option key={p.key} value={p.key}>
@@ -597,18 +597,18 @@ export default async function TaskPage({
 
             <button
               type="submit"
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white"
+              className="rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white"
             >
               حفظ
             </button>
           </form>
 
           {canDelete && (
-            <form action={deleteTask} className="mt-3 border-t border-gray-100 pt-3">
+            <form action={deleteTask} className="mt-3 border-t border-line pt-3">
               <input type="hidden" name="task_id" value={task.id} />
               <ConfirmButton
                 message="تمسح التاسك ده وكل خطواته وتعليقاته؟"
-                className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700"
+                className="rounded-control bg-danger-soft px-3 py-1.5 text-xs font-medium text-danger"
               >
                 امسح التاسك
               </ConfirmButton>
@@ -618,7 +618,7 @@ export default async function TaskPage({
         </details>
       )}
 
-      <p className="text-[10px] text-gray-400">
+      <p className="text-[10px] text-ink-faint">
         اتعمل {task.created_by ? `بواسطة ${task.created_by} ` : ""}
         {formatDate(task.created_at)}
         {task.done_at && ` · خلص ${task.done_by ? `بواسطة ${task.done_by} ` : ""}${formatDate(task.done_at)}`}

@@ -18,7 +18,7 @@ export function FillReasons({
   const [pending, start] = useTransition();
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
       <button
         type="button"
         disabled={pending}
@@ -29,13 +29,13 @@ export function FillReasons({
             setNote(r.message);
           })
         }
-        className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+        className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-50"
       >
         {pending ? "بنسأل بوسطة…" : "جيب الأسباب من بوسطة"}
       </button>
 
       {note && (
-        <span className={`text-xs ${failed ? "text-red-600" : "text-gray-500"}`}>
+        <span className={`text-xs ${failed ? "text-danger" : "text-ink-muted"}`}>
           {note}
         </span>
       )}
