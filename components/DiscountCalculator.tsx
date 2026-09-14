@@ -38,7 +38,7 @@ export function DiscountCalculator({
 
   if (cost <= 0) {
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-ink-muted">
         ⚠️ تكلفة الشكل ده صفر، فمفيش حساب ربح ليه. اكتب التكلفة فوق الأول.
       </p>
     );
@@ -47,10 +47,10 @@ export function DiscountCalculator({
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm text-gray-600">أكبر خصم قبل الخسارة</span>
-        <span className="text-lg font-bold tabular-nums text-gray-900">
+        <span className="text-sm text-ink-muted">أكبر خصم قبل الخسارة</span>
+        <span className="text-lg font-bold tabular-nums text-ink">
           {formatMoney(max)}{" "}
-          <span className="text-xs font-normal text-gray-400">({maxPct}%)</span>
+          <span className="text-xs font-normal text-ink-faint">({maxPct}%)</span>
         </span>
       </div>
 
@@ -60,7 +60,7 @@ export function DiscountCalculator({
         max={Math.max(1, Math.round(price))}
         value={discount}
         onChange={(e) => setDiscount(Number(e.target.value))}
-        className="mt-3 w-full accent-gray-900"
+        className="mt-3 w-full accent-primary"
       />
 
       <div className="mt-2 grid grid-cols-3 gap-2 text-center">
@@ -77,7 +77,7 @@ export function DiscountCalculator({
         />
       </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
         «المتوقع» بيدخل فيه إن {Math.round(returnRate * 100)}% من شحناتك بترجع —
         والشحنة اللي بترجع بتدفع شحن ومابتحصّلش.
       </p>
@@ -95,11 +95,11 @@ function Cell({
   danger?: boolean;
 }) {
   return (
-    <div className="rounded-lg bg-gray-50 px-2 py-2">
-      <p className="text-[11px] text-gray-500">{label}</p>
+    <div className="rounded-control bg-sunken px-2 py-2">
+      <p className="text-[11px] text-ink-muted">{label}</p>
       <p
         className={`text-sm font-bold tabular-nums ${
-          danger ? "text-red-600" : "text-gray-900"
+          danger ? "text-danger" : "text-ink"
         }`}
       >
         {value}

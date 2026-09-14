@@ -403,7 +403,7 @@ export default async function OrdersPage({
                     <input type="hidden" name="request_id" value={r.id} />
                     <ConfirmButton
                       message={`متأكد إنك عايز تمسح أوردر ${r.order_number ?? ""} نهائياً؟`}
-                      className="rounded-control bg-danger px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+                      className="rounded-control bg-danger px-3 py-1 text-xs font-medium text-white hover:brightness-[0.92]"
                     >
                       وافق وامسح
                     </ConfirmButton>

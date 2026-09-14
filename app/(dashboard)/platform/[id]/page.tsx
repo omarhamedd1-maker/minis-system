@@ -120,8 +120,8 @@ export default async function TenantDetailPage({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lg font-bold text-gray-900">{t.name}</h1>
-          <p className="mt-0.5 text-xs text-gray-400">
+          <h1 className="text-lg font-bold text-ink">{t.name}</h1>
+          <p className="mt-0.5 text-xs text-ink-faint">
             من {formatDate(t.created_at)}
             {t.id === me.tenantId && " · بيزنسك"}
           </p>
@@ -132,14 +132,14 @@ export default async function TenantDetailPage({
       <div className="flex flex-wrap gap-2 text-xs">
         <span
           className={`rounded-full px-2.5 py-1 font-medium ${
-            t.active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+            t.active ? "bg-success-soft text-success" : "bg-sunken text-ink-muted"
           }`}
         >
           {t.active ? "شغال" : "موقوف"}
         </span>
         <span
           className={`rounded-full px-2.5 py-1 ${
-            expired ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600"
+            expired ? "bg-danger-soft text-danger" : "bg-sunken text-ink-muted"
           }`}
         >
           الاشتراك: {t.subscription_ends_at ?? "مفتوح"}
@@ -147,8 +147,8 @@ export default async function TenantDetailPage({
       </div>
 
       {t.slug && (
-        <div className="rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-gray-900">لينك الدخول</h2>
+        <div className="card p-4">
+          <h2 className="text-sm font-bold text-ink">لينك الدخول</h2>
           <CopyLink url={`${base}/login/${t.slug}`} href={`/login/${t.slug}`} />
         </div>
       )}
@@ -156,32 +156,32 @@ export default async function TenantDetailPage({
       {/* ===== الأرقام ===== */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {counts.map((x) => (
-          <div key={x.label} className="rounded-xl bg-white p-3 shadow-sm">
-            <div className="text-lg font-bold text-gray-900">{x.count}</div>
-            <div className="text-[11px] text-gray-500">{x.label}</div>
+          <div key={x.label} className="card p-3">
+            <div className="text-lg font-bold text-ink">{x.count}</div>
+            <div className="text-[11px] text-ink-muted">{x.label}</div>
           </div>
         ))}
-        <div className="rounded-xl bg-white p-3 shadow-sm">
-          <div className="text-lg font-bold text-gray-900">
+        <div className="card p-3">
+          <div className="text-lg font-bold text-ink">
             {formatMoney(balance)}
           </div>
-          <div className="text-[11px] text-gray-500">رصيد الخزنة</div>
+          <div className="text-[11px] text-ink-muted">رصيد الخزنة</div>
         </div>
       </div>
 
       {/* ===== الربط — الحالة بس من غير أي مفتاح ===== */}
-      <div className="rounded-xl bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-bold text-gray-900">الربط</h2>
+      <div className="card p-4">
+        <h2 className="mb-2 text-sm font-bold text-ink">الربط</h2>
         <dl className="space-y-1.5 text-xs">
           <div className="flex justify-between gap-3">
-            <dt className="text-gray-600">بوسطة</dt>
-            <dd className={c?.bosta_api_key ? "text-green-700" : "text-gray-400"}>
+            <dt className="text-ink-muted">بوسطة</dt>
+            <dd className={c?.bosta_api_key ? "text-success" : "text-ink-faint"}>
               {c?.bosta_api_key ? "مربوط" : "مش مربوط"}
             </dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-gray-600">شوبيفاي</dt>
-            <dd className={c?.shopify_token ? "text-green-700" : "text-gray-400"}>
+            <dt className="text-ink-muted">شوبيفاي</dt>
+            <dd className={c?.shopify_token ? "text-success" : "text-ink-faint"}>
               {c?.shopify_token
                 ? `مربوط · ${c.shopify_domain ?? ""}`
                 : "مش مربوط"}
@@ -192,14 +192,14 @@ export default async function TenantDetailPage({
       </div>
 
       {/* ===== المستخدمون ===== */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <h2 className="px-4 py-3 text-sm font-bold text-gray-900">
+      <div className="card overflow-hidden">
+        <h2 className="px-4 py-3 text-sm font-bold text-ink">
           المستخدمون ({(users ?? []).length})
         </h2>
         {(users ?? []).length === 0 ? (
-          <p className="px-4 pb-4 text-xs text-gray-400">مفيش مستخدمين</p>
+          <p className="px-4 pb-4 text-xs text-ink-faint">مفيش مستخدمين</p>
         ) : (
-          <ul className="divide-y divide-gray-100 border-t border-gray-100">
+          <ul className="divide-y divide-line border-t border-line">
             {(
               (users ?? []) as unknown as {
                 auth_user_id: string;
@@ -215,18 +215,18 @@ export default async function TenantDetailPage({
                   key={u.auth_user_id}
                   className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2.5 text-xs"
                 >
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-ink">
                     {u.full_name ?? "بدون اسم"}
                     {u.roles?.name && (
-                      <span className="ms-2 font-normal text-gray-400">
+                      <span className="ms-2 font-normal text-ink-faint">
                         {u.roles.name}
                       </span>
                     )}
                   </span>
-                  <span dir="ltr" className="text-gray-500">
+                  <span dir="ltr" className="text-ink-muted">
                     {raw ? displayEmail(raw, t.slug ?? "") : "—"}
                   </span>
-                  {!u.active && <span className="text-red-600">موقوف</span>}
+                  {!u.active && <span className="text-danger">موقوف</span>}
                 </li>
               );
             })}
@@ -235,12 +235,12 @@ export default async function TenantDetailPage({
       </div>
 
       {/* ===== آخر أوردرات ===== */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <h2 className="px-4 py-3 text-sm font-bold text-gray-900">آخر أوردرات</h2>
+      <div className="card overflow-hidden">
+        <h2 className="px-4 py-3 text-sm font-bold text-ink">آخر أوردرات</h2>
         {(recent ?? []).length === 0 ? (
-          <p className="px-4 pb-4 text-xs text-gray-400">مفيش أوردرات</p>
+          <p className="px-4 pb-4 text-xs text-ink-faint">مفيش أوردرات</p>
         ) : (
-          <ul className="divide-y divide-gray-100 border-t border-gray-100">
+          <ul className="divide-y divide-line border-t border-line">
             {(
               (recent ?? []) as {
                 id: string;
@@ -253,9 +253,9 @@ export default async function TenantDetailPage({
                 key={o.id}
                 className="flex items-baseline justify-between gap-3 px-4 py-2 text-xs"
               >
-                <span className="text-gray-900">أوردر {o.order_number ?? "—"}</span>
-                <span className="text-gray-500">{o.order_status}</span>
-                <span className="text-gray-400">
+                <span className="text-ink">أوردر {o.order_number ?? "—"}</span>
+                <span className="text-ink-muted">{o.order_status}</span>
+                <span className="text-ink-faint">
                   {o.order_date ? formatDate(o.order_date) : ""}
                 </span>
               </li>

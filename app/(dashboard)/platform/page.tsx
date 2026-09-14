@@ -16,8 +16,8 @@ import {
 export const dynamic = "force-dynamic";
 
 const input =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none";
-const label = "text-xs text-gray-500";
+  "w-full rounded-control border border-line-strong px-3 py-2 text-sm text-ink focus:border-primary focus:outline-none";
+const label = "text-xs text-ink-muted";
 
 type Row = {
   id: string;
@@ -69,29 +69,29 @@ export default async function PlatformPage({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-gray-900">البيزنسات</h1>
-        <p className="mt-1 text-xs text-gray-400">
+        <h1 className="text-lg font-bold text-ink">البيزنسات</h1>
+        <p className="mt-1 text-xs text-ink-faint">
           الصفحة دي بتاعتك إنت كصاحب المنصة — مفيش عميل بيشوفها مهما كانت
           صلاحياته.
         </p>
       </div>
 
       {saved && (
-        <p className="rounded-lg bg-green-50 px-4 py-2 text-sm text-green-800">
+        <p className="rounded-control bg-success-soft px-4 py-2 text-sm text-success">
           {saved}
         </p>
       )}
       {error && (
-        <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-800">
+        <p className="rounded-control bg-danger-soft px-4 py-2 text-sm text-danger">
           {error}
         </p>
       )}
 
       {/* ===== القايمة ===== */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-200 text-xs text-gray-500">
+            <thead className="border-b border-line text-xs text-ink-muted">
               <tr>
                 <th className="px-4 py-3 text-start font-medium">البيزنس</th>
                 <th className="px-4 py-3 text-start font-medium">أوردرات</th>
@@ -106,10 +106,10 @@ export default async function PlatformPage({
                 const expired =
                   t.subscription_ends_at && t.subscription_ends_at < today;
                 return (
-                  <tr key={t.id} className="border-b border-gray-100 last:border-0">
+                  <tr key={t.id} className="border-b border-line last:border-0">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{t.name}</div>
-                      <div className="text-[11px] text-gray-400">
+                      <div className="font-medium text-ink">{t.name}</div>
+                      <div className="text-[11px] text-ink-faint">
                         من {formatDate(t.created_at)}
                         {t.id === me.tenantId && " · بيزنسك"}
                       </div>
@@ -120,17 +120,17 @@ export default async function PlatformPage({
                         className="mt-1.5 flex items-center gap-1"
                       >
                         <input type="hidden" name="tenant_id" value={t.id} />
-                        <span className="text-[11px] text-gray-400">/login/</span>
+                        <span className="text-[11px] text-ink-faint">/login/</span>
                         <input
                           name="slug"
                           defaultValue={t.slug ?? ""}
                           placeholder="minis"
                           dir="ltr"
-                          className="w-28 rounded-lg border border-gray-300 px-2 py-1 text-[11px] text-gray-900 focus:border-gray-900 focus:outline-none"
+                          className="w-28 rounded-control border border-line-strong px-2 py-1 text-[11px] text-ink focus:border-primary focus:outline-none"
                         />
                         <button
                           type="submit"
-                          className="rounded-lg bg-gray-100 px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-200"
+                          className="rounded-control bg-sunken px-2 py-1 text-[11px] text-ink-body hover:bg-line"
                         >
                           حفظ
                         </button>
@@ -146,13 +146,13 @@ export default async function PlatformPage({
 
                       <Link
                         href={`/platform/${t.id}`}
-                        className="mt-1.5 inline-block text-[11px] font-medium text-sky-700 hover:underline"
+                        className="mt-1.5 inline-block text-[11px] font-medium text-info hover:underline"
                       >
                         بيانات البيزنس ←
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{c.orders}</td>
-                    <td className="px-4 py-3 text-gray-700">{c.users}</td>
+                    <td className="px-4 py-3 text-ink-body">{c.orders}</td>
+                    <td className="px-4 py-3 text-ink-body">{c.users}</td>
                     <td className="px-4 py-3">
                       <form action={setSubscriptionEnd} className="flex items-center gap-1">
                         <input type="hidden" name="tenant_id" value={t.id} />
@@ -160,15 +160,15 @@ export default async function PlatformPage({
                           type="date"
                           name="subscription_ends_at"
                           defaultValue={t.subscription_ends_at ?? ""}
-                          className={`rounded-lg border px-2 py-1 text-xs ${
+                          className={`rounded-control border px-2 py-1 text-xs ${
                             expired
-                              ? "border-red-300 bg-red-50 text-red-700"
-                              : "border-gray-300 text-gray-900"
+                              ? "border-danger-line bg-danger-soft text-danger"
+                              : "border-line-strong text-ink"
                           }`}
                         />
                         <button
                           type="submit"
-                          className="rounded-lg bg-gray-100 px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-200"
+                          className="rounded-control bg-sunken px-2 py-1 text-[11px] text-ink-body hover:bg-line"
                         >
                           حفظ
                         </button>
@@ -183,8 +183,8 @@ export default async function PlatformPage({
                           disabled={t.id === me.tenantId}
                           className={`rounded-full px-3 py-1 text-xs font-medium disabled:opacity-40 ${
                             t.active
-                              ? "bg-green-50 text-green-700 hover:bg-green-100"
-                              : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                              ? "bg-success-soft text-success hover:bg-success-line"
+                              : "bg-sunken text-ink-muted hover:bg-line"
                           }`}
                         >
                           {t.active ? "شغال" : "موقوف"}
@@ -195,26 +195,26 @@ export default async function PlatformPage({
                           بيتداس بالغلط. وبيزنسك مالوش زرار أصلًا */}
                       {t.id !== me.tenantId && (
                         <details className="mt-2">
-                          <summary className="cursor-pointer list-none text-[11px] text-gray-300 hover:text-red-600">
+                          <summary className="cursor-pointer list-none text-[11px] text-ink-faint hover:text-danger">
                             حذف
                           </summary>
                           <form
                             action={deleteTenant}
-                            className="mt-1.5 w-56 space-y-1.5 rounded-lg bg-red-50 p-2"
+                            className="mt-1.5 w-56 space-y-1.5 rounded-control bg-danger-soft p-2"
                           >
                             <input type="hidden" name="tenant_id" value={t.id} />
-                            <p className="text-[10px] leading-relaxed text-red-900">
+                            <p className="text-[10px] leading-relaxed text-danger">
                               هيتمسح <b>{c.orders} أوردر</b> و<b>{c.users} حساب</b>{" "}
                               وكل العملاء والمنتجات والمصاريف. <b>مافيش رجوع.</b>
                             </p>
                             <input
                               name="confirm_name"
                               placeholder={`اكتب: ${t.name}`}
-                              className="w-full rounded-lg border border-red-300 px-2 py-1 text-[11px] text-gray-900 focus:border-red-600 focus:outline-none"
+                              className="w-full rounded-control border border-danger-line px-2 py-1 text-[11px] text-ink focus:border-danger focus:outline-none"
                             />
                             <button
                               type="submit"
-                              className="w-full rounded-lg bg-red-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-red-700"
+                              className="w-full rounded-control bg-danger px-2 py-1 text-[11px] font-medium text-white hover:brightness-[0.92]"
                             >
                               امسح نهائي
                             </button>
@@ -231,9 +231,9 @@ export default async function PlatformPage({
       </div>
 
       {/* ===== بيزنس جديد ===== */}
-      <form action={createTenant} className="rounded-xl bg-white p-5 shadow-sm">
-        <h2 className="text-sm font-bold text-gray-900">بيزنس جديد</h2>
-        <p className="mt-1 text-xs text-gray-500">
+      <form action={createTenant} className="card p-5">
+        <h2 className="text-sm font-bold text-ink">بيزنس جديد</h2>
+        <p className="mt-1 text-xs text-ink-muted">
           هيتعمل بإعداداته الافتراضية وحساب لصاحبه بكل صلاحيات بيزنسه. بعد كده
           يدخل بنفسه ويربط بوسطة ويظبط أرقامه من صفحة الإعدادات.
         </p>
@@ -270,7 +270,7 @@ export default async function PlatformPage({
               autoComplete="off"
               className={input}
             />
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-ink-faint">
               8 حروف على الأقل — ابعتهاله وهو يغيّرها
             </span>
           </div>
@@ -279,7 +279,7 @@ export default async function PlatformPage({
         {/* بيتقفل وهو بيبعت — الدوستين السريعتين كانوا بيعملوا بيزنسين */}
         <SubmitOnce
           pendingLabel="بيتعمل…"
-          className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:bg-gray-300"
+          className="mt-4 rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark disabled:bg-line-strong"
         >
           إنشاء البيزنس
         </SubmitOnce>
