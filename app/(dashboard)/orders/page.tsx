@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PeriodFilter } from "@/components/PeriodFilter";
+import { resolvePeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import {
   COMMENT_DOT_STATUSES,
@@ -24,16 +26,6 @@ const LIST_STATUS_OPTIONS = ORDER_STATUS_OPTIONS.filter(
 );
 // الأوردر الملغي بيتقفل تعديله من برة بعد 30 ثانية
 const CANCEL_LOCK_MS = 30 * 1000;
-
-// فلتر الوقت في قايمة الأوردرات
-const ORDER_PERIODS: Record<string, string> = {
-  all: "كل الوقت",
-  today: "النهارده",
-  week: "آخر 7 أيام",
-  month: "الشهر ده",
-  "3m": "آخر 3 شهور",
-  year: "السنة دي",
-};
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
 function currentMs() {
@@ -114,12 +106,25 @@ export default async function OrdersPage({
     bulk?: string;
     show?: string;
     period?: string;
+    from?: string;
+    to?: string;
     /** أرقام أوردرات محددة بالظبط — بييجي من الإشعارات */
     only?: string;
   }>;
 }) {
-  const { status, deleted, archived, saved, q, bulk, show, period: rawPeriod, only } =
-    await searchParams;
+  const {
+    status,
+    deleted,
+    archived,
+    saved,
+    q,
+    bulk,
+    show,
+    period: rawPeriod,
+    from: rawFrom,
+    to: rawTo,
+    only,
+  } = await searchParams;
 
   // **الإشعار بيوديك على أوردراته هو بس.** قبل كده كان بيوديك على القايمة
   // كلها بالحالة، فإشعار بيقول "أوردر واحد رجع" يفتحلك ٧ أوردرات وإنت
@@ -130,31 +135,28 @@ export default async function OrdersPage({
     .filter(Boolean);
   const showArchived = archived === "1";
   const searchTerm = (q ?? "").trim();
-  const period = ORDER_PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "all";
-  // بداية الفترة بتوقيت مصر (all = من غير حد)
-  const periodStart = (() => {
-    if (period === "all") return null;
-    const today = cairoToday();
-    const [y, m] = today.split("-").map(Number);
-    if (period === "today") return today;
-    if (period === "week") {
-      const d = new Date(today + "T12:00:00Z");
-      d.setUTCDate(d.getUTCDate() - 6);
-      return d.toISOString().slice(0, 10);
-    }
-    if (period === "month") return `${y}-${String(m).padStart(2, "0")}-01`;
-    if (period === "3m") {
-      const d = new Date(today + "T12:00:00Z");
-      d.setUTCDate(d.getUTCDate() - 89);
-      return d.toISOString().slice(0, 10);
-    }
-    return `${y}-01-01`;
-  })();
+  // ⚠️ **الفترة من `lib/periods`** — مصدر واحد لكل الصفحات (المرحلة ٢).
+  // الافتراضي هنا «كل الوقت» زي ما كان: تغييره بيخفي الأوردرات الأقدم من العرض
+  // الافتراضي — ومستني قرار (docs/PHASE2-RESTRUCTURE.md).
+  const range = resolvePeriod(
+    { period: rawPeriod, from: rawFrom, to: rawTo },
+    { today: cairoToday(), defaultKey: "all" }
+  );
+  const periodStart = range.start;
+  // الأوردرات مالهاش تاريخ في المستقبل، فالنهاية بتفرق في المدة المخصصة بس
+  const periodEnd = range.key === "custom" ? range.end : null;
+  // الفترة في اللينكات — عشان التنقل بين الفلاتر مايضيّعهاش
+  const periodParams: Record<string, string> =
+    range.key === "custom"
+      ? { from: range.from!, to: range.to! }
+      : range.key !== "all"
+        ? { period: range.key }
+        : {};
   // بنحافظ على الفلاتر في لينك الرجوع
   const returnParams = new URLSearchParams();
   if (showArchived) returnParams.set("archived", "1");
   else if (status) returnParams.set("status", status);
-  if (period !== "all") returnParams.set("period", period);
+  for (const [k, v] of Object.entries(periodParams)) returnParams.set(k, v);
   const returnTo = `/orders${returnParams.toString() ? `?${returnParams}` : ""}`;
   // بيبني لينك للأوردرات مع الحفاظ على فلتر الوقت
   const nowMs = currentMs();
@@ -163,7 +165,7 @@ export default async function OrdersPage({
   // تدوّر، البحث يضيع وتبدأ من الأول.
   const periodQS = (extra: string) => {
     const p = new URLSearchParams(extra);
-    if (period !== "all" && !p.has("period")) p.set("period", period);
+    for (const [k, v] of Object.entries(periodParams)) if (!p.has(k)) p.set(k, v);
     if (searchTerm && !p.has("q")) p.set("q", searchTerm);
     return `/orders${p.toString() ? `?${p}` : ""}`;
   };
@@ -264,6 +266,9 @@ export default async function OrdersPage({
     }
     if (periodStart) {
       query = query.gte("order_date", periodStart);
+    }
+    if (periodEnd) {
+      query = query.lte("order_date", periodEnd);
     }
   }
 
@@ -425,30 +430,18 @@ export default async function OrdersPage({
       )}
 
       <div className="mb-4 space-y-2">
-        {/* فلتر الوقت */}
-        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
-          <span className="shrink-0 text-xs text-ink-muted">الفترة:</span>
-          {Object.entries(ORDER_PERIODS).map(([key, label]) => {
-            const p = new URLSearchParams();
-            if (status) p.set("status", status);
-            if (showArchived) p.set("archived", "1");
-            if (searchTerm) p.set("q", searchTerm);
-            if (key !== "all") p.set("period", key);
-            return (
-              <Link
-                key={key}
-                href={`/orders${p.toString() ? `?${p}` : ""}`}
-                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
-                  period === key
-                    ? "bg-primary text-white"
-                    : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </div>
+        {/* فلتر الوقت — المكوّن الموحّد. «عرض المزيد» بيتصفّر مع تغيير الفترة */}
+        <PeriodFilter
+          basePath="/orders"
+          query={{
+            status: showArchived ? undefined : status,
+            archived: showArchived ? "1" : undefined,
+            q: searchTerm || undefined,
+          }}
+          current={range}
+          defaultKey="all"
+          resetKeys={["show"]}
+        />
         {/* شرائح الحالة — سطر واحد بيتزحلق لو ضاق */}
         <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
           <Link
@@ -490,9 +483,9 @@ export default async function OrdersPage({
         <form action="/orders" className="flex items-center gap-2">
           {status && <input type="hidden" name="status" value={status} />}
           {showArchived && <input type="hidden" name="archived" value="1" />}
-          {period !== "all" && (
-            <input type="hidden" name="period" value={period} />
-          )}
+          {Object.entries(periodParams).map(([k, v]) => (
+            <input key={k} type="hidden" name={k} value={v} />
+          ))}
           <input
             name="q"
             defaultValue={searchTerm}

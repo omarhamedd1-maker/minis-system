@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PeriodFilter } from "@/components/PeriodFilter";
+import { periodHref, resolvePeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CategoryPicker } from "@/components/CategoryPicker";
@@ -27,13 +29,6 @@ type ExpenseRow = {
 // استخدمته فعلاً — أي نوع جديد تكتبه بيتضاف لوحده.
 const STARTER_CATEGORIES = EXPENSE_CATEGORIES;
 
-const PERIODS: Record<string, string> = {
-  month: "الشهر ده",
-  "3m": "آخر 3 شهور",
-  year: "السنة دي",
-  all: "الكل",
-};
-
 export default async function ExpensesPage({
   searchParams,
 }: {
@@ -43,6 +38,8 @@ export default async function ExpensesPage({
     deleted?: string;
     cat?: string;
     period?: string;
+    from?: string;
+    to?: string;
     edit?: string;
   }>;
 }) {
@@ -52,21 +49,23 @@ export default async function ExpensesPage({
     deleted,
     cat: rawCat,
     period: rawPeriod,
+    from: rawFrom,
+    to: rawTo,
   } = await searchParams;
   const cat = (rawCat ?? "").trim() || undefined;
-  const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "month";
+
   const user = await requirePagePermission("expenses.view");
   const isAdmin = can(user, "expenses.edit");
   const supabase = await createClient();
 
   const today = cairoToday();
-  let periodStart: string | null = null;
-  if (period === "month") periodStart = today.slice(0, 8) + "01";
-  else if (period === "3m") {
-    const d = new Date(today + "T12:00:00Z");
-    d.setUTCDate(d.getUTCDate() - 89);
-    periodStart = d.toISOString().slice(0, 10);
-  } else if (period === "year") periodStart = today.slice(0, 4) + "-01-01";
+  // ⚠️ **الفترة من `lib/periods`** — مصدر واحد لكل الصفحات (المرحلة ٢).
+  // الافتراضي آخر ٣٠ يوم، و«كل الوقت» متاحة عشان دي قايمة.
+  const range = resolvePeriod(
+    { period: rawPeriod, from: rawFrom, to: rawTo },
+    { today, defaultKey: "30d", allowAll: true }
+  );
+  const periodStart = range.start;
 
   let query = supabase
     .from("expenses")
@@ -74,6 +73,7 @@ export default async function ExpensesPage({
     .order("expense_date", { ascending: false })
     .limit(2000);
   if (periodStart) query = query.gte("expense_date", periodStart);
+  if (range.key === "custom") query = query.lte("expense_date", range.end);
   if (cat) query = query.eq("category", cat);
 
   const { data: expenses, error } = await query.overrideTypes<ExpenseRow[]>();
@@ -112,14 +112,15 @@ export default async function ExpensesPage({
 
   const shownTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
 
-  const buildHref = (next: { cat?: string | null; period?: string }) => {
-    const params = new URLSearchParams();
+  // لينك نوع المصروف — بيحافظ على الفترة المختارة
+  const buildHref = (next: { cat?: string | null }) => {
     const c = next.cat === null ? undefined : (next.cat ?? cat);
-    const p = next.period ?? period;
-    if (c) params.set("cat", c);
-    if (p && p !== "month") params.set("period", p);
-    const qs = params.toString();
-    return qs ? `/expenses?${qs}` : "/expenses";
+    return periodHref(
+      "/expenses",
+      { cat: c },
+      range.key === "custom" ? { from: range.from!, to: range.to! } : { key: range.key as "7d" | "30d" | "month" | "all" },
+      "30d"
+    );
   };
 
   return (
@@ -128,25 +129,18 @@ export default async function ExpensesPage({
         <h1 className="text-xl font-bold text-ink">المصاريف</h1>
         <span className="text-sm text-ink-muted">
           {cat ? `${cat} — ` : ""}
-          {PERIODS[period]}: {formatMoney(shownTotal)}
+          {range.label}: {formatMoney(shownTotal)}
         </span>
       </div>
 
+      <PeriodFilter
+        basePath="/expenses"
+        query={{ cat }}
+        current={range}
+        defaultKey="30d"
+        allowAll
+      />
       <div className="flex flex-wrap items-center gap-2">
-        {Object.entries(PERIODS).map(([key, label]) => (
-          <Link
-            key={key}
-            href={buildHref({ period: key })}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              period === key
-                ? "bg-primary text-white"
-                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
-        <span className="mx-1 h-4 w-px bg-line-strong"></span>
         <Link
           href={buildHref({ cat: null })}
           className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -274,7 +268,7 @@ export default async function ExpensesPage({
 
       {expenses.length === 0 ? (
         <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
-          {cat || period !== "all"
+          {cat || range.key !== "all"
             ? "مفيش مصاريف بالفلتر ده."
             : "لسه مفيش مصاريف مسجلة."}
         </div>

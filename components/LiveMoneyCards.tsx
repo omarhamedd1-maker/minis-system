@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatMoney } from "@/lib/format";
+import { cairoToday, formatMoney } from "@/lib/format";
 import {
   computeHeadline,
-  resolvePeriod,
   type Headline,
   type StatOrder,
   type StatExpense,
 } from "@/lib/dashboard-stats";
 import { CountUp } from "./CountUp";
+import { resolvePeriod, shiftDays } from "@/lib/periods";
 
 /**
  * ⚠️ **`bosta_fees_real` لازم يفضل هنا.**
@@ -61,11 +61,12 @@ export function LiveMoneyCards({
 
   useEffect(() => {
     const supabase = createClient();
-    const { periodStart, periodEnd, fetchStart } = resolvePeriod({
-      period,
-      from,
-      to,
-    });
+    // ⚠️ نفس الفترة اللي السيرفر حسبها — من `lib/periods` بنفس الافتراضي
+    const today = cairoToday();
+    const range = resolvePeriod({ period, from, to }, { today, defaultKey: "30d" });
+    const periodStart = range.start ?? today;
+    const periodEnd = range.end;
+    const fetchStart = shiftDays(periodStart, -1); // يوم زيادة لفرق التوقيت
     let active = true;
 
     async function load() {

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { upcomingSeasons, remainingText } from "@/lib/seasons";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -8,7 +7,8 @@ import {
   orderStatusBadge,
 } from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
-import { DayPicker } from "@/components/DayPicker";
+import { PeriodFilter } from "@/components/PeriodFilter";
+import { resolvePeriod } from "@/lib/periods";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
@@ -62,13 +62,6 @@ const cairoWeekdayFormat = new Intl.DateTimeFormat("ar-EG", {
 
 const EXCLUDED = EXCLUDED_STATUSES;
 
-const PERIODS: Record<string, { label: string }> = {
-  today: { label: "النهارده" },
-  month: { label: "الشهر ده" },
-  "3m": { label: "آخر 3 شهور" },
-  year: { label: "السنة دي" },
-};
-
 function toDateString(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -110,46 +103,19 @@ export default async function StatsPage({
   searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
   await requirePagePermission("finance.dashboard");
-  const { period: rawPeriod, from: rawFrom, to: rawTo } = await searchParams;
-  const period = PERIODS[rawPeriod ?? ""] ? (rawPeriod as string) : "today";
+  const query = await searchParams;
 
   // اليوم الحالي بتوقيت مصر مش بتوقيت السيرفر
   const today = cairoDateOf(new Date());
   const [todayYear, todayMonth] = today.split("-").map(Number);
 
-  // فترة مختارة من التقويم (يوم واحد أو مدى)
-  const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
-  const rangeFrom = isDate(rawFrom) ? rawFrom! : undefined;
-  const rangeTo = isDate(rawTo) ? rawTo! : rangeFrom;
-  const hasRange = !!rangeFrom;
-
-  const fmtDay = (d: string) =>
-    new Date(d + "T12:00:00Z").toLocaleDateString("ar-EG", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-
-  let periodStart: string;
-  let periodEnd = today;
-  if (hasRange) {
-    periodStart = rangeFrom!;
-    periodEnd = rangeTo!;
-  } else if (period === "today") {
-    periodStart = today;
-  } else if (period === "month") {
-    periodStart = `${todayYear}-${String(todayMonth).padStart(2, "0")}-01`;
-  } else if (period === "3m") {
-    periodStart = shiftDays(today, -89);
-  } else {
-    periodStart = `${todayYear}-01-01`;
-  }
-
-  const periodLabel = hasRange
-    ? rangeFrom === rangeTo
-      ? fmtDay(rangeFrom!)
-      : `من ${fmtDay(rangeFrom!)} لـ ${fmtDay(rangeTo!)}`
-    : PERIODS[period].label;
+  // ⚠️ **الفترة من `lib/periods`** — مصدر واحد لكل الصفحات (المرحلة ٢).
+  // الافتراضي آخر ٣٠ يوم: «النهارده» في بيزنس بالدفع عند الاستلام بتوري
+  // أوردرات من غير فلوسها. يوم واحد لسه متاح من «مدة مخصصة».
+  const range = resolvePeriod(query, { today, defaultKey: "30d" });
+  const periodStart = range.start ?? today;
+  const periodEnd = range.end;
+  const periodLabel = range.label;
 
   // بنجيب من أول 6 شهور فاتت عشان شارت مقارنة الشهور، مهما كانت الفترة المختارة
   const sixMonthsAgo = new Date(Date.UTC(todayYear, todayMonth - 1 - 5, 1))
@@ -337,7 +303,8 @@ export default async function StatsPage({
   }));
 
   // شارت المبيعات عبر الوقت: يومي للفترات القصيرة، شهري للسنة
-  const daily = period !== "year";
+  // يوم بيوم لحد ٣ شهور، وبعد كده شهر بشهر
+  const daily = (range.days ?? 0) <= 92;
   const buckets = new Map<string, number>();
   if (daily) {
     const cursor = new Date(periodStart + "T00:00:00");
@@ -602,28 +569,20 @@ export default async function StatsPage({
 
       <section>
         {/* الفترة المختارة على اليمين، والاختيارات التانية جنبها على الشمال */}
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="mb-3 space-y-2">
           <h2 className="text-sm font-bold text-ink">{periodLabel}</h2>
-          <span className="h-4 w-px bg-line-strong"></span>
-          {Object.entries(PERIODS)
-            // نخفي الفترة المتحددة بالفعل — اسمها ظاهر على اليمين
-            .filter(([key]) => hasRange || period !== key)
-            .map(([key, p]) => (
-              <Link
-                key={key}
-                href={`/?period=${key}`}
-                className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-ink-muted shadow-card hover:bg-sunken"
-              >
-                {p.label}
-              </Link>
-            ))}
-          <DayPicker from={rangeFrom} to={rangeTo} />
+          <PeriodFilter
+            basePath="/"
+            query={query}
+            current={range}
+            defaultKey="30d"
+          />
         </div>
         <LiveMoneyCards
           initial={headline}
-          period={period}
-          from={rangeFrom}
-          to={rangeTo}
+          period={range.key === "custom" ? undefined : range.key}
+          from={range.from}
+          to={range.to}
         />
 
         {/*
