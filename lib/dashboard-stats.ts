@@ -20,32 +20,7 @@ export function shiftDays(dateStr: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-export type PeriodParams = { period?: string; from?: string; to?: string };
-
-export function resolvePeriod({ period, from, to }: PeriodParams) {
-  const today = cairoDateOf(new Date());
-  const [year, month] = today.split("-").map(Number);
-  const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
-  const rangeFrom = isDate(from) ? from! : undefined;
-  const rangeTo = isDate(to) ? to! : rangeFrom;
-
-  let periodStart: string;
-  let periodEnd = today;
-  if (rangeFrom) {
-    periodStart = rangeFrom;
-    periodEnd = rangeTo!;
-  } else if (period === "month") {
-    periodStart = `${year}-${String(month).padStart(2, "0")}-01`;
-  } else if (period === "3m") {
-    periodStart = shiftDays(today, -89);
-  } else if (period === "year") {
-    periodStart = `${year}-01-01`;
-  } else {
-    periodStart = today; // النهارده (الافتراضي)
-  }
-  const fetchStart = shiftDays(periodStart, -1); // يوم زيادة لفرق التوقيت
-  return { periodStart, periodEnd, fetchStart };
-}
+// ⚠️ الفترة (resolvePeriod) بقت في `lib/periods.ts` — مصدر واحد لكل الصفحات.
 
 type OrderItem = {
   quantity: number;
