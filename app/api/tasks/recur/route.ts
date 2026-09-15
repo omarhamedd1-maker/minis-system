@@ -17,7 +17,8 @@ import { generateRecurringTasks } from "@/lib/tasks-recur";
 import { runTaskReminders } from "@/lib/task-reminders-run";
 import { recordPrepaidCash } from "@/lib/prepaid-cash-run";
 import { activeTenantIds } from "@/lib/tenant-settings";
-import { NOT_LINKED_ERROR, runOrderImport } from "@/lib/shopify/orders";
+import { runOrderImport } from "@/lib/shopify/orders";
+import { importAlertNeeded } from "@/lib/shopify/failures";
 import { runProductImport } from "@/lib/shopify/products";
 import { shopifyImportFailMessage } from "@/lib/alert-messages";
 import {
@@ -267,7 +268,7 @@ export async function GET(request: Request) {
             // أو الديمو — تنبيهه كان هيضرب على ناس مالهمش ذنب. العطل
             // الحقيقي هو اللي **مربط وبيقف**: توكن باظ أو التطبيق اتشال —
             // وده معناه إن الأوردرات وقفت عن بيزنس بيشتغل فعلًا.
-            if (r.error !== NOT_LINKED_ERROR) {
+            if (importAlertNeeded(r.error)) {
               await alertImportFailed(db, tenantId, r.error, today, dry);
             }
           }
@@ -278,7 +279,10 @@ export async function GET(request: Request) {
           shopify = { skipped: msg };
           // اللفة دي وقعت من غير ما توصل لفحص «مربوط ولا لأ»؟ التنبيه
           // محتاج يوصل برضه — العطل أثناء الجلب نفسه عطل فعلًا
-          await alertImportFailed(db, tenantId, msg, today, dry);
+          // ⚠️ إلا لو السبب من الحالات اللي صاحبها عارفها (متجر مقفول · مش مربوط)
+          if (importAlertNeeded(msg)) {
+            await alertImportFailed(db, tenantId, msg, today, dry);
+          }
         }
 
         // ⚠️⚠️ **المنتج اللي اتغيّر سلوكه** — النسبة الكلية بتخبّي ده تمامًا:

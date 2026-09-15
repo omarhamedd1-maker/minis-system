@@ -1,4 +1,5 @@
 import { ltr } from "../format";
+import { SHOP_CLOSED_ERROR } from "./failures";
 // ==========================================================================
 // الاتصال بشوبيفاي — الملف الوحيد اللي يعرف عنوانها وشكل ردودها
 // --------------------------------------------------------------------------
@@ -129,7 +130,7 @@ export async function fetchAccessToken(
  */
 export function shopifyHttpError(status: number, errors?: unknown): string {
   if (status === 402) {
-    return "متجر شوبيفاي مقفول — فاتورة شوبيفاي مش مدفوعة، والمتجر مقفول قدام العملاء كمان";
+    return SHOP_CLOSED_ERROR;
   }
   if (status === 401 || status === 403) {
     return "شوبيفاي رفضت المفتاح";
