@@ -208,7 +208,9 @@ export type OrderImportResult =
  * كل ربع ساعة على ناس مالهمش ذنب. العطل الحقيقي هو اللي **مربط وبيقف**:
  * توكن باظ أو متجر شال التطبيق — وده بياخد تنبيه.
  */
-export const NOT_LINKED_ERROR = "البيزنس ده لسه مربطش متجر شوبيفاي";
+// المصدر بقى `lib/shopify/failures.ts` — نفس النص، ومعاه قرار الإشعار
+import { NOT_LINKED_ERROR } from "./failures";
+export { NOT_LINKED_ERROR };
 
 export async function runOrderImport(opts: {
   db: SupabaseClient;
