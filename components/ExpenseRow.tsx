@@ -16,10 +16,13 @@ export function ExpenseRow({
   expense,
   categories,
   supplier,
+  showDate = true,
   updateAction,
   deleteAction,
 }: {
   expense: Expense;
+  /** جوّه مجموعة يوم التاريخ مكتوب في العنوان — مايتكررش في السطر (قرار عمر) */
+  showDate?: boolean;
   categories: string[];
   supplier?: string | null;
   updateAction: (formData: FormData) => Promise<void>;
@@ -34,9 +37,11 @@ export function ExpenseRow({
   if (!editing) {
     return (
       <tr className="border-b border-line last:border-0">
-        <td className="whitespace-nowrap px-4 py-3 text-ink-body">
-          {formatDate(expense.expense_date)}
-        </td>
+        {showDate && (
+          <td className="whitespace-nowrap px-4 py-3 text-ink-body">
+            {formatDate(expense.expense_date)}
+          </td>
+        )}
         <td className="px-4 py-3 font-medium text-ink">
           {expense.category}
         </td>
@@ -75,22 +80,29 @@ export function ExpenseRow({
     );
   }
 
+  // التاريخ لازم يفضل قابل للتعديل — من غير عموده بيتحط فوق النوع
+  const dateField = (
+    <>
+      <form id={formId} action={updateAction}>
+        <input type="hidden" name="expense_id" value={expense.id} />
+      </form>
+      <input
+        type="date"
+        name="expense_date"
+        form={formId}
+        defaultValue={expense.expense_date}
+        required
+        aria-label="التاريخ"
+        className="rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
+      />
+    </>
+  );
+
   return (
     <tr className="border-b border-line bg-warning-soft last:border-0">
+      {showDate && <td className="px-4 py-3">{dateField}</td>}
       <td className="px-4 py-3">
-        <form id={formId} action={updateAction}>
-          <input type="hidden" name="expense_id" value={expense.id} />
-        </form>
-        <input
-          type="date"
-          name="expense_date"
-          form={formId}
-          defaultValue={expense.expense_date}
-          required
-          className="rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
-        />
-      </td>
-      <td className="px-4 py-3">
+        {!showDate && <div className="mb-1.5">{dateField}</div>}
         <input
           name="category"
           form={formId}

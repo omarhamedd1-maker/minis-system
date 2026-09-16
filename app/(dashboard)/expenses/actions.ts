@@ -22,7 +22,7 @@ export async function updateExpense(formData: FormData) {
     !expenseDate
   ) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent(
           "اكتب النوع والمبلغ والتاريخ — والمبلغ لازم يكون أكبر من صفر",
         ),
@@ -47,7 +47,7 @@ export async function updateExpense(formData: FormData) {
 
   if (updateError || count === 0) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent("معرفناش نعدل المصروف — اتأكد إن عندك صلاحية تعديل"),
     );
   }
@@ -60,7 +60,7 @@ export async function updateExpense(formData: FormData) {
 
   if (cashError) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent(
           "المصروف اتعدل لكن معرفناش نحدث الخزنة: " + cashError.message,
         ),
@@ -79,7 +79,7 @@ export async function updateExpense(formData: FormData) {
     .eq("related_expense_id", id);
 
   await logActivity(me, "expense.edit", `عدّل مصروف ${category} (${amount})`);
-  revalidatePath("/expenses");
+  revalidatePath("/cash");
   revalidatePath("/suppliers");
 }
 
@@ -87,7 +87,7 @@ export async function deleteExpense(formData: FormData) {
   const me = await requirePermission("expenses.edit");
   const id = String(formData.get("expense_id") ?? "");
   if (!id) {
-    redirect("/expenses?error=" + encodeURIComponent("المصروف ده مش موجود"));
+    redirect("/cash?tab=expenses&error=" + encodeURIComponent("المصروف ده مش موجود"));
   }
 
   const supabase = createAdminClient();
@@ -108,7 +108,7 @@ export async function deleteExpense(formData: FormData) {
 
   if (cashError) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent("معرفناش نمسح حركة الخزنة: " + cashError.message),
     );
   }
@@ -121,13 +121,13 @@ export async function deleteExpense(formData: FormData) {
 
   if (deleteError || count === 0) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent("معرفناش نمسح المصروف — اتأكد إن عندك صلاحية تعديل"),
     );
   }
 
   await logActivity(me, "expense.delete", "مسح مصروف");
-  revalidatePath("/expenses");
+  revalidatePath("/cash");
   revalidatePath("/suppliers");
 }
 
@@ -141,7 +141,7 @@ export async function addExpense(formData: FormData) {
 
   if (!category || !Number.isFinite(amount) || amount <= 0 || !expenseDate) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent(
           "اكتب النوع والمبلغ والتاريخ — والمبلغ لازم يكون أكبر من صفر",
         ),
@@ -167,7 +167,7 @@ export async function addExpense(formData: FormData) {
 
   if (expenseError || !expense) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent("معرفناش نسجل المصروف — اتأكد إن عندك صلاحية تعديل"),
     );
   }
@@ -194,7 +194,7 @@ export async function addExpense(formData: FormData) {
         .eq("tenant_id", me.tenantId)
         .eq("id", expense.id);
       redirect(
-        "/expenses?error=" +
+        "/cash?tab=expenses&error=" +
           encodeURIComponent(
             "معرفناش نسجل الدفعة في حساب المورد: " + txnError.message,
           ),
@@ -213,7 +213,7 @@ export async function addExpense(formData: FormData) {
 
   if (cashError) {
     redirect(
-      "/expenses?error=" +
+      "/cash?tab=expenses&error=" +
         encodeURIComponent(
           "المصروف اتسجل لكن معرفناش نسجله في الخزنة: " + cashError.message,
         ),
@@ -225,6 +225,6 @@ export async function addExpense(formData: FormData) {
     "expense.add",
     `سجّل مصروف ${category} بمبلغ ${amount}`,
   );
-  revalidatePath("/expenses");
+  revalidatePath("/cash");
   revalidatePath("/suppliers");
 }

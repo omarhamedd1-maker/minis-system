@@ -218,6 +218,17 @@ export async function requirePagePermission(
   return user;
 }
 
+// حارس لصفحة بتفتح بأكتر من صلاحية (زي الفلوس: الخزنة أو المصاريف) — واحدة كفاية.
+export async function requireAnyPagePermission(
+  permissions: PermissionKey[]
+): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (!user.active) redirect("/login?error=" + encodeURIComponent("حسابك موقوف"));
+  if (!permissions.some((p) => can(user, p))) redirect(landingPathFor(user));
+  return user;
+}
+
 // حارس للـ server actions: بيرمي خطأ لو مفيش صلاحية (بيوقف التعديل).
 export async function requirePermission(
   permission: PermissionKey
@@ -239,7 +250,7 @@ export function landingPathFor(user: SessionUser | null): string {
     { perm: "customers.view", path: "/customers" },
     { perm: "products.view", path: "/products" },
     { perm: "suppliers.view", path: "/suppliers" },
-    { perm: "expenses.view", path: "/expenses" },
+    { perm: "expenses.view", path: "/cash?tab=expenses" },
     { perm: "cash.view", path: "/cash" },
     { perm: "admin.users", path: "/users" },
   ];
