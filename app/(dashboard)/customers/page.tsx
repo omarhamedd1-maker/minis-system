@@ -4,6 +4,8 @@ import { EXCLUDED_STATUSES, formatDate, formatMoney } from "@/lib/format";
 import { CustomerRow } from "@/components/CustomerRow";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { mergeCustomers } from "./actions";
+import { ShowMore } from "@/components/ShowMore";
+import { resolveShowCount } from "@/lib/show-more";
 
 type CustomerData = {
   id: string;
@@ -37,6 +39,7 @@ export default async function CustomersPage({
     saved?: string;
     deleted?: string;
     error?: string;
+    show?: string;
   }>;
 }) {
   const {
@@ -45,6 +48,7 @@ export default async function CustomersPage({
     saved,
     deleted,
     error: actionError,
+    show,
   } = await searchParams;
   const searchTerm = (q ?? "").trim();
   const sort = SORTS[rawSort ?? ""] ? (rawSort as string) : "total";
@@ -135,6 +139,10 @@ export default async function CustomersPage({
       // الأكتر أوردرات الأول — عشان يبقى هو الافتراضي اللي نسيبه
       members: [...list].sort((a, b) => b.ordersCount - a.ordersCount),
     }));
+
+  // ⚠️ **المكررين اتحسبوا فوق على القايمة الكاملة** — القص ده للعرض بس
+  const showCount = resolveShowCount(show);
+  const visible = rows.slice(0, showCount);
 
   const sortHref = (key: string) => {
     const params = new URLSearchParams();
@@ -289,7 +297,7 @@ export default async function CustomersPage({
         <>
         {/* ===== موبايل: كروت (مفيش سحب جانبي) ===== */}
         <div className="space-y-2 md:hidden">
-          {rows.map((row) => (
+          {visible.map((row) => (
             <Link
               key={row.id}
               href={`/customers/${row.id}`}
@@ -331,12 +339,18 @@ export default async function CustomersPage({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {visible.map((row) => (
                 <CustomerRow key={row.id} row={row} />
               ))}
             </tbody>
           </table>
         </div>
+        <ShowMore
+          basePath="/customers"
+          query={{ q: searchTerm || undefined, sort: sort !== "total" ? sort : undefined }}
+          shown={visible.length}
+          total={rows.length}
+        />
         </>
       )}
     </div>

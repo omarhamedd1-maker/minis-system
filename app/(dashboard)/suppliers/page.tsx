@@ -4,6 +4,8 @@ import { formatMoney } from "@/lib/format";
 import { AddSupplier } from "@/components/AddSupplier";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { addSupplier } from "./actions";
+import { ShowMore } from "@/components/ShowMore";
+import { resolveShowCount } from "@/lib/show-more";
 
 type Supplier = {
   id: string;
@@ -16,9 +18,9 @@ type Supplier = {
 export default async function SuppliersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; show?: string }>;
 }) {
-  const { error: actionError } = await searchParams;
+  const { error: actionError, show } = await searchParams;
   const user = await requirePagePermission("suppliers.view");
   const canEdit = can(user, "suppliers.edit");
   const admin = createAdminClient();
@@ -64,6 +66,10 @@ export default async function SuppliersPage({
   const totalDue = suppliers.reduce((s, x) => s + Math.max(x.balance, 0), 0);
   const totalPurchases = suppliers.reduce((s, x) => s + x.purchases, 0);
   const totalPayments = suppliers.reduce((s, x) => s + x.payments, 0);
+
+  // ⚠️ **الإجماليات فوق على القايمة الكاملة** — القص ده للعرض بس
+  const showCount = resolveShowCount(show);
+  const visible = suppliers.slice(0, showCount);
 
   return (
     <div className="space-y-4">
@@ -114,7 +120,7 @@ export default async function SuppliersPage({
         <>
           {/* ===== موبايل: كروت ===== */}
           <div className="space-y-2 md:hidden">
-            {suppliers.map((s) => (
+            {visible.map((s) => (
               <Link
                 key={s.id}
                 href={`/suppliers/${s.id}`}
@@ -159,7 +165,7 @@ export default async function SuppliersPage({
                 </tr>
               </thead>
               <tbody>
-                {suppliers.map((s) => (
+                {visible.map((s) => (
                   <tr
                     key={s.id}
                     className="border-b border-line last:border-0 hover:bg-sunken"
@@ -188,6 +194,11 @@ export default async function SuppliersPage({
               </tbody>
             </table>
           </div>
+          <ShowMore
+            basePath="/suppliers"
+            shown={visible.length}
+            total={suppliers.length}
+          />
         </>
       )}
 

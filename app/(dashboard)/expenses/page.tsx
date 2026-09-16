@@ -16,6 +16,8 @@ import { ExpenseCard } from "@/components/ExpenseCard";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { SubmitOnce } from "@/components/SubmitOnce";
 import { addExpense, deleteExpense, updateExpense } from "./actions";
+import { ShowMore } from "@/components/ShowMore";
+import { resolveShowCount } from "@/lib/show-more";
 
 type ExpenseRow = {
   id: string;
@@ -42,6 +44,7 @@ export default async function ExpensesPage({
     from?: string;
     to?: string;
     edit?: string;
+    show?: string;
   }>;
 }) {
   const {
@@ -52,6 +55,7 @@ export default async function ExpensesPage({
     period: rawPeriod,
     from: rawFrom,
     to: rawTo,
+    show,
   } = await searchParams;
   const cat = (rawCat ?? "").trim() || undefined;
 
@@ -119,6 +123,10 @@ export default async function ExpensesPage({
   }
 
   const shownTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  // ⚠️ **إجمالي الفترة فوق على كل مصاريف الفترة** — القص ده للعرض بس
+  const showCount = resolveShowCount(show);
+  const visible = expenses.slice(0, showCount);
 
   // لينك نوع المصروف — بيحافظ على الفترة المختارة
   const buildHref = (next: { cat?: string | null }) => {
@@ -276,7 +284,7 @@ export default async function ExpensesPage({
         <>
           {/* ===== موبايل: كروت ===== */}
           <div className="space-y-2 md:hidden">
-            {expenses.map((expense) => (
+            {visible.map((expense) => (
               <ExpenseCard
                 key={expense.id}
                 expense={expense}
@@ -306,7 +314,7 @@ export default async function ExpensesPage({
                 </tr>
               </thead>
               <tbody>
-                {expenses.map((expense) =>
+                {visible.map((expense) =>
                   isAdmin ? (
                     <ExpenseRow
                       key={expense.id}
@@ -343,6 +351,12 @@ export default async function ExpensesPage({
               </tbody>
             </table>
           </div>
+          <ShowMore
+            basePath="/expenses"
+            query={{ cat, ...periodParams }}
+            shown={visible.length}
+            total={expenses.length}
+          />
         </>
       )}
     </div>

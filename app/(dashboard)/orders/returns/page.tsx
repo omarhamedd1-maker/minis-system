@@ -5,6 +5,8 @@ import { requirePagePermission } from "@/lib/permissions";
 import { formatMoney } from "@/lib/format";
 import { returnsBoard, returnRate } from "@/lib/returns-board";
 import { returnReasonLabel } from "@/lib/return-reasons";
+import { ShowMore } from "@/components/ShowMore";
+import { resolveShowCount } from "@/lib/show-more";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,9 @@ export const dynamic = "force-dynamic";
  * لحد ما اللي مهم يضيع فيه.
  */
 const WINDOW_DAYS = 90;
+
+/** أول كام واحد في كرت التحذير — والباقي بيتقال تحتيه */
+const NOT_RESTOCKED_SHOWN = 15;
 
 type Row = {
   id: string;
@@ -34,7 +39,12 @@ type Row = {
  * ⚠️⚠️ **أهم رقم هنا هو «رجع ومارجعش المخزن»** — البضاعة في إيدك في الواقع
  * والسيستم فاكرها متباعة، فبتشتري تاني حاجة عندك.
  */
-export default async function ReturnsPage() {
+export default async function ReturnsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ show?: string }>;
+}) {
+  const { show } = await searchParams;
   await requirePagePermission("orders.view");
   const supabase = await createClient();
 
@@ -112,6 +122,10 @@ export default async function ReturnsPage() {
     }))
   );
 
+  // ⚠️ **كل الأرقام فوق على القايمة الكاملة** — القص ده للعرض بس
+  const showCount = resolveShowCount(show);
+  const visible = board.rows.slice(0, showCount);
+
   const rate = returnRate(settled ?? 0, board.count);
 
   return (
@@ -172,7 +186,7 @@ export default async function ReturnsPage() {
                 الأوردر.
               </p>
               <div className="mt-3 space-y-1.5">
-                {board.notRestocked.slice(0, 15).map((r) => (
+                {board.notRestocked.slice(0, NOT_RESTOCKED_SHOWN).map((r) => (
                   <div
                     key={r.id}
                     className="flex items-baseline justify-between gap-3 text-sm"
@@ -189,6 +203,13 @@ export default async function ReturnsPage() {
                   </div>
                 ))}
               </div>
+              {/* ⚠️ القص لازم يتقال — مايتخبّاش */}
+              {board.notRestocked.length > NOT_RESTOCKED_SHOWN && (
+                <p className="mt-2 text-[11px] text-ink-faint">
+                  وفيه {board.notRestocked.length - NOT_RESTOCKED_SHOWN} كمان في
+                  القايمة اللي تحت.
+                </p>
+              )}
             </div>
           )}
 
@@ -228,7 +249,7 @@ export default async function ReturnsPage() {
           <div className="card p-4 sm:p-5">
             <h2 className="text-sm font-bold text-ink">كل الراجع</h2>
             <div className="mt-3 space-y-2">
-              {board.rows.map((r) => (
+              {visible.map((r) => (
                 <div
                   key={r.id}
                   className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2 last:border-0"
@@ -252,6 +273,11 @@ export default async function ReturnsPage() {
                 </div>
               ))}
             </div>
+            <ShowMore
+              basePath="/orders/returns"
+              shown={visible.length}
+              total={board.rows.length}
+            />
           </div>
         </>
       )}
