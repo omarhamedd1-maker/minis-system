@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
+import { cairoToday } from "@/lib/format";
+import { auditFields, reverseCashRows } from "@/lib/cash-reversal";
 
 export async function updateCashTransaction(formData: FormData) {
   const me = await requirePermission("cash.edit");
@@ -28,6 +30,19 @@ export async function updateCashTransaction(formData: FormData) {
   }
 
   const supabase = createAdminClient();
+
+  const { data: reversal } = await supabase
+    .from("cash_transactions")
+    .select("id")
+    .eq("tenant_id", me.tenantId)
+    .eq("reversal_of", id)
+    .maybeSingle();
+  if (reversal) {
+    redirect(
+      "/cash?error=" +
+        encodeURIComponent("الحركة دي اتلغت — سجّل حركة جديدة بدل ما تعدّلها")
+    );
+  }
 
   // التعديل مسموح للحركات اليدوية بس — اللي جاية من مصروف أو أوردر بتتعدل من مكانها
   const { error, count } = await supabase
@@ -65,21 +80,28 @@ export async function deleteCashTransaction(formData: FormData) {
 
   const supabase = createAdminClient();
 
-  const { error, count } = await supabase
+  // ⚠️ **مابنمسحش — بنلغي بحركة عكسية بتاريخ النهارده** (MONEY ٦.٢).
+  // اليدوي بس — اللي جاي من مصروف أو أوردر بيتلغي من مكانه.
+  const { data: row } = await supabase
     .from("cash_transactions")
-    .delete({ count: "exact" })
+    .select("id")
     .eq("tenant_id", me.tenantId)
     .eq("id", id)
-    .eq("source_type", "manual");
-
-  if (error || count === 0) {
-    redirect(
-      "/cash?error=" +
-        encodeURIComponent("معرفناش نمسح الحركة — اتأكد إن عندك صلاحية تعديل")
-    );
+    .eq("source_type", "manual")
+    .maybeSingle();
+  if (!row) {
+    redirect("/cash?error=" + encodeURIComponent("الحركة دي مش موجودة أو مش يدوية"));
   }
 
-  await logActivity(me, "cash.delete", "مسح حركة خزنة");
+  const result = await reverseCashRows(supabase, me.tenantId, [id], me, cairoToday());
+  if (result.error) {
+    redirect("/cash?error=" + encodeURIComponent("معرفناش نلغي الحركة: " + result.error));
+  }
+  if (result.reversed === 0) {
+    redirect("/cash?error=" + encodeURIComponent("الحركة دي اتلغت قبل كده"));
+  }
+
+  await logActivity(me, "cash.reverse", "لغى حركة خزنة بحركة عكسية");
   revalidatePath("/cash");
 }
 
@@ -114,6 +136,7 @@ export async function addCashTransaction(formData: FormData) {
     source_type: "manual",
     description: description || null,
     transaction_date: transactionDate,
+    ...auditFields(me, "app"),
   });
 
   if (error) {

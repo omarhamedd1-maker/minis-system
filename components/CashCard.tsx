@@ -11,6 +11,7 @@ export function CashCard({
   description,
   transactionDate,
   label,
+  note,
   balanceAfter,
   showDate = true,
   canEdit,
@@ -23,6 +24,8 @@ export function CashCard({
   description: string | null;
   transactionDate: string | null;
   label: string;
+  /** مين سجّلها — «سجّلها محمود» */
+  note?: string | null;
   /** الرصيد بعد الحركة — بيتعرض صغير تحت المبلغ */
   balanceAfter?: number;
   /** جوّه مجموعة يوم التاريخ مكتوب فوق — مالوش لازمة يتكرر */
@@ -39,6 +42,7 @@ export function CashCard({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-ink">{label}</div>
+          {note && <div className="mt-0.5 text-[11px] text-ink-faint">{note}</div>}
           {showDate && (
             <div className="mt-0.5 text-[11px] text-ink-faint">
               {formatDate(transactionDate)}
@@ -88,10 +92,10 @@ export function CashCard({
               <input type="hidden" name="transaction_id" value={id} />
               <button
                 type="submit"
-                title="مسح"
-                aria-label="مسح"
+                title="إلغاء بحركة عكسية"
+                aria-label="إلغاء"
                 onClick={(e) => {
-                  if (!confirm("متأكد إنك عايز تمسح الحركة دي من الخزنة؟"))
+                  if (!confirm("الحركة هتتلغي بحركة عكسية بتاريخ النهارده — الأصل بيفضل في الدفتر. تكمّل؟"))
                     e.preventDefault();
                 }}
                 className="group/btn flex h-11 w-11 items-center justify-center"

@@ -7,6 +7,7 @@ import { can, type SessionUser } from "@/lib/permissions";
 import { SubmitOnce } from "@/components/SubmitOnce";
 import type { CashTotals } from "@/lib/cash-totals";
 import { cashRowLabel, type CashLabelRow } from "@/lib/cash-label";
+import { cashSourceNote } from "@/lib/cash-reversal";
 import {
   dayHasHeader,
   groupByDay,
@@ -38,6 +39,9 @@ type CashRow = CashLabelRow & {
   id: string;
   amount: number;
   transaction_date: string | null;
+  /** sql/cash-audit.sql — فاضيين في الحركات القديمة */
+  created_by_name: string | null;
+  origin: string | null;
 };
 
 /**
@@ -68,7 +72,7 @@ export async function MovesTab({
   let rowsQuery = supabase
     .from("cash_transactions")
     .select(
-      "id, direction, amount, source_type, description, transaction_date, orders(order_number, customers(full_name)), expenses(category, description)"
+      "id, direction, amount, source_type, description, transaction_date, created_by_name, origin, orders(order_number, customers(full_name)), expenses(category, description)"
     );
   if (dir) rowsQuery = rowsQuery.eq("direction", dir);
 
@@ -91,6 +95,17 @@ export async function MovesTab({
   const { totalIn, totalOut, balance, countAll, countIn, countOut } = totals;
 
   const transactions = rowsResult.data;
+
+  // الحركات اللي اتلغت — مالهاش تعديل ولا إلغاء تاني (MONEY ٦.٢)
+  const shownIds = transactions.map((t) => t.id);
+  const { data: reversals } = shownIds.length
+    ? await supabase.from("cash_transactions").select("reversal_of").in("reversal_of", shownIds)
+    : { data: [] };
+  const reversedIds = new Set((reversals ?? []).map((r) => r.reversal_of as string));
+  const labelOf = (row: CashRow) =>
+    cashRowLabel(row) + (reversedIds.has(row.id) ? " · اتلغت" : "");
+  const editable = (row: CashRow) =>
+    isAdmin && row.source_type === "manual" && !reversedIds.has(row.id);
   const matching = dir === "in" ? countIn : dir === "out" ? countOut : countAll;
 
   /**
@@ -143,7 +158,7 @@ export async function MovesTab({
       )}
       {deleted && (
         <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
-          تم مسح الحركة من الخزنة
+          اتلغت الحركة بحركة عكسية
         </div>
       )}
 
@@ -270,10 +285,11 @@ export async function MovesTab({
                     amount={row.amount}
                     description={row.description}
                     transactionDate={row.transaction_date}
-                    label={cashRowLabel(row)}
+                    label={labelOf(row)}
+                    note={cashSourceNote(row)}
                     balanceAfter={row.balanceAfter}
                     showDate={!dayHasHeader(d)}
-                    canEdit={isAdmin && row.source_type === "manual"}
+                    canEdit={editable(row)}
                     updateAction={updateCashTransaction}
                     deleteAction={deleteCashTransaction}
                   />
@@ -310,7 +326,7 @@ export async function MovesTab({
                   </tr>
                 )}
                 {d.rows.map((row) =>
-                  isAdmin && row.source_type === "manual" ? (
+                  editable(row) ? (
                     <CashManualRow
                       key={row.id}
                       row={{
@@ -320,6 +336,7 @@ export async function MovesTab({
                         description: row.description,
                         transaction_date: row.transaction_date,
                       }}
+                      note={cashSourceNote(row)}
                       balanceAfter={row.balanceAfter}
                       showDate={false}
                       dateInline={!dayHasHeader(d)}
@@ -343,10 +360,15 @@ export async function MovesTab({
                         )}
                       </td>
                       <td className="px-4 py-3 text-ink-body">
-                        {cashRowLabel(row)}
-                        {!dayHasHeader(d) && (
+                        {labelOf(row)}
+                        {(!dayHasHeader(d) || cashSourceNote(row)) && (
                           <div className="text-[11px] text-ink-faint">
-                            {formatDate(row.transaction_date)}
+                            {[
+                              !dayHasHeader(d) ? formatDate(row.transaction_date) : null,
+                              cashSourceNote(row),
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </div>
                         )}
                       </td>

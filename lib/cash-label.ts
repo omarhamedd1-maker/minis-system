@@ -26,6 +26,8 @@ const SOURCE_LABELS: Record<string, string> = {
   order: "تحصيل",
   prepaid: "مقدم",
   opening: "رصيد افتتاحي",
+  // الوصف بيتكتب وقت الإلغاء («إلغاء: …») وبيظهر هو
+  reversal: "إلغاء حركة",
 };
 
 export function cashRowLabel(row: CashLabelRow): string {

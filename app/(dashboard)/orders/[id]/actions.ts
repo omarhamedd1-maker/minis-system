@@ -10,6 +10,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser, requirePermission } from "@/lib/permissions";
 import { resyncOrder } from "@/lib/shopify/order-resync-run";
 import { logActivity } from "@/lib/activity";
+import { cashIdsFor, reverseCashRows, type CashActor } from "@/lib/cash-reversal";
 import {
   loadBostaCities,
   runBostaCreate,
@@ -21,6 +22,7 @@ import { runShopifyOrderPush } from "@/lib/shopify/order-push";
 import {
   MANUAL_ONLY_BY_FLOW,
   ORDER_STATUS_OPTIONS,
+  cairoToday,
   orderStatusBadge,
 } from "@/lib/format";
 
@@ -654,7 +656,9 @@ export async function toggleOrderArchive(formData: FormData) {
 async function performOrderDeletion(
   orderId: string,
   /** بيزنس اللي بيمسح — كل حذف هنا بيتفلتر بيه كمان مش بالـid بس */
-  tenantId: string
+  tenantId: string,
+  /** اللي بيمسح — بيتكتب على حركات الإلغاء في الخزنة */
+  actor: CashActor
 ): Promise<{ ok: boolean; error?: string; orderNumber?: string }> {
   const me = { tenantId };
   const supabase = createAdminClient();
@@ -718,12 +722,12 @@ async function performOrderDeletion(
     .eq("related_order_id", orderId);
   if (unlinkError) return fail("سجل المخزون", unlinkError.message);
 
-  const { error: cashError } = await supabase
-    .from("cash_transactions")
-    .delete()
-    .eq("tenant_id", me.tenantId)
-    .eq("related_order_id", orderId);
-  if (cashError) return fail("الخزنة", cashError.message);
+  // ⚠️ **فلوس الأوردر في الخزنة بتتلغي بحركة عكسية مش بتتمسح** (MONEY ٦.٢)
+  // — قبل مسح الأوردر عشان وصف الإلغاء فيه اسم العميل ورقمه.
+  const linked = await cashIdsFor(supabase, me.tenantId, "related_order_id", [orderId]);
+  if (linked.error) return fail("الخزنة", linked.error);
+  const reversed = await reverseCashRows(supabase, me.tenantId, linked.ids, actor, cairoToday());
+  if (reversed.error) return fail("الخزنة", reversed.error);
 
   // جدول `shipments` متجمّد — آخر مرة اتكتب فيه ١٩ يوليو ٢٠٢٦، والمزامنة
   // الجديدة بتكتب في `orders` بس. الصفوف القديمة سايبينها كتاريخ، والمسح
@@ -765,7 +769,7 @@ export async function deleteOrder(formData: FormData) {
 
   // الأدمن بيمسح على طول
   if (me.isAdmin) {
-    const result = await performOrderDeletion(orderId, me.tenantId);
+    const result = await performOrderDeletion(orderId, me.tenantId, me);
     if (!result.ok) {
       redirect(`/orders/${orderId}?error=` + encodeURIComponent(result.error ?? "خطأ"));
     }
@@ -842,7 +846,7 @@ export async function approveDeletion(formData: FormData) {
     redirect("/orders?error=" + encodeURIComponent("الطلب مش موجود أو اتقفل خلاص"));
   }
 
-  const result = await performOrderDeletion(reqRow!.order_id, me.tenantId);
+  const result = await performOrderDeletion(reqRow!.order_id, me.tenantId, me);
   if (!result.ok) {
     redirect("/orders?error=" + encodeURIComponent(result.error ?? "خطأ"));
   }

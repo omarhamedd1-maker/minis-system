@@ -76,7 +76,7 @@ export function ExpenseRow({
             <form action={deleteAction}>
               <input type="hidden" name="expense_id" value={expense.id} />
               <ConfirmButton
-                message="متأكد إنك عايز تمسح المصروف ده؟ هيتشال من الخزنة كمان."
+                message="المصروف هيتمسح، وحركته في الخزنة هتتلغي بحركة عكسية بتاريخ النهارده. تكمّل؟"
                 className="rounded-control bg-danger-soft px-3 py-1 text-xs font-medium text-danger hover:bg-danger-line"
               >
                 مسح
