@@ -16,7 +16,9 @@
 >   ⚠️ نقل الشرايط الستة **متوقف على `/work`** (الخطوة ٥).
 > - [`ORDER-PAGE-REDESIGN.md`](ORDER-PAGE-REDESIGN.md) — صفحة الأوردر الواحد `/orders/[id]`، مكانها الخطوة ٩.
 > - [`DASHBOARD-REDESIGN.md`](DASHBOARD-REDESIGN.md) — الداشبورد `/`، مكانها الخطوة ٧.
-> - [`CASH-PAGE-REDESIGN.md`](CASH-PAGE-REDESIGN.md) — الخزنة `/cash`، مكانها الخطوة ١٠.
+> - [`MONEY-PAGE-REDESIGN.md`](MONEY-PAGE-REDESIGN.md) — صفحة الفلوس `/cash` (الخزنة + المصاريف بتابات)، مكانها الخطوة ١٠.
+>   بدّلت `CASH-PAGE-REDESIGN.md` (١٦ سبتمبر) — مراجعتها اتنقلت في القسم ٨.٥.
+> - [`TRANSFERS-REDESIGN.md`](TRANSFERS-REDESIGN.md) — تبويب التحويلات. لسه سبب وجودها بس.
 
 ---
 
