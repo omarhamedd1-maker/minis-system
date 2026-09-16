@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { periodHref, resolvePeriod, shiftDays } from "./periods";
+import { periodHref, previousPeriod, resolvePeriod, shiftDays } from "./periods";
 
 const today = "2026-09-15";
 
@@ -109,5 +109,38 @@ describe("⚠️ مفيش صفحة بتعرّف فتراتها بنفسها", ()
   it("app/ وcomponents/ مافيهمش ولا تعريف فترات", () => {
     const offenders = files.filter((f) => OWN_PERIODS.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("previousPeriod", () => {
+  const r = (period: string, extra: { from?: string; to?: string } = {}) =>
+    resolvePeriod({ period, ...extra }, { today, defaultKey: "30d", allowAll: true });
+
+  it("آخر ٣٠ يوم ← الـ٣٠ اللي قبلها بالظبط من غير تداخل", () => {
+    expect(previousPeriod(r("30d"))).toMatchObject({ start: "2026-07-18", end: "2026-08-16" });
+  });
+
+  it("آخر ٧ أيام", () => {
+    expect(previousPeriod(r("7d"))).toMatchObject({ start: "2026-09-02", end: "2026-09-08" });
+  });
+
+  it("الشهر ده (١٥ يوم) ← أول ١٥ يوم من الشهر اللي فات", () => {
+    expect(previousPeriod(r("month"))).toMatchObject({ start: "2026-08-01", end: "2026-08-15" });
+  });
+
+  it("الشهر اللي فات أقصر — مايعدّيش آخره", () => {
+    const march31 = resolvePeriod({ period: "month" }, { today: "2026-03-31", defaultKey: "30d" });
+    expect(previousPeriod(march31)).toMatchObject({ start: "2026-02-01", end: "2026-02-28" });
+  });
+
+  it("مدة مخصصة ← نفس الطول قبلها", () => {
+    expect(previousPeriod(r("", { from: "2026-09-01", to: "2026-09-10" }))).toMatchObject({
+      start: "2026-08-22",
+      end: "2026-08-31",
+    });
+  });
+
+  it("كل الوقت مالهاش قبل", () => {
+    expect(previousPeriod(r("all"))).toBeNull();
   });
 });

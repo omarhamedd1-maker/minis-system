@@ -1,7 +1,8 @@
 import { PeriodFilter } from "@/components/PeriodFilter";
 import { FilterBar } from "@/components/FilterBar";
 import { FilterSelect } from "@/components/FilterSelect";
-import { periodHref, resolvePeriod } from "@/lib/periods";
+import { periodHref, previousPeriod, resolvePeriod } from "@/lib/periods";
+import { SupplierField } from "@/components/SupplierField";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CategoryPicker } from "@/components/CategoryPicker";
@@ -93,6 +94,24 @@ export async function ExpensesTab({
 
   const { data: expenses, error } = await query.overrideTypes<ExpenseRow[]>();
 
+  // نفس الفلتر على الفترة اللي قبلها بنفس الطول — عشان الرقم يبقى ليه معنى
+  const prev = previousPeriod(range);
+  let prevTotal: number | null = null;
+  if (prev) {
+    let pq = supabase
+      .from("expenses")
+      .select("amount")
+      .gte("expense_date", prev.start)
+      .lte("expense_date", prev.end)
+      .limit(2000);
+    if (cat) pq = pq.eq("category", cat);
+    const { data: prevRows, error: prevError } = await pq;
+    // ⚠️ فشل المقارنة مايوقعش الصفحة — بس مانعرضش رقم من غير أساس
+    if (!prevError) {
+      prevTotal = (prevRows ?? []).reduce((t, r) => t + Number(r.amount), 0);
+    }
+  }
+
   // الأنواع اللي استخدمتها فعلاً + الجاهزة، من غير تكرار
   const { data: usedCats } = await supabase
     .from("expenses")
@@ -126,6 +145,11 @@ export async function ExpensesTab({
   }
 
   const shownTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const count = expenses.length;
+  const change =
+    prev && prevTotal !== null && prevTotal > 0
+      ? Math.round(((shownTotal - prevTotal) / prevTotal) * 100)
+      : null;
 
   // ⚠️ **إجمالي الفترة فوق على كل مصاريف الفترة** — القص ده للعرض بس
   const showCount = resolveShowCount(show);
@@ -153,11 +177,31 @@ export async function ExpensesTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <span className="text-sm text-ink-muted">
-          {cat ? `${cat} — ` : ""}
-          {range.label}: {formatMoney(shownTotal)}
-        </span>
+      {/* ⚠️ الرقم الأساسي في التاب — كان رمادي صغير في الركن */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs text-ink-muted">
+            {cat ? `${cat} · ` : ""}
+            {range.label}
+          </p>
+          <p className="mt-0.5 text-2xl font-bold tabular-nums text-ink sm:text-3xl">
+            {formatMoney(shownTotal)}
+            <span className="ms-2 text-sm font-normal text-ink-muted">
+              · {count} {count >= 3 && count <= 10 ? "مصاريف" : "مصروف"}
+            </span>
+          </p>
+          {prev && (
+            <p className="mt-0.5 text-xs text-ink-muted">
+              {change === null
+                ? prevTotal === 0
+                  ? `مفيش مصاريف في ${prev.label}`
+                  : null
+                : change === 0
+                  ? `زي ${prev.label}`
+                  : `${change > 0 ? "↑" : "↓"} ${Math.abs(change)}٪ عن ${prev.label}`}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* شريط الفلاتر الموحّد — التصنيفات منسدلة (١٣ نوع ماينفعوش شرايح) */}
@@ -201,88 +245,89 @@ export async function ExpensesTab({
         </div>
       )}
 
+      {/*
+        ⚠️ الفورم مقفول — كان تلت الصفحة مفتوح دايمًا لحاجة بتتعمل مرة في اليوم.
+        الترتيب: المبلغ الأول (الوحيد الإجباري مع النوع) · النوع · الوصف · التاريخ · المورد.
+      */}
       {isAdmin && (
-        <form
-          action={addExpense}
-          className="flex flex-wrap items-end gap-3 rounded-card bg-surface p-4 shadow-card"
+        <details
+          id="new-expense"
+          className="group rounded-card bg-surface shadow-card"
         >
-          <div className="flex flex-col gap-1">
-            <label htmlFor="category" className="text-xs text-ink-muted">
-              النوع
-            </label>
-            <CategoryPicker
-              id="category"
-              required
-              categories={CATEGORY_SUGGESTIONS}
-              className="w-40 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
-            />
-          </div>
-          <div className="flex min-w-48 flex-1 flex-col gap-1">
-            <label htmlFor="description" className="text-xs text-ink-muted">
-              الوصف (اختياري)
-            </label>
-            <input
-              id="description"
-              name="description"
-              className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="amount" className="text-xs text-ink-muted">
-              المبلغ (جنيه)
-            </label>
-            <input
-              id="amount"
-              name="amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              required
-              className="w-28 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="expense_date" className="text-xs text-ink-muted">
-              التاريخ
-            </label>
-            <input
-              id="expense_date"
-              name="expense_date"
-              type="date"
-              defaultValue={today}
-              required
-              className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
-            />
-          </div>
-          {suppliers.length > 0 && (
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+            <span
+              aria-hidden
+              className="flex h-6 w-6 items-center justify-center rounded-control bg-primary text-white transition-transform group-open:rotate-45"
+            >
+              +
+            </span>
+            مصروف
+          </summary>
+          <form
+            action={addExpense}
+            className="flex flex-wrap items-end gap-3 border-t border-line p-4"
+          >
             <div className="flex flex-col gap-1">
-              <label htmlFor="supplier_id" className="text-xs text-ink-muted">
-                المورد (اختياري)
+              <label htmlFor="amount" className="text-xs text-ink-muted">
+                المبلغ (جنيه)
               </label>
-              <select
-                id="supplier_id"
-                name="supplier_id"
-                defaultValue=""
-                className="w-40 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
-              >
-                <option value="">مش على مورد</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                id="amount"
+                name="amount"
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="0.01"
+                required
+                className="w-28 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+              />
             </div>
-          )}
-          <SubmitOnce className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
-            تسجيل المصروف
-          </SubmitOnce>
-          <p className="w-full text-xs text-ink-faint">
-            لو اخترت مورد، المصروف ده بيتسجّل دفعة في حسابه وبيقلّل اللي عليك
-            له. فواتير البضاعة بالأجل بتتسجّل من صفحة المورد نفسه ومابتتحسبش
-            مصروف غير لما تحاسبه.
-          </p>
-        </form>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="category" className="text-xs text-ink-muted">
+                النوع
+              </label>
+              <CategoryPicker
+                id="category"
+                required
+                categories={CATEGORY_SUGGESTIONS}
+                className="w-40 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+              />
+            </div>
+            {/* على الموبايل الوصف بياخد السطر كله — أعرض من المبلغ */}
+            <div className="flex w-full flex-col gap-1 sm:w-auto sm:min-w-48 sm:flex-1">
+              <label htmlFor="description" className="text-xs text-ink-muted">
+                الوصف (اختياري)
+              </label>
+              <input
+                id="description"
+                name="description"
+                className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="expense_date" className="text-xs text-ink-muted">
+                التاريخ
+              </label>
+              <input
+                id="expense_date"
+                name="expense_date"
+                type="date"
+                defaultValue={today}
+                required
+                className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+              />
+            </div>
+            {suppliers.length > 0 && (
+              <SupplierField
+                suppliers={suppliers}
+                className="w-40 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+              />
+            )}
+            <SubmitOnce className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
+              تسجيل المصروف
+            </SubmitOnce>
+          </form>
+        </details>
       )}
 
       {expenses.length === 0 ? (

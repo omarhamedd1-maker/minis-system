@@ -143,3 +143,35 @@ export function periodHref(
   const qs = p.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }
+
+/**
+ * الفترة اللي قبلها بنفس الطول — للمقارنة («↓ ٤٠٪ عن اللي قبلها»).
+ *
+ * ⚠️ **«الشهر ده» بيتقارن بنفس الأيام من الشهر اللي فات** مش بالشهر كله —
+ * يوم ١٠ في الشهر مايتقارنش بـ٣٠ يوم. و«كل الوقت» مالهاش قبل.
+ */
+export function previousPeriod(
+  range: ResolvedPeriod
+): { start: string; end: string; label: string } | null {
+  if (!range.start || !range.days) return null;
+  if (range.key === "month") {
+    const start = shiftDays(range.start, -1).slice(0, 8) + "01";
+    const lastOfPrev = shiftDays(range.start, -1);
+    const end = shiftDays(start, range.days - 1);
+    return {
+      start,
+      end: end > lastOfPrev ? lastOfPrev : end,
+      label: "نفس الأيام من الشهر اللي فات",
+    };
+  }
+  return {
+    start: shiftDays(range.start, -range.days),
+    end: shiftDays(range.start, -1),
+    label:
+      range.key === "7d"
+        ? "الـ٧ أيام اللي قبلها"
+        : range.key === "30d"
+          ? "الـ٣٠ يوم اللي قبلها"
+          : "المدة اللي قبلها",
+  };
+}
