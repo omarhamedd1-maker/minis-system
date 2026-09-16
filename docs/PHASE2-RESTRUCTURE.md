@@ -16,6 +16,7 @@
 >   ⚠️ نقل الشرايط الستة **متوقف على `/work`** (الخطوة ٥).
 > - [`ORDER-PAGE-REDESIGN.md`](ORDER-PAGE-REDESIGN.md) — صفحة الأوردر الواحد `/orders/[id]`، مكانها الخطوة ٩.
 > - [`DASHBOARD-REDESIGN.md`](DASHBOARD-REDESIGN.md) — الداشبورد `/`، مكانها الخطوة ٧.
+> - [`CASH-PAGE-REDESIGN.md`](CASH-PAGE-REDESIGN.md) — الخزنة `/cash`، مكانها الخطوة ١٠.
 
 ---
 
