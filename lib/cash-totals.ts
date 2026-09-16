@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAllPages } from "./fetch-all-pages";
 
 /**
  * ==========================================================================
@@ -50,25 +51,8 @@ export function sumCash(rows: Move[]): CashTotals {
   };
 }
 
-/** حجم الصفحة = سقف سوبابيز. أقل صفحة من ده معناها إن الحركات خلصت */
-export const PAGE_SIZE = 1000;
-
-/**
- * بيجيب كل الصفحات لحد ما صفحة ترجع أقل من الحجم.
- * ⚠️ **أي خطأ بيوقف** — رصيد من نص الحركات أوحش من مفيش رصيد.
- */
-export async function fetchAllPages<T>(
-  page: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>
-): Promise<T[]> {
-  const out: T[] = [];
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await page(from, from + PAGE_SIZE - 1);
-    if (error) throw new Error(error.message);
-    const rows = data ?? [];
-    out.push(...rows);
-    if (rows.length < PAGE_SIZE) return out;
-  }
-}
+// الصفحات اتنقلت لملف لوحدها — بتتستخدم برّه الخزنة كمان (التصدير)
+export { fetchAllPages, PAGE_SIZE } from "./fetch-all-pages";
 
 /** الدالة مش موجودة في الداتابيز لسه — مش خطأ حقيقي */
 export function isMissingFunction(error: { code?: string; message?: string } | null): boolean {
@@ -122,10 +106,7 @@ export async function loadCashTotals(
         .eq("tenant_id", tenantId)
         // ترتيب ثابت — من غيره الصفحات ممكن تتداخل أو تفوّت صفوف
         .order("id")
-        .range(from, to) as unknown as Promise<{
-        data: Move[] | null;
-        error: { message: string } | null;
-      }>
+        .range(from, to)
   );
   return sumCash(rows);
 }

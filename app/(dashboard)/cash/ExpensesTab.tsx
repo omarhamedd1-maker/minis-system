@@ -65,6 +65,7 @@ export async function ExpensesTab({
   const cat = (rawCat ?? "").trim() || undefined;
 
   const isAdmin = can(user, "expenses.edit");
+  const canExport = can(user, "finance.export");
   const supabase = await createClient();
 
   const today = cairoToday();
@@ -202,6 +203,15 @@ export async function ExpensesTab({
             </p>
           )}
         </div>
+        {/* التنزيل بنفس الفلاتر — اللي شايفه هو اللي بينزل (المحاسب طلب كشف) */}
+        {canExport && (
+          <a
+            href={`/export?${new URLSearchParams({ what: "expenses", ...(cat ? { cat } : {}), ...periodParams })}`}
+            className="rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-body hover:bg-sunken"
+          >
+            تنزيل Excel
+          </a>
+        )}
       </div>
 
       {/* شريط الفلاتر الموحّد — التصنيفات منسدلة (١٣ نوع ماينفعوش شرايح) */}

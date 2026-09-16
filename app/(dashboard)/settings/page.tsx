@@ -622,6 +622,8 @@ export default async function SettingsPage({
             { what: "orders", label: "الأوردرات" },
             { what: "customers", label: "العملاء" },
             { what: "products", label: "المنتجات" },
+            { what: "expenses&period=all", label: "المصاريف" },
+            { what: "cash", label: "حركات الخزنة" },
           ].map((f) => (
             <a
               key={f.what}
