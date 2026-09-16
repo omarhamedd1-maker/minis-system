@@ -6,6 +6,7 @@ import { CashCard } from "@/components/CashCard";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { SubmitOnce } from "@/components/SubmitOnce";
 import { loadCashTotals, type CashTotals } from "@/lib/cash-totals";
+import { cashRowLabel, type CashLabelRow } from "@/lib/cash-label";
 import {
   groupByDay,
   withRunningBalance,
@@ -32,38 +33,11 @@ import {
   updateCashTransaction,
 } from "./actions";
 
-type CashRow = {
+type CashRow = CashLabelRow & {
   id: string;
-  direction: string;
   amount: number;
-  source_type: string | null;
-  description: string | null;
   transaction_date: string | null;
-  orders: { order_number: string | null } | null;
-  expenses: { category: string | null; description: string | null } | null;
 };
-
-const SOURCE_LABELS: Record<string, string> = {
-  expense: "مصروف",
-  order: "أوردر",
-};
-
-function sourceLabel(row: CashRow) {
-  if (row.source_type === "manual") {
-    const base = row.direction === "in" ? "إيداع يدوي" : "سحب يدوي";
-    return row.description ? `${base}: ${row.description}` : base;
-  }
-  const base = SOURCE_LABELS[row.source_type ?? ""] ?? row.source_type ?? "—";
-  if (row.expenses) {
-    return `${base}: ${row.expenses.category ?? ""}${
-      row.expenses.description ? ` (${row.expenses.description})` : ""
-    }`;
-  }
-  if (row.orders?.order_number) {
-    return `${base} رقم ${row.orders.order_number}`;
-  }
-  return base;
-}
 
 export default async function CashPage({
   searchParams,
@@ -88,7 +62,7 @@ export default async function CashPage({
   let rowsQuery = supabase
     .from("cash_transactions")
     .select(
-      "id, direction, amount, source_type, description, transaction_date, orders(order_number), expenses(category, description)"
+      "id, direction, amount, source_type, description, transaction_date, orders(order_number, customers(full_name)), expenses(category, description)"
     );
   if (dir) rowsQuery = rowsQuery.eq("direction", dir);
 
@@ -299,7 +273,7 @@ export default async function CashPage({
                     amount={row.amount}
                     description={row.description}
                     transactionDate={row.transaction_date}
-                    label={sourceLabel(row)}
+                    label={cashRowLabel(row)}
                     balanceAfter={row.balanceAfter}
                     showDate={false}
                     canEdit={isAdmin && row.source_type === "manual"}
@@ -372,7 +346,7 @@ export default async function CashPage({
                         )}
                       </td>
                       <td className="px-4 py-3 text-ink-body">
-                        {sourceLabel(row)}
+                        {cashRowLabel(row)}
                       </td>
                       <td
                         className={`px-4 py-3 font-medium ${
