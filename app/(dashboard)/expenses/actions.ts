@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
+import { cairoToday } from "@/lib/format";
+import { auditFields, cashIdsFor, reverseCashRows } from "@/lib/cash-reversal";
 
 export async function updateExpense(formData: FormData) {
   const me = await requirePermission("expenses.edit");
@@ -99,17 +101,17 @@ export async function deleteExpense(formData: FormData) {
     .eq("tenant_id", me.tenantId)
     .eq("related_expense_id", id);
 
-  // نمسح حركة الخزنة المرتبطة الأول عشان مفيش حركة تفضل من غير مصروف
-  const { error: cashError } = await supabase
-    .from("cash_transactions")
-    .delete()
-    .eq("tenant_id", me.tenantId)
-    .eq("related_expense_id", id);
-
-  if (cashError) {
+  // ⚠️ **حركة الخزنة بتتلغي بحركة عكسية مش بتتمسح** (MONEY ٦.٢) — ولازم
+  // قبل مسح المصروف، عشان وصف الإلغاء بيتكتب من بياناته. بعد المسح الربط
+  // بيتفضّى (sql/cash-audit.sql) والحركة الأصلية بتفضل في الخزنة.
+  const linked = await cashIdsFor(supabase, me.tenantId, "related_expense_id", [id]);
+  const reversed = linked.error
+    ? { error: linked.error }
+    : await reverseCashRows(supabase, me.tenantId, linked.ids, me, cairoToday());
+  if (reversed.error) {
     redirect(
       "/cash?tab=expenses&error=" +
-        encodeURIComponent("معرفناش نمسح حركة الخزنة: " + cashError.message),
+        encodeURIComponent("معرفناش نلغي حركة الخزنة: " + reversed.error),
     );
   }
 
@@ -209,6 +211,7 @@ export async function addExpense(formData: FormData) {
     source_type: "expense",
     related_expense_id: expense.id,
     transaction_date: expenseDate,
+    ...auditFields(me, "app"),
   });
 
   if (cashError) {

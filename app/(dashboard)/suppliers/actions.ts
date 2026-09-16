@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
+import { cairoToday } from "@/lib/format";
+import { auditFields, cashIdsFor, reverseCashRows } from "@/lib/cash-reversal";
 
 // الحسبة زي ما عمر حددها (شغل بالأجل — بياخد البضاعة ويحاسب بعدين):
 //   الفاتورة (purchase)  = بضاعة استلمتها ولسه ما دفعتهاش → بتزوّد اللي عليك
@@ -155,9 +157,9 @@ export async function deleteSupplier(formData: FormData) {
   const cashIds = (txns ?? [])
     .map((t) => t.related_cash_id)
     .filter((v): v is string => Boolean(v));
-  if (cashIds.length > 0) {
-    await admin.from("cash_transactions").delete().eq("tenant_id", me.tenantId).in("id", cashIds);
-  }
+  // الدفعات بتتلغي في الخزنة بحركات عكسية — مابتتمسحش (MONEY ٦.٢)
+  const reversed = await reverseCashRows(admin, me.tenantId, cashIds, me, cairoToday());
+  if (reversed.error) fail(`/suppliers/${id}`, "معرفناش نلغي دفعات الخزنة: " + reversed.error);
 
   await admin.from("supplier_transactions").delete().eq("tenant_id", me.tenantId).eq("supplier_id", id);
 
@@ -248,6 +250,7 @@ export async function addSupplierTransaction(formData: FormData) {
           source_type: "expense",
           related_expense_id: expense.id,
           transaction_date: txnDate,
+          ...auditFields(me, "app"),
         })
         .select("id")
         .single();
@@ -347,15 +350,20 @@ export async function deleteSupplierTransaction(formData: FormData) {
   if (txn?.stock_applied && txn.supplier_invoice_items?.length) {
     await applyStock(txn.supplier_invoice_items, -1, "إلغاء فاتورة مورد", me.tenantId);
   }
-  if (txn?.related_cash_id) {
-    await admin.from("cash_transactions").delete().eq("tenant_id", me.tenantId).eq("id", txn.related_cash_id);
-  }
+  // حركة الخزنة بتتلغي بحركة عكسية — قبل مسح المصروف عشان الوصف (MONEY ٦.٢)
+  const viaExpense = txn?.related_expense_id
+    ? await cashIdsFor(admin, me.tenantId, "related_expense_id", [txn.related_expense_id])
+    : { ids: [] as string[] };
+  if (viaExpense.error) fail(back, "معرفناش نقرا حركة الخزنة: " + viaExpense.error);
+  const reversed = await reverseCashRows(
+    admin,
+    me.tenantId,
+    [...(txn?.related_cash_id ? [txn.related_cash_id] : []), ...viaExpense.ids],
+    me,
+    cairoToday()
+  );
+  if (reversed.error) fail(back, "معرفناش نلغي حركة الخزنة: " + reversed.error);
   if (txn?.related_expense_id) {
-    await admin
-      .from("cash_transactions")
-      .delete()
-      .eq("tenant_id", me.tenantId)
-      .eq("related_expense_id", txn.related_expense_id);
     await admin.from("expenses").delete().eq("tenant_id", me.tenantId).eq("id", txn.related_expense_id);
   }
 

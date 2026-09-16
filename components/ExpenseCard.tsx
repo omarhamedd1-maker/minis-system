@@ -95,7 +95,7 @@ export function ExpenseCard({
                 title="مسح"
                 aria-label="مسح"
                 onClick={(e) => {
-                  if (!confirm("متأكد إنك عايز تمسح المصروف ده؟"))
+                  if (!confirm("المصروف هيتمسح، وحركته في الخزنة هتتلغي بحركة عكسية بتاريخ النهارده. تكمّل؟"))
                     e.preventDefault();
                 }}
                 className="group/btn flex h-11 w-11 items-center justify-center"

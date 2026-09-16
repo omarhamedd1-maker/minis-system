@@ -9,6 +9,7 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { auditFields } from "./cash-reversal";
 import {
   planPrepaidCash,
   prepaidDescription,
@@ -189,6 +190,7 @@ export async function recordPrepaidCash(opts: {
       related_order_id: order.id,
       description: prepaidDescription(order),
       transaction_date: order.orderDate ?? new Date().toISOString().slice(0, 10),
+      ...auditFields(null, "prepaid"),
     });
     if (!e) out.added++;
   }

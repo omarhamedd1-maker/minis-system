@@ -14,6 +14,7 @@ type Row = {
 
 export function CashManualRow({
   row,
+  note,
   balanceAfter,
   showDate = true,
   dateInline = false,
@@ -21,6 +22,8 @@ export function CashManualRow({
   deleteAction,
 }: {
   row: Row;
+  /** مين سجّلها — «سجّلها محمود» */
+  note?: string | null;
   /** الرصيد بعد الحركة — عمود لوحده */
   balanceAfter?: number;
   /** جوّه مجموعة يوم التاريخ مكتوب في العنوان — مايتكررش في السطر (قرار عمر) */
@@ -55,9 +58,11 @@ export function CashManualRow({
         </td>
         <td className="break-words px-2 py-3 text-xs text-ink-body sm:px-4 sm:text-sm">
           {row.description ? `${label}: ${row.description}` : label}
-          {dateInline && (
+          {(dateInline || note) && (
             <div className="text-[11px] text-ink-faint">
-              {formatDate(row.transaction_date)}
+              {[dateInline ? formatDate(row.transaction_date) : null, note]
+                .filter(Boolean)
+                .join(" · ")}
             </div>
           )}
         </td>
@@ -85,10 +90,10 @@ export function CashManualRow({
             <form action={deleteAction}>
               <input type="hidden" name="transaction_id" value={row.id} />
               <ConfirmButton
-                message="متأكد إنك عايز تمسح الحركة دي من الخزنة؟"
+                message="الحركة هتتلغي بحركة عكسية بتاريخ النهارده — الأصل بيفضل في الدفتر. تكمّل؟"
                 className="rounded-control bg-danger-soft px-2 py-1 text-xs font-medium text-danger hover:bg-danger-line sm:px-3"
               >
-                مسح
+                إلغاء
               </ConfirmButton>
             </form>
           </div>

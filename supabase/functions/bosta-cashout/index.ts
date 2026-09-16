@@ -212,6 +212,8 @@ Deno.serve(async (req) => {
       source_type: "manual",
       description: `تحويل من بوسطة (${cashoutId})`,
       transaction_date: date,
+      // مصدر الحركة (sql/cash-audit.sql) — MONEY ٦.١
+      origin: "bosta-cashout",
     });
     if (cashErr) continue;
 
