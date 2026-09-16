@@ -33,6 +33,7 @@ import { recordSyncRun } from "@/lib/bosta/sync-runs";
 import { registerShopifyWebhooks } from "@/lib/shopify/register-webhooks";
 import { webhookCallbackUrl } from "@/lib/shopify/webhook-url";
 import { resolveShopifyToken } from "@/lib/shopify/token";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -309,7 +310,7 @@ export async function GET(request: Request) {
               }[];
             };
 
-            const { data: sold } = await db
+            const { data: sold } = await allRows(db
               .from("orders")
               .select(
                 "order_status, order_date, order_items(variant_id, product_variants(variant_name, products(name_ar, name)))"
@@ -321,10 +322,9 @@ export async function GET(request: Request) {
                 "returned_after_delivery",
               ])
               .gte("order_date", since)
-              .limit(3000)
               // ⚠️ الوصلات بترجع كمصفوفات في النوع المولّد، وهي كائن واحد
               // فعلًا — `overrideTypes` بتصحّح ده زي باقي الشاشات
-              .overrideTypes<SoldRow[]>();
+              .overrideTypes<SoldRow[]>());
 
             const lines = (sold ?? []).flatMap((o) =>
               (o.order_items ?? []).map((i) => ({

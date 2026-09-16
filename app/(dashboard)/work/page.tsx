@@ -13,6 +13,7 @@ import {
   type BoardRow,
 } from "@/lib/daily-board";
 import { formatMoney } from "@/lib/format";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 
@@ -70,13 +71,12 @@ export default async function WorkPage() {
   const supabase = await createClient();
 
   // ⚠️ **٣٠٠٠ صف للعدّ مش للعرض** — تقليلها معناه عدّادات ناقصة بالصمت.
-  const { data } = await supabase
+  const { data } = await allRows(supabase
     .from("orders")
     .select(
       "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected"
     )
     .eq("archived", false)
-    .limit(3000)
     .overrideTypes<
       {
         id: string;
@@ -86,7 +86,7 @@ export default async function WorkPage() {
         bosta_cod: number | null;
         bosta_collected: boolean | null;
       }[]
-    >();
+    >());
 
   const board = dailyBoard(
     (data ?? []).map((o) => ({

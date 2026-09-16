@@ -10,6 +10,7 @@ import { planShipmentLinks, type LinkPlan } from "@/lib/bosta/link-missing";
 import { compareCoverage } from "@/lib/bosta/coverage";
 import { AT_CARRIER_STATUSES } from "@/lib/format";
 import { recordImportRun } from "@/lib/import-runs";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export type LinkMissingResult =
   | { ok: true; dry: boolean; plan: LinkPlan; linked?: number }
@@ -189,11 +190,10 @@ export async function checkBostaCoverage(): Promise<CoverageReport> {
 
   // ⚠️ فحص التغطية بيقارن شحنات بوسطة بتاعت البيزنس ده بأوردراته هو.
   // من غير الفلتر أوردر بيزنس تاني ممكن يتطابق ويتعرض باسمه ورقمه.
-  const { data: rows, error } = await db
+  const { data: rows, error } = await allRows(db
     .from("orders")
     .select("id, order_number, order_status, bosta_tracking, customers(phone)")
     .eq("tenant_id", me.tenantId)
-    .limit(5000)
     .overrideTypes<
       {
         id: string;
@@ -202,7 +202,7 @@ export async function checkBostaCoverage(): Promise<CoverageReport> {
         bosta_tracking: string | null;
         customers: { phone: string | null } | null;
       }[]
-    >();
+    >());
 
   if (error) return { ok: false, error: "معرفناش نقرا الأوردرات: " + error.message };
 

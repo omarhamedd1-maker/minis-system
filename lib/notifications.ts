@@ -13,6 +13,7 @@ import { refundDue } from "./refund";
 import { loadTenantCredentials } from "./tenant-settings";
 import { staleBeforeShipping, STALE_AFTER_DAYS } from "./stale-orders";
 import { stockRunway, runningOut, WINDOW_DAYS } from "./stock-runway";
+import { allRows } from "./fetch-all-pages";
 
 export type NoticeLevel = "danger" | "warn" | "info";
 
@@ -165,15 +166,14 @@ export async function collectNotices(
     const since = new Date(
       Date.now() - RETURNED_LIVES_HOURS * 60 * 60 * 1000
     ).toISOString();
-    const { data: log, error } = await db
+    const { data: log, error } = await allRows(db
       .from("activity_log")
       .select("order_id, created_at")
       // ⚠️ بمفتاح الأدمن — من غير الفلتر ده بنقرا سجل كل البيزنسات،
       // والحد (٢٠٠٠ صف) بيتاكل من بيزنس تاني فصفوفنا تقع بره القراية
       .eq("tenant_id", tenantId)
       .eq("action", "order.status")
-      .gte("created_at", since)
-      .limit(2000);
+      .gte("created_at", since));
     if (!error) {
       fresh = changedWithin(
         (log ?? []) as { order_id?: string | null; created_at?: string | null }[],
@@ -319,20 +319,18 @@ export async function collectNotices(
   // كل يوم على أكتر منتجين بيبيعوا عند عمر وهما شغالين.
   try {
     const [variantsRes, salesRes] = await Promise.all([
-      db
+      allRows(db
         .from("product_variants")
         .select("id, variant_name, quantity_on_hand, products(name_ar, name)")
-        .eq("tenant_id", tenantId)
-        .limit(2000),
-      db
+        .eq("tenant_id", tenantId)),
+      allRows(db
         .from("orders")
         .select("order_status, order_date, order_items(variant_id, quantity)")
         .eq("tenant_id", tenantId)
         .gte(
           "order_date",
           new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString()
-        )
-        .limit(2000),
+        )),
     ]);
 
     const variants = (

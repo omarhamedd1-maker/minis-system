@@ -14,6 +14,7 @@ import { computeHeadline } from "@/lib/dashboard-stats";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
 import { monthlyReport } from "@/lib/monthly-report";
 import { requirePagePermission } from "@/lib/permissions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 type OrderRow = {
   id: string;
@@ -130,7 +131,7 @@ export default async function StatsPage({
 
   const [ordersResult, expensesResult, variantsResult] =
     await Promise.all([
-      supabase
+      allRows(supabase
         .from("orders")
         .select(
           `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, customers(full_name),
@@ -138,19 +139,17 @@ export default async function StatsPage({
              product_variants(id, variant_name, products(name)))`
         )
         .gte("order_date", fetchStart)
-        .limit(2000)
-        .overrideTypes<OrderRow[]>(),
-      supabase
+        .overrideTypes<OrderRow[]>()),
+      allRows(supabase
         .from("expenses")
         .select("category, amount, expense_date")
         // ⚠️ **بنجيب من `fetchStart` مش من `periodStart`** — الجدول الشهري
         // محتاج مصاريف الست شهور، والفلترة لكل شهر بتحصل جوّه التقرير.
         // والكروت فوق بتفلتر بالفترة بنفسها فمافيش تأثير عليها.
         .gte("expense_date", fetchStart)
-        .limit(5000)
         .overrideTypes<
           { category: string; amount: number; expense_date: string }[]
-        >(),
+        >()),
       supabase
         .from("product_variants")
         .select("id, variant_name, cost_price, sale_price, quantity_on_hand, products(name)")

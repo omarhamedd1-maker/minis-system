@@ -68,6 +68,7 @@ import { templateFor } from "@/lib/message-kinds";
 import { loadStoredTemplates } from "@/lib/message-templates-db";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { approveDeletion, rejectDeletion } from "./[id]/actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 type OrderRow = {
   id: string;
@@ -239,13 +240,12 @@ export default async function OrdersPage({
   // تفضل تقول لك إن فيه ٣ محتاجين تأكيد.
   const boardRows =
     (
-      await supabase
+      await allRows(supabase
         .from("orders")
         .select(
           "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected"
         )
         .eq("archived", false)
-        .limit(3000)
         .overrideTypes<
           {
             id: string;
@@ -255,7 +255,7 @@ export default async function OrdersPage({
             bosta_cod: number | null;
             bosta_collected: boolean | null;
           }[]
-        >()
+        >())
     ).data ?? [];
 
   const board = dailyBoard(

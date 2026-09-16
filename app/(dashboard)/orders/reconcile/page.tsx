@@ -13,6 +13,7 @@ import { LinkMissingShipments } from "@/components/LinkMissingShipments";
 import { BostaCoverage } from "@/components/BostaCoverage";
 import { requirePagePermission } from "@/lib/permissions";
 import { checkBostaCoverage, linkMissingShipments } from "./actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 type Row = {
   id: string;
@@ -89,7 +90,7 @@ export default async function ReconcilePage() {
   const me = await requirePagePermission("finance.dashboard");
   const admin = createAdminClient();
 
-  const { data, error } = await admin
+  const { data, error } = await allRows(admin
     .from("orders")
     .select(
       `id, order_number, order_status, order_date, archived, discount, shipping_price,
@@ -100,8 +101,7 @@ export default async function ReconcilePage() {
     // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
     .eq("tenant_id", me.tenantId)
     .order("order_date", { ascending: false })
-    .limit(5000)
-    .overrideTypes<Row[]>();
+    .overrideTypes<Row[]>());
 
   if (error) {
     return (

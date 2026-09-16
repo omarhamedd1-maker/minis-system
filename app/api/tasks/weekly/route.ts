@@ -20,6 +20,7 @@ import {
   worthSending,
   type WeekNumbers,
 } from "@/lib/weekly-digest";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
   for (const tenantId of tenants) {
     try {
       const [{ data: orders }, { data: expenses }] = await Promise.all([
-        db
+        allRows(db
           .from("orders")
           .select(
             `order_status, order_date, delivered_at, shipping_price, discount,
@@ -71,14 +72,12 @@ export async function GET(request: Request) {
              order_items(quantity, sale_price_at_order, cost_price_at_order)`
           )
           .eq("tenant_id", tenantId)
-          .gte("order_date", lastStart)
-          .limit(3000),
-        db
+          .gte("order_date", lastStart)),
+        allRows(db
           .from("expenses")
           .select("category, amount, expense_date")
           .eq("tenant_id", tenantId)
-          .gte("expense_date", lastStart)
-          .limit(2000),
+          .gte("expense_date", lastStart)),
       ]);
 
       const rows = (orders ?? []) as never[];

@@ -14,6 +14,7 @@ import {
   saveSku,
   saveStock,
 } from "../actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 type ProductDetails = {
   id: string;
@@ -55,12 +56,11 @@ export default async function ProductDetailsPage({
       .select("flat_shipping_price")
       .eq("tenant_id", user.tenantId)
       .maybeSingle(),
-    admin
+    allRows(admin
       .from("orders")
       .select("order_status")
       .eq("tenant_id", user.tenantId)
-      .in("order_status", ["delivered", "returned", "returned_after_delivery"])
-      .limit(3000),
+      .in("order_status", ["delivered", "returned", "returned_after_delivery"])),
   ]);
 
   const rows = (settled ?? []) as { order_status: string | null }[];

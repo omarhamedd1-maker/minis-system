@@ -16,6 +16,7 @@ import {
   type CashRow,
   type PrepaidOrder,
 } from "./prepaid-cash";
+import { allRows } from "./fetch-all-pages";
 
 export type PrepaidRunResult = {
   added: number;
@@ -47,13 +48,12 @@ export async function recordPrepaidCash(opts: {
   };
 
   // **الملغي مستثنى** — فلوسه رجعت أو عمرها ما وصلت
-  const { data: orderRows, error } = await db
+  const { data: orderRows, error } = await allRows(db
     .from("orders")
     .select("id, order_number, amount_paid, payment_method, order_date")
     .eq("tenant_id", tenantId)
     .gt("amount_paid", 0)
-    .neq("order_status", "cancelled")
-    .limit(2000);
+    .neq("order_status", "cancelled"));
 
   if (error || !orderRows) return out;
 
@@ -90,11 +90,10 @@ export async function recordPrepaidCash(opts: {
    * ⚠️ **والقيد في الداتابيز هو الضمان التاني** (`sql/prepaid-once.sql`)
    * — الكود ممكن يغلط تاني، والقيد مش بيغلط.
    */
-  const { data: cashRows, error: cashError } = await db
+  const { data: cashRows, error: cashError } = await allRows(db
     .from("cash_transactions")
     .select("id, direction, amount, description, related_order_id, transaction_date, source_type")
-    .eq("tenant_id", tenantId)
-    .limit(5000);
+    .eq("tenant_id", tenantId));
 
   if (cashError || !cashRows) {
     out.review.push({

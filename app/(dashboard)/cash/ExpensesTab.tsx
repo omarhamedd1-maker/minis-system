@@ -20,6 +20,7 @@ import { addExpense, deleteExpense, updateExpense } from "../expenses/actions";
 import { dayHasHeader, groupByDay } from "@/lib/cash-ledger";
 import { ShowMore } from "@/components/ShowMore";
 import { resolveShowCount } from "@/lib/show-more";
+import { allRows } from "@/lib/fetch-all-pages";
 
 type ExpenseRow = {
   id: string;
@@ -87,13 +88,13 @@ export async function ExpensesTab({
   let query = supabase
     .from("expenses")
     .select("id, category, description, amount, expense_date, supplier_id")
-    .order("expense_date", { ascending: false })
-    .limit(2000);
+    .order("expense_date", { ascending: false });
   if (periodStart) query = query.gte("expense_date", periodStart);
   if (range.key === "custom") query = query.lte("expense_date", range.end);
   if (cat) query = query.eq("category", cat);
 
-  const { data: expenses, error } = await query.overrideTypes<ExpenseRow[]>();
+  // ⚠️ كل مصاريف الفترة — الإجمالي فوق محسوب منها (NEXT §٣٣)
+  const { data: expenses, error } = await allRows(query.overrideTypes<ExpenseRow[]>());
 
   // نفس الفلتر على الفترة اللي قبلها بنفس الطول — عشان الرقم يبقى ليه معنى
   const prev = previousPeriod(range);
@@ -103,10 +104,9 @@ export async function ExpensesTab({
       .from("expenses")
       .select("amount")
       .gte("expense_date", prev.start)
-      .lte("expense_date", prev.end)
-      .limit(2000);
+      .lte("expense_date", prev.end);
     if (cat) pq = pq.eq("category", cat);
-    const { data: prevRows, error: prevError } = await pq;
+    const { data: prevRows, error: prevError } = await allRows(pq);
     // ⚠️ فشل المقارنة مايوقعش الصفحة — بس مانعرضش رقم من غير أساس
     if (!prevError) {
       prevTotal = (prevRows ?? []).reduce((t, r) => t + Number(r.amount), 0);
@@ -114,11 +114,10 @@ export async function ExpensesTab({
   }
 
   // الأنواع اللي استخدمتها فعلاً + الجاهزة، من غير تكرار
-  const { data: usedCats } = await supabase
+  const { data: usedCats } = await allRows(supabase
     .from("expenses")
     .select("category")
-    .limit(5000)
-    .overrideTypes<{ category: string }[]>();
+    .overrideTypes<{ category: string }[]>());
   const CATEGORY_SUGGESTIONS = Array.from(
     new Set([
       ...(usedCats ?? []).map((r) => r.category).filter(Boolean),

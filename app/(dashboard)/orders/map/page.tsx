@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePagePermission } from "@/lib/permissions";
 import { formatMoney } from "@/lib/format";
 import { orderMap, MIN_FOR_RATE } from "@/lib/order-map";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default async function OrderMapPage() {
   await requirePagePermission("finance.dashboard");
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await allRows(supabase
     .from("orders")
     .select(
       `order_status, discount, shipping_price,
@@ -36,8 +37,7 @@ export default async function OrderMapPage() {
        order_items(quantity, sale_price_at_order)`
     )
     .eq("archived", false)
-    .limit(2000)
-    .overrideTypes<Row[]>();
+    .overrideTypes<Row[]>());
 
   if (error) {
     return (

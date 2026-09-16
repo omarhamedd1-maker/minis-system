@@ -11,6 +11,7 @@ import {
 import { deadStock, frozenValue, withoutCost, DEAD_AFTER_DAYS } from "@/lib/dead-stock";
 import { ImportShopifyProducts } from "@/components/ImportShopifyProducts";
 import { importShopifyProducts } from "./actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 const SHOPIFY_STATUS: Record<
   string,
@@ -116,18 +117,17 @@ export default async function ProductsPage({
   const since = new Date(now.getTime() - WINDOW_DAYS * 86_400_000).toISOString();
   const salesRows =
     (
-      await supabase
+      await allRows(supabase
         .from("orders")
         .select("order_status, order_date, order_items(variant_id, quantity)")
         .gte("order_date", since)
-        .limit(2000)
         .overrideTypes<
           {
             order_status: string | null;
             order_date: string | null;
             order_items: { variant_id: string | null; quantity: number }[] | null;
           }[]
-        >()
+        >())
     ).data ?? [];
 
   const runway = stockRunway(
@@ -160,18 +160,17 @@ export default async function ProductsPage({
   // بيجيب آخر بيعة لكل شكل بس، مش كل البيعات.
   const lastSales =
     (
-      await supabase
+      await allRows(supabase
         .from("orders")
         .select("order_status, order_date, order_items(variant_id)")
         .gte("order_date", new Date(now.getTime() - 400 * 86_400_000).toISOString())
-        .limit(4000)
         .overrideTypes<
           {
             order_status: string | null;
             order_date: string | null;
             order_items: { variant_id: string | null }[] | null;
           }[]
-        >()
+        >())
     ).data ?? [];
 
   const dead = deadStock(

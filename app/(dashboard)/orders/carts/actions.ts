@@ -8,6 +8,7 @@ import {
   triageCarts,
   type AbandonedCart,
 } from "@/lib/shopify/abandoned";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export type CartsReport =
   | {
@@ -49,11 +50,10 @@ export async function loadAbandonedCarts(): Promise<CartsReport> {
   }
 
   // تليفونات اللي اشتروا فعلاً — عشان نشيل السلة اللي خلصت لوحدها
-  const { data: buyers } = await db
+  const { data: buyers } = await allRows(db
     .from("customers")
     .select("phone")
-    .eq("tenant_id", me.tenantId)
-    .limit(5000);
+    .eq("tenant_id", me.tenantId));
 
   const t = triageCarts(carts, (buyers ?? []).map((b) => b.phone as string | null));
 

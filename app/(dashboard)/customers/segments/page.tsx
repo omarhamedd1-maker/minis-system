@@ -9,6 +9,7 @@ import {
   statsByCustomer,
   type SegOrder,
 } from "@/lib/customer-segments";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 
@@ -35,19 +36,17 @@ export default async function SegmentsPage() {
   const db = await createClient();
 
   const [{ data: orders }, { data: people }] = await Promise.all([
-    db
+    allRows(db
       .from("orders")
       .select(
         `customer_id, order_status, order_date, payment_method, amount_paid,
          discount, shipping_price, order_items(quantity, sale_price_at_order)`
       )
-      .eq("tenant_id", me.tenantId)
-      .limit(5000),
-    db
+      .eq("tenant_id", me.tenantId)),
+    allRows(db
       .from("customers")
       .select("id, full_name, phone")
-      .eq("tenant_id", me.tenantId)
-      .limit(5000),
+      .eq("tenant_id", me.tenantId)),
   ]);
 
   const nameOf = new Map(
