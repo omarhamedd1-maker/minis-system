@@ -1,5 +1,6 @@
 // حسابات كروت الداشبورد — مشتركة بين السيرفر (أول تحميل) والعميل (التحديث اللايف)
 import { AT_CARRIER_STATUSES, EXCLUDED_STATUSES } from "./format";
+import { splitExpenses } from "./profit-exclusions";
 
 // ملحوظة: الشحن اللي العميل بيدفعه مابقاش رقم ثابت — بيتقرا من كل أوردر
 // زي ما نزل من شوبيفاي، فلو اختلف من أوردر للتاني الحسبة تفضل صح.
@@ -144,7 +145,8 @@ function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
 
-export type StatExpense = { amount: number };
+/** التصنيف لازم ييجي مع المبلغ — من غيره المستثنى من الربح بيتحسب (MONEY §٨.٦) */
+export type StatExpense = { amount: number; category?: string | null };
 
 export type Headline = {
   sales: number;
@@ -156,7 +158,10 @@ export type Headline = {
    */
   grossSales: number;
   profit: number;
+  /** المصاريف اللي بتدخل الربح بس */
   expensesTotal: number;
+  /** مسجّلة وخرجت من الخزنة، بس مابتتطرحش من الربح (`lib/profit-exclusions.ts`) */
+  expensesExcluded: number;
   shippingRevenue: number;
   shippedCount: number;
   bostaShippingTotal: number;
@@ -206,7 +211,10 @@ export function computeHeadline(
     (s, o) => s + itemsProfit(o) - o.discount,
     0
   );
-  const expensesTotal = expenses.reduce((s, e) => s + e.amount, 0);
+  // ⚠️⚠️ **مش كل المصاريف بتتطرح** — الخامات والباقة والسحوبات كانت بتتخصم
+  // مرتين (MONEY §٨.٦). بتفضل في الخزنة، بس مابتدخلش هنا.
+  const { counted: expensesTotal, excluded: expensesExcluded } =
+    splitExpenses(expenses);
   // تكلفة الشحن بتتحسب بعد ما المندوب يستلم — وبوسطة بتاخد فلوسها حتى في المرتجع
   const bostaChargedOrders = periodOrders.filter(
     (o) =>
@@ -257,6 +265,7 @@ export function computeHeadline(
     grossSales,
     profit,
     expensesTotal,
+    expensesExcluded,
     shippingRevenue,
     shippedCount,
     bostaShippingTotal,
