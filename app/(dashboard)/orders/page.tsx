@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { PeriodFilter } from "@/components/PeriodFilter";
+import { FilterBar } from "@/components/FilterBar";
+import { FilterSelect } from "@/components/FilterSelect";
 import { resolvePeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -169,6 +171,24 @@ export default async function OrdersPage({
     if (searchTerm && !p.has("q")) p.set("q", searchTerm);
     return `/orders${p.toString() ? `?${p}` : ""}`;
   };
+  // شرايح الفلاتر المفعّلة — قاعدة ٨ في DESIGN.md
+  const filterChips: { label: string; removeHref: string }[] = [];
+  if (status) {
+    filterChips.push({ label: orderStatusBadge(status).label, removeHref: periodQS("") });
+  }
+  if (showArchived) filterChips.push({ label: "الأرشيف", removeHref: periodQS("") });
+  if (searchTerm) {
+    const p = new URLSearchParams();
+    if (showArchived) p.set("archived", "1");
+    else if (status) p.set("status", status);
+    for (const [k, v] of Object.entries(periodParams)) p.set(k, v);
+    filterChips.push({
+      label: `بحث: ${searchTerm}`,
+      removeHref: `/orders${p.toString() ? `?${p}` : ""}`,
+    });
+  }
+  const hasFilters = Boolean(status || showArchived || searchTerm) || range.key !== "all";
+
   // عدد المعروض: 50 افتراضي، وبيزيد بزرار "عرض المزيد". في البحث بنجيب أكتر
   const showCount = Math.min(
     Math.max(Number(show) || 50, 50),
@@ -429,8 +449,22 @@ export default async function OrdersPage({
         </div>
       )}
 
-      <div className="mb-4 space-y-2">
-        {/* فلتر الوقت — المكوّن الموحّد. «عرض المزيد» بيتصفّر مع تغيير الفترة */}
+      {/* شريط الفلاتر الموحّد: بحث · فترة · حالة · مسح — وتحته شرايح المفعّل */}
+      <FilterBar
+        basePath="/orders"
+        query={{
+          status: showArchived ? undefined : status,
+          archived: showArchived ? "1" : undefined,
+          ...periodParams,
+        }}
+        search={{
+          name: "q",
+          value: searchTerm,
+          placeholder: "دور برقم الأوردر أو اسم العميل أو تليفونه",
+        }}
+        chips={filterChips}
+        clearHref={hasFilters ? "/orders" : undefined}
+      >
         <PeriodFilter
           basePath="/orders"
           query={{
@@ -442,72 +476,20 @@ export default async function OrdersPage({
           defaultKey="all"
           resetKeys={["show"]}
         />
-        {/* شرائح الحالة — سطر واحد بيتزحلق لو ضاق */}
-        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
-          <Link
-            href={periodQS("")}
-            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
-              !status && !showArchived
-                ? "bg-primary text-white"
-                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
-            }`}
-          >
-            الكل
-          </Link>
-          {ORDER_STATUS_OPTIONS.map((option) => (
-            <Link
-              key={option.value}
-              href={periodQS(`status=${option.value}`)}
-              className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
-                status === option.value && !showArchived
-                  ? "bg-primary text-white"
-                  : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
-              }`}
-            >
-              {option.label}
-            </Link>
-          ))}
-          <span className="mx-1 h-4 w-px shrink-0 bg-line-strong"></span>
-          <Link
-            href={showArchived ? periodQS("") : periodQS("archived=1")}
-            className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium ${
-              showArchived
-                ? "bg-warning text-white"
-                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
-            }`}
-          >
-            الأرشيف
-          </Link>
-        </div>
-        {/* البحث — سطر لوحده، عرض كامل على الموبايل */}
-        <form action="/orders" className="flex items-center gap-2">
-          {status && <input type="hidden" name="status" value={status} />}
-          {showArchived && <input type="hidden" name="archived" value="1" />}
-          {Object.entries(periodParams).map(([k, v]) => (
-            <input key={k} type="hidden" name={k} value={v} />
-          ))}
-          <input
-            name="q"
-            defaultValue={searchTerm}
-            placeholder="دور برقم الأوردر أو اسم العميل أو تليفونه"
-            className="w-full flex-1 rounded-full border-0 bg-surface px-4 py-2 text-sm text-ink shadow-card placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-primary sm:max-w-xs"
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
-          >
-            بحث
-          </button>
-          {searchTerm && (
-            <Link
-              href={returnTo}
-              className="shrink-0 rounded-full bg-surface px-3 py-2 text-sm text-ink-muted shadow-card hover:bg-sunken"
-            >
-              ✕
-            </Link>
-          )}
-        </form>
-      </div>
+        <FilterSelect
+          name="status"
+          value={showArchived ? "__archived__" : status}
+          options={[
+            ...ORDER_STATUS_OPTIONS,
+            { value: "__archived__", label: "الأرشيف", params: { archived: "1" } },
+          ]}
+          allLabel="كل الحالات"
+          basePath="/orders"
+          query={{ q: searchTerm || undefined, ...periodParams }}
+          resetKeys={["show"]}
+          label="حالة الأوردر"
+        />
+      </FilterBar>
 
       {orders.length === 0 ? (
         <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
