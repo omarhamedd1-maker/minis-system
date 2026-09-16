@@ -1,3 +1,5 @@
+import type { PermissionKey } from "./permission-keys";
+
 // ==========================================================================
 // لوحة اليوم — إيه اللي مستنيك دلوقتي
 // --------------------------------------------------------------------------
@@ -153,4 +155,35 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
 /** فيه حاجة مستنية إيدك؟ */
 export function boardIsClear(rows: BoardRow[]): boolean {
   return rows.every((r) => !r.urgent);
+}
+
+// ==========================================================================
+// صلاحيات السطور وترتيبها — في الملف الصافي عشان الاختبار يوصلها
+// ==========================================================================
+
+/**
+ * ⚠️ **السطر اللي مالوش صلاحية بيتشال خالص** — مش بيتعطّل ولا بيبان باهت.
+ * موظف التغليف مايشوفش «فلوس عند بوسطة» ومايعرفش إنها موجودة أصلًا.
+ * السطور اللي مش هنا مفتوحة لأي حد بيشوف الأوردرات.
+ */
+export const ROW_PERMISSION: Partial<Record<string, PermissionKey>> = {
+  money: "cash.view",
+};
+
+export function visibleRows(
+  rows: BoardRow[],
+  has: (perm: PermissionKey) => boolean
+): BoardRow[] {
+  return rows.filter((r) => {
+    const perm = ROW_PERMISSION[r.key];
+    return !perm || has(perm);
+  });
+}
+
+/**
+ * اللي محتاج إيدك الأول. الترتيب **جوّه** كل مجموعة زي ما هو —
+ * كارت بيقفز مكانه كل ما رقم يتغيّر بيضيّع الذاكرة العضلية.
+ */
+export function sortByUrgent(rows: BoardRow[]): BoardRow[] {
+  return [...rows].sort((a, b) => Number(b.urgent) - Number(a.urgent));
 }
