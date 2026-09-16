@@ -1,18 +1,29 @@
 // ==========================================================================
 // تنزيل الداتا — نسخة عندك على جهازك
 // --------------------------------------------------------------------------
-// `/export`             الأوردرات (الافتراضي)
+// `/export`                 الأوردرات (الافتراضي)
 // `/export?what=customers`  العملاء
 // `/export?what=products`   المنتجات وأشكالها
+// `/export?what=expenses`   المصاريف — بنفس فلاتر التاب (period · from · to · cat)
+// `/export?what=cash`       حركات الخزنة من أولها بالرصيد بعد كل حركة (dir اختياري)
 //
-// ⚠️ **BOM في أول الملف** — من غيره إكسيل بيفتح العربي حروف مكسّرة.
-// ⚠️ **والقراية بالاتصال المحمي** (`createClient`) مش بمفتاح الأدمن، فالملف
+// ⚠️ **القراية بالاتصال المحمي** (`createClient`) مش بمفتاح الأدمن، فالملف
 // بيطلع ببيانات البيزنس اللي داخل بس.
+//
+// ⚠️⚠️ **كل الصفوف صفحة صفحة** (`fetchAllPages`). كان مكتوب `.limit(20000)`
+// وسوبابيز بيقطع عند ١٠٠٠ من غير خطأ — يعني أي بيزنس عدّى الألف كان بينزّل
+// ملف ناقص وهو فاكره كامل.
 // ==========================================================================
 
 import { createClient } from "@/lib/supabase/server";
-import { orderStatusBadge } from "@/lib/format";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { cairoToday, orderStatusBadge } from "@/lib/format";
 import { can, getSessionUser } from "@/lib/permissions";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { csvResponse, csvText } from "@/lib/csv";
+import { resolvePeriod } from "@/lib/periods";
+import { cashRowLabel, type CashLabelRow } from "@/lib/cash-label";
+import { withRunningBalance } from "@/lib/cash-ledger";
 
 type ExportRow = {
   order_number: string | null;
@@ -42,23 +53,21 @@ type VariantRow = {
   products: { name: string | null; name_ar: string | null } | null;
 };
 
-function csvCell(value: string | number | null | undefined) {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
-}
+type ExpenseRow = {
+  expense_date: string;
+  category: string;
+  description: string | null;
+  amount: number;
+  supplier_id: string | null;
+};
 
-/** BOM عشان Excel يقرأ العربي صح */
-function csvFile(header: string[], lines: string[], name: string) {
-  const csv = "﻿" + [header.map(csvCell).join(","), ...lines].join("\r\n");
-  return new Response(csv, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${name}-${new Date()
-        .toISOString()
-        .slice(0, 10)}.csv"`,
-    },
-  });
-}
+type CashRow = CashLabelRow & {
+  id: string;
+  amount: number;
+  transaction_date: string | null;
+};
+
+const day = (v: string | null | undefined) => (v ?? "").slice(0, 10);
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -70,110 +79,205 @@ export async function GET(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  if (!can(await getSessionUser(), "finance.export")) {
+  const me = await getSessionUser();
+  if (!can(me, "finance.export")) {
     return new Response("مالكش صلاحية تصدير البيانات", { status: 403 });
   }
 
-  const what = new URL(request.url).searchParams.get("what") ?? "orders";
+  const params = new URL(request.url).searchParams;
+  const what = params.get("what") ?? "orders";
+  const today = cairoToday();
 
-  if (what === "customers") {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("full_name, phone, city, address, created_at")
-      .order("created_at", { ascending: false })
-      .limit(20000)
-      .overrideTypes<CustomerRow[]>();
+  try {
+    if (what === "customers") {
+      const data = await fetchAllPages<CustomerRow>((from, to) =>
+        supabase
+          .from("customers")
+          .select("full_name, phone, city, address, created_at")
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to)
+          .overrideTypes<CustomerRow[]>()
+      );
+      return csvResponse(
+        csvText(
+          ["الاسم", "التليفون", "المدينة", "العنوان", "أول أوردر"],
+          data.map((c) => [c.full_name, c.phone, c.city, c.address, day(c.created_at)])
+        ),
+        "gridpoint-customers",
+        today
+      );
+    }
 
-    if (error) return new Response("Error: " + error.message, { status: 500 });
+    if (what === "products") {
+      const data = await fetchAllPages<VariantRow>((from, to) =>
+        supabase
+          .from("product_variants")
+          .select("variant_name, sku, cost_price, sale_price, quantity_on_hand, products(name, name_ar)")
+          .order("id")
+          .range(from, to)
+          .overrideTypes<VariantRow[]>()
+      );
+      return csvResponse(
+        csvText(
+          ["المنتج", "الشكل", "الكود", "التكلفة", "سعر البيع", "المخزون"],
+          data.map((v) => [
+            v.products?.name_ar || v.products?.name,
+            v.variant_name,
+            v.sku,
+            v.cost_price ?? 0,
+            v.sale_price ?? 0,
+            v.quantity_on_hand ?? 0,
+          ])
+        ),
+        "gridpoint-products",
+        today
+      );
+    }
 
-    return csvFile(
-      ["الاسم", "التليفون", "المدينة", "العنوان", "أول أوردر"],
-      (data ?? []).map((c) =>
+    if (what === "expenses") {
+      // ⚠️ **الصلاحية التانية** — التصدير مايفتحش بيانات الصفحة نفسها مقفولة عنه
+      if (!can(me, "expenses.view")) {
+        return new Response("مالكش صلاحية تشوف المصاريف", { status: 403 });
+      }
+      // نفس فلاتر التاب — اللي شايفه هو اللي بينزل
+      const range = resolvePeriod(
+        {
+          period: params.get("period") ?? undefined,
+          from: params.get("from") ?? undefined,
+          to: params.get("to") ?? undefined,
+        },
+        { today, defaultKey: "30d", allowAll: true }
+      );
+      const cat = (params.get("cat") ?? "").trim();
+      const data = await fetchAllPages<ExpenseRow>((from, to) => {
+        let q = supabase
+          .from("expenses")
+          .select("expense_date, category, description, amount, supplier_id")
+          .order("expense_date", { ascending: false })
+          .order("id");
+        if (range.start) q = q.gte("expense_date", range.start);
+        if (range.key === "custom") q = q.lte("expense_date", range.end);
+        if (cat) q = q.eq("category", cat);
+        return q.range(from, to).overrideTypes<ExpenseRow[]>();
+      });
+      // أسماء الموردين بمفتاح الأدمن — الجدول مقفول في الـRLS (زي تاب المصاريف)
+      const { data: suppliers } = await createAdminClient()
+        .from("suppliers")
+        .select("id, name")
+        // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
+        .eq("tenant_id", me!.tenantId);
+      const supplierName = new Map((suppliers ?? []).map((x) => [x.id, x.name]));
+      const total = data.reduce((s, e) => s + Number(e.amount), 0);
+      return csvResponse(
+        csvText(
+          ["التاريخ", "النوع", "الوصف", "المورد", "المبلغ"],
+          [
+            ...data.map((e) => [day(e.expense_date), e.category, e.description, e.supplier_id ? supplierName.get(e.supplier_id) : "", e.amount]),
+            ["", "", "", "الإجمالي", total],
+          ]
+        ),
+        // آخر يوم في الفترة هو اللي بيتكتب في آخر الاسم
+        `gridpoint-expenses-${range.start ?? "all"}`,
+        range.end
+      );
+    }
+
+    if (what === "cash") {
+      if (!can(me, "cash.view")) {
+        return new Response("مالكش صلاحية تشوف الخزنة", { status: 403 });
+      }
+      const dir = params.get("dir");
+      // بترتيب الدفتر (الأحدث الأول) عشان الرصيد الجاري — والملف بيطلع من الأقدم
+      const data = await fetchAllPages<CashRow>((from, to) =>
+        supabase
+          .from("cash_transactions")
+          .select(
+            "id, direction, amount, source_type, description, transaction_date, orders(order_number, customers(full_name)), expenses(category, description)"
+          )
+          .order("transaction_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+          .overrideTypes<CashRow[]>()
+      );
+      const balance = data.reduce(
+        (s, r) => s + (r.direction === "in" ? 1 : r.direction === "out" ? -1 : 0) * Number(r.amount),
+        0
+      );
+      // الرصيد الجاري على كل الحركات، وبعدين الفلتر — عشان الرقم يفضل صح
+      const rows = withRunningBalance(data, balance)
+        .filter((r) => !dir || r.direction === dir)
+        .reverse();
+      return csvResponse(
+        csvText(
+          ["التاريخ", "الاتجاه", "البيان", "داخل", "خارج", "الرصيد بعدها"],
+          rows.map((r) => [
+            day(r.transaction_date),
+            r.direction === "in" ? "داخل" : "خارج",
+            cashRowLabel(r),
+            r.direction === "in" ? r.amount : "",
+            r.direction === "out" ? r.amount : "",
+            Math.round(r.balanceAfter * 100) / 100,
+          ])
+        ),
+        "gridpoint-cash",
+        today
+      );
+    }
+
+    const orders = await fetchAllPages<ExportRow>((from, to) =>
+      supabase
+        .from("orders")
+        .select(
+          `order_number, order_status, order_date, delivered_at, shipping_price, archived,
+           customers(full_name, phone),
+           order_items(quantity, sale_price_at_order)`
+        )
+        .order("order_date", { ascending: false })
+        .order("id")
+        .range(from, to)
+        .overrideTypes<ExportRow[]>()
+    );
+
+    return csvResponse(
+      csvText(
         [
-          csvCell(c.full_name),
-          csvCell(c.phone),
-          csvCell(c.city),
-          csvCell(c.address),
-          csvCell((c.created_at ?? "").slice(0, 10)),
-        ].join(",")
+          "رقم الأوردر",
+          "العميل",
+          "التليفون",
+          "التاريخ",
+          "الحالة",
+          "إجمالي المنتجات",
+          "الشحن",
+          "الإجمالي الكلي",
+          "تاريخ التسليم",
+          "مؤرشف",
+        ],
+        orders.map((order) => {
+          const itemsTotal = order.order_items.reduce(
+            (s, i) => s + i.quantity * i.sale_price_at_order,
+            0
+          );
+          return [
+            order.order_number,
+            order.customers?.full_name,
+            order.customers?.phone,
+            day(order.order_date),
+            orderStatusBadge(order.order_status).label,
+            itemsTotal,
+            order.shipping_price,
+            itemsTotal + order.shipping_price,
+            day(order.delivered_at),
+            order.archived ? "أيوة" : "لأ",
+          ];
+        })
       ),
-      "gridpoint-customers"
+      "gridpoint-orders",
+      today
     );
+  } catch (e) {
+    // ⚠️ ملف ناقص أوحش من مفيش ملف — أي صفحة فشلت بتوقف التنزيل كله
+    return new Response("معرفناش نجهّز الملف: " + (e as Error).message, { status: 500 });
   }
-
-  if (what === "products") {
-    const { data, error } = await supabase
-      .from("product_variants")
-      .select(
-        "variant_name, sku, cost_price, sale_price, quantity_on_hand, products(name, name_ar)"
-      )
-      .limit(20000)
-      .overrideTypes<VariantRow[]>();
-
-    if (error) return new Response("Error: " + error.message, { status: 500 });
-
-    return csvFile(
-      ["المنتج", "الشكل", "الكود", "التكلفة", "سعر البيع", "المخزون"],
-      (data ?? []).map((v) =>
-        [
-          csvCell(v.products?.name_ar || v.products?.name),
-          csvCell(v.variant_name),
-          csvCell(v.sku),
-          csvCell(v.cost_price ?? 0),
-          csvCell(v.sale_price ?? 0),
-          csvCell(v.quantity_on_hand ?? 0),
-        ].join(",")
-      ),
-      "gridpoint-products"
-    );
-  }
-
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select(
-      `order_number, order_status, order_date, delivered_at, shipping_price, archived,
-       customers(full_name, phone),
-       order_items(quantity, sale_price_at_order)`
-    )
-    .order("order_date", { ascending: false })
-    .limit(20000)
-    .overrideTypes<ExportRow[]>();
-
-  if (error) {
-    return new Response("Error: " + error.message, { status: 500 });
-  }
-
-  const header = [
-    "رقم الأوردر",
-    "العميل",
-    "التليفون",
-    "التاريخ",
-    "الحالة",
-    "إجمالي المنتجات",
-    "الشحن",
-    "الإجمالي الكلي",
-    "تاريخ التسليم",
-    "مؤرشف",
-  ];
-
-  const lines = (orders ?? []).map((order) => {
-    const itemsTotal = order.order_items.reduce(
-      (s, i) => s + i.quantity * i.sale_price_at_order,
-      0
-    );
-    return [
-      csvCell(order.order_number),
-      csvCell(order.customers?.full_name),
-      csvCell(order.customers?.phone),
-      csvCell((order.order_date ?? "").slice(0, 10)),
-      csvCell(orderStatusBadge(order.order_status).label),
-      csvCell(itemsTotal),
-      csvCell(order.shipping_price),
-      csvCell(itemsTotal + order.shipping_price),
-      csvCell((order.delivered_at ?? "").slice(0, 10)),
-      csvCell(order.archived ? "أيوة" : "لأ"),
-    ].join(",");
-  });
-
-  return csvFile(header, lines, "gridpoint-orders");
 }

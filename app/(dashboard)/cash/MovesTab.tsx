@@ -234,7 +234,17 @@ export async function MovesTab({
             </Link>
           ))}
         </div>
-        <span className="text-xs tabular-nums text-ink-muted">{summary}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs tabular-nums text-ink-muted">{summary}</span>
+          {can(user, "finance.export") && (
+            <a
+              href={`/export?what=cash${dir ? `&dir=${dir}` : ""}`}
+              className="rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-body hover:bg-sunken"
+            >
+              تنزيل Excel
+            </a>
+          )}
+        </div>
       </div>
 
       {transactions.length === 0 ? (
