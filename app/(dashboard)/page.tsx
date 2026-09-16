@@ -11,6 +11,7 @@ import { PeriodFilter } from "@/components/PeriodFilter";
 import { resolvePeriod } from "@/lib/periods";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
+import { countsInProfit } from "@/lib/profit-exclusions";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
 import { monthlyReport } from "@/lib/monthly-report";
 import { requirePagePermission } from "@/lib/permissions";
@@ -458,7 +459,8 @@ export default async function StatsPage({
   const expenseItems = [...expenseByCategory.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([category, amount]) => ({
-      label: category,
+      // المستثنى من الربح بيتعرض بس بيتقال — عشان مايتفهمش إنه متطرح
+      label: countsInProfit(category) ? category : `${category} · مش في الربح`,
       value: amount,
       display: formatMoney(amount),
       color: "var(--primary-mid)",

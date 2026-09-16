@@ -79,7 +79,7 @@ export function LiveMoneyCards({
           .or(`order_date.gte.${fetchStart},delivered_at.gte.${fetchStart}`)),
         allRows(supabase
           .from("expenses")
-          .select("amount")
+          .select("amount, category")
           .gte("expense_date", periodStart)
           .lte("expense_date", periodEnd)),
       ]);
@@ -131,7 +131,14 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
-      <Card label="المصاريف">
+      <Card
+        label="المصاريف"
+        hint={
+          s.expensesExcluded > 0
+            ? `و${money(s.expensesExcluded)} مش في الربح (خامات · باقة بوسطة · سحوبات)`
+            : undefined
+        }
+      >
         <span className="text-danger">
           <CountUp
             key={key}
