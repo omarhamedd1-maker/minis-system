@@ -11,6 +11,8 @@ export function CashCard({
   description,
   transactionDate,
   label,
+  balanceAfter,
+  showDate = true,
   canEdit,
   updateAction,
   deleteAction,
@@ -21,6 +23,10 @@ export function CashCard({
   description: string | null;
   transactionDate: string | null;
   label: string;
+  /** الرصيد بعد الحركة — بيتعرض صغير تحت المبلغ */
+  balanceAfter?: number;
+  /** جوّه مجموعة يوم التاريخ مكتوب فوق — مالوش لازمة يتكرر */
+  showDate?: boolean;
   canEdit: boolean;
   updateAction: (fd: FormData) => Promise<void>;
   deleteAction: (fd: FormData) => Promise<void>;
@@ -33,17 +39,26 @@ export function CashCard({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-ink">{label}</div>
-          <div className="mt-0.5 text-[11px] text-ink-faint">
-            {formatDate(transactionDate)}
-          </div>
+          {showDate && (
+            <div className="mt-0.5 text-[11px] text-ink-faint">
+              {formatDate(transactionDate)}
+            </div>
+          )}
         </div>
 
-        <div
-          className={`shrink-0 text-base font-bold ${
-            isIn ? "text-success" : "text-danger"
-          }`}
-        >
-          {isIn ? "+" : "−"} {formatMoney(amount)}
+        <div className="shrink-0 text-end">
+          <div
+            className={`text-base font-bold ${
+              isIn ? "text-success" : "text-danger"
+            }`}
+          >
+            {isIn ? "+" : "−"} {formatMoney(amount)}
+          </div>
+          {balanceAfter !== undefined && (
+            <div className="text-[11px] tabular-nums text-ink-faint">
+              الرصيد {formatMoney(balanceAfter)}
+            </div>
+          )}
         </div>
 
         {canEdit && (

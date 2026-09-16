@@ -6,6 +6,16 @@ import { can, requirePagePermission } from "@/lib/permissions";
 import { SubmitOnce } from "@/components/SubmitOnce";
 import { loadCashTotals, type CashTotals } from "@/lib/cash-totals";
 import {
+  groupByDay,
+  withRunningBalance,
+  type LedgerDay,
+} from "@/lib/cash-ledger";
+import { ShowMore } from "@/components/ShowMore";
+import { resolveShowCount } from "@/lib/show-more";
+
+/** الخزنة بتعرض ١٠٠ حركة في المرة — زي ما كانت */
+const CASH_STEP = 100;
+import {
   addCashTransaction,
   deleteCashTransaction,
   updateCashTransaction,
@@ -47,9 +57,15 @@ function sourceLabel(row: CashRow) {
 export default async function CashPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string; deleted?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    saved?: string;
+    deleted?: string;
+    show?: string;
+  }>;
 }) {
-  const { error: actionError, saved, deleted } = await searchParams;
+  const { error: actionError, saved, deleted, show } = await searchParams;
+  const showCount = resolveShowCount(show, CASH_STEP);
   const user = await requirePagePermission("cash.view");
   const isAdmin = can(user, "cash.edit");
   const supabase = await createClient();
@@ -67,7 +83,9 @@ export default async function CashPage({
       )
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(100)
+      // ⚠️ ترتيب ثابت للآخر — الرصيد الجاري بيعتمد إن الترتيب مايتغيّرش بين تحميلتين
+      .order("id", { ascending: false })
+      .limit(showCount)
       .overrideTypes<CashRow[]>(),
   ]);
 
@@ -80,9 +98,14 @@ export default async function CashPage({
     );
   }
 
-  const { totalIn, totalOut, balance } = totalsResult.data!;
+  const { totalIn, totalOut, balance, countAll } = totalsResult.data!;
 
   const transactions = rowsResult.data;
+  // الرصيد الجاري من الرصيد الحالي ونازل — صح لأن المعروض أول N حركة من غير فجوات
+  const days = groupByDay(
+    withRunningBalance(transactions, balance),
+    countAll > transactions.length
+  );
 
   return (
     <div className="space-y-4">
@@ -202,25 +225,34 @@ export default async function CashPage({
         </div>
       ) : (
         <>
-        {/* ===== موبايل: كروت ===== */}
-        <div className="space-y-2 md:hidden">
-          {transactions.map((row) => (
-            <CashCard
-              key={row.id}
-              id={row.id}
-              direction={row.direction}
-              amount={row.amount}
-              description={row.description}
-              transactionDate={row.transaction_date}
-              label={sourceLabel(row)}
-              canEdit={isAdmin && row.source_type === "manual"}
-              updateAction={updateCashTransaction}
-              deleteAction={deleteCashTransaction}
-            />
+        {/* ===== موبايل: كروت مجمّعة باليوم ===== */}
+        <div className="space-y-4 md:hidden">
+          {days.map((d) => (
+            <section key={d.day}>
+              <DayHeader day={d} />
+              <div className="mt-1.5 space-y-2">
+                {d.rows.map((row) => (
+                  <CashCard
+                    key={row.id}
+                    id={row.id}
+                    direction={row.direction}
+                    amount={row.amount}
+                    description={row.description}
+                    transactionDate={row.transaction_date}
+                    label={sourceLabel(row)}
+                    balanceAfter={row.balanceAfter}
+                    showDate={false}
+                    canEdit={isAdmin && row.source_type === "manual"}
+                    updateAction={updateCashTransaction}
+                    deleteAction={deleteCashTransaction}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
 
-        {/* ===== كمبيوتر: جدول ===== */}
+        {/* ===== كمبيوتر: جدول مجمّع باليوم ===== */}
         <div className="hidden overflow-x-auto rounded-card bg-surface shadow-card md:block">
           <table className="w-full text-sm">
             <thead>
@@ -229,64 +261,103 @@ export default async function CashPage({
                 <th className="px-4 py-3 font-medium">الاتجاه</th>
                 <th className="px-4 py-3 font-medium">المصدر</th>
                 <th className="px-4 py-3 font-medium">المبلغ</th>
+                <th className="px-4 py-3 font-medium">الرصيد بعدها</th>
                 {isAdmin && <th className="px-4 py-3 font-medium"></th>}
               </tr>
             </thead>
-            <tbody>
-              {transactions.map((row) =>
-                isAdmin && row.source_type === "manual" ? (
-                  <CashManualRow
-                    key={row.id}
-                    row={{
-                      id: row.id,
-                      direction: row.direction,
-                      amount: row.amount,
-                      description: row.description,
-                      transaction_date: row.transaction_date,
-                    }}
-                    updateAction={updateCashTransaction}
-                    deleteAction={deleteCashTransaction}
-                  />
-                ) : (
-                  <tr
-                    key={row.id}
-                    className="border-b border-line last:border-0"
-                  >
-                    <td className="px-4 py-3 text-ink-body">
-                      {formatDate(row.transaction_date)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {row.direction === "in" ? (
-                        <span className="inline-block rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
-                          داخل
-                        </span>
-                      ) : (
-                        <span className="inline-block rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-medium text-danger">
-                          خارج
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-ink-body">
-                      {sourceLabel(row)}
-                    </td>
-                    <td
-                      className={`px-4 py-3 font-medium ${
-                        row.direction === "in"
-                          ? "text-success"
-                          : "text-danger"
-                      }`}
+            {days.map((d) => (
+              <tbody key={d.day}>
+                <tr className="border-b border-line bg-sunken">
+                  <td colSpan={isAdmin ? 6 : 5} className="px-4 py-2">
+                    <DayHeader day={d} />
+                  </td>
+                </tr>
+                {d.rows.map((row) =>
+                  isAdmin && row.source_type === "manual" ? (
+                    <CashManualRow
+                      key={row.id}
+                      row={{
+                        id: row.id,
+                        direction: row.direction,
+                        amount: row.amount,
+                        description: row.description,
+                        transaction_date: row.transaction_date,
+                      }}
+                      balanceAfter={row.balanceAfter}
+                      updateAction={updateCashTransaction}
+                      deleteAction={deleteCashTransaction}
+                    />
+                  ) : (
+                    <tr
+                      key={row.id}
+                      className="border-b border-line last:border-0"
                     >
-                      {formatMoney(row.amount)}
-                    </td>
-                    {isAdmin && <td className="px-4 py-3"></td>}
-                  </tr>
-                )
-              )}
-            </tbody>
+                      <td className="px-4 py-3 text-ink-body">
+                        {formatDate(row.transaction_date)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.direction === "in" ? (
+                          <span className="inline-block rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
+                            داخل
+                          </span>
+                        ) : (
+                          <span className="inline-block rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-medium text-danger">
+                            خارج
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-ink-body">
+                        {sourceLabel(row)}
+                      </td>
+                      <td
+                        className={`px-4 py-3 font-medium ${
+                          row.direction === "in"
+                            ? "text-success"
+                            : "text-danger"
+                        }`}
+                      >
+                        {formatMoney(row.amount)}
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-ink-muted">
+                        {formatMoney(row.balanceAfter)}
+                      </td>
+                      {isAdmin && <td className="px-4 py-3"></td>}
+                    </tr>
+                  )
+                )}
+              </tbody>
+            ))}
           </table>
         </div>
+        <ShowMore
+          basePath="/cash"
+          shown={transactions.length}
+          total={countAll}
+          step={CASH_STEP}
+        />
         </>
       )}
+    </div>
+  );
+}
+
+/** عنوان اليوم: التاريخ ومجموع داخله وخارجه */
+function DayHeader({ day }: { day: LedgerDay<unknown> }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-xs">
+      <span className="font-bold text-ink">
+        {formatDate(day.day)}
+        {day.partial && (
+          <span className="ms-1.5 font-normal text-ink-faint">
+            (جزء من اليوم — الباقي تحت «عرض المزيد»)
+          </span>
+        )}
+      </span>
+      <span className="tabular-nums text-ink-muted">
+        {day.totalIn > 0 && <>+{formatMoney(day.totalIn)}</>}
+        {day.totalIn > 0 && day.totalOut > 0 && " · "}
+        {day.totalOut > 0 && <>−{formatMoney(day.totalOut)}</>}
+      </span>
     </div>
   );
 }
