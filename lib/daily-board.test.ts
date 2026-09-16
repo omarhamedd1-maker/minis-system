@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { dailyBoard, boardIsClear, STUCK_DAYS, type BoardOrder } from "./daily-board";
+import {
+  dailyBoard,
+  boardIsClear,
+  sortByUrgent,
+  visibleRows,
+  STUCK_DAYS,
+  type BoardOrder,
+} from "./daily-board";
 
 const NOW = new Date("2026-08-19T10:00:00Z");
 const daysAgo = (n: number) =>
@@ -98,5 +105,53 @@ describe("لوحة اليوم", () => {
       NOW
     );
     expect(boardIsClear(rows)).toBe(true);
+  });
+});
+
+describe("صلاحيات السطور", () => {
+  const packer = ["orders.view", "orders.status", "ship.print"];
+  const has = (list: string[]) => (perm: string) => list.includes(perm);
+
+  it("موظف التغليف مايشوفش سطر الفلوس خالص", () => {
+    const rows = dailyBoard([{ id: "a", orderStatus: "delivered", bostaCod: 500 }], NOW);
+    const seen = visibleRows(rows, has(packer));
+    expect(seen.map((r) => r.key)).not.toContain("money");
+    // والباقي زي ما هو — مش بيتشال معاه
+    expect(seen.map((r) => r.key)).toContain("confirm");
+  });
+
+  it("اللي معاه cash.view بيشوفه", () => {
+    const rows = dailyBoard([], NOW);
+    const seen = visibleRows(rows, has([...packer, "cash.view"]));
+    expect(seen.map((r) => r.key)).toContain("money");
+  });
+
+  it("الشيل مش تعطيل — السطر مش موجود أصلاً", () => {
+    const rows = dailyBoard([], NOW);
+    expect(visibleRows(rows, has(packer)).length).toBe(rows.length - 1);
+  });
+});
+
+describe("sortByUrgent", () => {
+  it("العاجل الأول والترتيب جوّه المجموعة زي ما هو", () => {
+    const rows = dailyBoard(
+      [
+        { id: "a", orderStatus: "returning" },
+        { id: "b", orderStatus: "awaiting_action" },
+      ],
+      NOW
+    );
+    const sorted = sortByUrgent(rows);
+    expect(sorted[0].key).toBe("action");
+    // غير العاجل محافظ على ترتيبه الأصلي بين بعضه
+    const rest = sorted.filter((r) => !r.urgent).map((r) => r.key);
+    expect(rest).toEqual(rows.filter((r) => !r.urgent).map((r) => r.key));
+  });
+
+  it("مابيغيّرش المصفوفة الأصلية", () => {
+    const rows = dailyBoard([{ id: "a", orderStatus: "new" }], NOW);
+    const before = rows.map((r) => r.key);
+    sortByUrgent(rows);
+    expect(rows.map((r) => r.key)).toEqual(before);
   });
 });
