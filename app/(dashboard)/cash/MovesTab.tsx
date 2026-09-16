@@ -8,6 +8,7 @@ import { SubmitOnce } from "@/components/SubmitOnce";
 import type { CashTotals } from "@/lib/cash-totals";
 import { cashRowLabel, type CashLabelRow } from "@/lib/cash-label";
 import {
+  dayHasHeader,
   groupByDay,
   withRunningBalance,
   type LedgerDay,
@@ -245,11 +246,12 @@ export async function MovesTab({
       ) : (
         <>
         {/* ===== موبايل: كروت مجمّعة باليوم ===== */}
-        <div className="space-y-4 md:hidden">
+        {/* المسافة الكبيرة قبل الأيام اللي ليها عنوان بس — اليوم بحركة واحدة كارت عادي */}
+        <div className="space-y-2 md:hidden">
           {days.map((d) => (
-            <section key={d.day}>
-              <DayHeader day={d} />
-              <div className="mt-1.5 space-y-2">
+            <section key={d.day} className={dayHasHeader(d) ? "pt-2" : ""}>
+              {dayHasHeader(d) && <DayHeader day={d} />}
+              <div className={`space-y-2 ${dayHasHeader(d) ? "mt-1.5" : ""}`}>
                 {d.rows.map((row) => (
                   <CashCard
                     key={row.id}
@@ -260,7 +262,7 @@ export async function MovesTab({
                     transactionDate={row.transaction_date}
                     label={cashRowLabel(row)}
                     balanceAfter={row.balanceAfter}
-                    showDate={false}
+                    showDate={!dayHasHeader(d)}
                     canEdit={isAdmin && row.source_type === "manual"}
                     updateAction={updateCashTransaction}
                     deleteAction={deleteCashTransaction}
@@ -287,14 +289,16 @@ export async function MovesTab({
             </thead>
             {days.map((d) => (
               <tbody key={d.day}>
-                <tr className="border-b border-line bg-sunken">
-                  <td
-                    colSpan={3 + (showBalance ? 1 : 0) + (isAdmin ? 1 : 0)}
-                    className="px-4 py-2"
-                  >
-                    <DayHeader day={d} />
-                  </td>
-                </tr>
+                {dayHasHeader(d) && (
+                  <tr className="border-b border-line bg-sunken">
+                    <td
+                      colSpan={3 + (showBalance ? 1 : 0) + (isAdmin ? 1 : 0)}
+                      className="px-4 py-2"
+                    >
+                      <DayHeader day={d} />
+                    </td>
+                  </tr>
+                )}
                 {d.rows.map((row) =>
                   isAdmin && row.source_type === "manual" ? (
                     <CashManualRow
@@ -308,6 +312,7 @@ export async function MovesTab({
                       }}
                       balanceAfter={row.balanceAfter}
                       showDate={false}
+                      dateInline={!dayHasHeader(d)}
                       updateAction={updateCashTransaction}
                       deleteAction={deleteCashTransaction}
                     />
@@ -329,6 +334,11 @@ export async function MovesTab({
                       </td>
                       <td className="px-4 py-3 text-ink-body">
                         {cashRowLabel(row)}
+                        {!dayHasHeader(d) && (
+                          <div className="text-[11px] text-ink-faint">
+                            {formatDate(row.transaction_date)}
+                          </div>
+                        )}
                       </td>
                       <td
                         className={`px-4 py-3 font-medium ${

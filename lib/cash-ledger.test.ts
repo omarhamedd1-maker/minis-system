@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupByDay, withRunningBalance, type LedgerMove } from "./cash-ledger";
+import { dayHasHeader, groupByDay, withRunningBalance, type LedgerMove } from "./cash-ledger";
 
 const m = (id: string, direction: string, amount: number, date: string): LedgerMove => ({
   id,
@@ -53,5 +53,17 @@ describe("groupByDay", () => {
 
   it("فاضي = مفيش أيام", () => {
     expect(groupByDay([], true)).toEqual([]);
+  });
+});
+
+describe("dayHasHeader", () => {
+  it("يوم بحركة واحدة مالوش عنوان — التاريخ بيرجع جوّه السطر", () => {
+    expect(dayHasHeader({ rows: [1], partial: false })).toBe(false);
+  });
+  it("يوم بأكتر من حركة ليه عنوان", () => {
+    expect(dayHasHeader({ rows: [1, 2], partial: false })).toBe(true);
+  });
+  it("اليوم المقصوص ليه عنوان دايمًا — «جزء من اليوم» لازم يتقال", () => {
+    expect(dayHasHeader({ rows: [1], partial: true })).toBe(true);
   });
 });

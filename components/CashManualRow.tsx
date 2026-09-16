@@ -16,6 +16,7 @@ export function CashManualRow({
   row,
   balanceAfter,
   showDate = true,
+  dateInline = false,
   updateAction,
   deleteAction,
 }: {
@@ -24,6 +25,8 @@ export function CashManualRow({
   balanceAfter?: number;
   /** جوّه مجموعة يوم التاريخ مكتوب في العنوان — مايتكررش في السطر (قرار عمر) */
   showDate?: boolean;
+  /** يوم فيه حركة واحدة مالوش عنوان — التاريخ بيتكتب صغير جوّه السطر */
+  dateInline?: boolean;
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -52,6 +55,11 @@ export function CashManualRow({
         </td>
         <td className="break-words px-2 py-3 text-xs text-ink-body sm:px-4 sm:text-sm">
           {row.description ? `${label}: ${row.description}` : label}
+          {dateInline && (
+            <div className="text-[11px] text-ink-faint">
+              {formatDate(row.transaction_date)}
+            </div>
+          )}
         </td>
         <td
           className={`px-2 py-3 text-xs font-medium sm:px-4 sm:text-sm ${

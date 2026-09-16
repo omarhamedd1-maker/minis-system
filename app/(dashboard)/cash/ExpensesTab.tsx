@@ -17,7 +17,7 @@ import { ExpenseCard } from "@/components/ExpenseCard";
 import { can, type SessionUser } from "@/lib/permissions";
 import { SubmitOnce } from "@/components/SubmitOnce";
 import { addExpense, deleteExpense, updateExpense } from "../expenses/actions";
-import { groupByDay } from "@/lib/cash-ledger";
+import { dayHasHeader, groupByDay } from "@/lib/cash-ledger";
 import { ShowMore } from "@/components/ShowMore";
 import { resolveShowCount } from "@/lib/show-more";
 
@@ -339,14 +339,16 @@ export async function ExpensesTab({
       ) : (
         <>
           {/* ===== موبايل: كروت ===== */}
-          <div className="space-y-4 md:hidden">
+          <div className="space-y-2 md:hidden">
             {days.map((d) => (
-              <section key={d.day}>
-                <ExpenseDayHeader day={d.day} total={d.totalOut} partial={d.partial} />
-                <div className="mt-1.5 space-y-2">
+              <section key={d.day} className={dayHasHeader(d) ? "pt-2" : ""}>
+                {dayHasHeader(d) && (
+                  <ExpenseDayHeader day={d.day} total={d.totalOut} partial={d.partial} />
+                )}
+                <div className={`space-y-2 ${dayHasHeader(d) ? "mt-1.5" : ""}`}>
             {d.rows.map((expense) => (
               <ExpenseCard
-                showDate={false}
+                showDate={!dayHasHeader(d)}
                 key={expense.id}
                 expense={expense}
                 categories={CATEGORY_SUGGESTIONS}
@@ -378,16 +380,19 @@ export async function ExpensesTab({
               </thead>
               {days.map((d) => (
               <tbody key={d.day}>
-                <tr className="border-b border-line bg-sunken">
-                  <td colSpan={isAdmin ? 4 : 3} className="px-4 py-2">
-                    <ExpenseDayHeader day={d.day} total={d.totalOut} partial={d.partial} />
-                  </td>
-                </tr>
+                {dayHasHeader(d) && (
+                  <tr className="border-b border-line bg-sunken">
+                    <td colSpan={isAdmin ? 4 : 3} className="px-4 py-2">
+                      <ExpenseDayHeader day={d.day} total={d.totalOut} partial={d.partial} />
+                    </td>
+                  </tr>
+                )}
                 {d.rows.map((expense) =>
                   isAdmin ? (
                     <ExpenseRow
                       key={expense.id}
                       showDate={false}
+                      dateInline={!dayHasHeader(d)}
                       expense={expense}
                       categories={CATEGORY_SUGGESTIONS}
                       supplier={
@@ -405,6 +410,11 @@ export async function ExpensesTab({
                     >
                       <td className="px-4 py-3 font-medium text-ink">
                         {expense.category}
+                        {!dayHasHeader(d) && (
+                          <div className="text-[11px] font-normal text-ink-faint">
+                            {formatDate(expense.expense_date)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-ink-body">
                         {expense.description ?? "—"}
