@@ -5,6 +5,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { displayEmail } from "@/lib/tenant-email";
 import { BackLink } from "@/components/BackLink";
 import { CopyLink } from "@/components/CopyLink";
+import { loadCashTotals } from "@/lib/cash-totals";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function TenantDetailPage({
     })
   );
 
-  const [{ data: users }, { data: creds }, { data: recent }, { data: cash }] =
+  const [{ data: users }, { data: creds }, { data: recent }, cash] =
     await Promise.all([
       db
         .from("app_users")
@@ -84,11 +85,8 @@ export default async function TenantDetailPage({
         .eq("tenant_id", t.id)
         .order("order_date", { ascending: false })
         .limit(8),
-      db
-        .from("cash_transactions")
-        .select("direction, amount")
-        .eq("tenant_id", t.id)
-        .limit(5000),
+      // ⚠️ .limit(5000) كان بيقصّ عند ١٠٠٠ برضه — سقف سوبابيز أقوى منه
+      loadCashTotals(db, t.id),
     ]);
 
   const authList = await db.auth.admin.listUsers({ perPage: 200 });
@@ -96,10 +94,7 @@ export default async function TenantDetailPage({
     (authList.data?.users ?? []).map((u) => [u.id, u.email ?? null])
   );
 
-  const balance = ((cash ?? []) as { direction: string; amount: number }[]).reduce(
-    (s, c) => s + (c.direction === "in" ? 1 : -1) * Number(c.amount ?? 0),
-    0
-  );
+  const balance = cash.balance;
 
   const c = creds as {
     bosta_api_key: string | null;
