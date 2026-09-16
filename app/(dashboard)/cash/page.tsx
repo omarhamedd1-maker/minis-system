@@ -4,6 +4,7 @@ import { CashManualRow } from "@/components/CashManualRow";
 import { CashCard } from "@/components/CashCard";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { SubmitOnce } from "@/components/SubmitOnce";
+import { loadCashTotals, type CashTotals } from "@/lib/cash-totals";
 import {
   addCashTransaction,
   deleteCashTransaction,
@@ -53,11 +54,12 @@ export default async function CashPage({
   const isAdmin = can(user, "cash.edit");
   const supabase = await createClient();
 
+  // ⚠️ **الرصيد من الداتابيز** — الجمع في الصفحة كان بيقصّ عند ١٠٠٠ حركة بالصمت
   const [totalsResult, rowsResult] = await Promise.all([
-    supabase
-      .from("cash_transactions")
-      .select("direction, amount")
-      .overrideTypes<{ direction: string; amount: number }[]>(),
+    loadCashTotals(supabase, user.tenantId).then(
+      (data): { data: CashTotals; error: null } => ({ data, error: null }),
+      (e: Error) => ({ data: null, error: { message: e.message } })
+    ),
     supabase
       .from("cash_transactions")
       .select(
@@ -78,13 +80,7 @@ export default async function CashPage({
     );
   }
 
-  const totalIn = totalsResult.data
-    .filter((t) => t.direction === "in")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalOut = totalsResult.data
-    .filter((t) => t.direction === "out")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const balance = totalIn - totalOut;
+  const { totalIn, totalOut, balance } = totalsResult.data!;
 
   const transactions = rowsResult.data;
 
