@@ -17,12 +17,15 @@ export function ExpenseRow({
   categories,
   supplier,
   showDate = true,
+  dateInline = false,
   updateAction,
   deleteAction,
 }: {
   expense: Expense;
   /** جوّه مجموعة يوم التاريخ مكتوب في العنوان — مايتكررش في السطر (قرار عمر) */
   showDate?: boolean;
+  /** يوم فيه حركة واحدة مالوش عنوان — التاريخ بيتكتب صغير جوّه السطر */
+  dateInline?: boolean;
   categories: string[];
   supplier?: string | null;
   updateAction: (formData: FormData) => Promise<void>;
@@ -44,6 +47,11 @@ export function ExpenseRow({
         )}
         <td className="px-4 py-3 font-medium text-ink">
           {expense.category}
+          {dateInline && (
+            <div className="text-[11px] font-normal text-ink-faint">
+              {formatDate(expense.expense_date)}
+            </div>
+          )}
         </td>
         <td className="px-4 py-3 text-ink-body">
           {expense.description ?? "—"}

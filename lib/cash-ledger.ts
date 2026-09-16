@@ -55,6 +55,15 @@ export function withRunningBalance<T extends LedgerMove>(
 export const dayOf = (value: string | null) => (value ?? "").slice(0, 10);
 
 /**
+ * ⚠️ **اليوم اللي فيه حركة واحدة مالوش عنوان** (قرار عمر، ١٦ سبتمبر).
+ * العنوان بيوفّر لما يبقى فيه حركات كتير في اليوم — مع حركة واحدة بيزوّد
+ * سطر (التجريبي طوّل من 8,135 لـ11,053px). تاريخها بيرجع جوّه السطر.
+ * اليوم المقصوص بياخد عنوان دايمًا — عشان «جزء من اليوم» لازم يتقال.
+ */
+export const dayHasHeader = (day: { rows: unknown[]; partial: boolean }) =>
+  day.rows.length > 1 || day.partial;
+
+/**
  * @param hasMore فيه حركات أقدم ماتجابتش — آخر يوم يتعلّم «مقصوص».
  */
 export function groupByDay<T extends LedgerMove>(
