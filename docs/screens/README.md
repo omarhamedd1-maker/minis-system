@@ -6,6 +6,22 @@
 - **المقاسات:** ديسكتوب 1440 عرض · موبايل 390 عرض. الصفحة كلها لحد آخرها (مش الشاشة الأولى بس)، إلا الحالات اللي فيها قايمة أو شيت مفتوح فهي بمقاس الشاشة (1440×900 و390×844).
 - **العدد:** 129 صورة من 133 · الحجم 13.5 MB.
 - **التسمية:** `{الصفحة}-{desktop|mobile}.png` والحالات `{الصفحة}-{الحالة}-{desktop|mobile}.png`.
+- **صفحة الفلوس اتصوّرت تاني ١٦ سبتمبر** بعد دمج المصاريف (#١٩٧ · #١٩٨) وتصليح خزنة التجريبي — تحت.
+
+## ⚠️ قاعدة: أي انحراف عن البيزنس الحقيقي يتكتب هنا صراحة
+
+**الصور دي هي مصدر المراجعة التصميمية الوحيد.** أي حاجة في التجريبي بتتصرف غير البيزنس الحقيقي
+بتتحول لمواصفة غلط — وده حصل: الخزنة كانت سطر «تحصيل أوردر» لكل أوردر، والحقيقي سطر
+يدوي «تحصيل» لكل تحويل، فطلع بند «تجميع التحصيل في سطر التحويل» على مشكلة مش موجودة.
+
+| الانحراف | الحالة | أثره على المراجعة |
+|---|---|---|
+| الخزنة: سطر تحصيل لكل أوردر | ✅ **اتصلّح ١٦ سبتمبر** — بقى سطر يدوي «تحصيل» لكل يوم تحويل، والرصيد زي ما هو (٣١٣,٤١٤) | صور `cash` القديمة (٩٥ سطر «أوردر رقم …») مش بتمثّل الحقيقي |
+| التجريبي بيتحوّل **كل يوم تقريبًا** (١١٠ يوم تحويل) | قائم | مينيز ٢٩ تحويل على شهرين — طول صفحة الحركات على التجريبي أكبر من الحقيقي |
+| الحساب التجريبي **أدمن** | قائم | أي حاجة بتختفي بالصلاحية (كروت · تابات) مش باينة في الصور |
+| **تصنيفات المصاريف مختلفة تمامًا** — التجريبي: تغليف · إعلانات · **باقة شحن · مرتبات · إيجار**. مينيز: تصنيع وخامات · إعلانات · اشتراكات · شحن · سحوبات · تسويق · … | قائم | مجموعة «ثابتة» في مواصفة الفلوس (مرتبات · إيجار · باقة شحن) جاية من التجريبي — **ولا بيزنس حقيقي بيستخدمها**. والتجريبي مافيهوش «تصنيع وخامات» (مينيز ١٧٦,٦٥٥ — قريب من تكلفة البضاعة) ولا «سحوبات» (مينيز ٢٢,٥٠٠) |
+| تكلفة البنود: مفيش بند بتكلفة صفر | قائم | مينيز فيها ٦ بنود بتكلفة صفر (١٫٧٪) |
+| السلات المتروكة فاضية · صندوق الرسايل مزروع من غير Meta | قائم | مكتوبين تحت في «حاجات معروفة» |
 
 ## الفهرس
 
@@ -52,10 +68,12 @@
 | products-bundles | الباقات | `/products/bundles` | [products-bundles-desktop.png](products-bundles-desktop.png) | 900px | [products-bundles-mobile.png](products-bundles-mobile.png) | 844px |  |
 | products-bundles-form | الباقات وفورم «باقة جديدة» مفتوح | `/products/bundles` | [products-bundles-form-desktop.png](products-bundles-form-desktop.png) | 965px | [products-bundles-form-mobile.png](products-bundles-form-mobile.png) | 1,131px |  |
 | products-links | لينكات الأوردر | `/products/links` | [products-links-desktop.png](products-links-desktop.png) | 974px | [products-links-mobile.png](products-links-mobile.png) | 1,070px |  |
-| expenses | المصاريف — فورم التسجيل في أول الصفحة | `/expenses` | [expenses-desktop.png](expenses-desktop.png) | 900px | [expenses-mobile.png](expenses-mobile.png) | 915px |  |
-| expenses-edit | المصاريف ومصروف مفتوح للتعديل | `/expenses?edit=:id` | [expenses-edit-desktop.png](expenses-edit-desktop.png) | 900px | [expenses-edit-mobile.png](expenses-edit-mobile.png) | 915px |  |
-| expenses-empty | المصاريف بتصنيف مالوش حركات | `/expenses?cat=zzzzzz-no-match` | [expenses-empty-desktop.png](expenses-empty-desktop.png) | 900px | [expenses-empty-mobile.png](expenses-empty-mobile.png) | 850px |  |
-| cash | الخزنة | `/cash` | [cash-desktop.png](cash-desktop.png) | 5,018px | [cash-mobile.png](cash-mobile.png) | 8,135px |  |
+| cash | الفلوس — تاب الحركات (الرصيد الجاري · مجمّع باليوم) | `/cash` | [cash-desktop.png](cash-desktop.png) | 8,355px | [cash-mobile.png](cash-mobile.png) | 10,000px | الموبايل اتقصّ عند 10,000 من 11,053px · ١٦ سبتمبر |
+| cash-out | الفلوس — الخارج بس (من غير رصيد جاري) | `/cash?tab=moves&dir=out` | [cash-out-desktop.png](cash-out-desktop.png) | 903px | [cash-out-mobile.png](cash-out-mobile.png) | 1,208px | ١٦ سبتمبر |
+| cash-expenses | تاب المصاريف والفورم مقفول | `/cash?tab=expenses` | [cash-expenses-desktop.png](cash-expenses-desktop.png) | 900px | [cash-expenses-mobile.png](cash-expenses-mobile.png) | 955px | بدل `expenses` · `/expenses` بتحوّل هنا |
+| cash-expenses-form | تاب المصاريف وفورم «+ مصروف» مفتوح | `/cash?tab=expenses` | [cash-expenses-form-desktop.png](cash-expenses-form-desktop.png) | 900px | [cash-expenses-form-mobile.png](cash-expenses-form-mobile.png) | 1,234px | ١٦ سبتمبر |
+| cash-expenses-edit | تاب المصاريف ومصروف مفتوح للتعديل | `/cash?tab=expenses` | [cash-expenses-edit-desktop.png](cash-expenses-edit-desktop.png) | 900px | [cash-expenses-edit-mobile.png](cash-expenses-edit-mobile.png) | 1,098px | بدل `expenses-edit` |
+| cash-expenses-empty | تاب المصاريف بتصنيف مالوش حركات | `/cash?tab=expenses&cat=zzzzzz-no-match` | [cash-expenses-empty-desktop.png](cash-expenses-empty-desktop.png) | 900px | [cash-expenses-empty-mobile.png](cash-expenses-empty-mobile.png) | 844px | بدل `expenses-empty` |
 | suppliers | الموردين | `/suppliers` | [suppliers-desktop.png](suppliers-desktop.png) | 900px | [suppliers-mobile.png](suppliers-mobile.png) | 844px |  |
 | suppliers-add | الموردين وفورم «إضافة مورد» مفتوح | `/suppliers` | [suppliers-add-desktop.png](suppliers-add-desktop.png) | 900px | [suppliers-add-mobile.png](suppliers-add-mobile.png) | 844px |  |
 | supplier | صفحة مورد — فورم إضافة حركة (فاتورة/دفعة) ظاهر | `/suppliers/:id` | [supplier-desktop.png](supplier-desktop.png) | 1,139px | [supplier-mobile.png](supplier-mobile.png) | 1,639px |  |
@@ -89,7 +107,10 @@
 |---|---|---|---|
 | customers | 24,510px | 29 | 11,512px |
 | orders | 8,546px | 10 | 3,683px |
-| cash | 8,135px | 10 | 5,018px |
+| cash | 11,053px | 13 | 8,355px |
+
+⚠️ **صفحة الحركات طوّلت بعد التجميع باليوم** (كانت 8,135px). التاريخ اتشال من السطر، بس كل يوم بقى ليه عنوان —
+والتجريبي فيه يوم تحويل لكل حركة تقريبًا (١١٠ يوم على ١٣٥ حركة)، فالعناوين زوّدت بدل ما توفّر.
 
 
 ### القوايم: بتجيب كام صف وبتقطع ولا لأ (من الكود، ١٤ سبتمبر)
@@ -101,9 +122,9 @@
 | `/orders` | 3000 للبحث | ✅ 50 وزرار «عرض المزيد» |
 | `/users/activity` | حسب `limit` | ✅ زرار «عرض المزيد» |
 | `/products` | 2000 · 4000 | ✅ «اعرض الكل» |
-| `/cash` | 100 | حد ثابت — آخر ١٠٠ حركة بس |
+| `/cash` (الحركات) | 100 · والرصيد من الداتابيز | ✅ 100 وزرار «عرض المزيد» (#١٩٣) |
 | `/customers` | 1000 | ❌ كلهم في صفحة واحدة |
-| `/expenses` | 2000 · 5000 | ❌ كلهم في صفحة واحدة |
+| `/cash?tab=expenses` | 2000 · 5000 | ✅ 50 وزرار «عرض المزيد» (#١٨٩) |
 | `/orders/returns` | 1000 · 3000 | ❌ |
 | `/orders/ratings` | 1000 | ❌ |
 | `/orders/followup` | 500 | ❌ |
@@ -128,5 +149,5 @@
 - **السلات المتروكة** بتتجاب من شوبيفاي لحظتها، والتجريبي مش مربوط بمتجر — فالصفحة فاضية.
 - **صندوق الرسايل** المحادثات فيه مزروعة في الداتابيز بس — مفيش ربط Meta حقيقي، فالرد الفعلي مش شغال.
 - **البيزنسات (`/platform`)** لأدمن المنصة بس، والحساب التجريبي مش أدمن منصة.
-- **فورم تسجيل المصروف** و**فورم حركة المورد** ظاهرين على طول في صفحتهم (مش مودال) — `expenses` و`supplier`. التعديل المفتوح في `expenses-edit` والدفعة في `supplier-payment`.
+- **فورم تسجيل المصروف** بقى مقفول ورا «+ مصروف» (`cash-expenses-form` مفتوح). **فورم حركة المورد** لسه ظاهر على طول في صفحته — `supplier`، والدفعة في `supplier-payment`.
 - **صفحة ربط الأوردر (`/o/:id`)** ماتصوّرتش — محتاجة لينك أوردر متولّد، والتجريبي مافيهوش.
