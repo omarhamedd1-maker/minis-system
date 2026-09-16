@@ -7,6 +7,7 @@ import { returnsBoard, returnRate } from "@/lib/returns-board";
 import { returnReasonLabel } from "@/lib/return-reasons";
 import { ShowMore } from "@/components/ShowMore";
 import { resolveShowCount } from "@/lib/show-more";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 
@@ -87,11 +88,10 @@ export default async function ReturnsPage({
    */
   const ids = (data ?? []).map((o) => o.id);
   const { data: moves } = ids.length
-    ? await supabase
+    ? await allRows(supabase
         .from("stock_movements")
         .select("related_order_id, reason")
-        .in("related_order_id", ids)
-        .limit(3000)
+        .in("related_order_id", ids))
     : { data: [] };
 
   const byOrder = new Map<string, string[]>();

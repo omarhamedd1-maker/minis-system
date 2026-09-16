@@ -11,6 +11,7 @@ import { kindInfo, templateFor } from "@/lib/message-kinds";
 import { loadStoredTemplates } from "@/lib/message-templates-db";
 import TemplateEditor from "@/components/TemplateEditor";
 import { saveMessageTemplate } from "../template-actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 
@@ -101,11 +102,10 @@ export default async function RiskyPage({
    */
   const customerIds = [...new Set(rows.map((o) => o.customer_id).filter(Boolean))];
   const { data: history } = customerIds.length
-    ? await supabase
+    ? await allRows(supabase
         .from("orders")
         .select("customer_id, order_status")
-        .in("customer_id", customerIds as string[])
-        .limit(3000)
+        .in("customer_id", customerIds as string[]))
     : { data: [] };
 
   const past = new Map<

@@ -15,6 +15,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchShopifyOrders } from "./orders";
 import { resolveShopifyToken } from "./token";
 import { planResync, resyncSummary, type ResyncPlan } from "./order-resync";
+import { allRows } from "../fetch-all-pages";
 
 export type ResyncResult =
   | { ok: true; summary: string; before: number; after: number }
@@ -84,12 +85,11 @@ export async function resyncOrder(opts: {
   }
 
   // ⚠️ **خريطة الأشكال** — شكل شوبيفاي ← الشكل عندنا
-  const { data: variants } = await db
+  const { data: variants } = await allRows(db
     .from("product_variants")
     .select("id, shopify_variant_id")
     .eq("tenant_id", tenantId)
-    .not("shopify_variant_id", "is", null)
-    .limit(2000);
+    .not("shopify_variant_id", "is", null));
 
   const variantMap: Record<string, string> = {};
   for (const v of (variants ?? []) as {

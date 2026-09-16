@@ -38,13 +38,16 @@ describe("حدود البيانات ما اتلمستش", () => {
   const root = join(__dirname, "..");
   const read = (p: string) => readFileSync(join(root, p), "utf8");
 
-  it("الشرايح لسه بتجيب ٥٠٠٠ صف للحساب", () => {
+  // ⚠️ كانت `.limit(5000)` و`.limit(3000)` — وسوبابيز كان بيقطعهم عند ١٠٠٠
+  // بالصمت (NEXT §٣٣). دلوقتي بيجيبوا كل الصفوف.
+  it("الشرايح بتجيب كل الأوردرات والعملاء للحساب", () => {
     const src = read("app/(dashboard)/customers/segments/page.tsx");
-    expect(src).toContain(".limit(5000)");
+    expect(src.match(/allRows\(/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(src).not.toMatch(/\.limit\(/);
   });
 
-  it("المرتجعات لسه بتجيب ٣٠٠٠ حركة مخزون للبحث", () => {
+  it("المرتجعات بتجيب كل حركات المخزون للبحث", () => {
     const src = read("app/(dashboard)/orders/returns/page.tsx");
-    expect(src).toContain(".limit(3000)");
+    expect(src).toMatch(/allRows\(supabase\s*\.from\("stock_movements"\)/);
   });
 });

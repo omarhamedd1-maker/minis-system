@@ -19,6 +19,7 @@ import {
   deleteSupplierTransaction,
   updateSupplier,
 } from "../actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 type Txn = {
   id: string;
@@ -75,12 +76,11 @@ export default async function SupplierPage({
       .order("created_at", { ascending: false })
       .limit(500)
       .overrideTypes<Txn[]>(),
-    admin
+    allRows(admin
       .from("product_variants")
       .select("id, variant_name, sku, cost_price, products(name_ar, name)")
       .eq("tenant_id", user.tenantId)
       .order("id")
-      .limit(2000)
       .overrideTypes<
         {
           id: string;
@@ -89,7 +89,7 @@ export default async function SupplierPage({
           cost_price: number;
           products: { name_ar: string | null; name: string | null } | null;
         }[]
-      >(),
+      >(), null),
   ]);
 
   if (supplierResult.error || !supplierResult.data) notFound();

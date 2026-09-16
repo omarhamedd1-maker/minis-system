@@ -12,6 +12,7 @@ import {
   type Measure,
   type Group,
 } from "@/lib/report-builder";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export default async function ReportsPage({
   const to = isDate(q.to) ? q.to! : null;
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { data, error } = await allRows(supabase
     .from("orders")
     .select(
       `order_status, order_date, discount, shipping_price,
@@ -75,8 +76,7 @@ export default async function ReportsPage({
     )
     .eq("archived", false)
     .order("order_date", { ascending: false })
-    .limit(3000)
-    .overrideTypes<Row[]>();
+    .overrideTypes<Row[]>());
 
   if (error) {
     return (

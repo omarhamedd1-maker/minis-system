@@ -18,6 +18,7 @@ import { codGaps, type GapReport } from "@/lib/cod-gap";
 import { prepaidValue } from "@/lib/prepaid-value";
 import { fetchShopifyOrders } from "@/lib/shopify/orders";
 import { resolveShopifyToken } from "@/lib/shopify/token";
+import { allRows } from "@/lib/fetch-all-pages";
 
 export type HealthReport =
   | {
@@ -63,7 +64,7 @@ export async function loadHealth(): Promise<HealthReport> {
   }
 
   const db = createAdminClient();
-  const { data, error } = await db
+  const { data, error } = await allRows(db
     .from("orders")
     .select(
       `order_number, order_status, order_date, delivered_at, bosta_tracking,
@@ -74,8 +75,7 @@ export async function loadHealth(): Promise<HealthReport> {
        order_items(quantity, sale_price_at_order, variant_id,
          product_variants(variant_name, products(name_ar, name)))`
     )
-    .eq("tenant_id", me.tenantId)
-    .limit(5000);
+    .eq("tenant_id", me.tenantId));
 
   if (error) return { ok: false, error: "معرفناش نقرا الأوردرات" };
 
@@ -346,12 +346,11 @@ async function loadDiscountCodes(
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   try {
-    const { data, error } = await db
+    const { data, error } = await allRows(db
       .from("orders")
       .select("order_number, discount_code")
       .eq("tenant_id", tenantId)
-      .not("discount_code", "is", null)
-      .limit(5000);
+      .not("discount_code", "is", null));
     if (error) return out;
     for (const row of (data ?? []) as { order_number: string | null; discount_code: string | null }[]) {
       const n = String(row.order_number ?? "").trim();

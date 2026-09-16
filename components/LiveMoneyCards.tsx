@@ -11,6 +11,7 @@ import {
 } from "@/lib/dashboard-stats";
 import { CountUp } from "./CountUp";
 import { resolvePeriod, shiftDays } from "@/lib/periods";
+import { allRows } from "@/lib/fetch-all-pages";
 
 /**
  * ⚠️ **`bosta_fees_real` لازم يفضل هنا.**
@@ -71,18 +72,16 @@ export function LiveMoneyCards({
 
     async function load() {
       const [o, e] = await Promise.all([
-        supabase
+        allRows(supabase
           .from("orders")
           .select(ORDER_SELECT)
           // نجيب اللي اتعمل في الفترة أو اللي اتسلّم فيها (عشان التحصيل بيتحسب بتاريخ التسليم)
-          .or(`order_date.gte.${fetchStart},delivered_at.gte.${fetchStart}`)
-          .limit(5000),
-        supabase
+          .or(`order_date.gte.${fetchStart},delivered_at.gte.${fetchStart}`)),
+        allRows(supabase
           .from("expenses")
           .select("amount")
           .gte("expense_date", periodStart)
-          .lte("expense_date", periodEnd)
-          .limit(5000),
+          .lte("expense_date", periodEnd)),
       ]);
       if (!active || o.error || e.error || !o.data || !e.data) return;
       setS(

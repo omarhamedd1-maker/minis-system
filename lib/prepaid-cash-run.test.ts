@@ -34,11 +34,18 @@ function fakeDb(
 ): SupabaseClient {
   const make = (rows: unknown[], error: boolean) => {
     const chain: Record<string, unknown> = {};
-    for (const k of ["eq", "gt", "neq"]) chain[k] = () => chain;
-    chain.limit = async () => ({
-      data: error ? null : rows,
-      error: error ? { message: "الجدول مقفول" } : null,
-    });
+    for (const k of ["eq", "gt", "neq", "order"]) chain[k] = () => chain;
+    // صفحة صفحة (allRows) — الصفحة الأولى فيها كل الصفوف، والتانية فاضية
+    let from = 0;
+    chain.range = (f: number) => {
+      from = f;
+      return chain;
+    };
+    chain.then = (resolve: (v: unknown) => void) =>
+      resolve({
+        data: error ? null : from === 0 ? rows : [],
+        error: error ? { message: "الجدول مقفول" } : null,
+      });
     return chain;
   };
 
