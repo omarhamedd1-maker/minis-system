@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { CashManualRow } from "@/components/CashManualRow";
@@ -15,6 +16,16 @@ import { resolveShowCount } from "@/lib/show-more";
 
 /** الخزنة بتعرض ١٠٠ حركة في المرة — زي ما كانت */
 const CASH_STEP = 100;
+
+/** فلتر الاتجاه — الخارج بيبقى مدفون وسط الداخل من غيره */
+const DIRECTIONS = [
+  { key: "", label: "الكل" },
+  { key: "in", label: "داخل" },
+  { key: "out", label: "خارج" },
+] as const;
+
+/** العربي: ٣ لـ١٠ «حركات» — غير كده «حركة» */
+const moves = (n: number) => `${n} ${n >= 3 && n <= 10 ? "حركات" : "حركة"}`;
 import {
   addCashTransaction,
   deleteCashTransaction,
@@ -62,25 +73,31 @@ export default async function CashPage({
     saved?: string;
     deleted?: string;
     show?: string;
+    dir?: string;
   }>;
 }) {
-  const { error: actionError, saved, deleted, show } = await searchParams;
+  const { error: actionError, saved, deleted, show, dir: rawDir } =
+    await searchParams;
+  const dir = rawDir === "in" || rawDir === "out" ? rawDir : "";
   const showCount = resolveShowCount(show, CASH_STEP);
   const user = await requirePagePermission("cash.view");
   const isAdmin = can(user, "cash.edit");
   const supabase = await createClient();
 
   // ⚠️ **الرصيد من الداتابيز** — الجمع في الصفحة كان بيقصّ عند ١٠٠٠ حركة بالصمت
+  let rowsQuery = supabase
+    .from("cash_transactions")
+    .select(
+      "id, direction, amount, source_type, description, transaction_date, orders(order_number), expenses(category, description)"
+    );
+  if (dir) rowsQuery = rowsQuery.eq("direction", dir);
+
   const [totalsResult, rowsResult] = await Promise.all([
     loadCashTotals(supabase, user.tenantId).then(
       (data): { data: CashTotals; error: null } => ({ data, error: null }),
       (e: Error) => ({ data: null, error: { message: e.message } })
     ),
-    supabase
-      .from("cash_transactions")
-      .select(
-        "id, direction, amount, source_type, description, transaction_date, orders(order_number), expenses(category, description)"
-      )
+    rowsQuery
       .order("transaction_date", { ascending: false })
       .order("created_at", { ascending: false })
       // ⚠️ ترتيب ثابت للآخر — الرصيد الجاري بيعتمد إن الترتيب مايتغيّرش بين تحميلتين
@@ -98,14 +115,31 @@ export default async function CashPage({
     );
   }
 
-  const { totalIn, totalOut, balance, countAll } = totalsResult.data!;
+  const { totalIn, totalOut, balance, countAll, countIn, countOut } =
+    totalsResult.data!;
 
   const transactions = rowsResult.data;
-  // الرصيد الجاري من الرصيد الحالي ونازل — صح لأن المعروض أول N حركة من غير فجوات
-  const days = groupByDay(
-    withRunningBalance(transactions, balance),
-    countAll > transactions.length
-  );
+  const matching = dir === "in" ? countIn : dir === "out" ? countOut : countAll;
+
+  /**
+   * ⚠️ **مع فلتر الاتجاه الرصيد الجاري مايتعرضش.** الحساب من فوق لتحت
+   * محتاج كل الحركات من غير فجوات — والفلتر بيشيل نصها، فالرقم هيطلع غلط.
+   */
+  const showBalance = !dir;
+  const ledger: ((typeof transactions)[number] & {
+    balanceAfter: number | undefined;
+  })[] = showBalance
+    ? withRunningBalance(transactions, balance)
+    : transactions.map((row) => ({ ...row, balanceAfter: undefined }));
+  const days = groupByDay(ledger, matching > transactions.length);
+
+  // سطر المجموع — بإشارة مع اللون، مش بداله
+  const summary =
+    dir === "in"
+      ? `${moves(countIn)} داخلة · +${formatMoney(totalIn)}`
+      : dir === "out"
+        ? `${moves(countOut)} خارجة · −${formatMoney(totalOut)}`
+        : `${moves(countAll)} · صافي ${balance < 0 ? "−" : "+"}${formatMoney(Math.abs(balance))}`;
 
   return (
     <div className="space-y-4">
@@ -219,9 +253,35 @@ export default async function CashPage({
         </form>
       )}
 
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div
+          role="group"
+          aria-label="الاتجاه"
+          className="flex gap-1 rounded-control bg-sunken p-1"
+        >
+          {DIRECTIONS.map((d) => (
+            <Link
+              key={d.key}
+              href={d.key ? `/cash?dir=${d.key}` : "/cash"}
+              aria-current={dir === d.key ? "true" : undefined}
+              className={`rounded-control px-3 py-1 text-xs font-medium ${
+                dir === d.key
+                  ? "bg-surface text-ink shadow-card"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              {d.label}
+            </Link>
+          ))}
+        </div>
+        <span className="text-xs tabular-nums text-ink-muted">{summary}</span>
+      </div>
+
       {transactions.length === 0 ? (
         <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
-          لسه مفيش حركة فلوس في الخزنة.
+          {dir
+            ? "مفيش حركات بالاتجاه ده."
+            : "لسه مفيش حركة فلوس في الخزنة."}
         </div>
       ) : (
         <>
@@ -261,14 +321,19 @@ export default async function CashPage({
                 <th className="px-4 py-3 font-medium">الاتجاه</th>
                 <th className="px-4 py-3 font-medium">المصدر</th>
                 <th className="px-4 py-3 font-medium">المبلغ</th>
-                <th className="px-4 py-3 font-medium">الرصيد بعدها</th>
+                {showBalance && (
+                  <th className="px-4 py-3 font-medium">الرصيد بعدها</th>
+                )}
                 {isAdmin && <th className="px-4 py-3 font-medium"></th>}
               </tr>
             </thead>
             {days.map((d) => (
               <tbody key={d.day}>
                 <tr className="border-b border-line bg-sunken">
-                  <td colSpan={isAdmin ? 6 : 5} className="px-4 py-2">
+                  <td
+                    colSpan={4 + (showBalance ? 1 : 0) + (isAdmin ? 1 : 0)}
+                    className="px-4 py-2"
+                  >
                     <DayHeader day={d} />
                   </td>
                 </tr>
@@ -318,9 +383,11 @@ export default async function CashPage({
                       >
                         {formatMoney(row.amount)}
                       </td>
-                      <td className="px-4 py-3 tabular-nums text-ink-muted">
-                        {formatMoney(row.balanceAfter)}
-                      </td>
+                      {row.balanceAfter !== undefined && (
+                        <td className="px-4 py-3 tabular-nums text-ink-muted">
+                          {formatMoney(row.balanceAfter)}
+                        </td>
+                      )}
                       {isAdmin && <td className="px-4 py-3"></td>}
                     </tr>
                   )
@@ -331,8 +398,9 @@ export default async function CashPage({
         </div>
         <ShowMore
           basePath="/cash"
+          query={{ dir: dir || undefined }}
           shown={transactions.length}
-          total={countAll}
+          total={matching}
           step={CASH_STEP}
         />
         </>
