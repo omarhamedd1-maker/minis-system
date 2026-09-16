@@ -18,11 +18,14 @@ export function ExpenseCard({
   expense,
   categories,
   supplier,
+  showDate = true,
   canEdit,
   updateAction,
   deleteAction,
 }: {
   expense: Expense;
+  /** جوّه مجموعة يوم التاريخ مكتوب في العنوان — مايتكررش في السطر (قرار عمر) */
+  showDate?: boolean;
   categories: string[];
   supplier?: string | null;
   canEdit: boolean;
@@ -40,9 +43,11 @@ export function ExpenseCard({
             <span className="text-sm font-bold text-ink">
               {expense.description || expense.category}
             </span>
-            <span className="text-[11px] text-ink-faint">
-              {formatDate(expense.expense_date)}
-            </span>
+            {showDate && (
+              <span className="text-[11px] text-ink-faint">
+                {formatDate(expense.expense_date)}
+              </span>
+            )}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
             {expense.description && <span>{expense.category}</span>}

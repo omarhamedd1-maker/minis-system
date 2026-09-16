@@ -315,7 +315,6 @@ export async function addSupplierTransaction(formData: FormData) {
     }`
   );
   revalidatePath("/products");
-  revalidatePath("/expenses");
   revalidatePath(back);
   revalidatePath("/suppliers");
   revalidatePath("/cash");
