@@ -14,10 +14,13 @@ type Row = {
 
 export function CashManualRow({
   row,
+  balanceAfter,
   updateAction,
   deleteAction,
 }: {
   row: Row;
+  /** الرصيد بعد الحركة — عمود لوحده */
+  balanceAfter?: number;
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: (formData: FormData) => Promise<void>;
 }) {
@@ -52,6 +55,11 @@ export function CashManualRow({
         >
           {formatMoney(row.amount)}
         </td>
+        {balanceAfter !== undefined && (
+          <td className="px-2 py-3 text-xs tabular-nums text-ink-muted sm:px-4 sm:text-sm">
+            {formatMoney(balanceAfter)}
+          </td>
+        )}
         <td className="px-2 py-3 sm:px-4">
           <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
             <button
@@ -123,6 +131,8 @@ export function CashManualRow({
           className="w-28 rounded-control border border-line-strong px-2 py-1 text-sm text-ink focus:border-primary focus:outline-none"
         />
       </td>
+      {/* الرصيد بيتحسب بعد الحفظ — الخانة فاضية عشان الأعمدة ماتتزحزحش */}
+      {balanceAfter !== undefined && <td className="px-4 py-3"></td>}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <button
