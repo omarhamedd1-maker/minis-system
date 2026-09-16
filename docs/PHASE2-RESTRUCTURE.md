@@ -15,6 +15,7 @@
 >   القسم ٧ فيه ١٠ قواعد عامة مكانها `DESIGN.md` وبتنطبق على كل الصفحات.
 >   ⚠️ نقل الشرايط الستة **متوقف على `/work`** (الخطوة ٥).
 > - [`ORDER-PAGE-REDESIGN.md`](ORDER-PAGE-REDESIGN.md) — صفحة الأوردر الواحد `/orders/[id]`، مكانها الخطوة ٩.
+> - [`DASHBOARD-REDESIGN.md`](DASHBOARD-REDESIGN.md) — الداشبورد `/`، مكانها الخطوة ٧.
 
 ---
 
