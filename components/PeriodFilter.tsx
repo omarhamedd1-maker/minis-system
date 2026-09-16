@@ -1,9 +1,12 @@
 "use client";
 
 // ==========================================================================
-// محدد الفترة — مكوّن واحد لكل الصفحات (المرحلة ٢، الخطوة ١)
+// محدد الفترة — مكوّن واحد بشكلين (المرحلة ٢، الخطوة ١ + قرار ١٦ سبتمبر)
 // --------------------------------------------------------------------------
-// الشكل: آخر ٧ أيام · آخر ٣٠ يوم · الشهر ده · [كل الوقت] · 📅 مدة مخصصة
+//   • **الموبايل: منسدلة** — الشرايط الأفقية كانت بتتقص وتخبّي اختيارات.
+//   • **الديسكتوب: شرايط** — المساحة موجودة، والاختيار بضغطة واحدة.
+//
+// الاتنين نفس المكوّن ونفس اللينكات، فمفيش صفحة بتختلف عن التانية.
 //
 // ⚠️ **الفلاتر التانية بتيجي من السيرفر في `query`** مش من `useSearchParams` —
 // كده اللينكات بتتبني وقت الرندر، وكل صفحة بتقرر أنهي فلاتر تتصفّر (`resetKeys`).
@@ -29,7 +32,6 @@ export function PeriodFilter({
   resetKeys = [],
 }: {
   basePath: string;
-  /** كل الفلاتر اللي في اللينك دلوقتي */
   query: Record<string, string | undefined>;
   current: ResolvedPeriod;
   defaultKey: PresetKey | "all";
@@ -45,6 +47,9 @@ export function PeriodFilter({
     ...(allowAll || defaultKey === "all" ? [{ key: "all" as const, label: ALL_LABEL }] : []),
   ];
 
+  const hrefFor = (key: PresetKey | "all") =>
+    periodHref(basePath, query, { key }, defaultKey, resetKeys);
+
   function applyRange(nextFrom: string, nextTo: string) {
     const f = nextFrom || nextTo;
     const t = nextTo || nextFrom;
@@ -58,25 +63,48 @@ export function PeriodFilter({
     }`;
 
   return (
-    <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
-      {options.map((o) => (
-        <Link
-          key={o.key}
-          href={periodHref(basePath, query, { key: o.key }, defaultKey, resetKeys)}
-          className={chip(current.key === o.key)}
-          aria-current={current.key === o.key ? "true" : undefined}
-        >
-          {o.label}
-        </Link>
-      ))}
+    <div className="flex items-center gap-2">
+      {/* الموبايل — منسدلة */}
+      <select
+        aria-label="الفترة"
+        value={isCustom ? "custom" : current.key}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "custom") setOpen(true);
+          else router.push(hrefFor(v as PresetKey | "all"));
+        }}
+        className="field w-auto py-1.5 text-xs sm:hidden"
+      >
+        {options.map((o) => (
+          <option key={o.key} value={o.key}>
+            {o.label}
+          </option>
+        ))}
+        <option value="custom">{isCustom ? current.label : "مدة مخصصة…"}</option>
+      </select>
 
+      {/* الديسكتوب — شرايط */}
+      <div className="hidden items-center gap-2 sm:flex">
+        {options.map((o) => (
+          <Link
+            key={o.key}
+            href={hrefFor(o.key)}
+            className={chip(current.key === o.key)}
+            aria-current={current.key === o.key ? "true" : undefined}
+          >
+            {o.label}
+          </Link>
+        ))}
+      </div>
+
+      {/* التقويم — مشترك بين الشكلين */}
       <span className="relative inline-flex shrink-0 items-center gap-1">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           title="اختار يوم أو مدة"
           aria-label="اختار يوم أو مدة من التقويم"
-          className={`${chip(isCustom)} inline-flex items-center gap-1.5`}
+          className={`${chip(isCustom)} inline-flex h-11 items-center gap-1.5 sm:h-auto`}
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
             <path
@@ -85,7 +113,7 @@ export function PeriodFilter({
               clipRule="evenodd"
             />
           </svg>
-          {isCustom ? current.label : "مدة مخصصة"}
+          <span className="hidden sm:inline">{isCustom ? current.label : "مدة مخصصة"}</span>
         </button>
 
         {isCustom && (
@@ -93,7 +121,7 @@ export function PeriodFilter({
             href={periodHref(basePath, query, { clear: true }, defaultKey, resetKeys)}
             title="إلغاء المدة المخصصة"
             aria-label="إلغاء المدة المخصصة"
-            className="rounded-full bg-surface px-2 py-1 text-xs text-ink-muted shadow-card hover:bg-sunken"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-xs text-ink-muted shadow-card hover:bg-sunken sm:h-auto sm:w-auto sm:px-2 sm:py-1"
           >
             ✕
           </Link>

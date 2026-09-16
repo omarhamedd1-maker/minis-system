@@ -1,5 +1,6 @@
-import Link from "next/link";
 import { PeriodFilter } from "@/components/PeriodFilter";
+import { FilterBar } from "@/components/FilterBar";
+import { FilterSelect } from "@/components/FilterSelect";
 import { periodHref, resolvePeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -66,6 +67,13 @@ export default async function ExpensesPage({
     { today, defaultKey: "30d", allowAll: true }
   );
   const periodStart = range.start;
+  // الفترة في اللينكات — عشان فلتر النوع مايضيّعهاش
+  const periodParams: Record<string, string> =
+    range.key === "custom" && range.from && range.to
+      ? { from: range.from, to: range.to }
+      : range.key !== "30d"
+        ? { period: range.key }
+        : {};
 
   let query = supabase
     .from("expenses")
@@ -133,38 +141,30 @@ export default async function ExpensesPage({
         </span>
       </div>
 
-      <PeriodFilter
+      {/* شريط الفلاتر الموحّد — التصنيفات منسدلة (١٣ نوع ماينفعوش شرايح) */}
+      <FilterBar
         basePath="/expenses"
-        query={{ cat }}
-        current={range}
-        defaultKey="30d"
-        allowAll
-      />
-      <div className="flex flex-wrap items-center gap-2">
-        <Link
-          href={buildHref({ cat: null })}
-          className={`rounded-full px-3 py-1 text-xs font-medium ${
-            !cat
-              ? "bg-primary text-white"
-              : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
-          }`}
-        >
-          كل الأنواع
-        </Link>
-        {CATEGORY_SUGGESTIONS.map((c) => (
-          <Link
-            key={c}
-            href={buildHref({ cat: c })}
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              cat === c
-                ? "bg-primary text-white"
-                : "bg-surface text-ink-muted shadow-card hover:bg-sunken"
-            }`}
-          >
-            {c}
-          </Link>
-        ))}
-      </div>
+        query={{ cat, ...periodParams }}
+        chips={cat ? [{ label: cat, removeHref: buildHref({ cat: null }) }] : []}
+        clearHref={cat || range.key !== "30d" ? "/expenses" : undefined}
+      >
+        <PeriodFilter
+          basePath="/expenses"
+          query={{ cat }}
+          current={range}
+          defaultKey="30d"
+          allowAll
+        />
+        <FilterSelect
+          name="cat"
+          value={cat}
+          options={CATEGORY_SUGGESTIONS.map((c) => ({ value: c, label: c }))}
+          allLabel="كل الأنواع"
+          basePath="/expenses"
+          query={periodParams}
+          label="نوع المصروف"
+        />
+      </FilterBar>
 
       {actionError && (
         <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
