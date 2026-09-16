@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PeriodFilter } from "@/components/PeriodFilter";
 import { FilterBar } from "@/components/FilterBar";
 import { FilterSelect } from "@/components/FilterSelect";
+import { ShowMore } from "@/components/ShowMore";
 import { resolvePeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -849,22 +850,17 @@ export default async function OrdersPage({
             </tbody>
           </table>
           </div>
+          {/* الإجمالي مش معروف هنا — بنجيب بقد المعروض بالظبط */}
           {!searchTerm && orders.length >= showCount && (
-            <div className="mt-4 flex justify-center">
-              <Link
-                scroll={false}
-                href={(() => {
-                  const params = new URLSearchParams();
-                  if (status) params.set("status", status);
-                  if (showArchived) params.set("archived", "1");
-                  params.set("show", String(showCount + 50));
-                  return `/orders?${params.toString()}`;
-                })()}
-                className="rounded-control bg-surface px-6 py-2 text-sm font-medium text-ink-body shadow-card hover:bg-sunken"
-              >
-                عرض المزيد
-              </Link>
-            </div>
+            <ShowMore
+              basePath="/orders"
+              query={{
+                status: showArchived ? undefined : status,
+                archived: showArchived ? "1" : undefined,
+                ...periodParams,
+              }}
+              shown={showCount}
+            />
           )}
         </>
       )}
