@@ -18,7 +18,6 @@ import {
   orderStatusBadge,
   orderStatusClass,
 } from "@/lib/format";
-import { dailyBoard, boardIsClear } from "@/lib/daily-board";
 
 // حالات الشحن بتتحدّث من بوسطة — بنقفل تغييرها من القايمة برة
 // الحالات اللي القايمة **مش** بتعرضها. لازم اللي مش في القايمة يتعرض كشارة
@@ -234,40 +233,9 @@ export default async function OrdersPage({
       ).data ?? []
     : [];
 
-  // ⚠️ **اللوحة ليها استعلامها لوحدها بقصد.** الاستعلام اللي تحت مفلتر
-  // بالحالة والفترة، واللوحة لازم تشوف كل حاجة — يعني لو فتحت «الملغي»
-  // تفضل تقول لك إن فيه ٣ محتاجين تأكيد.
-  const boardRows =
-    (
-      await allRows(supabase
-        .from("orders")
-        .select(
-          "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected"
-        )
-        .eq("archived", false)
-        .overrideTypes<
-          {
-            id: string;
-            order_status: string | null;
-            bosta_tracking: string | null;
-            bosta_created_at: string | null;
-            bosta_cod: number | null;
-            bosta_collected: boolean | null;
-          }[]
-        >())
-    ).data ?? [];
-
-  const board = dailyBoard(
-    boardRows.map((o) => ({
-      id: o.id,
-      orderStatus: o.order_status,
-      bostaTracking: o.bosta_tracking,
-      bostaCreatedAt: o.bosta_created_at,
-      bostaCod: o.bosta_cod,
-      bostaCollected: o.bosta_collected,
-    })),
-    new Date()
-  );
+  // الشرايط الستة (محتاج تأكيد · مستني بوليصة · …) اتنقلت لـ`/work` بس —
+  // كانت هنا وهناك، وبتاخد ~٨٥٠px قبل أول أوردر على الموبايل
+  // (ORDERS-PAGE-REDESIGN §١).
 
   let query = supabase
     .from("orders")
@@ -343,37 +311,6 @@ export default async function OrdersPage({
           )}
         </div>
       </div>
-
-      {/*
-        مستنيك النهاردة.
-
-        كل رقم بيفتح **نفس الأوردرات دي بالظبط** مش فلتر قريب منها —
-        السطر اللي بيقول «٣ واقفين» لازم يفتح التلاتة، مش كل اللي عند بوسطة.
-        ولو مفيش حاجة عاجلة، الشريط بيختفي خالص بدل ما ياخد مكان بأصفار.
-      */}
-      {!boardIsClear(board) && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {board
-            .filter((row) => row.count > 0)
-            .map((row) => (
-              <Link
-                key={row.key}
-                href={row.href}
-                className={"flex items-baseline gap-2 rounded-control px-3 py-1.5 text-sm hover:brightness-95 " +
-                  (row.urgent
-                    ? "bg-warning-soft text-warning"
-                    : "bg-surface text-ink-muted shadow-card")}
-              >
-                <span className="font-bold tabular-nums">
-                  {row.money === undefined
-                    ? row.count
-                    : formatMoney(row.money)}
-                </span>
-                <span>{row.label}</span>
-              </Link>
-            ))}
-        </div>
-      )}
 
       {deleted && (
         <div className="mb-4 rounded-control bg-success-soft px-4 py-3 text-sm text-success">
