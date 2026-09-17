@@ -78,13 +78,13 @@ export default async function ProductsPage({
   const canEdit = can(me, "products.edit");
   const supabase = await createClient();
 
-  const { data: allProducts, error } = await supabase
+  const { data: allProducts, error } = await allRows(supabase
     .from("products")
     .select(
       "id, name, name_ar, image_url, deleted_in_shopify, shopify_status, product_variants(id, variant_name, sku, cost_price, sale_price, quantity_on_hand)"
     )
     .order("name_ar")
-    .overrideTypes<ProductRow[]>();
+    .overrideTypes<ProductRow[]>());
 
   if (error) {
     return (

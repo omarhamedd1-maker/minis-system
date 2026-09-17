@@ -210,6 +210,7 @@ export type OrderImportResult =
  */
 // المصدر بقى `lib/shopify/failures.ts` — نفس النص، ومعاه قرار الإشعار
 import { NOT_LINKED_ERROR } from "./failures";
+import { allRows } from "../fetch-all-pages";
 export { NOT_LINKED_ERROR };
 
 export async function runOrderImport(opts: {
@@ -259,7 +260,7 @@ export async function runOrderImport(opts: {
   //   ٣. **بند الأوردر بياخد منتج بيزنس تاني** بتكلفته هو، فالأرباح تغلط.
   const [{ data: ourOrders }, { data: ourCustomers }, { data: ourVariants }] =
     await Promise.all([
-      db
+      allRows(db
         .from("orders")
         .select("id, shopify_order_id, order_number, order_status, bosta_tracking")
         .eq("tenant_id", tenantId)
@@ -271,21 +272,21 @@ export async function runOrderImport(opts: {
             order_status: string | null;
             bosta_tracking: string | null;
           }[]
-        >(),
-      db
+        >()),
+      allRows(db
         .from("customers")
         .select("id, shopify_customer_id, phone")
         .eq("tenant_id", tenantId)
         .overrideTypes<
           { id: string; shopify_customer_id: string | null; phone: string | null }[]
-        >(),
-      db
+        >()),
+      allRows(db
         .from("product_variants")
         .select("id, shopify_variant_id, cost_price")
         .eq("tenant_id", tenantId)
         .overrideTypes<
           { id: string; shopify_variant_id: string | null; cost_price: number }[]
-        >(),
+        >()),
     ]);
 
   const variantByShopifyId = new Map<string, { id: string; cost: number }>();

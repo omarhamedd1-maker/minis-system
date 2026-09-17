@@ -21,6 +21,7 @@ import {
   updateCashTransaction,
 } from "./actions";
 import { resolveShowCount } from "@/lib/show-more";
+import { allRows } from "@/lib/fetch-all-pages";
 
 /** الخزنة بتعرض ١٠٠ حركة في المرة — زي ما كانت */
 const CASH_STEP = 100;
@@ -99,7 +100,7 @@ export async function MovesTab({
   // الحركات اللي اتلغت — مالهاش تعديل ولا إلغاء تاني (MONEY ٦.٢)
   const shownIds = transactions.map((t) => t.id);
   const { data: reversals } = shownIds.length
-    ? await supabase.from("cash_transactions").select("reversal_of").in("reversal_of", shownIds)
+    ? await allRows(supabase.from("cash_transactions").select("reversal_of").in("reversal_of", shownIds))
     : { data: [] };
   const reversedIds = new Set((reversals ?? []).map((r) => r.reversal_of as string));
   const labelOf = (row: CashRow) =>

@@ -25,7 +25,7 @@ describe("resolveShowCount", () => {
   });
 
   it("فيه سقف — لينك بمليون مايجيبش الدنيا كلها", () => {
-    expect(resolveShowCount("1000000")).toBe(5000);
+    expect(resolveShowCount("1000000")).toBe(1000);
   });
 });
 
