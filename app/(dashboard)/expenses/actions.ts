@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { cairoToday } from "@/lib/format";
 import { auditFields, cashIdsFor, reverseCashRows } from "@/lib/cash-reversal";
+import { closedCategory } from "@/lib/profit-exclusions";
 
 export async function updateExpense(formData: FormData) {
   const me = await requirePermission("expenses.edit");
@@ -32,6 +33,25 @@ export async function updateExpense(formData: FormData) {
   }
 
   const supabase = createAdminClient();
+
+  // ⚠️ التصنيف المقفول بيفضل على القديم — بس مفيش حاجة تتنقل له
+  const closed = closedCategory(category);
+  if (closed) {
+    const { data: before } = await supabase
+      .from("expenses")
+      .select("category")
+      .eq("tenant_id", me.tenantId)
+      .eq("id", id)
+      .maybeSingle();
+    if (before?.category !== closed.category) {
+      redirect(
+        "/cash?tab=expenses&error=" +
+        encodeURIComponent(
+          `«${closed.category}» اتقفلت — ${closed.why}`,
+        ),
+      );
+    }
+  }
 
   const { error: updateError, count } = await supabase
     .from("expenses")
@@ -146,6 +166,16 @@ export async function addExpense(formData: FormData) {
       "/cash?tab=expenses&error=" +
         encodeURIComponent(
           "اكتب النوع والمبلغ والتاريخ — والمبلغ لازم يكون أكبر من صفر",
+        ),
+    );
+  }
+
+  const closed = closedCategory(category);
+  if (closed) {
+    redirect(
+      "/cash?tab=expenses&error=" +
+        encodeURIComponent(
+          `«${closed.category}» اتقفلت — ${closed.why}`,
         ),
     );
   }

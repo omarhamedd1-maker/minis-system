@@ -6,6 +6,7 @@ import { SupplierField } from "@/components/SupplierField";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CategoryPicker } from "@/components/CategoryPicker";
+import { closedCategory } from "@/lib/profit-exclusions";
 import {
   EXPENSE_CATEGORIES,
   cairoToday,
@@ -118,12 +119,13 @@ export async function ExpensesTab({
     .from("expenses")
     .select("category")
     .overrideTypes<{ category: string }[]>());
+  // المقفول (`CLOSED_CATEGORIES`) مابيتعرضش — القديم بيفضل باسمه
   const CATEGORY_SUGGESTIONS = Array.from(
     new Set([
       ...(usedCats ?? []).map((r) => r.category).filter(Boolean),
       ...STARTER_CATEGORIES,
     ]),
-  );
+  ).filter((c) => !closedCategory(c));
 
   // أسماء الموردين بتتقري بمفتاح الأدمن (جدول الموردين مقفول في الـRLS)
   const { data: supplierRows } = await allRows(createAdminClient()

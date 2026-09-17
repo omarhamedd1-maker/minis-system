@@ -40,7 +40,7 @@ export default async function SegmentsPage() {
       .from("orders")
       .select(
         `customer_id, order_status, order_date, payment_method, amount_paid,
-         discount, shipping_price, order_items(quantity, sale_price_at_order)`
+         discount, shipping_price, refunded_amount, refunded_at, order_items(quantity, sale_price_at_order, returned_quantity)`
       )
       .eq("tenant_id", me.tenantId)),
     allRows(db

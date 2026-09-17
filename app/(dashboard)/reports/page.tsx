@@ -13,6 +13,7 @@ import {
   type Group,
 } from "@/lib/report-builder";
 import { allRows } from "@/lib/fetch-all-pages";
+import { itemCost, orderNetTotal, orderRefund } from "@/lib/returned-items";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,15 @@ type Row = {
   order_date: string | null;
   discount: number | null;
   shipping_price: number | null;
+  refunded_amount: number | null;
+  refunded_at: string | null;
   customers: { full_name: string | null; address: string | null } | null;
   order_items: {
     quantity: number;
     sale_price_at_order: number;
     cost_price_at_order: number;
+    returned_quantity: number | null;
+    returned_condition: string | null;
     product_variants: {
       variant_name: string | null;
       products: { name: string | null; name_ar: string | null } | null;
@@ -69,9 +74,9 @@ export default async function ReportsPage({
   const { data, error } = await allRows(supabase
     .from("orders")
     .select(
-      `order_status, order_date, discount, shipping_price,
+      `order_status, order_date, discount, shipping_price, refunded_amount, refunded_at,
        customers(full_name, address),
-       order_items(quantity, sale_price_at_order, cost_price_at_order,
+       order_items(quantity, sale_price_at_order, cost_price_at_order, returned_quantity, returned_condition,
          product_variants(variant_name, products(name, name_ar)))`
     )
     .eq("archived", false)
@@ -91,22 +96,19 @@ export default async function ReportsPage({
     return {
       orderStatus: o.order_status,
       orderDate: o.order_date,
-      total:
-        items.reduce(
-          (s, i) => s + Number(i.quantity) * Number(i.sale_price_at_order),
-          0
-        ) -
-        Number(o.discount ?? 0) +
-        Number(o.shipping_price ?? 0),
+      // ⚠️ الريفند بيتطرح — الراجع بعد التسليم بيتحسب بالصافي (ب)
+      total: orderNetTotal({ ...o, order_items: items }),
       // ⚠️ **التكلفة وقت الأوردر** — تغيير التكلفة النهاردة مايغيّرش أرباح
       // الشهر اللي فات
-      profit: items.reduce(
-        (s, i) =>
-          s +
-          Number(i.quantity) *
-            (Number(i.sale_price_at_order) - Number(i.cost_price_at_order)),
-        0
-      ),
+      // والبضاعة اللي رجعت الرف تكلفتها مابتتحسبش
+      profit:
+        items.reduce(
+          (s, i) =>
+            s +
+            Number(i.quantity) * Number(i.sale_price_at_order) -
+            itemCost(o, i),
+          0
+        ) - orderRefund(o),
       area: areaOf(o.customers?.address),
       customerName: o.customers?.full_name ?? null,
       products: items

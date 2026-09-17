@@ -71,6 +71,20 @@ describe("بناء التقرير", () => {
     expect(r.used).toBe(1);
   });
 
+  it("⚠️ المرتجع قبل التسليم مش بيعة · الراجع بعد التسليم بيعة", () => {
+    const r = buildReport(
+      [o(), o({ orderStatus: "returned" }), o({ orderStatus: "returned_after_delivery" })],
+      spec()
+    );
+    expect(r.used).toBe(2);
+    // بس بيتعد في المرتجعات
+    const back = buildReport(
+      [o(), o({ orderStatus: "returned" })],
+      spec({ measure: "returns" })
+    );
+    expect(back.total).toBe(1);
+  });
+
   it("⚠️ الملغي بيبان لما التقسيم بالحالة نفسها", () => {
     const r = buildReport(
       [o(), o({ orderStatus: "cancelled" })],

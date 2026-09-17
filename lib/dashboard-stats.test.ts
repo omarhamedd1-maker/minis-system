@@ -150,7 +150,7 @@ describe("الإجمالي بالملغي والمرتجع", () => {
   const empty = { amount: 0 };
   const day = "2026-08-24";
 
-  it("المبيعات بتقفّي الملغي والمرتجع — والإجمالي بيشملهم كلهم", () => {
+  it("المبيعات بتقفّي الملغي والمرتجع قبل التسليم — والإجمالي بيشملهم كلهم", () => {
     const h = computeHeadline(
       [
         order({ order_items: [item(1, 1000)] }),
@@ -168,11 +168,11 @@ describe("الإجمالي بالملغي والمرتجع", () => {
       day,
       day
     );
-    // المبيعات = المتسلم بس
-    expect(h.sales).toBe(1000);
+    // المبيعات = المتسلم + اللي رجع بعد التسليم (ب) — مفيش ريفند متسجّل
+    expect(h.sales).toBe(1200);
     // الإجمالي = كل حاجة حركت في الفترة: 1000 + 500 + 300 + 200
     expect(h.grossSales).toBe(2000);
-    expect(h.orderCount).toBe(1);
+    expect(h.orderCount).toBe(2);
   });
 
   it("الفرق بين الإجمالي والمبيعات = قيمة اللي اتلغى ورجع بالظبط", () => {
@@ -215,5 +215,91 @@ describe("الإجمالي بالملغي والمرتجع", () => {
     );
     expect(h.sales).toBe(300);
     expect(h.grossSales).toBe(300);
+  });
+});
+
+describe("الراجع بعد التسليم — (ب)", () => {
+  const order = (over: Partial<StatOrder> = {}): StatOrder => ({
+    order_status: "returned_after_delivery",
+    order_date: "2026-09-17T10:00:00Z",
+    delivered_at: null,
+    discount: 0,
+    shipping_price: 60,
+    bosta_shipping_cost: null,
+    bosta_fees_real: null,
+    bosta_cod: null,
+    bosta_collected: null,
+    order_items: [],
+    ...over,
+  });
+  const day = "2026-09-17";
+  const head = (o: StatOrder, expenses = [{ amount: 0 }]) =>
+    computeHeadline([o], expenses, day, day);
+
+  it("⚠️ البيعة بتتحسب والريفند بيتطرح — مش الاتنين بيتشالوا", () => {
+    const h = head(
+      order({
+        refunded_amount: 500,
+        order_items: [
+          { quantity: 2, sale_price_at_order: 500, cost_price_at_order: 200, returned_quantity: 1, returned_condition: "restocked" },
+        ],
+      })
+    );
+    // ١٠٠٠ + شحن ٦٠ − ريفند ٥٠٠
+    expect(h.sales).toBe(560);
+    // ١٠٠٠ − تكلفة القطعة اللي فضلت عند العميل (٢٠٠) − الريفند
+    expect(h.profit).toBe(300);
+  });
+
+  it("التالف تكلفته بتفضل — خسارة فعلية", () => {
+    const h = head(
+      order({
+        refunded_amount: 500,
+        order_items: [
+          { quantity: 2, sale_price_at_order: 500, cost_price_at_order: 200, returned_quantity: 1, returned_condition: "damaged" },
+        ],
+      })
+    );
+    expect(h.profit).toBe(100);
+  });
+
+  it("رجع كله سليم وريفند كامل = ربح صفر", () => {
+    const h = head(
+      order({
+        shipping_price: 0,
+        refunded_amount: 1000,
+        order_items: [
+          { quantity: 2, sale_price_at_order: 500, cost_price_at_order: 200, returned_quantity: 2, returned_condition: "restocked" },
+        ],
+      })
+    );
+    expect(h.sales).toBe(0);
+    expect(h.profit).toBe(0);
+  });
+
+  it("القديم: مفيش كميات ولا ريفند على الأوردر — الريفند في «مرتجعات»", () => {
+    const h = head(
+      order({
+        shipping_price: 0,
+        order_items: [{ quantity: 1, sale_price_at_order: 700, cost_price_at_order: 250 }],
+      }),
+      [{ amount: 700, category: "مرتجعات" } as never]
+    );
+    expect(h.sales).toBe(700);
+    // ٧٠٠ − ٢٥٠ − ٧٠٠: الريفند اتطرح مرة واحدة والتكلفة فضلت (البضاعة ماتسجّلتش راجعة)
+    expect(h.netProfit).toBe(-250);
+  });
+
+  it("الريفند مايأثرش على أوردر حالته مش «رجع بعد التسليم»", () => {
+    const h = head(
+      order({
+        order_status: "delivered",
+        shipping_price: 0,
+        refunded_amount: 300,
+        order_items: [{ quantity: 1, sale_price_at_order: 700, cost_price_at_order: 250, returned_quantity: 1 }],
+      })
+    );
+    expect(h.sales).toBe(700);
+    expect(h.profit).toBe(450);
   });
 });

@@ -196,11 +196,10 @@ export const COMMENT_DOT_STATUSES = ["new", "confirmed", "packed", "ready"];
 export const CUSTOMER_PAID_STATUSES = ["delivered", "returned_after_delivery"];
 
 // الحالات اللي معناها الأوردر مش بيتحسب في المبيعات/الأرباح
-export const EXCLUDED_STATUSES = [
-  "cancelled",
-  "returned",
-  "returned_after_delivery",
-];
+//
+// ⚠️ **«رجع بعد التسليم» مش منهم** — البيعة اتعملت، فبتتحسب والريفند
+// بيتطرح منها (`orderRefund` في `lib/returned-items.ts` · قرار (ب)).
+export const EXCLUDED_STATUSES = ["cancelled", "returned"];
 
 // باقات بوسطة التقديرية (`BUNDLE_COVERS` · `BOSTA_BUNDLES` ·
 // `bundlePerOrder` · `DEFAULT_BUNDLE`) اتمسحت ٢٤ أغسطس — ميتة من ٦ أغسطس
@@ -216,7 +215,7 @@ export const EXPENSE_CATEGORIES = [
   "تصنيع وخامات",
   "مواصلات",
   "اشتراكات",
-  "مرتجعات",
+  // «مرتجعات» اتقفلت — الريفند بقى على الأوردر (`CLOSED_CATEGORIES`)
   // ⚠️ التلاتة دول مابيدخلوش حساب الربح — lib/profit-exclusions.ts
   "باقة بوسطة",
   "سحوبات",
