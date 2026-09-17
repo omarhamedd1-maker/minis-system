@@ -14,6 +14,12 @@ import { loadTenantCredentials } from "./tenant-settings";
 import { staleBeforeShipping, STALE_AFTER_DAYS } from "./stale-orders";
 import { stockRunway, runningOut, WINDOW_DAYS } from "./stock-runway";
 import { allRows } from "./fetch-all-pages";
+import {
+  duplicateExpenses,
+  unusualMoves,
+  UNUSUAL,
+  type AlertExpense,
+} from "./money-alerts";
 
 export type NoticeLevel = "danger" | "warn" | "info";
 
@@ -375,6 +381,90 @@ export async function collectNotices(
         count: low.length,
         detail: `${low[0].name}: فاضل ${low[0].onHand} — تكفي ${low[0].daysLeft} يوم`,
         href: "/products",
+      });
+    }
+  } catch {
+    // الإشعار بس هو اللي مايبانش
+  }
+
+  // ٦) فلوس شاذة (MONEY ٤.٩ · ٦.٧) — مصروف متسجّل مرتين · حركة أكبر من المعتاد
+  //
+  // ⚠️ **القواعد اتقاست على البيانات قبل ما تتكتب** (`lib/money-alerts.ts`) —
+  // تنبيه بيرن كل أسبوع بيتتشاف ضوضاء.
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const since = new Date(Date.now() - (UNUSUAL.lookbackDays + 10) * 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const [expRes, cashRes] = await Promise.all([
+      allRows(db
+        .from("expenses")
+        .select("id, category, amount, expense_date, description")
+        .eq("tenant_id", tenantId)
+        .gte("expense_date", since)),
+      allRows(db
+        .from("cash_transactions")
+        .select("id, direction, amount, transaction_date, description")
+        .eq("tenant_id", tenantId)
+        .eq("source_type", "manual")
+        .gte("transaction_date", since)),
+    ]);
+    const expenses = (expRes.data ?? []) as AlertExpense[];
+
+    const dups = duplicateExpenses(expenses, today);
+    if (dups.length > 0) {
+      const p = dups[0];
+      const when = (d: string) => Number(d.slice(8, 10));
+      notices.push({
+        id: "expense-duplicate",
+        level: "warn",
+        title: "مصروف متسجّل مرتين؟",
+        count: dups.length,
+        detail: `${p.first.description || p.first.category} · ${Number(p.first.amount).toLocaleString("en-EG")} جنيه — ${p.first.expense_date.slice(0, 10) === p.second.expense_date.slice(0, 10) ? `مرتين يوم ${when(p.first.expense_date)}` : `يوم ${when(p.first.expense_date)} و${when(p.second.expense_date)}`}`,
+        href: `/cash?tab=expenses&cat=${encodeURIComponent(p.first.category)}`,
+      });
+    }
+
+    const manual = (
+      (cashRes.data ?? []) as {
+        id: string;
+        direction: string;
+        amount: number;
+        transaction_date: string;
+        description: string | null;
+      }[]
+    ).map((c) => ({
+      id: c.id,
+      kind: c.direction === "in" ? "إيداع يدوي" : "سحب يدوي",
+      amount: Number(c.amount),
+      date: c.transaction_date,
+      label: c.description || (c.direction === "in" ? "إيداع يدوي" : "سحب يدوي"),
+    }));
+    const moves = unusualMoves(
+      [
+        ...expenses.map((x) => ({
+          id: x.id,
+          kind: x.category,
+          amount: Number(x.amount),
+          date: x.expense_date,
+          label: x.description || x.category,
+        })),
+        ...manual,
+      ],
+      today
+    );
+    if (moves.length > 0) {
+      const m = moves[0];
+      const isManual = manual.some((x) => x.id === m.id);
+      notices.push({
+        id: "money-unusual",
+        level: "warn",
+        title: "حركة أكبر من المعتاد",
+        count: moves.length,
+        detail: `${m.kind}: ${m.label} · ${m.amount.toLocaleString("en-EG")} جنيه — أكبر حركة قبلها ${m.previousMax.toLocaleString("en-EG")}`,
+        href: isManual
+          ? "/cash?tab=moves"
+          : `/cash?tab=expenses&cat=${encodeURIComponent(m.kind)}`,
       });
     }
   } catch {
