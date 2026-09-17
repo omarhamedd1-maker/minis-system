@@ -15,6 +15,7 @@ import {
   formatDate,
   formatMoney,
   lastMove,
+  lastMoveIsOrderDay,
   orderStatusBadge,
   orderStatusClass,
 } from "@/lib/format";
@@ -70,6 +71,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { approveDeletion, rejectDeletion } from "./[id]/actions";
 import { allRows } from "@/lib/fetch-all-pages";
 import { ORDER_TABS, resolveOrderTab } from "@/lib/order-tabs";
+import { isStuckShipment } from "@/lib/daily-board";
 
 type OrderRow = {
   id: string;
@@ -535,8 +537,13 @@ export default async function OrdersPage({
                   key={order.id}
                   orderId={order.id}
                   hasAwb={Boolean(order.bosta_tracking)}
+                  stuck={isStuckShipment(
+                    { orderStatus: order.order_status, bostaCreatedAt: order.bosta_created_at },
+                    new Date(nowMs)
+                  )}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  {/* ارتفاع ثابت للسطر: المنسدلة أطول من الشارة، والكروت لازم تتساوى (ORDERS §٢هـ) */}
+                  <div className="flex min-h-9 items-center justify-between gap-2">
                     <div className="min-w-0 text-base font-bold text-ink">
                       {order.customers?.full_name ?? "بدون اسم"}
                     </div>
@@ -568,12 +575,18 @@ export default async function OrdersPage({
                       </span>
                     </span>
                     <span>القطع: {pieces}</span>
-                    <span className="flex items-center gap-1">
-                      آخر حركة:
-                      <span className={lastMove(order).className}>
-                        {lastMove(order).label}
+                    {/* نفس يوم الأوردر = السطر مالوش لازمة. المكان بيفضل عشان
+                        الكروت كلها بنفس الارتفاع (ORDERS §٢ب · §٢هـ) */}
+                    {lastMoveIsOrderDay(order) ? (
+                      <span aria-hidden />
+                    ) : (
+                      <span className="flex items-center gap-1">
+                        آخر حركة:
+                        <span className={lastMove(order).className}>
+                          {lastMove(order).label}
+                        </span>
                       </span>
-                    </span>
+                    )}
                   </div>
 
                   <div className="mt-2 flex items-center gap-3 border-t border-line pt-2">
@@ -584,7 +597,7 @@ export default async function OrdersPage({
                         target="_blank"
                         rel="noopener noreferrer"
                         title="واتساب العميل"
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-success"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted hover:bg-success-soft hover:text-success active:bg-success-soft active:text-success"
                       >
                         <svg
                           viewBox="0 0 448 512"
@@ -783,7 +796,7 @@ export default async function OrdersPage({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="واتساب العميل"
-                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success-soft text-success hover:bg-success-line"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted hover:bg-success-soft hover:text-success"
                           >
                             <svg
                               viewBox="0 0 448 512"
