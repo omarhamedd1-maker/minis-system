@@ -11,6 +11,7 @@ import { PeriodFilter } from "@/components/PeriodFilter";
 import { resolvePeriod } from "@/lib/periods";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
+import { loadHeadline } from "@/lib/profit-headline";
 import { itemCost, itemKept, orderRefund } from "@/lib/returned-items";
 import { countsInProfit } from "@/lib/profit-exclusions";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
@@ -116,7 +117,7 @@ export default async function StatsPage({
 }: {
   searchParams: Promise<{ period?: string; from?: string; to?: string }>;
 }) {
-  await requirePagePermission("finance.dashboard");
+  const user = await requirePagePermission("finance.dashboard");
   const query = await searchParams;
 
   // اليوم الحالي بتوقيت مصر مش بتوقيت السيرفر
@@ -201,8 +202,14 @@ export default async function StatsPage({
       !EXCLUDED.includes(o.order_status ?? "")
   );
 
-  // أرقام الكروت المالية (أول تحميل) — بتتحدّث لايف في العميل
-  const headline = computeHeadline(
+  // أرقام الكروت المالية (أول تحميل) — بتتحدّث لايف في العميل.
+  // ⚠️ **من دالة الداتابيز** (`sql/profit-headline.sql`) — نفس اللي الكروت
+  // اللايف بتناديها، فالرقم مايتغيّرش لوحده بعد ٢٠ ثانية. اتقارنت بالكود على
+  // ١٣ فترة × ٣ بيزنسات قبل التوصيل (١٧ سبتمبر) — مطابقة في الـ١٢ رقم.
+  // الحسبة في الكود بتفضل للرجوع لو الدالة مش موجودة.
+  const headline =
+    (await loadHeadline(supabase, user.tenantId, periodStart, periodEnd)) ??
+    computeHeadline(
     allOrders,
     // ⚠️ الكروت على الفترة المختارة، والمصاريف اتجابت أوسع عشان الجدول
     // الشهري — فبنفلترها هنا
@@ -590,6 +597,7 @@ export default async function StatsPage({
         </div>
         <LiveMoneyCards
           initial={headline}
+          tenantId={user.tenantId}
           period={range.key === "custom" ? undefined : range.key}
           from={range.from}
           to={range.to}
