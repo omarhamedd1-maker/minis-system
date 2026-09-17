@@ -1230,10 +1230,15 @@ export default async function OrderDetailsPage({
           )}
         </div>
 
-        {/* المرتجع — بيظهر بس لو الأوردر اتسلّم فعلاً */}
+        {/*
+          المرتجع — بيظهر بس لو الأوردر اتسلّم فعلاً.
+          ⚠️ بصلاحية «تغيير حالة الأوردر» مش أدمن (قرار ١٧ سبتمبر): اللي بيستلم
+          المرتجع هو اللي شايف البضاعة سليمة ولا تالفة — لو التسجيل للأدمن بس،
+          الخطوة مابتتعملش. تأكيد تحويل الفلوس كارت لوحده بصلاحيته.
+        */}
         {(order.order_status === "delivered" ||
           order.order_status === "returned_after_delivery") &&
-          isAdmin && (
+          canStatus && (
             <ReturnPanel
               orderId={order.id}
               returnTracking={order.return_tracking}
