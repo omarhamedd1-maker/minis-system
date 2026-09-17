@@ -523,7 +523,8 @@ export default async function OrdersPage({
             {orderDays.map((d) => (
               <section key={d.day || "بدون تاريخ"} className={dayHasHeader(d) ? "pt-2" : ""}>
                 {dayHasHeader(d) && (
-                  <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
+                  // الفاصل بيلزق جوّه مجموعته (ORDERS §٣) — تحت شريط الفلاتر
+                  <div className="sticky top-[6.5rem] z-10 mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 rounded-control bg-canvas py-1 text-xs">
                     <span className="font-bold text-ink">
                       {d.day ? formatDate(d.day) : "من غير تاريخ"}
                       {d.partial && (
@@ -691,9 +692,10 @@ export default async function OrdersPage({
           </div>
 
           {/* ===== كمبيوتر: جدول ===== */}
-          <div className="hidden overflow-x-auto rounded-card bg-surface shadow-card md:block">
+          <div className="hidden overflow-x-auto rounded-card bg-surface shadow-card md:block md:overflow-x-visible">
           <table className="w-full text-sm">
-            <thead>
+            {/* راس الجدول بيلزق في الديسكتوب — العمود بيضيع في قايمة طويلة */}
+            <thead className="sticky top-0 z-10 bg-surface">
               <tr className="border-b border-line text-right text-ink-muted">
                 <th className="px-4 py-3 font-medium">
                   <SelectAllCheckbox />
