@@ -69,6 +69,7 @@ import { loadStoredTemplates } from "@/lib/message-templates-db";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { approveDeletion, rejectDeletion } from "./[id]/actions";
 import { allRows } from "@/lib/fetch-all-pages";
+import { ORDER_TABS, resolveOrderTab } from "@/lib/order-tabs";
 
 type OrderRow = {
   id: string;
@@ -103,6 +104,8 @@ export default async function OrdersPage({
 }: {
   searchParams: Promise<{
     status?: string;
+    /** التبويب: work · transit · done — والفاضي = الكل (`lib/order-tabs.ts`) */
+    tab?: string;
     deleted?: string;
     archived?: string;
     saved?: string;
@@ -118,6 +121,7 @@ export default async function OrdersPage({
 }) {
   const {
     status,
+    tab: rawTab,
     deleted,
     archived,
     saved,
@@ -138,6 +142,9 @@ export default async function OrdersPage({
     .map((s) => s.trim())
     .filter(Boolean);
   const showArchived = archived === "1";
+  // الأرشيف مالوش تبويب — بيتفتح من المنسدلة
+  const tab = resolveOrderTab(showArchived ? undefined : rawTab, showArchived ? undefined : status);
+  const tabParam = tab.key === "all" ? undefined : tab.key;
   const searchTerm = (q ?? "").trim();
   // ⚠️ **الفترة من `lib/periods`** — مصدر واحد لكل الصفحات (المرحلة ٢).
   // الافتراضي هنا «كل الوقت» زي ما كان: تغييره بيخفي الأوردرات الأقدم من العرض
@@ -160,6 +167,7 @@ export default async function OrdersPage({
   const returnParams = new URLSearchParams();
   if (showArchived) returnParams.set("archived", "1");
   else if (status) returnParams.set("status", status);
+  else if (tabParam) returnParams.set("tab", tabParam);
   for (const [k, v] of Object.entries(periodParams)) returnParams.set(k, v);
   const returnTo = `/orders${returnParams.toString() ? `?${returnParams}` : ""}`;
   // بيبني لينك للأوردرات مع الحفاظ على فلتر الوقت
@@ -176,13 +184,17 @@ export default async function OrdersPage({
   // شرايح الفلاتر المفعّلة — قاعدة ٨ في DESIGN.md
   const filterChips: { label: string; removeHref: string }[] = [];
   if (status) {
-    filterChips.push({ label: orderStatusBadge(status).label, removeHref: periodQS("") });
+    filterChips.push({
+      label: orderStatusBadge(status).label,
+      removeHref: periodQS(tabParam ? `tab=${tabParam}` : ""),
+    });
   }
   if (showArchived) filterChips.push({ label: "الأرشيف", removeHref: periodQS("") });
   if (searchTerm) {
     const p = new URLSearchParams();
     if (showArchived) p.set("archived", "1");
     else if (status) p.set("status", status);
+    else if (tabParam) p.set("tab", tabParam);
     for (const [k, v] of Object.entries(periodParams)) p.set(k, v);
     filterChips.push({
       label: `بحث: ${searchTerm}`,
@@ -251,6 +263,8 @@ export default async function OrdersPage({
   } else {
     if (status) {
       query = query.eq("order_status", status);
+    } else if (!showArchived && tab.statuses.length > 0) {
+      query = query.in("order_status", tab.statuses);
     }
     if (periodStart) {
       query = query.gte("order_date", periodStart);
@@ -258,6 +272,25 @@ export default async function OrdersPage({
     if (periodEnd) {
       query = query.lte("order_date", periodEnd);
     }
+  }
+
+  // عدد كل تبويب بنفس الفترة — عدّ من الداتابيز مش صفوف (`head: true`)
+  const tabCounts = new Map<string, number>();
+  if (!showArchived && onlyIds.length === 0) {
+    const counted = await Promise.all(
+      ORDER_TABS.map(async (t) => {
+        let c = supabase
+          .from("orders")
+          .select("id", { count: "exact", head: true })
+          .eq("archived", false);
+        if (t.statuses.length > 0) c = c.in("order_status", t.statuses);
+        if (periodStart) c = c.gte("order_date", periodStart);
+        if (periodEnd) c = c.lte("order_date", periodEnd);
+        const { count } = await c;
+        return [t.key, count ?? 0] as const;
+      })
+    );
+    for (const [k, v] of counted) tabCounts.set(k, v);
   }
 
   const { data: fetchedOrders, error } = await query
@@ -386,6 +419,40 @@ export default async function OrdersPage({
         </div>
       )}
 
+      {/*
+        ٤ تبويبات بدل ١٢ شريحة (ORDERS-PAGE-REDESIGN §١). العدد على الفترة
+        المختارة. والحالة بعينها في المنسدلة تحت — مقصورة على التبويب.
+      */}
+      {!showArchived && onlyIds.length === 0 && (
+        <nav
+          aria-label="تبويبات الأوردرات"
+          className="-mx-4 mb-3 flex gap-1 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0"
+        >
+          {ORDER_TABS.map((t) => {
+            const active = t.key === tab.key;
+            return (
+              <Link
+                key={t.key}
+                href={periodQS(t.key === "all" ? "" : `tab=${t.key}`)}
+                aria-current={active ? "page" : undefined}
+                className={`-mb-px flex min-h-11 flex-1 shrink-0 items-center justify-center gap-1 whitespace-nowrap border-b-2 px-1.5 text-sm sm:flex-none sm:gap-1.5 sm:px-3 ${
+                  active
+                    ? "border-primary font-bold text-ink"
+                    : "border-transparent text-ink-muted hover:text-ink"
+                }`}
+              >
+                {t.label}
+                {tabCounts.has(t.key) && (
+                  <span className="text-xs tabular-nums text-ink-faint">
+                    {tabCounts.get(t.key)}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+      )}
+
       {/* شريط الفلاتر الموحّد: بحث · فترة · حالة · مسح — وتحته شرايح المفعّل */}
       <FilterBar
         chips={filterChips}
@@ -395,6 +462,7 @@ export default async function OrdersPage({
           basePath="/orders"
           query={{
             status: showArchived ? undefined : status,
+            tab: showArchived || status ? undefined : tabParam,
             archived: showArchived ? "1" : undefined,
             q: searchTerm || undefined,
           }}
@@ -406,12 +474,15 @@ export default async function OrdersPage({
           name="status"
           value={showArchived ? "__archived__" : status}
           options={[
-            ...ORDER_STATUS_OPTIONS,
+            // مقصورة على حالات التبويب المفتوح
+            ...ORDER_STATUS_OPTIONS.filter(
+              (o) => tab.statuses.length === 0 || tab.statuses.includes(o.value)
+            ),
             { value: "__archived__", label: "الأرشيف", params: { archived: "1" } },
           ]}
-          allLabel="كل الحالات"
+          allLabel={tab.key === "all" ? "كل الحالات" : `كل «${tab.label}»`}
           basePath="/orders"
-          query={{ q: searchTerm || undefined, ...periodParams }}
+          query={{ q: searchTerm || undefined, tab: tabParam, ...periodParams }}
           resetKeys={["show"]}
           label="حالة الأوردر"
         />
