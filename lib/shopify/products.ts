@@ -17,6 +17,7 @@ import {
   type ImportPlan,
   type ShopifyProductIn,
 } from "./product-import-plan";
+import { allRows } from "../fetch-all-pages";
 
 export * from "./product-import-plan";
 
@@ -145,7 +146,7 @@ export async function runProductImport(opts: {
   const [{ data: ourProducts }, { data: ourVariants }] = await Promise.all([
     // ⚠️ **الفلتر لازم**: من غيره المقارنة بتتم على منتجات كل البيزنسات،
     // فمنتج العميل الجديد بيتخطّى «لأنه موجود» وهو موجود عند حد تاني.
-    db
+    allRows(db
       .from("products")
       .select("id, shopify_product_id, name_ar, name")
       .eq("tenant_id", tenantId)
@@ -156,8 +157,8 @@ export async function runProductImport(opts: {
           name_ar: string | null;
           name: string | null;
         }[]
-      >(),
-    db
+      >()),
+    allRows(db
       .from("product_variants")
       .select("id, product_id, shopify_variant_id, variant_name, sale_price, cost_price")
       .eq("tenant_id", tenantId)
@@ -170,7 +171,7 @@ export async function runProductImport(opts: {
           sale_price: number;
           cost_price: number;
         }[]
-      >(),
+      >()),
   ]);
 
   const plan = planProductImport(

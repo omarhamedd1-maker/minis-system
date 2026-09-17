@@ -44,7 +44,7 @@ export async function linkMissingShipments(
   // دي مش بتعرض بس — بتربط الأوردر بشحنة من **حساب بوسطة بتاع اللي فاتح
   // الشاشة**. يعني مستخدم بيزنس كان يقدر يربط أوردر بيزنس تاني بشحنته هو،
   // ويجرّ عليه رسومه وتحصيله.
-  const { data: rows, error } = await db
+  const { data: rows, error } = await allRows(db
     .from("orders")
     .select("id, order_number, order_status, customers(full_name)")
     .eq("tenant_id", me.tenantId)
@@ -57,7 +57,7 @@ export async function linkMissingShipments(
         order_status: string | null;
         customers: { full_name: string | null } | null;
       }[]
-    >();
+    >());
 
   if (error) {
     return { ok: false, error: "معرفناش نقرا الأوردرات: " + error.message };
@@ -71,12 +71,12 @@ export async function linkMissingShipments(
   }
 
   // أرقام التتبع المستخدمة خلاص — منلزقهاش مرتين
-  const { data: taken } = await db
+  const { data: taken } = await allRows(db
     .from("orders")
     .select("bosta_tracking")
     .eq("tenant_id", me.tenantId)
     .not("bosta_tracking", "is", null)
-    .overrideTypes<{ bosta_tracking: string }[]>();
+    .overrideTypes<{ bosta_tracking: string }[]>());
 
   let deliveries;
   try {

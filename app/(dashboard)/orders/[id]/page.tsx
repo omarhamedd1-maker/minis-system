@@ -73,6 +73,7 @@ import {
   restockReturn,
   resyncFromShopify,
 } from "./actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 // وقت النداء — بره الرندر عشان الرندر يبقى نقي
 function currentMs() {
@@ -200,7 +201,7 @@ export default async function OrderDetailsPage({
 
   // قايمة المنتجات لفورم إضافة منتج (لمن يقدر يعدّل البنود)
   const { data: variantsData } = canItems
-    ? await supabase
+    ? await allRows(supabase
         .from("product_variants")
         .select("id, variant_name, sku, sale_price, products(name, name_ar)")
         .overrideTypes<
@@ -211,7 +212,7 @@ export default async function OrderDetailsPage({
             sale_price: number;
             products: { name: string | null; name_ar: string | null } | null;
           }[]
-        >()
+        >())
     : { data: [] };
   const variants = (variantsData ?? [])
     .map((v) => ({

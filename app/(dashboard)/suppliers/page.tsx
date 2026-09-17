@@ -6,6 +6,7 @@ import { can, requirePagePermission } from "@/lib/permissions";
 import { addSupplier } from "./actions";
 import { ShowMore } from "@/components/ShowMore";
 import { resolveShowCount } from "@/lib/show-more";
+import { allRows } from "@/lib/fetch-all-pages";
 
 type Supplier = {
   id: string;
@@ -25,13 +26,13 @@ export default async function SuppliersPage({
   const canEdit = can(user, "suppliers.edit");
   const admin = createAdminClient();
 
-  const { data, error } = await admin
+  const { data, error } = await allRows(admin
     .from("suppliers")
     .select("id, name, phone, notes, supplier_transactions(kind, amount)")
     // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
     .eq("tenant_id", user.tenantId)
     .order("name")
-    .overrideTypes<Supplier[]>();
+    .overrideTypes<Supplier[]>());
 
   // الجداول لسه ماتعملتش في الداتابيز
   if (error) {

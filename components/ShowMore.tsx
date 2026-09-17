@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SHOW_STEP } from "@/lib/show-more";
+import { SHOW_MAX, SHOW_STEP } from "@/lib/show-more";
 
 /**
  * زرار «عرض المزيد» — مكوّن واحد لكل القوايم.
@@ -24,6 +24,14 @@ export function ShowMore({
   step?: number;
 }) {
   if (total !== undefined && shown >= total) return null;
+  // ⚠️ فوق الألف مابنقدرش نعرض أكتر في صفحة واحدة — بنقول كده بدل زرار مابيعملش حاجة
+  if (shown >= SHOW_MAX) {
+    return (
+      <p className="mt-4 text-center text-xs text-ink-muted">
+        دي أول {SHOW_MAX.toLocaleString("en-EG")} — ضيّق بالفلاتر عشان تشوف الباقي
+      </p>
+    );
+  }
 
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) if (v) params.set(k, v);

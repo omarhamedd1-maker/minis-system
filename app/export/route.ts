@@ -19,7 +19,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cairoToday, orderStatusBadge } from "@/lib/format";
 import { can, getSessionUser } from "@/lib/permissions";
-import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { allRows, fetchAllPages } from "@/lib/fetch-all-pages";
 import { csvResponse, csvText } from "@/lib/csv";
 import { resolvePeriod } from "@/lib/periods";
 import { cashRowLabel, type CashLabelRow } from "@/lib/cash-label";
@@ -162,11 +162,11 @@ export async function GET(request: Request) {
         return q.range(from, to).overrideTypes<ExpenseRow[]>();
       });
       // أسماء الموردين بمفتاح الأدمن — الجدول مقفول في الـRLS (زي تاب المصاريف)
-      const { data: suppliers } = await createAdminClient()
+      const { data: suppliers } = await allRows(createAdminClient()
         .from("suppliers")
         .select("id, name")
         // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
-        .eq("tenant_id", me!.tenantId);
+        .eq("tenant_id", me!.tenantId));
       const supplierName = new Map((suppliers ?? []).map((x) => [x.id, x.name]));
       const total = data.reduce((s, e) => s + Number(e.amount), 0);
       return csvResponse(

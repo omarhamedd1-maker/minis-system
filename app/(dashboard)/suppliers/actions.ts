@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { cairoToday } from "@/lib/format";
 import { auditFields, cashIdsFor, reverseCashRows } from "@/lib/cash-reversal";
+import { allRows } from "@/lib/fetch-all-pages";
 
 // الحسبة زي ما عمر حددها (شغل بالأجل — بياخد البضاعة ويحاسب بعدين):
 //   الفاتورة (purchase)  = بضاعة استلمتها ولسه ما دفعتهاش → بتزوّد اللي عليك
@@ -148,11 +149,11 @@ export async function deleteSupplier(formData: FormData) {
   const admin = createAdminClient();
 
   // بنشيل حركات الخزنة المربوطة بدفعات المورد الأول
-  const { data: txns } = await admin
+  const { data: txns } = await allRows(admin
     .from("supplier_transactions")
     .select("related_cash_id")
     .eq("supplier_id", id)
-    .overrideTypes<{ related_cash_id: string | null }[]>();
+    .overrideTypes<{ related_cash_id: string | null }[]>());
 
   const cashIds = (txns ?? [])
     .map((t) => t.related_cash_id)

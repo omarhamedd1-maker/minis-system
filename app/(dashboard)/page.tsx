@@ -151,7 +151,7 @@ export default async function StatsPage({
         .overrideTypes<
           { category: string; amount: number; expense_date: string }[]
         >()),
-      supabase
+      allRows(supabase
         .from("product_variants")
         .select("id, variant_name, cost_price, sale_price, quantity_on_hand, products(name)")
         .overrideTypes<
@@ -163,7 +163,7 @@ export default async function StatsPage({
             quantity_on_hand: number;
             products: { name: string | null } | null;
           }[]
-        >(),
+        >()),
     ]);
 
   if (ordersResult.error || expensesResult.error || variantsResult.error) {

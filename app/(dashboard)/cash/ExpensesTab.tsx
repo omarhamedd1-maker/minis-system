@@ -126,13 +126,13 @@ export async function ExpensesTab({
   );
 
   // أسماء الموردين بتتقري بمفتاح الأدمن (جدول الموردين مقفول في الـRLS)
-  const { data: supplierRows } = await createAdminClient()
+  const { data: supplierRows } = await allRows(createAdminClient()
     .from("suppliers")
     .select("id, name")
     // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد المنع
     .eq("tenant_id", user.tenantId)
     .order("name")
-    .overrideTypes<{ id: string; name: string }[]>();
+    .overrideTypes<{ id: string; name: string }[]>());
   const suppliers = supplierRows ?? [];
   const supplierName = new Map(suppliers.map((s) => [s.id, s.name]));
 

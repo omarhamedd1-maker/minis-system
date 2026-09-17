@@ -12,6 +12,7 @@
 // ==========================================================================
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { allRows } from "./fetch-all-pages";
 
 export type ImportKind = "products" | "orders" | "shipments" | "costs";
 
@@ -199,12 +200,12 @@ export async function undoImportRun(
   // ٣) الأشكال قبل المنتجات
   const variantIds = [...(p.variants ?? [])];
   if (p.products?.length) {
-    const { data: theirVariants } = await db
+    const { data: theirVariants } = await allRows(db
       .from("product_variants")
       .select("id")
       .eq("tenant_id", tenantId)
       .in("product_id", p.products)
-      .overrideTypes<{ id: string }[]>();
+      .overrideTypes<{ id: string }[]>());
     for (const v of theirVariants ?? []) variantIds.push(v.id);
   }
 

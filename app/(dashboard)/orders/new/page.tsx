@@ -4,6 +4,7 @@ import { ProductPicker } from "@/components/ProductPicker";
 import { BackLink } from "@/components/BackLink";
 import { requirePagePermission } from "@/lib/permissions";
 import { createOrder } from "./actions";
+import { allRows } from "@/lib/fetch-all-pages";
 
 const ITEM_ROWS = 5;
 
@@ -37,10 +38,10 @@ export default async function NewOrderPage({
       .order("full_name")
       .limit(500)
       .overrideTypes<CustomerOption[]>(),
-    supabase
+    allRows(supabase
       .from("product_variants")
       .select("id, variant_name, sku, sale_price, products(name, name_ar)")
-      .overrideTypes<VariantOption[]>(),
+      .overrideTypes<VariantOption[]>()),
   ]);
 
   const customers = customersResult.data ?? [];

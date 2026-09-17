@@ -3,6 +3,7 @@ import { PeriodFilter } from "@/components/PeriodFilter";
 import { FilterBar } from "@/components/FilterBar";
 import { FilterSelect } from "@/components/FilterSelect";
 import { ShowMore } from "@/components/ShowMore";
+import { resolveShowCount, SHOW_MAX } from "@/lib/show-more";
 import { resolvePeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -192,11 +193,9 @@ export default async function OrdersPage({
   const hasFilters = Boolean(status || showArchived || searchTerm) || range.key !== "all";
 
   // عدد المعروض: 50 افتراضي، وبيزيد بزرار "عرض المزيد". في البحث بنجيب أكتر
-  const showCount = Math.min(
-    Math.max(Number(show) || 50, 50),
-    5000
-  );
-  const fetchLimit = searchTerm ? 3000 : showCount;
+  // ⚠️ السقف ١٠٠٠ = سقف سوبابيز (NEXT §٣٣) — أكتر من كده كان بيرجع ١٠٠٠ بالصمت
+  const showCount = resolveShowCount(show);
+  const fetchLimit = searchTerm ? SHOW_MAX : showCount;
   const user = await requirePagePermission("orders.view");
   const canCreate = can(user, "orders.create");
   const canStatus = can(user, "orders.status");

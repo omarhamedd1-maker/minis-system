@@ -42,6 +42,7 @@ import {
   unconfirmedGroupMessage,
   unconfirmedMessage,
 } from "../unconfirmed";
+import { allRows } from "../fetch-all-pages";
 
 const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
@@ -283,10 +284,10 @@ export async function runBostaSync(opts: {
   const deliveries = await fetchAllDeliveries(apiKey, fetchImpl);
   summary.fetched = deliveries.length;
 
-  const { data: orders, error } = await db
+  const { data: orders, error } = await allRows(db
     .from("orders")
     .select(ORDER_FIELDS)
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId));
   if (error) throw new Error("معرفناش نقرا الأوردرات: " + error.message);
 
   const rows = (orders ?? []) as unknown as OrderRow[];
@@ -740,14 +741,14 @@ export async function runBostaSync(opts: {
   // وقاية: لو الشحنة قعدت أسبوعين بوسطة بتأرشفها وخلاص مفيش رجعة —
   // فبننبّه بعد ٣ أيام وإنت لسه تقدر تكلّمهم.
   if (!dry) {
-    const { data: waiting } = await db
+    const { data: waiting } = await allRows(db
       .from("orders")
       .select(
         "id, order_number, order_status, bosta_tracking, bosta_created_at, bosta_stale_alerted_day, customers(full_name)"
       )
       .eq("tenant_id", tenantId)
       .eq("archived", false)
-      .not("bosta_created_at", "is", null);
+      .not("bosta_created_at", "is", null));
 
     for (const w of (waiting ?? []) as unknown as {
       id: string;
@@ -798,14 +799,14 @@ export async function runBostaSync(opts: {
     // بوسطة مابتدفعش للعميل — عمر اللي بيحوّله. والحوالة دي مالهاش أثر في
     // السيستم، فبنفضل ننبّه لحد ما يأكّد. تاريخ البداية هو آخر مرة الحالة
     // بقت "مرتجع بعد التسليم" في السجل، وإلا تاريخ التسليم.
-    const { data: owing } = await db
+    const { data: owing } = await allRows(db
       .from("orders")
       .select(
         "id, order_number, order_status, delivered_at, refunded_at, refund_reminded_day, order_items(returned_quantity, sale_price_at_order), customers(full_name, phone)"
       )
       .eq("tenant_id", tenantId)
       .eq("order_status", "returned_after_delivery")
-      .is("refunded_at", null);
+      .is("refunded_at", null));
 
     for (const o of (owing ?? []) as unknown as {
       id: string;
@@ -857,14 +858,14 @@ export async function runBostaSync(opts: {
 
     // ===== أوردرات لسه "جديد" ومحدش أكّدها =====
     // تنبيه **يومي** (مش مراحل) لحد ما تتأكّد. البضاعة محجوزة والعميل مستني.
-    const { data: unconfirmed } = await db
+    const { data: unconfirmed } = await allRows(db
       .from("orders")
       .select(
         "id, order_number, order_status, order_date, new_reminded_day, order_items(quantity, sale_price_at_order), customers(full_name, phone)"
       )
       .eq("tenant_id", tenantId)
       .eq("archived", false)
-      .eq("order_status", "new");
+      .eq("order_status", "new"));
 
     type Unconf = {
       id: string;
