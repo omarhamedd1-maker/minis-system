@@ -116,6 +116,8 @@ type OrderDetails = {
     sale_price_at_order: number;
     cost_price_at_order: number;
     returned_quantity: number | null;
+    /** sql/returns-on-order.sql */
+    returned_condition: "restocked" | "damaged" | null;
     product_variants: {
       variant_name: string | null;
       products: { name: string | null } | null;
@@ -164,7 +166,7 @@ export default async function OrderDetailsPage({
        bosta_created_at, refunded_at, refunded_amount, cash_received_at,
        delivered_at, return_note, return_reason, return_tracking, payment_method, amount_paid,
        customers(id, full_name, phone, address),
-       order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity,
+       order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity, returned_condition,
          product_variants(variant_name, products(name)))`
     )
     .eq("id", id)
@@ -1243,6 +1245,7 @@ export default async function OrderDetailsPage({
                 name: i.product_variants?.products?.name ?? "منتج",
                 quantity: i.quantity,
                 returnedQuantity: i.returned_quantity ?? 0,
+                returnedCondition: i.returned_condition ?? "restocked",
               }))}
             />
           )}
@@ -1390,8 +1393,16 @@ export default async function OrderDetailsPage({
                   حوّله للعميل (إنستا باي أو أونلاين) وبعدين أكّد من هنا —
                   والتنبيهات هتفضل توصلك لحد ما تأكّد.
                 </p>
-                <form action={confirmRefund} className="mt-3 flex items-end gap-2">
+                <form action={confirmRefund} className="mt-3 flex flex-wrap items-end gap-2">
                   <input type="hidden" name="order_id" value={order.id} />
+                  {/*
+                    الأوردرات اللي ريفندها اتسجّل مصروف «مرتجعات» قبل ١٧ سبتمبر —
+                    الفلوس خرجت من الخزنة خلاص، فحركة جديدة كانت هتخصمها مرتين.
+                  */}
+                  <label className="order-last flex w-full items-center gap-2 text-[11px] text-danger">
+                    <input type="checkbox" name="already_in_cash" value="1" />
+                    الفلوس دي متسجّلة في الخزنة قبل كده (مصروف «مرتجعات»)
+                  </label>
                   <div className="flex-1">
                     <label
                       htmlFor="refund_amount"
@@ -1410,7 +1421,7 @@ export default async function OrderDetailsPage({
                     />
                   </div>
                   <ConfirmButton
-                    message="متأكد إنك حوّلت الفلوس للعميل؟"
+                    message="متأكد إنك حوّلت الفلوس للعميل؟ هتتسجّل حركة خارجة من الخزنة بالمبلغ ده."
                     className="shrink-0 rounded-control bg-danger px-4 py-2 text-sm font-medium text-white"
                   >
                     أكّد إني حوّلت

@@ -28,6 +28,7 @@ const SOURCE_LABELS: Record<string, string> = {
   opening: "رصيد افتتاحي",
   // الوصف بيتكتب وقت الإلغاء («إلغاء: …») وبيظهر هو
   reversal: "إلغاء حركة",
+  refund: "ريفند",
 };
 
 export function cashRowLabel(row: CashLabelRow): string {
