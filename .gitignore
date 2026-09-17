@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 tmp-*.mjs
 !.env.example
+
+# ربط سوبابيز المحلي — بيتعمل على كل جهاز (CONTEXT.md)
+supabase/.temp/
