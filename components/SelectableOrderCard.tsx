@@ -12,10 +12,16 @@ const LONG_PRESS_MS = 450;
 export function SelectableOrderCard({
   orderId,
   hasAwb,
+  stuck = false,
   children,
 }: {
   orderId: string;
   hasAwb: boolean;
+  /**
+   * شحنة واقفة (`STUCK_DAYS`) — الخلفية بتتغيّر درجة، من غير أيقونة ولا كلام
+   * (ORDERS §٢د). ⚠️ الكارت مالوش إطار ولا ظل: `surface` على `canvas`.
+   */
+  stuck?: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -103,8 +109,8 @@ export function SelectableOrderCard({
       onPointerCancel={cancel}
       onClick={onClick}
       onContextMenu={(e) => e.preventDefault()}
-      className={`relative cursor-pointer select-none rounded-card p-3 shadow-card transition-colors duration-75 ${
-        pressed ? "bg-line" : "bg-surface"
+      className={`relative cursor-pointer select-none rounded-card p-3 transition-colors duration-75 ${
+        pressed ? "bg-line" : stuck ? "bg-warning-soft/60" : "bg-surface"
       } ${selected ? "ring-2 ring-primary" : ""}`}
     >
       {/* الشيك بوكس المخفي — الشريط بيقرأ منه المحدد */}

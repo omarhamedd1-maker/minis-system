@@ -298,6 +298,26 @@ export function lastMove(
   return { label, className, days };
 }
 
+/**
+ * آخر حركة في نفس يوم الأوردر؟ — الكارت بيشيل السطر وقتها (ORDERS §٢ب):
+ * في أوردر جديد «التاريخ» و«آخر حركة» الاتنين نفس اليوم، فالسطر مالوش لازمة.
+ */
+const cairoDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo" });
+
+export function lastMoveIsOrderDay(order: {
+  order_date?: string | null;
+  created_at?: string | null;
+  bosta_created_at?: string | null;
+  delivered_at?: string | null;
+}): boolean {
+  if (!order.order_date) return false;
+  const stamps = [order.delivered_at, order.bosta_created_at, order.order_date, order.created_at]
+    .map((s) => (s ? new Date(s).getTime() : NaN))
+    .filter((t) => Number.isFinite(t));
+  const day = (t: number) => cairoDate.format(new Date(t));
+  return day(Math.max(...stamps)) === day(new Date(order.order_date).getTime());
+}
+
 /** اسم الحالة بالعربي — الشكل من `orderStatusClass` */
 export function orderStatusBadge(status: string | null): { label: string } {
   if (!status) return { label: "غير محدد" };

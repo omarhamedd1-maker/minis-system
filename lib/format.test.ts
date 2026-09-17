@@ -114,3 +114,14 @@ describe("عزل الإنجليزي جوّه العربي", () => {
     expect(ltr(s).replace(/[⁦⁩]/g, "")).toBe(s);
   });
 });
+
+describe("lastMoveIsOrderDay", () => {
+  it("آخر حركة في يوم الأوردر (بتوقيت مصر) = السطر بيتشال", async () => {
+    const { lastMoveIsOrderDay } = await import("./format");
+    // ٨ بالليل UTC = ١١ بالليل في مصر · و١١ بالليل UTC = ٢ الصبح اليوم اللي بعده
+    expect(lastMoveIsOrderDay({ order_date: "2026-09-16T20:00:00Z", created_at: "2026-09-16T20:30:00Z" })).toBe(true);
+    expect(lastMoveIsOrderDay({ order_date: "2026-09-16T20:00:00Z", bosta_created_at: "2026-09-16T23:00:00Z" })).toBe(false);
+    expect(lastMoveIsOrderDay({ order_date: "2026-09-10T10:00:00Z", delivered_at: "2026-09-12T10:00:00Z" })).toBe(false);
+    expect(lastMoveIsOrderDay({ order_date: null })).toBe(false);
+  });
+});

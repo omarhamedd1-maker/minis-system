@@ -50,7 +50,7 @@ export function SendBostaRowButton({
       onClick={send}
       disabled={sending}
       title="ابعت لبوسطة"
-      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-danger-soft text-[#E30613] hover:bg-danger-line disabled:opacity-50"
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted hover:bg-danger-soft hover:text-[#E30613] disabled:opacity-50"
     >
       {sending ? (
         <span className="text-[10px]">…</span>

@@ -183,3 +183,12 @@ describe("sortByUrgent", () => {
     expect(rows.map((r) => r.key)).toEqual(before);
   });
 });
+
+describe("isStuckShipment", () => {
+  it("نفس تعريف سطر «واقفة» — كارت الأوردر بيسأله", async () => {
+    const { isStuckShipment } = await import("./daily-board");
+    expect(isStuckShipment({ orderStatus: "shipped", bostaCreatedAt: daysAgo(STUCK_DAYS) }, NOW)).toBe(true);
+    expect(isStuckShipment({ orderStatus: "shipped", bostaCreatedAt: daysAgo(STUCK_DAYS - 1) }, NOW)).toBe(false);
+    expect(isStuckShipment({ orderStatus: "delivered", bostaCreatedAt: daysAgo(30) }, NOW)).toBe(false);
+  });
+});

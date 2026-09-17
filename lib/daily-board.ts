@@ -77,6 +77,19 @@ function link(ids: string[], fallback: string): string {
 }
 
 /**
+ * شحنة واقفة: عند بوسطة وعدّى عليها `STUCK_DAYS`. مصدر واحد — لوحة `/work`
+ * وخلفية كارت الأوردر بيسألوا نفس السؤال.
+ */
+export function isStuckShipment(
+  o: Pick<BoardOrder, "orderStatus" | "bostaCreatedAt">,
+  now: Date
+): boolean {
+  if (!["shipped", "out_for_delivery"].includes(String(o.orderStatus))) return false;
+  const d = daysSince(o.bostaCreatedAt, now);
+  return d !== null && d >= STUCK_DAYS;
+}
+
+/**
  * لوحة اليوم.
  *
  * السطور مترتبة بالأقرب للفلوس: حاجة مستنية إيدك الأول، وبعدين اللي مستني
@@ -96,13 +109,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
 
   const needAction = pick((o) => o.orderStatus === "awaiting_action");
 
-  const stuck = pick((o) => {
-    if (!["shipped", "out_for_delivery"].includes(String(o.orderStatus))) {
-      return false;
-    }
-    const d = daysSince(o.bostaCreatedAt, now);
-    return d !== null && d >= STUCK_DAYS;
-  });
+  const stuck = pick((o) => isStuckShipment(o, now));
 
   const coming = pick((o) => o.orderStatus === "returning");
 

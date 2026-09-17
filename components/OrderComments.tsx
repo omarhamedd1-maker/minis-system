@@ -77,7 +77,7 @@ export function OrderComments({
             ? `${comments.length} تعليق — دوس للعرض`
             : "إضافة تعليق"
         }
-        className="relative rounded-control bg-sunken p-1.5 text-ink-muted hover:bg-line"
+        className="relative rounded-control bg-sunken p-1.5 text-ink-muted hover:bg-info-soft hover:text-info"
         aria-label="تعليقات الأوردر"
       >
         <svg
