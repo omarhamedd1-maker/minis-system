@@ -13,6 +13,7 @@ import { CountUp } from "./CountUp";
 import { resolvePeriod, shiftDays } from "@/lib/periods";
 import { allRows } from "@/lib/fetch-all-pages";
 import { NOT_IN_PROFIT } from "@/lib/profit-exclusions";
+import { loadHeadline } from "@/lib/profit-headline";
 
 /** الأسامي من القايمة نفسها — النص الثابت كان هيقدم أول ما نوع يتضاف */
 const EXCLUDED_NAMES = NOT_IN_PROFIT.map((c) => c.category).join(" · ");
@@ -33,11 +34,14 @@ const ORDER_SELECT =
 
 export function LiveMoneyCards({
   initial,
+  tenantId,
   period,
   from,
   to,
 }: {
   initial: Headline;
+  /** دالة الربح محتاجاه — نفس البيزنس اللي السيرفر حسب له */
+  tenantId: string;
   period?: string;
   from?: string;
   to?: string;
@@ -75,6 +79,18 @@ export function LiveMoneyCards({
     let active = true;
 
     async function load() {
+      // ⚠️ الأول من دالة الداتابيز — ١٢ رقم بدل كل الأوردرات كل ٢٠ ثانية.
+      // `null` = الدالة مش موجودة، فبنرجع للحسبة القديمة تحت.
+      try {
+        const fromDb = await loadHeadline(supabase, tenantId, periodStart, periodEnd);
+        if (fromDb) {
+          if (active) setS(fromDb);
+          return;
+        }
+      } catch {
+        // خطأ في الشبكة — الأرقام اللي على الشاشة بتفضل لحد اللفة الجاية
+        return;
+      }
       const [o, e] = await Promise.all([
         allRows(supabase
           .from("orders")
@@ -104,7 +120,7 @@ export function LiveMoneyCards({
       active = false;
       clearInterval(id);
     };
-  }, [period, from, to]);
+  }, [period, from, to, tenantId]);
 
   const money = (n: number) => formatMoney(n);
   const plain = (n: number) => new Intl.NumberFormat("en").format(n);
