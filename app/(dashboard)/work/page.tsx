@@ -15,7 +15,12 @@ import {
 import { formatMoney } from "@/lib/format";
 import { allRows } from "@/lib/fetch-all-pages";
 import { refundDue } from "@/lib/refund";
-import { extraQueues } from "@/lib/work-queues";
+import {
+  extraQueues,
+  groupOfRow,
+  QUEUE_GROUPS,
+  QUEUE_LINKS,
+} from "@/lib/work-queues";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -32,42 +37,6 @@ export const dynamic = "force-dynamic";
  * هنا اختلف عن اللوحة اللي في صفحة الأوردرات يبقى فيه مصدرين للحقيقة.
  * ==========================================================================
  */
-
-/** الطوابير التانية — كروت أصغر تحت، كل واحد بصلاحيته */
-const MORE: { href: string; label: string; note: string; perm: PermissionKey }[] = [
-  {
-    href: "/orders/rescue",
-    label: "اتصل قبل ما ترجع",
-    note: "شحنات على وش رجوع",
-    perm: "orders.view",
-  },
-  {
-    href: "/orders/risky",
-    label: "محتاجة نظرة",
-    note: "أوردرات فيها ريبة",
-    perm: "orders.view",
-  },
-  {
-    href: "/orders/carts",
-    label: "سلات متروكة",
-    note: "دخل وساب العربية",
-    perm: "orders.view",
-  },
-  {
-    href: "/orders/followup",
-    label: "اسأل بعد التسليم",
-    note: "عميل استلم من كام يوم",
-    perm: "orders.view",
-  },
-  {
-    href: "/orders/reconcile",
-    label: "مراجعة الشحنات",
-    note: "أرقام بوسطة مقابل عندنا",
-    perm: "finance.dashboard",
-  },
-  { href: "/tasks", label: "التاسكات", note: "اللي عليك وعلى الفريق", perm: "tasks.view" },
-  { href: "/inbox", label: "الرسايل", note: "رد على العملاء", perm: "inbox.view" },
-];
 
 export default async function WorkPage() {
   const user = await requirePagePermission("orders.view");
@@ -154,7 +123,13 @@ export default async function WorkPage() {
     .filter((r) => r.urgent)
     .reduce((sum, r) => sum + r.count, 0);
   const clear = boardIsClear(rows);
-  const more = MORE.filter((m) => can(user, m.perm));
+  const more = QUEUE_LINKS.filter((m) => can(user, m.perm as PermissionKey));
+  // المجموعة الفاضية (كل سطورها متشالة بالصلاحية) مابتظهرش أصلًا
+  const groups = QUEUE_GROUPS.map((g) => ({
+    ...g,
+    rows: ordered.filter((r) => groupOfRow(r.key) === g.key),
+    links: more.filter((m) => m.group === g.key),
+  })).filter((g) => g.rows.length > 0 || g.links.length > 0);
 
   return (
     <div className="space-y-5">
@@ -177,31 +152,43 @@ export default async function WorkPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {ordered.map((row) => (
-          <QueueCard key={row.key} row={row} />
-        ))}
-      </div>
-
-      {more.length > 0 && (
-        <div>
-          <h2 className="mb-2 text-xs font-medium text-ink-muted">
-            طوابير تانية
+      {/*
+        التقسيم بيقول **مين مستني مين** — ١١ كارت جنب بعض كانوا قايمة أرقام.
+        الترتيب جوّه المجموعة زي ما هو (`sortByUrgent`).
+      */}
+      {groups.map((g) => (
+        <section key={g.key}>
+          <h2 className="mb-2 flex items-baseline gap-2">
+            <span className="text-sm font-bold text-ink">{g.label}</span>
+            <span className="text-[11px] text-ink-faint">{g.note}</span>
           </h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            {more.map((m) => (
-              <Link
-                key={m.href}
-                href={m.href}
-                className="card block p-3 transition-colors hover:bg-sunken"
-              >
-                <div className="text-sm font-medium text-ink">{m.label}</div>
-                <div className="mt-0.5 text-[11px] text-ink-faint">{m.note}</div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+          {g.rows.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+              {g.rows.map((row) => (
+                <QueueCard key={row.key} row={row} />
+              ))}
+            </div>
+          )}
+          {g.links.length > 0 && (
+            <div
+              className={`grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 ${
+                g.rows.length > 0 ? "mt-2" : ""
+              }`}
+            >
+              {g.links.map((m) => (
+                <Link
+                  key={m.href}
+                  href={m.href}
+                  className="card block p-3 transition-colors hover:bg-sunken"
+                >
+                  <div className="text-sm font-medium text-ink">{m.label}</div>
+                  <div className="mt-0.5 text-[11px] text-ink-faint">{m.note}</div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
     </div>
   );
 }
