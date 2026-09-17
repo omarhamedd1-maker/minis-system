@@ -11,10 +11,13 @@
 // **الملف ده صافي** — النهارده بيتبعت من برّه عشان الاختبار يبقى ثابت.
 // ==========================================================================
 
-export type PresetKey = "7d" | "30d" | "month";
+export type PresetKey = "today" | "7d" | "30d" | "month";
 export type PeriodKey = PresetKey | "all" | "custom";
 
+// «النهارده» رجعت اختيار ثابت في كل الصفحات (قرار عمر ١٧ سبتمبر) — كانت
+// متاحة من «مدة مخصصة» بس. الافتراضي في الداشبورد لسه «آخر ٣٠ يوم».
 export const PERIOD_PRESETS: { key: PresetKey; label: string }[] = [
+  { key: "today", label: "النهارده" },
   { key: "7d", label: "آخر ٧ أيام" },
   { key: "30d", label: "آخر ٣٠ يوم" },
   { key: "month", label: "الشهر ده" },
@@ -66,8 +69,7 @@ const fmtDay = (d: string) => dayFormat.format(new Date(d + "T12:00:00Z"));
 /**
  * بيحوّل اللي في اللينك لفترة.
  *
- * ⚠️ **اللينكات القديمة بتفضل شغالة:** `today` ← مدة مخصصة يوم النهارده ·
- * `week` ← آخر ٧ أيام. أي قيمة تانية مش معروفة (`3m` · `year`) بترجع للافتراضي.
+ * ⚠️ **اللينكات القديمة بتفضل شغالة:** `week` ← آخر ٧ أيام. أي قيمة تانية مش معروفة (`3m` · `year`) بترجع للافتراضي.
  */
 export function resolvePeriod(
   input: { period?: string | null; from?: string | null; to?: string | null },
@@ -79,7 +81,6 @@ export function resolvePeriod(
   // مدة مخصصة — يوم واحد أو من لـ
   let from = isDate(input.from) ? input.from : undefined;
   let to = isDate(input.to) ? input.to : from;
-  if (!from && input.period === "today") from = to = today;
   if (from && to) {
     if (to < from) [from, to] = [to, from];
     return {
@@ -95,7 +96,7 @@ export function resolvePeriod(
 
   const raw = input.period === "week" ? "7d" : input.period;
   const key: PresetKey | "all" =
-    raw === "7d" || raw === "30d" || raw === "month"
+    raw === "today" || raw === "7d" || raw === "30d" || raw === "month"
       ? raw
       : raw === "all" && allowAll
         ? "all"
@@ -104,7 +105,9 @@ export function resolvePeriod(
   if (key === "all") return { key, start: null, end: today, label: ALL_LABEL, days: null };
 
   const start =
-    key === "7d"
+    key === "today"
+      ? today
+      : key === "7d"
       ? shiftDays(today, -6)
       : key === "30d"
         ? shiftDays(today, -29)
@@ -168,7 +171,9 @@ export function previousPeriod(
     start: shiftDays(range.start, -range.days),
     end: shiftDays(range.start, -1),
     label:
-      range.key === "7d"
+      range.key === "today"
+        ? "امبارح"
+        : range.key === "7d"
         ? "الـ٧ أيام اللي قبلها"
         : range.key === "30d"
           ? "الـ٣٠ يوم اللي قبلها"
