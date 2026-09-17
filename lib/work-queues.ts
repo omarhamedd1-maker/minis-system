@@ -63,3 +63,60 @@ export function extraQueues(input: ExtraInput): BoardRow[] {
     },
   ];
 }
+
+// ==========================================================================
+// التقسيم — أربع مجموعات (PHASE2)
+// --------------------------------------------------------------------------
+// ١١ كارت جنب بعض بيبقوا قايمة أرقام. المجموعة بتقول **مين مستني مين**:
+// اللي في إيدك دلوقتي · اللي مستني حد تاني · فرص فلوس · شغل الفريق.
+//
+// ⚠️ **كل سطر لازم يبقى في مجموعة** — عليه اختبار. السطر اللي مالوش
+// مجموعة كان هيختفي من الصفحة وهو بيتحسب.
+// ==========================================================================
+
+export type QueueGroupKey = "mine" | "others" | "chances" | "team";
+
+export const QUEUE_GROUPS: { key: QueueGroupKey; label: string; note: string }[] = [
+  { key: "mine", label: "مستني إيدك", note: "مفيش حد تاني هيعمله" },
+  { key: "others", label: "مستني حد تاني", note: "عند بوسطة أو في السكة" },
+  { key: "chances", label: "فرص", note: "فلوس ممكن ترجع لو اتصرّفت" },
+  { key: "team", label: "الفريق", note: "شغل مشترك" },
+];
+
+/** سطور اللوحة والطوابير — كل مفتاح ومجموعته */
+export const ROW_GROUP: Record<string, QueueGroupKey> = {
+  confirm: "mine",
+  ship: "mine",
+  action: "mine",
+  register: "mine",
+  refund: "mine",
+  deletion: "mine",
+  zero_cost: "mine",
+  stuck: "others",
+  returning: "others",
+  rating: "chances",
+};
+
+export function groupOfRow(key: string): QueueGroupKey {
+  return ROW_GROUP[key] ?? "mine";
+}
+
+/** الطوابير اللي ليها صفحاتها — لينك من غير عدّاد */
+export type QueueLink = {
+  href: string;
+  label: string;
+  note: string;
+  /** اسم الصلاحية — الكارت اللي مالهاش بيتشال خالص */
+  perm: string;
+  group: QueueGroupKey;
+};
+
+export const QUEUE_LINKS: QueueLink[] = [
+  { href: "/orders/rescue", label: "اتصل قبل ما ترجع", note: "شحنات على وش رجوع", perm: "orders.view", group: "chances" },
+  { href: "/orders/carts", label: "سلات متروكة", note: "دخل وساب العربية", perm: "orders.view", group: "chances" },
+  { href: "/orders/followup", label: "اسأل بعد التسليم", note: "عميل استلم من كام يوم", perm: "orders.view", group: "chances" },
+  { href: "/orders/risky", label: "محتاجة نظرة", note: "أوردرات فيها ريبة", perm: "orders.view", group: "mine" },
+  { href: "/orders/reconcile", label: "مراجعة الشحنات", note: "أرقام بوسطة مقابل عندنا", perm: "finance.dashboard", group: "mine" },
+  { href: "/tasks", label: "التاسكات", note: "اللي عليك وعلى الفريق", perm: "tasks.view", group: "team" },
+  { href: "/inbox", label: "الرسايل", note: "رد على العملاء", perm: "inbox.view", group: "team" },
+];
