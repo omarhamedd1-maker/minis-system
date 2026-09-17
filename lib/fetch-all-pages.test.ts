@@ -156,7 +156,7 @@ describe("حارس القراية من غير حد", () => {
     "lib/push/send.ts": { tables: { push_subscriptions: 1 }, why: TEAM },
     "lib/task-reminders-run.ts": { tables: { app_users: 1 }, why: TEAM },
     "app/(dashboard)/tasks/actions.ts": { tables: { app_users: 1, task_assignees: 1, task_steps: 1 }, why: `${TEAM} · ${PARENT}` },
-    "app/(dashboard)/orders/[id]/actions.ts": { tables: { order_items: 2 }, why: PARENT },
+    "app/(dashboard)/orders/[id]/actions.ts": { tables: { order_items: 2, cash_transactions: 2 }, why: `${PARENT} · ريفند أوردر واحد` },
     "app/(dashboard)/orders/[id]/page.tsx": { tables: { orders: 1, tasks: 1, app_users: 1 }, why: `${PARENT} · ${TEAM}` },
     "app/(dashboard)/products/actions.ts": { tables: { product_variants: 1 }, why: PARENT },
     "app/(dashboard)/products/bundles/actions.ts": { tables: { product_variants: 1 }, why: IDS },

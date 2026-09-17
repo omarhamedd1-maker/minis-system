@@ -10,7 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { can, getSessionUser, requirePermission } from "@/lib/permissions";
 import { resyncOrder } from "@/lib/shopify/order-resync-run";
 import { logActivity } from "@/lib/activity";
-import { cashIdsFor, reverseCashRows, type CashActor } from "@/lib/cash-reversal";
+import { auditFields, cashIdsFor, reverseCashRows, type CashActor } from "@/lib/cash-reversal";
+import { clampReturned, parseCondition, shelfDelta, type ReturnedCondition } from "@/lib/returned-items";
 import {
   loadBostaCities,
   runBostaCreate,
@@ -1215,8 +1216,12 @@ export async function createReturnShipment(formData: FormData) {
   );
 }
 
-// حفظ المرتجع: بنختار المنتجات اللي رجعت وكمياتها من بنود الأوردر نفسه
-// وبنرجّع مخزونها تلقائياً (الفرق بين الكمية الراجعة القديمة والجديدة)
+// حفظ المرتجع: الكمية الراجعة وحالتها لكل بند (رجعت للمخزون / تالفة).
+// المخزون بيتحرك بفرق **السليم بس** — التالف مالوش مكان على الرف.
+//
+// ⚠️ **والأوردر اللي ماخصمش من المخزون أصلًا مخزونه مايتلمسش** — زي
+// `restockReturn`. الأوردرات القديمة دخلت من غير حركة مخزون، فرجوعها كان
+// بيزوّد الرقم من غير ما ينقص قبلها (وده كان بيحصل هنا قبل ١٧ سبتمبر).
 export async function saveReturnedItems(formData: FormData) {
   const me = await requirePermission("orders.status");
   const orderId = String(formData.get("order_id") ?? "");
@@ -1227,46 +1232,75 @@ export async function saveReturnedItems(formData: FormData) {
 
   const { data: items } = await supabase
     .from("order_items")
-    .select("id, quantity, returned_quantity, variant_id")
+    .select("id, quantity, returned_quantity, returned_condition, variant_id")
+    .eq("tenant_id", me.tenantId)
     .eq("order_id", orderId)
     .overrideTypes<
       {
         id: string;
         quantity: number;
         returned_quantity: number | null;
+        returned_condition: ReturnedCondition | null;
         variant_id: string | null;
       }[]
     >();
 
+  // الأوردر خصم من المخزون وقت ما اتعمل؟ (أي حركة غير حركات المرتجع)
+  const { data: moves } = await supabase
+    .from("stock_movements")
+    .select("reason")
+    .eq("tenant_id", me.tenantId)
+    .eq("related_order_id", orderId)
+    .limit(50);
+  const RETURN_REASONS = ["مرتجع بعد التسليم", "رجوع مرتجع للمخزن"];
+  const tracksStock = ((moves ?? []) as { reason: string | null }[]).some(
+    (m) => !RETURN_REASONS.includes(String(m.reason ?? "").trim())
+  );
+
+  if (!items || items.length === 0) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نقرا بنود الأوردر — لو sql/returns-on-order.sql ماتشغّلش، شغّله")
+    );
+  }
+
   let totalReturned = 0;
+  let damaged = 0;
   for (const item of items ?? []) {
-    const raw = formData.get(`ret_${item.id}`);
-    let qty = raw != null && String(raw).trim() !== "" ? Number(raw) : 0;
-    if (!Number.isInteger(qty) || qty < 0) qty = 0;
-    if (qty > item.quantity) qty = item.quantity;
+    const qty = clampReturned(formData.get(`ret_${item.id}`), item.quantity);
+    const condition = parseCondition(formData.get(`cond_${item.id}`));
+    const was = {
+      quantity: Number(item.returned_quantity ?? 0),
+      condition: parseCondition(item.returned_condition),
+    };
+    totalReturned += qty;
+    if (condition === "damaged") damaged += qty;
+    if (qty === was.quantity && condition === was.condition) continue;
 
-    const was = Number(item.returned_quantity ?? 0);
-    if (qty === was) {
-      totalReturned += qty;
-      continue;
-    }
-
-    await supabase
+    const { error: itemError } = await supabase
       .from("order_items")
-      .update({ returned_quantity: qty })
+      .update({ returned_quantity: qty, returned_condition: condition })
       .eq("tenant_id", me.tenantId)
       .eq("id", item.id);
+    if (itemError) {
+      redirect(
+        `/orders/${orderId}?error=` +
+          encodeURIComponent(
+            "معرفناش نحفظ المرتجع: " + itemError.message + " — شغّل sql/returns-on-order.sql"
+          )
+      );
+    }
 
-    // الفرق يرجع للمخزون (أو يتخصم لو قلّلنا الكمية الراجعة)
-    await adjustStock(
-      supabase,
-      item.variant_id,
-      qty - was,
-      orderId,
-      "مرتجع بعد التسليم",
-      me.tenantId
-    );
-    totalReturned += qty;
+    if (tracksStock) {
+      await adjustStock(
+        supabase,
+        item.variant_id,
+        shelfDelta(was, { quantity: qty, condition }),
+        orderId,
+        "مرتجع بعد التسليم",
+        me.tenantId
+      );
+    }
   }
 
   const { error } = await supabase
@@ -1285,12 +1319,19 @@ export async function saveReturnedItems(formData: FormData) {
   await logActivity(
     me,
     "order.return",
-    `سجّل مرتجع ${totalReturned} قطعة لأوردر ${await orderNo(supabase, orderId)}`,
+    `سجّل مرتجع ${totalReturned} قطعة${damaged ? ` (${damaged} تالفة)` : ""} لأوردر ${await orderNo(supabase, orderId)}`,
     orderId
   );
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/products");
-  redirect(`/orders/${orderId}?saved=1`);
+  redirect(
+    `/orders/${orderId}?saved=` +
+      encodeURIComponent(
+        tracksStock
+          ? "اتسجّل المرتجع — والسليم رجع المخزون"
+          : "اتسجّل المرتجع — المخزون ماتلمسش لأن الأوردر ده ماخصمش منه أصلًا"
+      )
+  );
 }
 
 // حفظ تفاصيل المرتجع (إيه اللي رجع + رقم شحنة المرتجع)
@@ -1387,7 +1428,47 @@ export async function confirmRefund(formData: FormData) {
     );
   }
 
+  // الأوردرات القديمة: الريفند اتسجّل مصروف «مرتجعات» قبل كده، فالفلوس
+  // خرجت من الخزنة خلاص — حركة جديدة كانت هتخصمها مرتين
+  const alreadyInCash = formData.get("already_in_cash") === "1";
+
   const supabase = createAdminClient();
+
+  // ⚠️ **الريفند بيطلع حركة خزنة** (قرار عمر) — ومايتسجّلش مصروف تاني.
+  // لو فيه ريفند قبل كده على الأوردر (المبلغ اتعدّل) بيتلغي الأول.
+  const { data: oldRefunds } = await supabase
+    .from("cash_transactions")
+    .select("id")
+    .eq("tenant_id", me.tenantId)
+    .eq("related_order_id", orderId)
+    .eq("source_type", "refund");
+  const reversedOld = await reverseCashRows(
+    supabase,
+    me.tenantId,
+    (oldRefunds ?? []).map((r) => r.id as string),
+    me,
+    cairoToday()
+  );
+  if (reversedOld.error) {
+    redirect(`/orders/${orderId}?error=` + encodeURIComponent("معرفناش نلغي الريفند القديم: " + reversedOld.error));
+  }
+
+  if (!alreadyInCash && amount > 0) {
+    const { error: cashError } = await supabase.from("cash_transactions").insert({
+      tenant_id: me.tenantId,
+      direction: "out",
+      amount,
+      source_type: "refund",
+      related_order_id: orderId,
+      description: `ريفند أوردر ${await orderNo(supabase, orderId)}`,
+      transaction_date: cairoToday(),
+      ...auditFields(me, "app"),
+    });
+    if (cashError) {
+      redirect(`/orders/${orderId}?error=` + encodeURIComponent("معرفناش نسجّل الريفند في الخزنة: " + cashError.message));
+    }
+  }
+
   const { error } = await supabase
     .from("orders")
     .update({
@@ -1424,6 +1505,25 @@ export async function undoRefund(formData: FormData) {
   if (!orderId) redirect("/orders");
 
   const supabase = createAdminClient();
+
+  // حركة الريفند في الخزنة بتتلغي بحركة عكسية — مابتتمسحش
+  const { data: refunds } = await supabase
+    .from("cash_transactions")
+    .select("id")
+    .eq("tenant_id", me.tenantId)
+    .eq("related_order_id", orderId)
+    .eq("source_type", "refund");
+  const reversed = await reverseCashRows(
+    supabase,
+    me.tenantId,
+    (refunds ?? []).map((r) => r.id as string),
+    me,
+    cairoToday()
+  );
+  if (reversed.error) {
+    redirect(`/orders/${orderId}?error=` + encodeURIComponent("معرفناش نلغي الريفند في الخزنة: " + reversed.error));
+  }
+
   await supabase
     .from("orders")
     .update({ refunded_at: null, refunded_amount: null, refund_reminded_day: null })
