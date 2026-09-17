@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney } from "@/lib/format";
 import { can, requireAnyPagePermission } from "@/lib/permissions";
 import { loadCashTotals } from "@/lib/cash-totals";
 import { moneyTabsFor, pickMoneyTab } from "@/lib/money-tabs";
 import { MovesTab } from "./MovesTab";
+import { BalanceFigure } from "./BalanceFigure";
 import { ExpensesTab } from "./ExpensesTab";
 
 /**
@@ -45,21 +45,7 @@ export default async function MoneyPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-xl font-bold text-ink">الفلوس</h1>
-        {totals && (
-          <div className="text-end">
-            <p className="text-xs text-ink-muted">الرصيد الحالي</p>
-            <p
-              className={`text-2xl font-bold tabular-nums sm:text-3xl ${
-                totals.balance >= 0 ? "text-ink" : "text-danger"
-              }`}
-            >
-              {formatMoney(totals.balance)}
-            </p>
-          </div>
-        )}
-      </div>
+      <h1 className="text-xl font-bold text-ink">الفلوس</h1>
 
       {totalsError && (
         <div className="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
@@ -67,8 +53,10 @@ export default async function MoneyPage({
         </div>
       )}
 
-      {tabs.length > 1 && (
-        <nav aria-label="أقسام الفلوس" className="flex gap-1 border-b border-line">
+      {/* التابات والرصيد على سطر واحد — الرصيد هو الرقم الأساسي في الصفحة */}
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line">
+        {tabs.length > 1 ? (
+        <nav aria-label="أقسام الفلوس" className="flex gap-1">
           {tabs.map((t) => (
             <Link
               key={t.key}
@@ -84,7 +72,11 @@ export default async function MoneyPage({
             </Link>
           ))}
         </nav>
-      )}
+        ) : (
+          <span />
+        )}
+        {totals && <BalanceFigure balance={totals.balance} />}
+      </div>
 
       {tab === "expenses" ? (
         <ExpensesTab params={params} user={user} />

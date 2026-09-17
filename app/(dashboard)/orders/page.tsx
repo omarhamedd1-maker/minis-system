@@ -452,17 +452,6 @@ export default async function OrdersPage({
 
       {/* شريط الفلاتر الموحّد: بحث · فترة · حالة · مسح — وتحته شرايح المفعّل */}
       <FilterBar
-        basePath="/orders"
-        query={{
-          status: showArchived ? undefined : status,
-          archived: showArchived ? "1" : undefined,
-          ...periodParams,
-        }}
-        search={{
-          name: "q",
-          value: searchTerm,
-          placeholder: "دور برقم الأوردر أو اسم العميل أو تليفونه",
-        }}
         chips={filterChips}
         clearHref={hasFilters ? "/orders" : undefined}
       >

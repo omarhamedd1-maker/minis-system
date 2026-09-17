@@ -3,6 +3,8 @@
 import { CategoryPicker } from "@/components/CategoryPicker";
 
 import { useState } from "react";
+import { ConfirmDialogButton } from "./ConfirmDialogButton";
+import { TrashIcon } from "./RowIcons";
 import { formatDate, formatMoney } from "@/lib/format";
 
 type Expense = {
@@ -90,30 +92,18 @@ export function ExpenseCard({
             </button>
             <form action={deleteAction}>
               <input type="hidden" name="expense_id" value={expense.id} />
-              <button
-                type="submit"
-                title="مسح"
-                aria-label="مسح"
-                onClick={(e) => {
-                  if (!confirm("المصروف هيتمسح، وحركته في الخزنة هتتلغي بحركة عكسية بتاريخ النهارده. تكمّل؟"))
-                    e.preventDefault();
-                }}
+              <ConfirmDialogButton
+                label="مسح"
+                title="مسح المصروف"
+                detail={`${expense.description || expense.category} · ${formatMoney(expense.amount)} · ${formatDate(expense.expense_date)}`}
+                note="وحركته في الخزنة هتتلغي بحركة عكسية بتاريخ النهارده."
+                confirmLabel="مسح"
                 className="group/btn flex h-11 w-11 items-center justify-center"
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-control bg-danger-soft text-danger group-active/btn:bg-danger-line">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-3.5 w-3.5"
-                  >
-                    <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
-                  </svg>
+                  <TrashIcon />
                 </span>
-              </button>
+              </ConfirmDialogButton>
             </form>
           </div>
         )}

@@ -42,9 +42,10 @@ describe("التابات بالصلاحية", () => {
   const has = (list: string[]) => (p: string) => list.includes(p);
 
   it("المحاسب بيشوف الاتنين", () => {
+    // المصاريف الأول (قرار عمر)
     expect(moneyTabsFor(has(["cash.view", "expenses.view"])).map((t) => t.key)).toEqual([
-      "moves",
       "expenses",
+      "moves",
     ]);
   });
 
@@ -55,10 +56,11 @@ describe("التابات بالصلاحية", () => {
     expect(pickMoneyTab("moves", tabs)).toBe("expenses");
   });
 
-  it("الافتراضي الحركات", () => {
+  it("الافتراضي أول تاب — المصاريف", () => {
     const tabs = moneyTabsFor(has(["cash.view", "expenses.view"]));
-    expect(pickMoneyTab(undefined, tabs)).toBe("moves");
-    expect(pickMoneyTab("كلام", tabs)).toBe("moves");
+    expect(pickMoneyTab(undefined, tabs)).toBe("expenses");
+    expect(pickMoneyTab("كلام", tabs)).toBe("expenses");
+    expect(pickMoneyTab("moves", tabs)).toBe("moves");
     expect(pickMoneyTab("expenses", tabs)).toBe("expenses");
   });
 });

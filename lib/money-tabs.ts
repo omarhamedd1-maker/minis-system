@@ -6,9 +6,10 @@ import type { PermissionKey } from "./permission-keys";
  */
 export type MoneyTabKey = "moves" | "expenses";
 
+/** الترتيب قرار عمر (١٧ سبتمبر): المصاريف الأول — وأول تاب هو اللي بيفتح */
 export const MONEY_TABS: { key: MoneyTabKey; label: string; perm: PermissionKey }[] = [
-  { key: "moves", label: "الحركات", perm: "cash.view" },
   { key: "expenses", label: "المصاريف", perm: "expenses.view" },
+  { key: "moves", label: "الحركات", perm: "cash.view" },
 ];
 
 export function moneyTabsFor(has: (perm: PermissionKey) => boolean) {

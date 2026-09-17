@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
-import Link from "next/link";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { PushPrompt } from "@/components/PushPrompt";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -8,6 +7,7 @@ import { collectNotices } from "@/lib/notifications";
 import { can, getSessionUser } from "@/lib/permissions";
 import { sendAnnouncement } from "./notify/actions";
 import type { NotifyMember } from "@/components/SendAnnouncement";
+import { HeaderSearch } from "@/components/HeaderSearch";
 
 // ترحيب بالاسم الأول حسب وقت اليوم (بتوقيت مصر)
 function greeting(name: string | null) {
@@ -122,23 +122,7 @@ export default async function DashboardLayout({
           <span className="truncate text-sm text-ink-muted">
             {greeting(user.fullName ?? user.email)}
           </span>
-          <Link
-            href="/search"
-            aria-label="بحث"
-            title="بحث"
-            className="shrink-0 rounded-full p-2 text-ink-muted hover:bg-sunken hover:text-ink"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              className="h-5 w-5"
-            >
-              <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" />
-            </svg>
-          </Link>
+          <HeaderSearch />
           <NotificationsBell
             notices={notices}
             canNotify={canNotify}
@@ -161,23 +145,7 @@ export default async function DashboardLayout({
           <div className="mb-4 hidden items-center justify-between gap-3 text-sm text-ink-muted md:flex">
             <span>{greeting(user.fullName ?? user.email)}</span>
             <span className="flex items-center gap-1">
-          <Link
-            href="/search"
-            aria-label="بحث"
-            title="بحث"
-            className="rounded-full p-2 text-ink-muted hover:bg-sunken hover:text-ink"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              className="h-5 w-5"
-            >
-              <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4" />
-            </svg>
-          </Link>
+          <HeaderSearch />
             <NotificationsBell
             notices={notices}
             canNotify={canNotify}

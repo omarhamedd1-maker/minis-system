@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ConfirmButton } from "./ConfirmButton";
+import { ConfirmDialogButton } from "./ConfirmDialogButton";
+import { PencilIcon, TrashIcon, rowIconButton } from "./RowIcons";
 import { formatDate, formatMoney } from "@/lib/format";
 
 type Row = {
@@ -79,22 +80,28 @@ export function CashManualRow({
           </td>
         )}
         <td className="px-2 py-3 sm:px-4">
-          <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-control bg-primary px-2 py-1 text-xs font-medium text-white hover:bg-primary-dark sm:px-3"
+              title="تعديل"
+              aria-label="تعديل"
+              className={rowIconButton("neutral")}
             >
-              تعديل
+              <PencilIcon />
             </button>
             <form action={deleteAction}>
               <input type="hidden" name="transaction_id" value={row.id} />
-              <ConfirmButton
-                message="الحركة هتتلغي بحركة عكسية بتاريخ النهارده — الأصل بيفضل في الدفتر. تكمّل؟"
-                className="rounded-control bg-danger-soft px-2 py-1 text-xs font-medium text-danger hover:bg-danger-line sm:px-3"
+              <ConfirmDialogButton
+                label="إلغاء الحركة"
+                title="إلغاء الحركة"
+                detail={`${row.description ? `${label}: ${row.description}` : label} · ${formatMoney(row.amount)} · ${formatDate(row.transaction_date)}`}
+                note="هتتسجل حركة عكسية بتاريخ النهارده، والأصل بيفضل في الدفتر."
+                confirmLabel="إلغاء الحركة"
+                className={rowIconButton("danger")}
               >
-                إلغاء
-              </ConfirmButton>
+                <TrashIcon />
+              </ConfirmDialogButton>
             </form>
           </div>
         </td>

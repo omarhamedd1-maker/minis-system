@@ -162,10 +162,21 @@ export async function MovesTab({
         </div>
       )}
 
+      {/* مقفول ورا «+ حركة» — بنفس شكل «+ مصروف» */}
       {isAdmin && (
+        <details id="new-move" className="group rounded-card bg-surface shadow-card">
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+            <span
+              aria-hidden
+              className="flex h-6 w-6 items-center justify-center rounded-control bg-primary text-white transition-transform group-open:rotate-45"
+            >
+              +
+            </span>
+            حركة
+          </summary>
         <form
           action={addCashTransaction}
-          className="flex flex-wrap items-end gap-3 rounded-card bg-surface p-4 shadow-card"
+          className="flex flex-wrap items-end gap-3 border-t border-line p-4"
         >
           <div className="flex flex-col gap-1">
             <label htmlFor="direction" className="text-xs text-ink-muted">
@@ -226,6 +237,7 @@ export async function MovesTab({
             تسجيل
           </SubmitOnce>
         </form>
+        </details>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
