@@ -19,6 +19,10 @@ MINIS، وبعدين MINO، ودلوقتي **Gridpoint** (الاسم القدي�
 - **Next.js 16** (App Router) + TypeScript + Tailwind v4 — على Vercel
   ⚠️ دي نسخة Next فيها تغييرات كاسرة — اقرا التنبيه في `AGENTS.md`
 - **Supabase** — داتابيز + auth + cron (مشروع واحد، بيزنسات كتير جواه)
+  الفولدر **مربوط بالمشروع** (`npx supabase link` اتعمل مرة، ١٧ سبتمبر) — فأوامر
+  زي `npx supabase functions deploy <اسم>` بتشتغل من غير `--project-ref`.
+  الربط بيتحفظ في `supabase/.temp/` (مش في جيت) — جهاز جديد محتاج `link` تاني.
+  ⚠️ **تسجيل الدخول لوحده مش كفاية** — من غير الربط الأمر بيقف بـ«Cannot find project ref».
 - **Vitest** — ١٢٥٠+ اختبار، والفحص الكامل `npm run check`
 
 ## الملفات اللي بتشرح — بالترتيب
