@@ -23,6 +23,12 @@ import type { BoardRow } from "./daily-board";
 export type ExtraInput = {
   /** طلبات حذف لسه مستنية موافقة — ومعاها أوردراتها عشان اللينك */
   deletionOrderIds: string[];
+  /** أقدم طلب حذف بالأيام — الترتيب جوّه المجموعة بالقِدَم */
+  deletionOldestDays?: number | null;
+  /** أقدم تقييم سيء بالأيام */
+  ratingOldestDays?: number | null;
+  /** أقدم أوردر بتكلفة صفر بالأيام */
+  zeroCostOldestDays?: number | null;
   /** تقييمات سيئة (٣ نجوم أو أقل) لسه محدش شافها */
   badRatings: number;
   /** أوردرات فيها بند بتكلفة صفر — الربح عليها غلط */
@@ -44,6 +50,7 @@ export function extraQueues(input: ExtraInput): BoardRow[] {
       count: input.deletionOrderIds.length,
       href: link(input.deletionOrderIds, "/orders"),
       urgent: input.deletionOrderIds.length > 0,
+      oldestDays: input.deletionOldestDays ?? null,
     },
     {
       key: "rating",
@@ -52,6 +59,7 @@ export function extraQueues(input: ExtraInput): BoardRow[] {
       href: "/orders/ratings",
       // مش شغل واقف — بس محتاج تتصرّف مع العميل
       urgent: false,
+      oldestDays: input.ratingOldestDays ?? null,
     },
     {
       key: "zero_cost",
@@ -60,6 +68,7 @@ export function extraQueues(input: ExtraInput): BoardRow[] {
       href: link(input.zeroCostOrderIds, "/products?missing_cost=1"),
       // الربح عليه غلط، بس مش بيوقف شحنة
       urgent: false,
+      oldestDays: input.zeroCostOldestDays ?? null,
     },
   ];
 }

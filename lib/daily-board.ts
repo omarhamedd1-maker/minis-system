@@ -26,6 +26,8 @@ export const STUCK_DAYS = 5;
 export type BoardOrder = {
   id: string;
   orderStatus: string | null;
+  /** تاريخ الأوردر — الترتيب جوّه المجموعة بالقِدَم */
+  orderDate?: string | null;
   bostaTracking?: string | null;
   bostaCreatedAt?: string | null;
   bostaCod?: number | null;
@@ -53,6 +55,12 @@ export type BoardRow = {
   href: string;
   /** السطر ده محتاج تصرّف منك ولا مجرد خبر */
   urgent: boolean;
+  /**
+   * أقدم حاجة في الطابور بالأيام — و`null` لو مفيش تاريخ.
+   * ⚠️ **الترتيب بالقِدَم مش بالنوع** — الطابور اللي فيه حاجة من ٩ أيام
+   * أهم من واحد كله النهارده، حتى لو عدده أكبر.
+   */
+  oldestDays?: number | null;
 };
 
 /** عدد الأيام من تاريخ لتاريخ — و`null` لو التاريخ مش مقروء */
@@ -135,6 +143,13 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
   );
 
   const ids = (list: BoardOrder[]) => list.map((o) => o.id);
+  /** أقدم عنصر في الطابور — من تاريخ الأوردر، وإلا تاريخ الشحنة */
+  const oldest = (list: BoardOrder[]): number | null => {
+    const days = list
+      .map((o) => daysSince(o.orderDate ?? o.bostaCreatedAt, now))
+      .filter((d): d is number => d !== null);
+    return days.length > 0 ? Math.max(...days) : null;
+  };
 
   return [
     {
@@ -143,6 +158,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       count: needConfirm.length,
       href: link(ids(needConfirm), "/orders?status=new"),
       urgent: needConfirm.length > 0,
+      oldestDays: oldest(needConfirm),
     },
     {
       key: "ship",
@@ -150,6 +166,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       count: needShip.length,
       href: link(ids(needShip), "/orders?status=confirmed"),
       urgent: needShip.length > 0,
+      oldestDays: oldest(needShip),
     },
     {
       key: "action",
@@ -157,6 +174,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       count: needAction.length,
       href: link(ids(needAction), "/orders?status=awaiting_action"),
       urgent: needAction.length > 0,
+      oldestDays: oldest(needAction),
     },
     {
       key: "stuck",
@@ -164,6 +182,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       count: stuck.length,
       href: link(ids(stuck), "/orders?status=shipped"),
       urgent: stuck.length > 0,
+      oldestDays: oldest(stuck),
     },
     {
       key: "returning",
@@ -171,6 +190,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       count: coming.length,
       href: link(ids(coming), "/orders?status=returning"),
       urgent: false,
+      oldestDays: oldest(coming),
     },
     {
       key: "register",
@@ -178,6 +198,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       count: toRegister.length,
       href: link(ids(toRegister), "/orders?status=returned_after_delivery"),
       urgent: toRegister.length > 0,
+      oldestDays: oldest(toRegister),
     },
     {
       key: "refund",
@@ -186,6 +207,7 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       money: toRefund.reduce((s, o) => s + Number(o.refundDue ?? 0), 0),
       href: link(ids(toRefund), "/orders?status=returned_after_delivery"),
       urgent: toRefund.length > 0,
+      oldestDays: oldest(toRefund),
     },
   ];
 }
@@ -225,4 +247,14 @@ export function visibleRows(
  */
 export function sortByUrgent(rows: BoardRow[]): BoardRow[] {
   return [...rows].sort((a, b) => Number(b.urgent) - Number(a.urgent));
+}
+
+/**
+ * الترتيب جوّه المجموعة: **الأقدم الأول**، واللي مالوش تاريخ في الآخر.
+ * الطابور الفاضي بيفضل مكانه (باهت) — الثبات أهم من التوفير.
+ */
+export function sortByAge(rows: BoardRow[]): BoardRow[] {
+  const age = (r: BoardRow) =>
+    r.count === 0 || r.oldestDays == null ? -1 : r.oldestDays;
+  return [...rows].sort((a, b) => age(b) - age(a));
 }

@@ -8,7 +8,7 @@ import {
 import {
   boardIsClear,
   dailyBoard,
-  sortByUrgent,
+  sortByAge,
   visibleRows,
   type BoardRow,
 } from "@/lib/daily-board";
@@ -24,6 +24,14 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * كام كارت يبانوا في المجموعة قبل «الباقي».
+ *
+ * ⚠️ **«مستني إيدك» فيها ٩** — تسع كروت جنب بعض بيرجّعوا نفس المشكلة اللي
+ * التقسيم اتعمل عشانها. الستة الأقدم بيبانوا، والباقي مطوي.
+ */
+const VISIBLE_IN_GROUP = 6;
 
 /**
  * ==========================================================================
@@ -45,6 +53,7 @@ export default async function WorkPage() {
   type WorkRow = {
     id: string;
     order_status: string | null;
+    order_date: string | null;
     bosta_tracking: string | null;
     bosta_created_at: string | null;
     bosta_cod: number | null;
@@ -58,7 +67,7 @@ export default async function WorkPage() {
     }[];
   };
   const BASE =
-    "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected, refunded_at, order_items(returned_quantity, sale_price_at_order, cost_price_at_order)";
+    "id, order_status, order_date, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected, refunded_at, order_items(returned_quantity, sale_price_at_order, cost_price_at_order)";
   const read = (cols: string) =>
     allRows(supabase.from("orders").select(cols).eq("archived", false).overrideTypes<WorkRow[]>());
   // ⚠️ **العدّ على كل الصفوف مش المعروض** (`allRows`) — عدّادات ناقصة بالصمت أسوأ.
@@ -72,6 +81,7 @@ export default async function WorkPage() {
     (data ?? []).map((o) => ({
       id: o.id,
       orderStatus: o.order_status,
+      orderDate: o.order_date,
       bostaTracking: o.bosta_tracking,
       bostaCreatedAt: o.bosta_created_at,
       bostaCod: o.bosta_cod,
@@ -96,29 +106,40 @@ export default async function WorkPage() {
   const [deletions, ratings] = await Promise.all([
     allRows(admin
       .from("deletion_requests")
-      .select("order_id")
+      .select("order_id, created_at")
       .eq("tenant_id", user.tenantId)
       .eq("status", "pending")
-      .overrideTypes<{ order_id: string | null }[]>()),
+      .overrideTypes<{ order_id: string | null; created_at: string }[]>()),
     allRows(admin
       .from("order_ratings")
-      .select("id, stars")
+      .select("id, stars, created_at")
       .eq("tenant_id", user.tenantId)
       .lte("stars", 3)
-      .overrideTypes<{ id: string; stars: number }[]>()),
+      .overrideTypes<{ id: string; stars: number; created_at: string }[]>()),
   ]);
+  /** أقدم تاريخ في القايمة بالأيام — `null` لو فاضية */
+  const oldestOf = (dates: (string | null | undefined)[]): number | null => {
+    const days = dates
+      .map((d) => (d ? Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000) : NaN))
+      .filter((n) => Number.isFinite(n));
+    return days.length > 0 ? Math.max(...days) : null;
+  };
+  const zeroCostOrders = (data ?? []).filter((o) =>
+    (o.order_items ?? []).some((i) => !Number(i.cost_price_at_order))
+  );
   const extra = extraQueues({
     deletionOrderIds: (deletions.data ?? []).map((d) => d.order_id).filter((v): v is string => Boolean(v)),
+    deletionOldestDays: oldestOf((deletions.data ?? []).map((d) => d.created_at)),
     badRatings: (ratings.data ?? []).length,
+    ratingOldestDays: oldestOf((ratings.data ?? []).map((r) => r.created_at)),
+    zeroCostOldestDays: oldestOf(zeroCostOrders.map((o) => o.order_date)),
     // بند بتكلفة صفر = الربح على الأوردر ده غلط (`lib/zero-cost.ts`)
-    zeroCostOrderIds: (data ?? [])
-      .filter((o) => (o.order_items ?? []).some((i) => !Number(i.cost_price_at_order)))
-      .map((o) => o.id),
+    zeroCostOrderIds: zeroCostOrders.map((o) => o.id),
   });
 
   // الصلاحية والترتيب جايين من `lib/daily-board` — مافيش قرار متكرر هنا
   const rows = visibleRows([...board, ...extra], (perm) => can(user, perm));
-  const ordered = sortByUrgent(rows);
+  const ordered = sortByAge(rows);
   const waiting = rows
     .filter((r) => r.urgent)
     .reduce((sum, r) => sum + r.count, 0);
@@ -164,10 +185,25 @@ export default async function WorkPage() {
           </h2>
           {g.rows.length > 0 && (
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-              {g.rows.map((row) => (
+              {g.rows.slice(0, VISIBLE_IN_GROUP).map((row) => (
                 <QueueCard key={row.key} row={row} />
               ))}
             </div>
+          )}
+          {g.rows.length > VISIBLE_IN_GROUP && (
+            <details className="group mt-2">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-ink-muted [&::-webkit-details-marker]:hidden">
+                <span className="group-open:hidden">
+                  + {g.rows.length - VISIBLE_IN_GROUP} كمان
+                </span>
+                <span className="hidden group-open:inline">− اطوي</span>
+              </summary>
+              <div className="mt-2 grid grid-cols-2 gap-3 lg:grid-cols-3">
+                {g.rows.slice(VISIBLE_IN_GROUP).map((row) => (
+                  <QueueCard key={row.key} row={row} />
+                ))}
+              </div>
+            </details>
           )}
           {g.links.length > 0 && (
             <div

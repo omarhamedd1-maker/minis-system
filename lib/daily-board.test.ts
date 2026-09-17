@@ -3,6 +3,7 @@ import {
   dailyBoard,
   boardIsClear,
   sortByUrgent,
+  sortByAge,
   visibleRows,
   STUCK_DAYS,
   type BoardOrder,
@@ -190,5 +191,27 @@ describe("isStuckShipment", () => {
     expect(isStuckShipment({ orderStatus: "shipped", bostaCreatedAt: daysAgo(STUCK_DAYS) }, NOW)).toBe(true);
     expect(isStuckShipment({ orderStatus: "shipped", bostaCreatedAt: daysAgo(STUCK_DAYS - 1) }, NOW)).toBe(false);
     expect(isStuckShipment({ orderStatus: "delivered", bostaCreatedAt: daysAgo(30) }, NOW)).toBe(false);
+  });
+});
+
+describe("sortByAge", () => {
+  it("⚠️ الأقدم الأول — مش الأكتر عددًا", () => {
+    const rows = dailyBoard(
+      [
+        { id: "a", orderStatus: "new", orderDate: daysAgo(1) },
+        { id: "b", orderStatus: "new", orderDate: daysAgo(1) },
+        { id: "c", orderStatus: "awaiting_action", orderDate: daysAgo(9) },
+      ],
+      NOW
+    );
+    const keys = sortByAge(rows).map((r) => r.key);
+    expect(keys.indexOf("action")).toBeLessThan(keys.indexOf("confirm"));
+    expect(row(rows, "action").oldestDays).toBe(9);
+  });
+
+  it("الفاضي في الآخر — حتى لو تاريخه قديم", () => {
+    const rows = dailyBoard([{ id: "a", orderStatus: "new", orderDate: daysAgo(3) }], NOW);
+    expect(sortByAge(rows)[0].key).toBe("confirm");
+    expect(sortByAge(rows).at(-1)!.count).toBe(0);
   });
 });
