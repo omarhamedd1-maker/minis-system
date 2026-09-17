@@ -218,7 +218,7 @@ export function computeHeadline(
     (s, o) => s + itemsProfit(o) - o.discount,
     0
   );
-  // ⚠️⚠️ **مش كل المصاريف بتتطرح** — الخامات والباقة والسحوبات كانت بتتخصم
+  // ⚠️⚠️ **مش كل المصاريف بتتطرح** — البضاعة والخامات والباقة والسحوبات كانت بتتخصم
   // مرتين (MONEY §٨.٦). بتفضل في الخزنة، بس مابتدخلش هنا.
   const { counted: expensesTotal, excluded: expensesExcluded } =
     splitExpenses(expenses);

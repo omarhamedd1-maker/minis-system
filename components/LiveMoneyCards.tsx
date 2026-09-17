@@ -12,6 +12,10 @@ import {
 import { CountUp } from "./CountUp";
 import { resolvePeriod, shiftDays } from "@/lib/periods";
 import { allRows } from "@/lib/fetch-all-pages";
+import { NOT_IN_PROFIT } from "@/lib/profit-exclusions";
+
+/** الأسامي من القايمة نفسها — النص الثابت كان هيقدم أول ما نوع يتضاف */
+const EXCLUDED_NAMES = NOT_IN_PROFIT.map((c) => c.category).join(" · ");
 
 /**
  * ⚠️ **`bosta_fees_real` لازم يفضل هنا.**
@@ -135,7 +139,7 @@ export function LiveMoneyCards({
         label="المصاريف"
         hint={
           s.expensesExcluded > 0
-            ? `و${money(s.expensesExcluded)} مش في الربح (خامات · باقة بوسطة · سحوبات)`
+            ? `و${money(s.expensesExcluded)} مش في الربح (${EXCLUDED_NAMES})`
             : undefined
         }
       >
