@@ -25,6 +25,7 @@ describe("مجموعات المصاريف", () => {
   it("أنواع مينيز الحقيقية", () => {
     expect(groupOf("تصنيع وخامات").key).toBe("outside");
     expect(groupOf("سحوبات").key).toBe("outside");
+    expect(groupOf("بضاعة").key).toBe("outside");
     expect(groupOf("باقة بوسطة").key).toBe("outside");
     expect(groupOf("إعلانات").key).toBe("marketing");
     expect(groupOf("تسويق").key).toBe("marketing");

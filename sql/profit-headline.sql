@@ -13,7 +13,7 @@
 --     قبل التسليم (`EXCLUDED_STATUSES`)
 --   · الراجع بعد التسليم: الريفند المتأكّد، ولو لسه = المستحق من البنود
 --     الراجعة · وتكلفة اللي رجع الرف مابتتحسبش (`lib/returned-items.ts`)
---   · المصاريف: من غير خامات · باقة بوسطة · سحوبات (`NOT_IN_PROFIT`)
+--   · المصاريف: من غير خامات · بضاعة · باقة بوسطة · سحوبات (`NOT_IN_PROFIT`)
 --   · تكلفة بوسطة: الحقيقي لو موجود وإلا التقدير · على الحالات اللي عدّت
 --     على المندوب (`AT_CARRIER_STATUSES`)
 --   · التحصيل: المتسلّم بتاريخ التسليم
@@ -133,9 +133,9 @@ as $$
     -- NOT_IN_PROFIT
     select
       coalesce(sum(amount) filter (where btrim(coalesce(category, '')) not in
-        ('تصنيع وخامات', 'باقة بوسطة', 'سحوبات')), 0) as counted,
+        ('تصنيع وخامات', 'بضاعة', 'باقة بوسطة', 'سحوبات')), 0) as counted,
       coalesce(sum(amount) filter (where btrim(coalesce(category, '')) in
-        ('تصنيع وخامات', 'باقة بوسطة', 'سحوبات')), 0) as excluded
+        ('تصنيع وخامات', 'بضاعة', 'باقة بوسطة', 'سحوبات')), 0) as excluded
     from expenses
     where tenant_id = p_tenant
       and expense_date between p_from and p_to
