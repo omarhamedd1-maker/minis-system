@@ -41,12 +41,17 @@ describe("resolvePeriod", () => {
     expect(r).toMatchObject({ start: "2026-09-01", end: "2026-09-10", days: 10 });
   });
 
-  it("⚠️ اللينكات القديمة: today ← يوم النهارده · week ← ٧ أيام · 3m/year ← الافتراضي", () => {
+  it("النهارده اختيار ثابت — يوم واحد", () => {
     expect(resolvePeriod({ period: "today" }, { today, defaultKey: "30d" })).toMatchObject({
-      key: "custom",
+      key: "today",
       start: today,
       end: today,
+      days: 1,
+      label: "النهارده",
     });
+  });
+
+  it("⚠️ اللينكات القديمة: week ← ٧ أيام · 3m/year ← الافتراضي", () => {
     expect(resolvePeriod({ period: "week" }, { today, defaultKey: "30d" }).key).toBe("7d");
     expect(resolvePeriod({ period: "3m" }, { today, defaultKey: "30d" }).key).toBe("30d");
     expect(resolvePeriod({ period: "year" }, { today, defaultKey: "month" }).key).toBe("month");
@@ -118,6 +123,10 @@ describe("previousPeriod", () => {
 
   it("آخر ٣٠ يوم ← الـ٣٠ اللي قبلها بالظبط من غير تداخل", () => {
     expect(previousPeriod(r("30d"))).toMatchObject({ start: "2026-07-18", end: "2026-08-16" });
+  });
+
+  it("النهارده ← امبارح", () => {
+    expect(previousPeriod(r("today"))).toMatchObject({ start: "2026-09-14", end: "2026-09-14", label: "امبارح" });
   });
 
   it("آخر ٧ أيام", () => {

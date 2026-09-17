@@ -1,7 +1,7 @@
 import { PeriodFilter } from "@/components/PeriodFilter";
 import { FilterBar } from "@/components/FilterBar";
 import { FilterSelect } from "@/components/FilterSelect";
-import { periodHref, previousPeriod, resolvePeriod } from "@/lib/periods";
+import { periodHref, previousPeriod, resolvePeriod, type PresetKey } from "@/lib/periods";
 import { SupplierField } from "@/components/SupplierField";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -180,7 +180,7 @@ export async function ExpensesTab({
     return periodHref(
       "/cash",
       { tab: "expenses", cat: c },
-      range.key === "custom" ? { from: range.from!, to: range.to! } : { key: range.key as "7d" | "30d" | "month" | "all" },
+      range.key === "custom" ? { from: range.from!, to: range.to! } : { key: range.key as PresetKey | "all" },
       "30d"
     );
   };
