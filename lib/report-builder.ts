@@ -16,6 +16,8 @@
 // **الملف ده صافي** — بياخد أوردرات وتعريف تقرير وبيرجّع صفوف.
 // ==========================================================================
 
+import { EXCLUDED_STATUSES } from "./format";
+
 /** اللي بنقيسه */
 export const MEASURES = {
   sales: "المبيعات",
@@ -53,6 +55,14 @@ const SETTLED = ["delivered", "returned", "returned_after_delivery"];
 const RETURNED = ["returned", "returned_after_delivery"];
 /** الملغي مش بيعة */
 const NOT_A_SALE = ["cancelled"];
+/**
+ * المقاييس اللي بالفلوس بتمشي على تعريف المبيعات بتاع الداشبورد
+ * (`EXCLUDED_STATUSES`) — المرتجع قبل التسليم مادفعش حاجة.
+ *
+ * ⚠️ كان بيدخل هنا بقيمته كاملة، فالتقارير كانت أعلى من الداشبورد بقيمة
+ * كل المرتجع (مينيز ٨٧ ألف لكل الوقت · ١٧ سبتمبر).
+ */
+const MONEY_MEASURES: Measure[] = ["sales", "avg_order", "profit"];
 
 export type ReportOrder = {
   orderStatus: string | null;
@@ -198,6 +208,13 @@ export function buildReport(orders: ReportOrder[], spec: ReportSpec): Report {
 
     // ⚠️ الملغي مش بيعة — بيدخل بس لما التقسيم بالحالة نفسها
     if (NOT_A_SALE.includes(status) && spec.group !== "status") continue;
+    if (
+      MONEY_MEASURES.includes(spec.measure) &&
+      EXCLUDED_STATUSES.includes(status) &&
+      spec.group !== "status"
+    ) {
+      continue;
+    }
 
     const isSettled = SETTLED.includes(status);
     if (settledOnly && !isSettled) {

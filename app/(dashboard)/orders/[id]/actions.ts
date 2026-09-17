@@ -1473,7 +1473,10 @@ export async function confirmRefund(formData: FormData) {
     .from("orders")
     .update({
       refunded_at: new Date().toISOString(),
-      refunded_amount: amount,
+      // ⚠️⚠️ **المتسجّل قبل كده بيتحفظ صفر** — الربح بيطرح `refunded_amount`
+      // (ب)، والمبلغ ده متطرح خلاص كمصروف «مرتجعات». لو اتحفظ بقيمته
+      // كان هيتطرح مرتين.
+      refunded_amount: alreadyInCash ? 0 : amount,
     })
     .eq("tenant_id", me.tenantId)
     .eq("id", orderId);

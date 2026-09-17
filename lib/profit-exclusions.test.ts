@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countsInProfit, splitExpenses } from "./profit-exclusions";
+import { closedCategory, countsInProfit, splitExpenses } from "./profit-exclusions";
 import { computeHeadline } from "./dashboard-stats";
 import { EXPENSE_CATEGORIES } from "./format";
 
@@ -60,5 +60,17 @@ describe("⚠️ صافي الربح مابيطرحش المستثنى", () => {
     expect(h.expensesExcluded).toBe(700);
     // مجمل الربح ٦٠٠ − إعلانات ١٠٠ = ٥٠٠ (مش ٥٠٠ − ٤٠٠ − ٣٠٠)
     expect(h.netProfit).toBe(500);
+  });
+});
+
+describe("«مرتجعات» مقفولة", () => {
+  it("مابتتعرضش في الأنواع الجاهزة", () => {
+    expect(EXPENSE_CATEGORIES).not.toContain("مرتجعات");
+    expect(closedCategory(" مرتجعات ")?.category).toBe("مرتجعات");
+    expect(closedCategory("بضاعة")).toBeNull();
+  });
+
+  it("⚠️ القديم بيفضل في الربح — هو المكان الوحيد لريفند الأوردرات القديمة", () => {
+    expect(countsInProfit("مرتجعات")).toBe(true);
   });
 });

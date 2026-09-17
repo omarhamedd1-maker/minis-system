@@ -8,6 +8,7 @@ import { logActivity } from "@/lib/activity";
 import { cairoToday } from "@/lib/format";
 import { auditFields, cashIdsFor, reverseCashRows } from "@/lib/cash-reversal";
 import { allRows } from "@/lib/fetch-all-pages";
+import { closedCategory } from "@/lib/profit-exclusions";
 
 // الحسبة زي ما عمر حددها (شغل بالأجل — بياخد البضاعة ويحاسب بعدين):
 //   الفاتورة (purchase)  = بضاعة استلمتها ولسه ما دفعتهاش → بتزوّد اللي عليك
@@ -194,6 +195,8 @@ export async function addSupplierTransaction(formData: FormData) {
   ) {
     fail(back, "اختار النوع واكتب مبلغ أكبر من صفر والتاريخ");
   }
+  const closed = closedCategory(category);
+  if (closed) fail(back, `«${closed.category}» اتقفلت — ${closed.why}`);
 
   const admin = createAdminClient();
 

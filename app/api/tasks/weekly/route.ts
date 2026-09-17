@@ -67,9 +67,9 @@ export async function GET(request: Request) {
           .select(
             `order_status, order_date, delivered_at, shipping_price, discount,
              bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected,
-             bosta_tracking, bosta_exception, bosta_created_at,
+             bosta_tracking, bosta_exception, bosta_created_at, refunded_amount, refunded_at,
              customers(full_name, phone),
-             order_items(quantity, sale_price_at_order, cost_price_at_order)`
+             order_items(quantity, sale_price_at_order, cost_price_at_order, returned_quantity, returned_condition)`
           )
           .eq("tenant_id", tenantId)
           .gte("order_date", lastStart)),

@@ -1,6 +1,7 @@
 // حسابات كروت الداشبورد — مشتركة بين السيرفر (أول تحميل) والعميل (التحديث اللايف)
 import { AT_CARRIER_STATUSES, EXCLUDED_STATUSES } from "./format";
 import { splitExpenses } from "./profit-exclusions";
+import { itemCost, orderRefund, type MoneyItem } from "./returned-items";
 
 // ملحوظة: الشحن اللي العميل بيدفعه مابقاش رقم ثابت — بيتقرا من كل أوردر
 // زي ما نزل من شوبيفاي، فلو اختلف من أوردر للتاني الحسبة تفضل صح.
@@ -23,11 +24,7 @@ export function shiftDays(dateStr: string, days: number) {
 
 // ⚠️ الفترة (resolvePeriod) بقت في `lib/periods.ts` — مصدر واحد لكل الصفحات.
 
-type OrderItem = {
-  quantity: number;
-  sale_price_at_order: number;
-  cost_price_at_order: number;
-};
+type OrderItem = MoneyItem & { cost_price_at_order: number };
 export type StatOrder = {
   order_status: string | null;
   order_date: string | null;
@@ -39,6 +36,9 @@ export type StatOrder = {
   bosta_fees_real?: number | null;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
+  /** الريفند على الأوردر — بيتطرح من المبيعات والربح (ب) */
+  refunded_amount?: number | null;
+  refunded_at?: string | null;
   order_items: OrderItem[];
 };
 
@@ -174,11 +174,13 @@ export type Headline = {
 
 const itemsTotal = (o: StatOrder) =>
   o.order_items.reduce((s, i) => s + i.quantity * i.sale_price_at_order, 0);
+// ⚠️ **الريفند بيتطرح والبضاعة اللي رجعت الرف تكلفتها مابتتحسبش** —
+// `lib/returned-items.ts` (ب)
 const itemsProfit = (o: StatOrder) =>
   o.order_items.reduce(
-    (s, i) => s + i.quantity * (i.sale_price_at_order - i.cost_price_at_order),
+    (s, i) => s + i.quantity * i.sale_price_at_order - itemCost(o, i),
     0
-  );
+  ) - orderRefund(o);
 
 export function computeHeadline(
   orders: StatOrder[],
@@ -197,7 +199,12 @@ export function computeHeadline(
 
   // المبيعات شاملة الشحن اللي العميل دفعه — عشان الرقم يقارن بشوبيفاي على طول
   const sales = validOrders.reduce(
-    (s, o) => s + itemsTotal(o) - o.discount + Number(o.shipping_price ?? 0),
+    (s, o) =>
+      s +
+      itemsTotal(o) -
+      o.discount +
+      Number(o.shipping_price ?? 0) -
+      orderRefund(o),
     0
   );
   // ⚠️ **الإجمالي من غير فلتر حالة** — نفس معادلة المبيعات بالظبط، بس على

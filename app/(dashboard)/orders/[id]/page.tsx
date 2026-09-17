@@ -1373,8 +1373,11 @@ export default async function OrderDetailsPage({
                   ✅ الفلوس رجعت للعميل
                 </p>
                 <p className="mt-1 text-xs text-success">
-                  {formatMoney(order.refunded_amount ?? refundAmount)} —{" "}
-                  {formatDate(order.refunded_at)}
+                  {/* صفر = كان متسجّل مصروف «مرتجعات» قبل كده (confirmRefund) */}
+                  {order.refunded_amount === 0
+                    ? "متسجّلة قبل كده مصروف «مرتجعات»"
+                    : formatMoney(order.refunded_amount ?? refundAmount)}{" "}
+                  — {formatDate(order.refunded_at)}
                 </p>
                 <form action={undoRefund} className="mt-3">
                   <input type="hidden" name="order_id" value={order.id} />

@@ -25,7 +25,7 @@ import { allRows } from "@/lib/fetch-all-pages";
  * بيزنس التقدير فيه صفر — الكروت طلعت صفر رغم إن الرسوم الحقيقية موجودة.
  */
 const ORDER_SELECT =
-  "order_status, order_date, delivered_at, discount, shipping_price, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, order_items(quantity, sale_price_at_order, cost_price_at_order)";
+  "order_status, order_date, delivered_at, discount, shipping_price, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, refunded_amount, refunded_at, order_items(quantity, sale_price_at_order, cost_price_at_order, returned_quantity, returned_condition)";
 
 export function LiveMoneyCards({
   initial,

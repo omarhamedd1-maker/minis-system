@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { EXCLUDED_STATUSES, formatDate, formatMoney } from "@/lib/format";
+import { orderNetTotal } from "@/lib/returned-items";
 import { CustomerRow } from "@/components/CustomerRow";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { mergeCustomers } from "./actions";
@@ -18,7 +19,9 @@ type CustomerData = {
     order_status: string | null;
     shipping_price: number;
     discount: number;
-    order_items: { quantity: number; sale_price_at_order: number }[];
+    refunded_amount: number | null;
+    refunded_at: string | null;
+    order_items: { quantity: number; sale_price_at_order: number; returned_quantity: number | null }[];
   }[];
 };
 
@@ -60,8 +63,8 @@ export default async function CustomersPage({
     .from("customers")
     .select(
       `id, full_name, phone, address,
-       orders(id, order_date, order_status, shipping_price, discount,
-         order_items(quantity, sale_price_at_order))`
+       orders(id, order_date, order_status, shipping_price, discount, refunded_amount, refunded_at,
+         order_items(quantity, sale_price_at_order, returned_quantity))`
     )
     .limit(1000)
     .overrideTypes<CustomerData[]>();
@@ -81,15 +84,9 @@ export default async function CustomersPage({
       const validOrders = customer.orders.filter(
         (o) => !EXCLUDED.includes(o.order_status ?? "")
       );
+      // الريفند بيتطرح — اللي رجّع كل حاجة مايبانش إنه اشترى (ب)
       const total = validOrders.reduce(
-        (sum, order) =>
-          sum +
-          order.order_items.reduce(
-            (s, item) => s + item.quantity * item.sale_price_at_order,
-            0
-          ) -
-          order.discount +
-          order.shipping_price,
+        (sum, order) => sum + orderNetTotal(order),
         0
       );
       const lastOrderDate = customer.orders.reduce<string | null>(

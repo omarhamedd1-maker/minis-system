@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EXCLUDED_STATUSES, formatDate, formatMoney, orderStatusBadge, orderStatusClass } from "@/lib/format";
+import { orderNetTotal } from "@/lib/returned-items";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { CustomerEdit } from "@/components/CustomerEdit";
 import { CustomerAddress } from "@/components/CustomerAddress";
@@ -33,9 +34,12 @@ type CustomerDetail = {
     order_date: string | null;
     shipping_price: number;
     discount: number;
+    refunded_amount: number | null;
+    refunded_at: string | null;
     order_items: {
       quantity: number;
       sale_price_at_order: number;
+      returned_quantity: number | null;
       product_variants: {
         variant_name: string | null;
         products: { name_ar: string | null; name: string | null } | null;
@@ -63,8 +67,8 @@ export default async function CustomerPage({
     .from("customers")
     .select(
       `id, full_name, phone, address, city, zone, street, building, floor, apartment, landmark,
-       orders(id, order_number, order_status, order_date, shipping_price, discount,
-         order_items(quantity, sale_price_at_order,
+       orders(id, order_number, order_status, order_date, shipping_price, discount, refunded_amount, refunded_at,
+         order_items(quantity, sale_price_at_order, returned_quantity,
            product_variants(variant_name, products(name_ar, name))))`
     )
     .eq("id", id)
@@ -88,10 +92,8 @@ export default async function CustomerPage({
   const validOrders = orders.filter(
     (o) => !EXCLUDED.includes(o.order_status ?? "")
   );
-  const orderTotal = (o: CustomerDetail["orders"][number]) =>
-    o.order_items.reduce((s, i) => s + i.quantity * i.sale_price_at_order, 0) -
-    o.discount +
-    o.shipping_price;
+  // الريفند بيتطرح — اللي رجع بعد التسليم بيتحسب بالصافي (ب)
+  const orderTotal = (o: CustomerDetail["orders"][number]) => orderNetTotal(o);
   const total = validOrders.reduce((s, o) => s + orderTotal(o), 0);
   const deliveredCount = orders.filter(
     (o) => o.order_status === "delivered"

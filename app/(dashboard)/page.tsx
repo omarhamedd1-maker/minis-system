@@ -11,6 +11,7 @@ import { PeriodFilter } from "@/components/PeriodFilter";
 import { resolvePeriod } from "@/lib/periods";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
+import { itemCost, itemKept, orderRefund } from "@/lib/returned-items";
 import { countsInProfit } from "@/lib/profit-exclusions";
 import { zeroCostMessage, zeroCostNote } from "@/lib/zero-cost";
 import { monthlyReport } from "@/lib/monthly-report";
@@ -28,11 +29,15 @@ type OrderRow = {
   bosta_fees_real: number | null;
   bosta_cod: number | null;
   bosta_collected: boolean | null;
+  refunded_amount: number | null;
+  refunded_at: string | null;
   customers: { full_name: string | null } | null;
   order_items: {
     quantity: number;
     sale_price_at_order: number;
     cost_price_at_order: number;
+    returned_quantity: number | null;
+    returned_condition: string | null;
     product_variants: {
       id: string;
       variant_name: string | null;
@@ -85,17 +90,24 @@ function shiftDays(dateStr: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
+// ⚠️ **الريفند بيتطرح** — الأوردر اللي رجع بعد التسليم بيتحسب بيعة (ب)،
+// والملغي والمرتجع قبل التسليم ريفندهم صفر فمابيتأثروش.
 function itemsTotal(order: OrderRow) {
-  return order.order_items.reduce(
-    (s, i) => s + i.quantity * i.sale_price_at_order,
-    0
+  return (
+    order.order_items.reduce(
+      (s, i) => s + i.quantity * i.sale_price_at_order,
+      0
+    ) - orderRefund(order)
   );
 }
 
+// والبضاعة اللي رجعت الرف تكلفتها مابتتحسبش — `lib/returned-items.ts`
 function itemsProfit(order: OrderRow) {
-  return order.order_items.reduce(
-    (s, i) => s + i.quantity * (i.sale_price_at_order - i.cost_price_at_order),
-    0
+  return (
+    order.order_items.reduce(
+      (s, i) => s + i.quantity * i.sale_price_at_order - itemCost(order, i),
+      0
+    ) - orderRefund(order)
   );
 }
 
@@ -135,8 +147,8 @@ export default async function StatsPage({
       allRows(supabase
         .from("orders")
         .select(
-          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, customers(full_name),
-           order_items(quantity, sale_price_at_order, cost_price_at_order,
+          `id, order_status, order_date, delivered_at, shipping_price, discount, bosta_shipping_cost, bosta_fees_real, bosta_cod, bosta_collected, refunded_amount, refunded_at, customers(full_name),
+           order_items(quantity, sale_price_at_order, cost_price_at_order, returned_quantity, returned_condition,
              product_variants(id, variant_name, products(name)))`
         )
         .gte("order_date", fetchStart)
@@ -480,10 +492,11 @@ export default async function StatsPage({
         .filter(Boolean)
         .join(" / ");
       const entry = productStats.get(name) ?? { qty: 0, revenue: 0, profit: 0 };
-      entry.qty += item.quantity;
-      entry.revenue += item.quantity * item.sale_price_at_order;
-      entry.profit +=
-        item.quantity * (item.sale_price_at_order - item.cost_price_at_order);
+      // اللي رجع من العميل مايتحسبش للمنتج — `itemKept`
+      const kept = itemKept(order, item);
+      entry.qty += kept.qty;
+      entry.revenue += kept.revenue;
+      entry.profit += kept.profit;
       productStats.set(name, entry);
     }
   }

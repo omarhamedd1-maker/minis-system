@@ -14,6 +14,7 @@
 // ==========================================================================
 
 import { isPrepaidMethod } from "./format";
+import { orderNetTotal } from "./returned-items";
 
 /** الأوردر اللي بيتحسب: خرج فعلاً أو اتسلّم — الملغي لأ */
 const COUNTED = [
@@ -38,7 +39,10 @@ export type SegOrder = {
   amount_paid?: number | null;
   discount: number;
   shipping_price?: number | null;
-  order_items: { quantity: number; sale_price_at_order: number }[];
+  /** الريفند بيتطرح من الصرف (ب) */
+  refunded_amount?: number | null;
+  refunded_at?: string | null;
+  order_items: { quantity: number; sale_price_at_order: number; returned_quantity?: number | null }[];
 };
 
 export type CustomerStats = {
@@ -54,11 +58,7 @@ export type CustomerStats = {
 };
 
 function total(o: SegOrder): number {
-  const goods = o.order_items.reduce(
-    (s, i) => s + i.quantity * i.sale_price_at_order,
-    0
-  );
-  return goods - (o.discount ?? 0) + Number(o.shipping_price ?? 0);
+  return orderNetTotal(o);
 }
 
 function days(from: string, to: string): number {
