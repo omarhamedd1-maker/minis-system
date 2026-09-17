@@ -41,12 +41,17 @@ describe("expensesRedirectPath — اللينكات القديمة ماتتكس�
 describe("التابات بالصلاحية", () => {
   const has = (list: string[]) => (p: string) => list.includes(p);
 
-  it("المحاسب بيشوف الاتنين", () => {
-    // المصاريف الأول (قرار عمر)
+  it("المحاسب بيشوف التلاتة — والمصاريف الأول (قرار عمر)", () => {
     expect(moneyTabsFor(has(["cash.view", "expenses.view"])).map((t) => t.key)).toEqual([
       "expenses",
       "moves",
+      "transfers",
     ]);
+  });
+
+  it("⚠️ التحويلات بصلاحية الخزنة — مش تاب مفتوح لأي حد", () => {
+    expect(moneyTabsFor(has(["expenses.view"])).map((t) => t.key)).toEqual(["expenses"]);
+    expect(moneyTabsFor(has(["cash.view"])).map((t) => t.key)).toEqual(["moves", "transfers"]);
   });
 
   it("معاه المصاريف بس — تاب واحد", () => {
