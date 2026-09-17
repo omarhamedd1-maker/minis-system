@@ -6,6 +6,7 @@ import { moneyTabsFor, pickMoneyTab } from "@/lib/money-tabs";
 import { MovesTab } from "./MovesTab";
 import { BalanceFigure } from "./BalanceFigure";
 import { ExpensesTab } from "./ExpensesTab";
+import { TransfersTab } from "./TransfersTab";
 
 /**
  * ==========================================================================
@@ -80,6 +81,8 @@ export default async function MoneyPage({
 
       {tab === "expenses" ? (
         <ExpensesTab params={params} user={user} />
+      ) : tab === "transfers" ? (
+        <TransfersTab user={user} />
       ) : totals ? (
         <MovesTab params={params} user={user} totals={totals} />
       ) : null}

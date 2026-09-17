@@ -2,14 +2,16 @@ import type { PermissionKey } from "./permission-keys";
 
 /**
  * تابات صفحة الفلوس — كل تاب بصلاحيته.
- * «التحويلات» جاية في مواصفة لوحدها (`docs/TRANSFERS-REDESIGN.md`).
+ * «التحويلات» مواصفتها في `docs/TRANSFERS-REDESIGN.md`.
  */
-export type MoneyTabKey = "moves" | "expenses";
+export type MoneyTabKey = "moves" | "expenses" | "transfers";
 
 /** الترتيب قرار عمر (١٧ سبتمبر): المصاريف الأول — وأول تاب هو اللي بيفتح */
 export const MONEY_TABS: { key: MoneyTabKey; label: string; perm: PermissionKey }[] = [
   { key: "expenses", label: "المصاريف", perm: "expenses.view" },
   { key: "moves", label: "الحركات", perm: "cash.view" },
+  // التحويلات فلوس داخلة للخزنة — نفس صلاحية الخزنة
+  { key: "transfers", label: "التحويلات", perm: "cash.view" },
 ];
 
 export function moneyTabsFor(has: (perm: PermissionKey) => boolean) {
