@@ -22,15 +22,30 @@ export type FilterChip = {
 export function FilterBar({
   chips = [],
   clearHref,
+  sticky = true,
   children,
 }: {
   chips?: FilterChip[];
   /** لينك «مسح» — بيبان لما يكون فيه فلتر شغّال */
   clearHref?: string;
+  /**
+   * الشريط بيلزق فوق عند النزول (DESIGN §٢ قاعدة ٢).
+   *
+   * ⚠️ **اللزق فوق مش تحت** — تحت فيه شريط التنقل العايم في الموبايل.
+   * وعلى الموبايل بيلزق **تحت الهيدر** (`h-14`) مش فوقه، وعلى الديسكتوب
+   * مافيش هيدر لازق فبيلزق من فوق خالص.
+   */
+  sticky?: boolean;
   children?: React.ReactNode;
 }) {
   return (
-    <div className="mb-4 space-y-2">
+    <div
+      className={`mb-4 space-y-2 ${
+        sticky
+          ? "sticky top-14 z-20 -mx-4 bg-canvas px-4 py-2 md:top-0 md:-mx-6 md:px-6"
+          : ""
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2">
         {children}
 
