@@ -206,6 +206,7 @@ export function boardIsClear(rows: BoardRow[]): boolean {
  */
 export const ROW_PERMISSION: Partial<Record<string, PermissionKey>> = {
   refund: "cash.view",
+  zero_cost: "products.cost",
 };
 
 export function visibleRows(
