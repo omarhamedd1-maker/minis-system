@@ -15,6 +15,8 @@ import {
 import { formatMoney } from "@/lib/format";
 import { allRows } from "@/lib/fetch-all-pages";
 import { refundDue } from "@/lib/refund";
+import { extraQueues } from "@/lib/work-queues";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -80,10 +82,14 @@ export default async function WorkPage() {
     bosta_collected: boolean | null;
     refunded_at: string | null;
     return_skip_reason?: string | null;
-    order_items: { returned_quantity: number | null; sale_price_at_order: number }[];
+    order_items: {
+      returned_quantity: number | null;
+      sale_price_at_order: number;
+      cost_price_at_order: number | null;
+    }[];
   };
   const BASE =
-    "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected, refunded_at, order_items(returned_quantity, sale_price_at_order)";
+    "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected, refunded_at, order_items(returned_quantity, sale_price_at_order, cost_price_at_order)";
   const read = (cols: string) =>
     allRows(supabase.from("orders").select(cols).eq("archived", false).overrideTypes<WorkRow[]>());
   // ⚠️ **العدّ على كل الصفوف مش المعروض** (`allRows`) — عدّادات ناقصة بالصمت أسوأ.
@@ -114,8 +120,35 @@ export default async function WorkPage() {
     new Date()
   );
 
+  // الطوابير اللي مصدرها مش الأوردرات (`lib/work-queues.ts`).
+  // ⚠️ جدول التقييمات وطلبات الحذف مقفولين في الـRLS، فبيتقروا بمفتاح
+  // الأدمن **بفلتر البيزنس** — من غيره بيرجّعوا كل البيزنسات.
+  const admin = createAdminClient();
+  const [deletions, ratings] = await Promise.all([
+    allRows(admin
+      .from("deletion_requests")
+      .select("order_id")
+      .eq("tenant_id", user.tenantId)
+      .eq("status", "pending")
+      .overrideTypes<{ order_id: string | null }[]>()),
+    allRows(admin
+      .from("order_ratings")
+      .select("id, stars")
+      .eq("tenant_id", user.tenantId)
+      .lte("stars", 3)
+      .overrideTypes<{ id: string; stars: number }[]>()),
+  ]);
+  const extra = extraQueues({
+    deletionOrderIds: (deletions.data ?? []).map((d) => d.order_id).filter((v): v is string => Boolean(v)),
+    badRatings: (ratings.data ?? []).length,
+    // بند بتكلفة صفر = الربح على الأوردر ده غلط (`lib/zero-cost.ts`)
+    zeroCostOrderIds: (data ?? [])
+      .filter((o) => (o.order_items ?? []).some((i) => !Number(i.cost_price_at_order)))
+      .map((o) => o.id),
+  });
+
   // الصلاحية والترتيب جايين من `lib/daily-board` — مافيش قرار متكرر هنا
-  const rows = visibleRows(board, (perm) => can(user, perm));
+  const rows = visibleRows([...board, ...extra], (perm) => can(user, perm));
   const ordered = sortByUrgent(rows);
   const waiting = rows
     .filter((r) => r.urgent)
