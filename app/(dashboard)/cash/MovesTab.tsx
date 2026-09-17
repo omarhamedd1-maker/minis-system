@@ -18,8 +18,10 @@ import { ShowMore } from "@/components/ShowMore";
 import {
   addCashTransaction,
   deleteCashTransaction,
+  setOpeningBalance,
   updateCashTransaction,
 } from "./actions";
+import { OPENING, OPENING_LABEL, latestOpeningDate } from "@/lib/cash-opening";
 import { resolveShowCount } from "@/lib/show-more";
 import { allRows } from "@/lib/fetch-all-pages";
 
@@ -95,6 +97,25 @@ export async function MovesTab({
 
   const { totalIn, totalOut, balance, countAll, countIn, countOut } = totals;
 
+  // الرصيد الافتتاحي وأول حركة — السطر بتاعه بيقول هو كام وآخر تاريخ ينفع
+  const [{ data: opening }, { data: firstMove }] = await Promise.all([
+    supabase
+      .from("cash_transactions")
+      .select("amount, transaction_date")
+      .eq("tenant_id", user.tenantId)
+      .eq("source_type", OPENING)
+      .maybeSingle(),
+    supabase
+      .from("cash_transactions")
+      .select("transaction_date")
+      .eq("tenant_id", user.tenantId)
+      .neq("source_type", OPENING)
+      .order("transaction_date", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const openingMax = latestOpeningDate(firstMove?.transaction_date as string | undefined);
+
   const transactions = rowsResult.data;
 
   // الحركات اللي اتلغت — مالهاش تعديل ولا إلغاء تاني (MONEY ٦.٢)
@@ -154,7 +175,7 @@ export async function MovesTab({
       )}
       {saved && (
         <div className="rounded-control bg-success-soft px-4 py-3 text-sm text-success">
-          تم حفظ الحركة في الخزنة
+          {saved === "opening" ? "اتحفظ الرصيد الافتتاحي" : "تم حفظ الحركة في الخزنة"}
         </div>
       )}
       {deleted && (
@@ -274,6 +295,79 @@ export async function MovesTab({
           )}
         </div>
       </div>
+
+      {/*
+        الرصيد الافتتاحي (MONEY §٦.٤) — سطر صغير مش حركة. بيتعدّل في مكانه،
+        وتاريخه لازم يكون قبل أول حركة (`lib/cash-opening.ts`).
+      */}
+      {!dir && (opening || isAdmin) && (
+        <details className="group rounded-card bg-surface text-xs shadow-card">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 text-ink-muted [&::-webkit-details-marker]:hidden">
+            {opening ? (
+              <>
+                <span>{OPENING_LABEL}</span>
+                <b className="tabular-nums text-ink">{formatMoney(Number(opening.amount))}</b>
+                <span>· {formatDate(opening.transaction_date as string)}</span>
+                {isAdmin && <span className="ms-auto text-primary group-open:hidden">تعديل</span>}
+              </>
+            ) : (
+              <>
+                <span>مفيش {OPENING_LABEL} — لو الخزنة بدأت بفلوس قبل أول حركة، سجّلها هنا</span>
+                <span className="ms-auto text-primary group-open:hidden">تسجيل</span>
+              </>
+            )}
+          </summary>
+          {isAdmin && (
+            <form
+              action={setOpeningBalance}
+              className="flex flex-wrap items-end gap-3 border-t border-line p-4"
+            >
+              <div className="flex flex-col gap-1">
+                <label htmlFor="opening_amount" className="text-ink-muted">
+                  المبلغ (جنيه)
+                </label>
+                <input
+                  id="opening_amount"
+                  name="amount"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  required
+                  defaultValue={opening ? Number(opening.amount) : undefined}
+                  className="w-28 rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="opening_date" className="text-ink-muted">
+                  التاريخ{openingMax ? ` (قبل ${formatDate(firstMove!.transaction_date as string)})` : ""}
+                </label>
+                <input
+                  id="opening_date"
+                  name="transaction_date"
+                  type="date"
+                  required
+                  max={openingMax ?? undefined}
+                  defaultValue={
+                    opening
+                      ? String(opening.transaction_date).slice(0, 10)
+                      : (openingMax ?? cairoToday())
+                  }
+                  className="rounded-control border border-line-strong px-3 py-1.5 text-sm text-ink focus:border-primary focus:outline-none"
+                />
+              </div>
+              <SubmitOnce className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark disabled:opacity-60">
+                حفظ
+              </SubmitOnce>
+              {opening && (
+                <p className="w-full text-ink-faint">
+                  التعديل بيغيّر الرصيد من أوله، وبيتسجّل في سجل النشاط بالقيمة القديمة.
+                </p>
+              )}
+            </form>
+          )}
+        </details>
+      )}
 
       {transactions.length === 0 ? (
         <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
