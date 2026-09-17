@@ -72,6 +72,7 @@ import { approveDeletion, rejectDeletion } from "./[id]/actions";
 import { allRows } from "@/lib/fetch-all-pages";
 import { ORDER_TABS, resolveOrderTab } from "@/lib/order-tabs";
 import { isStuckShipment } from "@/lib/daily-board";
+import { dayHasHeader, groupDays } from "@/lib/group-days";
 
 type OrderRow = {
   id: string;
@@ -325,6 +326,18 @@ export default async function OrdersPage({
       })
     : fetchedOrders;
 
+  // ⚠️ التجميع بالتاريخ — واليوم اللي فيه أوردر واحد مالوش عنوان
+  // (`lib/group-days.ts`، نفس قاعدة صفحة الفلوس)
+  const orderTotal = (o: OrderRow) =>
+    o.order_items.reduce((s, i) => s + i.quantity * i.sale_price_at_order, 0) -
+    o.discount +
+    o.shipping_price;
+  const orderDays = groupDays(orders, {
+    dateOf: (o) => o.order_date,
+    amountOf: orderTotal,
+    hasMore: !searchTerm && orders.length >= showCount,
+  });
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -505,9 +518,27 @@ export default async function OrdersPage({
             sendAction={bulkSendToBosta}
           />
 
-          {/* ===== موبايل: كروت (بدل الجدول عشان مفيش سحب جانبي) ===== */}
-          <div className="space-y-3 md:hidden">
-            {orders.map((order) => {
+          {/* ===== موبايل: كروت مجمّعة باليوم (ORDERS §٣) ===== */}
+          <div className="space-y-2 md:hidden">
+            {orderDays.map((d) => (
+              <section key={d.day || "بدون تاريخ"} className={dayHasHeader(d) ? "pt-2" : ""}>
+                {dayHasHeader(d) && (
+                  <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
+                    <span className="font-bold text-ink">
+                      {d.day ? formatDate(d.day) : "من غير تاريخ"}
+                      {d.partial && (
+                        <span className="ms-1.5 font-normal text-ink-faint">
+                          (جزء من اليوم — الباقي تحت «عرض المزيد»)
+                        </span>
+                      )}
+                    </span>
+                    <span className="tabular-nums text-ink-muted">
+                      {d.rows.length} أوردر · {formatMoney(d.total)}
+                    </span>
+                  </div>
+                )}
+                <div className="space-y-2">
+            {d.rows.map((order) => {
               const total =
                 order.order_items.reduce(
                   (sum, item) => sum + item.quantity * item.sale_price_at_order,
@@ -654,6 +685,9 @@ export default async function OrdersPage({
                 </SelectableOrderCard>
               );
             })}
+                </div>
+              </section>
+            ))}
           </div>
 
           {/* ===== كمبيوتر: جدول ===== */}
