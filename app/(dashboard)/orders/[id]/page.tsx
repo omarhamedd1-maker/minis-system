@@ -70,6 +70,7 @@ import {
   updateReturnReason,
   confirmRefund,
   undoRefund,
+  clearReturnSkip,
   restockReturn,
   resyncFromShopify,
 } from "./actions";
@@ -235,6 +236,19 @@ export default async function OrderDetailsPage({
   if (!order) {
     notFound();
   }
+
+  // استثناء «مرتجع محتاج تسجيل» — قراية لوحدها عشان الصفحة ماتقعش لو
+  // `sql/return-skip.sql` لسه ماتشغّلش (العمود مش موجود = مفيش استثناء)
+  const returnSkip =
+    order.order_status === "returned_after_delivery"
+      ? (
+          await supabase
+            .from("orders")
+            .select("return_skip_reason")
+            .eq("id", order.id)
+            .maybeSingle()
+        ).data?.return_skip_reason ?? null
+      : null;
 
   const badge = orderStatusBadge(order.order_status);
 
@@ -1229,6 +1243,26 @@ export default async function OrderDetailsPage({
             </form>
           )}
         </div>
+
+        {/*
+          مستثنى من «مرتجع محتاج تسجيل» — بيقول ليه، عشان محدش يسأل «ليه ده
+          مش في الطابور؟». الاستثناء بيتشال من هنا (`sql/return-skip.sql`).
+        */}
+        {returnSkip && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-control bg-sunken px-4 py-3 text-xs text-ink-muted">
+            <span>
+              <b className="text-ink-body">مستثنى من تسجيل المرتجع:</b> {returnSkip}
+            </span>
+            {canStatus && (
+              <form action={clearReturnSkip}>
+                <input type="hidden" name="order_id" value={order.id} />
+                <button type="submit" className="text-primary underline">
+                  رجّعه للطابور
+                </button>
+              </form>
+            )}
+          </div>
+        )}
 
         {/*
           المرتجع — بيظهر بس لو الأوردر اتسلّم فعلاً.

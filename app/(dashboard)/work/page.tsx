@@ -14,6 +14,7 @@ import {
 } from "@/lib/daily-board";
 import { formatMoney } from "@/lib/format";
 import { allRows } from "@/lib/fetch-all-pages";
+import { refundDue } from "@/lib/refund";
 
 export const dynamic = "force-dynamic";
 
@@ -70,23 +71,27 @@ export default async function WorkPage() {
   const user = await requirePagePermission("orders.view");
   const supabase = await createClient();
 
-  // ⚠️ **٣٠٠٠ صف للعدّ مش للعرض** — تقليلها معناه عدّادات ناقصة بالصمت.
-  const { data } = await allRows(supabase
-    .from("orders")
-    .select(
-      "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected"
-    )
-    .eq("archived", false)
-    .overrideTypes<
-      {
-        id: string;
-        order_status: string | null;
-        bosta_tracking: string | null;
-        bosta_created_at: string | null;
-        bosta_cod: number | null;
-        bosta_collected: boolean | null;
-      }[]
-    >());
+  type WorkRow = {
+    id: string;
+    order_status: string | null;
+    bosta_tracking: string | null;
+    bosta_created_at: string | null;
+    bosta_cod: number | null;
+    bosta_collected: boolean | null;
+    refunded_at: string | null;
+    return_skip_reason?: string | null;
+    order_items: { returned_quantity: number | null; sale_price_at_order: number }[];
+  };
+  const BASE =
+    "id, order_status, bosta_tracking, bosta_created_at, bosta_cod, bosta_collected, refunded_at, order_items(returned_quantity, sale_price_at_order)";
+  const read = (cols: string) =>
+    allRows(supabase.from("orders").select(cols).eq("archived", false).overrideTypes<WorkRow[]>());
+  // ⚠️ **العدّ على كل الصفوف مش المعروض** (`allRows`) — عدّادات ناقصة بالصمت أسوأ.
+  // `return_skip_reason` من `sql/return-skip.sql` — لحد ما يتشغّل بنقرا من غيره
+  // (التمانية القدام هيبانوا في الطابور لحد ساعتها).
+  let result = await read(`${BASE}, return_skip_reason`);
+  if (result.error?.code === "42703") result = await read(BASE);
+  const data = result.data;
 
   const board = dailyBoard(
     (data ?? []).map((o) => ({
@@ -96,6 +101,15 @@ export default async function WorkPage() {
       bostaCreatedAt: o.bosta_created_at,
       bostaCod: o.bosta_cod,
       bostaCollected: o.bosta_collected,
+      refundedAt: o.refunded_at,
+      returnSkip: o.return_skip_reason ?? null,
+      returnedQty: (o.order_items ?? []).reduce((s, i) => s + Number(i.returned_quantity ?? 0), 0),
+      refundDue: refundDue(
+        (o.order_items ?? []).map((i) => ({
+          returnedQuantity: i.returned_quantity,
+          salePriceAtOrder: i.sale_price_at_order,
+        }))
+      ),
     })),
     new Date()
   );

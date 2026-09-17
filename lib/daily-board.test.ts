@@ -59,16 +59,43 @@ describe("لوحة اليوم", () => {
     expect(row(rows, "stuck").count).toBe(0);
   });
 
-  it("فلوس بوسطة = المسلّم اللي لسه ماتحصّلش", () => {
-    const orders: BoardOrder[] = [
-      { id: "a", orderStatus: "delivered", bostaCod: 500 },
-      { id: "b", orderStatus: "delivered", bostaCod: 300, bostaCollected: true },
-      { id: "c", orderStatus: "delivered", bostaCod: 0 },
-      { id: "d", orderStatus: "returned", bostaCod: 900 },
-    ];
-    const r = row(dailyBoard(orders, NOW), "money");
-    expect(r.count).toBe(1);
-    expect(r.money).toBe(500);
+  it("«فلوس عند بوسطة» اتشالت — صفر دايمًا على الحقيقي", () => {
+    const rows = dailyBoard([{ id: "a", orderStatus: "delivered", bostaCod: 500 }], NOW);
+    expect(rows.map((r) => r.key)).not.toContain("money");
+  });
+
+  describe("⚠️ المرتجع بعد التسليم: مرحلتين والأوردر في واحدة بس", () => {
+    const rad = (o: Partial<BoardOrder>): BoardOrder => ({ id: "x", orderStatus: "returned_after_delivery", ...o });
+    const where = (o: BoardOrder) => {
+      const rows = dailyBoard([o], NOW);
+      return ["register", "refund"].filter((k) => row(rows, k).count > 0);
+    };
+
+    it("ماتسجّلش = تسجيل بس", () => {
+      expect(where(rad({ returnedQty: 0, refundDue: 0 }))).toEqual(["register"]);
+    });
+
+    it("اتسجّل وعليه مستحق = ريفند بس", () => {
+      expect(where(rad({ returnedQty: 1, refundDue: 700 }))).toEqual(["refund"]);
+      expect(row(dailyBoard([rad({ returnedQty: 1, refundDue: 700 })], NOW), "refund").money).toBe(700);
+    });
+
+    it("اتسجّل ومفيش مستحق = برّه الاتنين", () => {
+      expect(where(rad({ returnedQty: 1, refundDue: 0 }))).toEqual([]);
+    });
+
+    it("الريفند اتأكّد = برّه الاتنين", () => {
+      expect(where(rad({ returnedQty: 1, refundDue: 700, refundedAt: "2026-08-18" }))).toEqual([]);
+    });
+
+    it("مستثنى بعلامة = برّه التسجيل · والعلامة الفاضية مش استثناء", () => {
+      expect(where(rad({ returnedQty: 0, returnSkip: "مرتجع قديم" }))).toEqual([]);
+      expect(where(rad({ returnedQty: 0, returnSkip: "  " }))).toEqual(["register"]);
+    });
+
+    it("حالة تانية مابتدخلش", () => {
+      expect(where({ id: "y", orderStatus: "returned", returnedQty: 0 })).toEqual([]);
+    });
   });
 
   it("اللينك بيفتح نفس الأوردرات بالظبط", () => {
@@ -96,7 +123,7 @@ describe("لوحة اليوم", () => {
     expect(boardIsClear(rows)).toBe(true);
   });
 
-  it("الراجعة والفلوس مش عاجل — دول خبر مش شغل", () => {
+  it("الراجعة مش عاجل — دي خبر مش شغل", () => {
     const rows = dailyBoard(
       [
         { id: "a", orderStatus: "returning" },
@@ -113,9 +140,10 @@ describe("صلاحيات السطور", () => {
   const has = (list: string[]) => (perm: string) => list.includes(perm);
 
   it("موظف التغليف مايشوفش سطر الفلوس خالص", () => {
-    const rows = dailyBoard([{ id: "a", orderStatus: "delivered", bostaCod: 500 }], NOW);
+    const rows = dailyBoard([], NOW);
     const seen = visibleRows(rows, has(packer));
-    expect(seen.map((r) => r.key)).not.toContain("money");
+    expect(seen.map((r) => r.key)).not.toContain("refund");
+    expect(seen.map((r) => r.key)).toContain("register");
     // والباقي زي ما هو — مش بيتشال معاه
     expect(seen.map((r) => r.key)).toContain("confirm");
   });
@@ -123,7 +151,7 @@ describe("صلاحيات السطور", () => {
   it("اللي معاه cash.view بيشوفه", () => {
     const rows = dailyBoard([], NOW);
     const seen = visibleRows(rows, has([...packer, "cash.view"]));
-    expect(seen.map((r) => r.key)).toContain("money");
+    expect(seen.map((r) => r.key)).toContain("refund");
   });
 
   it("الشيل مش تعطيل — السطر مش موجود أصلاً", () => {
