@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { groupCategories } from "@/lib/expense-groups";
 
 /**
  * اختيار نوع المصروف من قايمة.
@@ -69,10 +70,15 @@ export function CategoryPicker({
       className={className}
     >
       {!current && <option value="">اختار النوع</option>}
-      {options.map((c) => (
-        <option key={c} value={c}>
-          {c}
-        </option>
+      {/* متقسّمة بالمجموعة (`lib/expense-groups.ts`) — «برّه الربح» باينة وانت بتختار */}
+      {groupCategories(options).map((g) => (
+        <optgroup key={g.label} label={g.label}>
+          {g.categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </optgroup>
       ))}
       <option value="__new__">+ نوع جديد</option>
     </select>

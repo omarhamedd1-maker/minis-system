@@ -23,7 +23,13 @@ export function FilterSelect({
   name: string;
   value?: string;
   /** كل اختيار يقدر يحط باراميترات خاصة بيه (زي الأرشيف) بدل name=value */
-  options: { value: string; label: string; params?: Record<string, string> }[];
+  options: {
+    value: string;
+    label: string;
+    params?: Record<string, string>;
+    /** اسم مجموعة — الاختيارات اللي ليها نفس الاسم بتتجمع تحته */
+    group?: string;
+  }[];
   /** نص «الكل» — القيمة الفاضية */
   allLabel: string;
   basePath: string;
@@ -58,11 +64,34 @@ export function FilterSelect({
       className="field w-auto min-w-32 py-1.5 text-xs"
     >
       <option value="">{allLabel}</option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
+      {groupsOf(options).map((g) =>
+        g.name ? (
+          <optgroup key={g.name} label={g.name}>
+            {g.items.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </optgroup>
+        ) : (
+          g.items.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))
+        )
+      )}
     </select>
   );
+}
+
+/** الاختيارات بترتيبها، والمتتاليين من نفس المجموعة تحت عنوان واحد */
+function groupsOf<T extends { group?: string }>(options: T[]) {
+  const out: { name?: string; items: T[] }[] = [];
+  for (const o of options) {
+    const last = out[out.length - 1];
+    if (last && last.name === o.group) last.items.push(o);
+    else out.push({ name: o.group, items: [o] });
+  }
+  return out;
 }

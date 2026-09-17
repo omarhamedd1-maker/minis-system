@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { closedCategory } from "@/lib/profit-exclusions";
+import { groupCategories, groupTotals } from "@/lib/expense-groups";
 import {
   EXPENSE_CATEGORIES,
   cairoToday,
@@ -119,13 +120,18 @@ export async function ExpensesTab({
     .from("expenses")
     .select("category")
     .overrideTypes<{ category: string }[]>());
-  // المقفول (`CLOSED_CATEGORIES`) مابيتعرضش — القديم بيفضل باسمه
-  const CATEGORY_SUGGESTIONS = Array.from(
+  const ALL_CATEGORIES = Array.from(
     new Set([
       ...(usedCats ?? []).map((r) => r.category).filter(Boolean),
       ...STARTER_CATEGORIES,
     ]),
-  ).filter((c) => !closedCategory(c));
+  );
+  // المقفول (`CLOSED_CATEGORIES`) مابيتعرضش للإضافة — بس الفلتر بيشوفه
+  // عشان القديم يتفلتر
+  const CATEGORY_SUGGESTIONS = ALL_CATEGORIES.filter((c) => !closedCategory(c));
+  const FILTER_OPTIONS = groupCategories(ALL_CATEGORIES).flatMap((g) =>
+    g.categories.map((c) => ({ value: c, label: c, group: g.label })),
+  );
 
   // أسماء الموردين بتتقري بمفتاح الأدمن (جدول الموردين مقفول في الـRLS)
   const { data: supplierRows } = await allRows(createAdminClient()
@@ -147,6 +153,8 @@ export async function ExpensesTab({
   }
 
   const shownTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  // التقسيم بالمجموعة — بيبان بس لما مفيش نوع مختار (نوع واحد = مجموعة واحدة)
+  const groups = cat ? [] : groupTotals(expenses);
   const count = expenses.length;
   const change =
     prev && prevTotal !== null && prevTotal > 0
@@ -192,6 +200,18 @@ export async function ExpensesTab({
               · {count} {count >= 3 && count <= 10 ? "مصاريف" : "مصروف"}
             </span>
           </p>
+          {groups.length > 1 && (
+            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-muted">
+              {groups.map((g) => (
+                <span key={g.key}>
+                  {g.label}{" "}
+                  <b className="font-semibold tabular-nums text-ink-body">
+                    {formatMoney(g.total)}
+                  </b>
+                </span>
+              ))}
+            </p>
+          )}
           {prev && (
             <p className="mt-0.5 text-xs text-ink-muted">
               {change === null
@@ -230,7 +250,7 @@ export async function ExpensesTab({
         <FilterSelect
           name="cat"
           value={cat}
-          options={CATEGORY_SUGGESTIONS.map((c) => ({ value: c, label: c }))}
+          options={FILTER_OPTIONS}
           allLabel="كل الأنواع"
           basePath="/cash"
           query={{ tab: "expenses", ...periodParams }}
