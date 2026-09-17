@@ -230,28 +230,16 @@ export default async function ProductsPage({
           <span className="text-sm text-ink-muted">
             {products.length} منتج / {variantCount} شكل
           </span>
-          <form action="/products" className="flex items-center gap-1">
-            <input
-              name="q"
-              defaultValue={searchTerm}
-              placeholder="دور بالاسم أو الكود"
-              className="w-52 rounded-full border-0 bg-surface px-3 py-1 text-xs text-ink shadow-card placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <button
-              type="submit"
-              className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
+          {/* البحث من الأيقونة اللي فوق — هنا بيبان بس لو شغّال */}
+          {searchTerm && (
+            <Link
+              href={"/products"}
+              className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-3 py-1 text-xs text-ink"
             >
-              بحث
-            </button>
-            {searchTerm && (
-              <Link
-                href="/products"
-                className="rounded-full bg-surface px-2 py-1 text-xs text-ink-muted shadow-card hover:bg-sunken"
-              >
-                ✕
-              </Link>
-            )}
-          </form>
+              بحث: {searchTerm}
+              <span aria-hidden className="text-ink-muted">✕</span>
+            </Link>
+          )}
           {canEdit && <ImportShopifyProducts action={importShopifyProducts} />}
         </div>
       </div>

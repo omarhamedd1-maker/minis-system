@@ -547,37 +547,33 @@ export default async function StatsPage({
 
       </div>
 
-      {/*
-        المواسم الجاية.
-
-        ⚠️ **سطر واحد مش كارت** — ده مش رقم بتشتغل عليه كل يوم، ده تذكير
-        بيعدّي. الكارت بياخد مساحة الأرقام اللي بتتبص كل صباح.
-      */}
-      {seasons.length > 0 && (
-        <p className="text-xs text-ink-muted">
-          جاي:{" "}
-          {seasons.map((s, i) => (
-            <span key={s.key}>
-              {i > 0 && " · "}
-              <span className="text-ink">{s.name}</span>{" "}
-              <span className="text-ink-faint">
-                {remainingText(s.daysAway)}
-              </span>
-            </span>
-          ))}
-        </p>
-      )}
-
       <section>
-        {/* الفترة المختارة على اليمين، والاختيارات التانية جنبها على الشمال */}
-        <div className="mb-3 space-y-2">
-          <h2 className="text-sm font-bold text-ink">{periodLabel}</h2>
+        {/*
+          الفترة على اليمين والمواسم الجاية على الشمال — نفس السطر.
+          ⚠️ مفيش كلمة «الفترة» ولا عنوانها فوق: الشريحة المختارة هي اللي بتقول
+          (قرار عمر ١٧ سبتمبر). والمواسم **سطر مش كارت** — تذكير بيعدّي.
+        */}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <PeriodFilter
             basePath="/"
             query={query}
             current={range}
             defaultKey="30d"
           />
+          {seasons.length > 0 && (
+            <p className="text-xs text-ink-muted">
+              جاي:{" "}
+              {seasons.map((s, i) => (
+                <span key={s.key}>
+                  {i > 0 && " · "}
+                  <span className="text-ink">{s.name}</span>{" "}
+                  <span className="text-ink-faint">
+                    {remainingText(s.daysAway)}
+                  </span>
+                </span>
+              ))}
+            </p>
+          )}
         </div>
         <LiveMoneyCards
           initial={headline}

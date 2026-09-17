@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ConfirmButton } from "./ConfirmButton";
+import { ConfirmDialogButton } from "./ConfirmDialogButton";
+import { PencilIcon, TrashIcon, rowIconButton } from "./RowIcons";
 import { formatDate, formatMoney } from "@/lib/format";
 
 type Expense = {
@@ -65,22 +66,28 @@ export function ExpenseRow({
           {formatMoney(expense.amount)}
         </td>
         <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-control bg-sunken px-3 py-1 text-xs font-medium text-ink-body hover:bg-line"
+              title="تعديل"
+              aria-label="تعديل"
+              className={rowIconButton("neutral")}
             >
-              تعديل
+              <PencilIcon />
             </button>
             <form action={deleteAction}>
               <input type="hidden" name="expense_id" value={expense.id} />
-              <ConfirmButton
-                message="المصروف هيتمسح، وحركته في الخزنة هتتلغي بحركة عكسية بتاريخ النهارده. تكمّل؟"
-                className="rounded-control bg-danger-soft px-3 py-1 text-xs font-medium text-danger hover:bg-danger-line"
+              <ConfirmDialogButton
+                label="مسح"
+                title="مسح المصروف"
+                detail={`${expense.description || expense.category} · ${formatMoney(expense.amount)} · ${formatDate(expense.expense_date)}`}
+                note="وحركته في الخزنة هتتلغي بحركة عكسية بتاريخ النهارده."
+                confirmLabel="مسح"
+                className={rowIconButton("danger")}
               >
-                مسح
-              </ConfirmButton>
+                <TrashIcon />
+              </ConfirmDialogButton>
             </form>
           </div>
         </td>

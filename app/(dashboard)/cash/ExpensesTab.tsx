@@ -215,8 +215,6 @@ export async function ExpensesTab({
 
       {/* شريط الفلاتر الموحّد — التصنيفات منسدلة (١٣ نوع ماينفعوش شرايح) */}
       <FilterBar
-        basePath="/cash"
-        query={{ tab: "expenses", cat, ...periodParams }}
         chips={cat ? [{ label: cat, removeHref: buildHref({ cat: null }) }] : []}
         clearHref={cat || range.key !== "30d" ? "/cash?tab=expenses" : undefined}
       >

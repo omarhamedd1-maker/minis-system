@@ -97,23 +97,17 @@ export function PeriodFilter({
         ))}
       </div>
 
-      {/* التقويم — مشترك بين الشكلين */}
+      {/*
+        المدة المخصصة — على الموبايل خيار جوّه المنسدلة، وعلى الديسكتوب شريحة
+        زي الباقي. ⚠️ مفيش أيقونة تقويم (قرار عمر ١٧ سبتمبر).
+      */}
       <span className="relative inline-flex shrink-0 items-center gap-1">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          title="اختار يوم أو مدة"
-          aria-label="اختار يوم أو مدة من التقويم"
-          className={`${chip(isCustom)} inline-flex h-11 items-center gap-1.5 sm:h-auto`}
+          className={`${chip(isCustom)} hidden sm:inline-flex`}
         >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden="true">
-            <path
-              fillRule="evenodd"
-              d="M6 2a1 1 0 0 1 1 1v1h6V3a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1V3a1 1 0 0 1 1-1zm10 6H4v8h12V8z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span className="hidden sm:inline">{isCustom ? current.label : "مدة مخصصة"}</span>
+          {isCustom ? current.label : "مدة مخصصة"}
         </button>
 
         {isCustom && (
