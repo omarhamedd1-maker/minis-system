@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OrderImportResult } from "@/lib/shopify/orders";
 
@@ -12,8 +12,14 @@ import type { OrderImportResult } from "@/lib/shopify/orders";
  */
 export function ImportShopifyOrders({
   action,
+  trigger,
 }: {
   action: (dry: boolean) => Promise<OrderImportResult>;
+  /**
+   * بيشغّل العرض من برّه (قايمة `+` في الأوردرات) — كل زيادة = فتحة.
+   * وقتها الزرار بتاع الكومبوننت نفسه مابيظهرش.
+   */
+  trigger?: number;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -29,6 +35,15 @@ export function ImportShopifyOrders({
     if (!dry && r.ok) router.refresh();
   }
 
+  // الفتح من برّه — أول قيمة مابتفتحش (دي الحالة الابتدائية)
+  const seen = useRef(trigger);
+  useEffect(() => {
+    if (trigger === undefined || trigger === seen.current) return;
+    seen.current = trigger;
+    void run(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger]);
+
   const plan = result?.ok ? result.plan : null;
   const added = result?.ok ? result.added : undefined;
 
@@ -42,6 +57,7 @@ export function ImportShopifyOrders({
 
   return (
     <>
+      {trigger === undefined && (
       <button
         type="button"
         onClick={() => run(true)}
@@ -50,6 +66,7 @@ export function ImportShopifyOrders({
       >
         {busy && !plan ? "بنقرا…" : "جيب من شوبيفاي"}
       </button>
+      )}
 
       {open && (
         <div className="fixed inset-x-0 bottom-0 z-40 max-h-[80vh] overflow-y-auto rounded-t-sheet bg-surface p-5 shadow-pop sm:inset-x-auto sm:left-4 sm:bottom-4 sm:w-[26rem] sm:rounded-modal">

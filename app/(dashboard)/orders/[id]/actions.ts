@@ -1871,3 +1871,31 @@ export async function resyncFromShopify(formData: FormData) {
       encodeURIComponent("اتظبّط من شوبيفاي — " + result.summary)
   );
 }
+
+/**
+ * شيل استثناء الأوردر من «مرتجع محتاج تسجيل» — فيرجع للطابور
+ * (`orders.return_skip_reason` · `sql/return-skip.sql`).
+ */
+export async function clearReturnSkip(formData: FormData) {
+  const me = await requirePermission("orders.status");
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) redirect("/orders");
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("orders")
+    .update({ return_skip_reason: null })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", orderId);
+  if (error) {
+    redirect(`/orders/${orderId}?error=` + encodeURIComponent("معرفناش نشيل الاستثناء: " + error.message));
+  }
+  await logActivity(
+    me,
+    "order.return_skip_clear",
+    `رجّع أوردر ${await orderNo(supabase, orderId)} لطابور «مرتجع محتاج تسجيل»`,
+    orderId
+  );
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/work");
+  redirect(`/orders/${orderId}?saved=` + encodeURIComponent("رجع لطابور تسجيل المرتجع"));
+}

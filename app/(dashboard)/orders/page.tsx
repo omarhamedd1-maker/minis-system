@@ -59,7 +59,7 @@ import { BulkStatusBar, SelectAllCheckbox } from "@/components/BulkStatusBar";
 import { SendBostaRowButton } from "@/components/SendBostaRowButton";
 import { SelectableOrderCard } from "@/components/SelectableOrderCard";
 import { bulkUpdateStatus, bulkSendToBosta } from "./[id]/actions";
-import { ImportShopifyOrders } from "@/components/ImportShopifyOrders";
+import { OrdersAddMenu } from "@/components/OrdersAddMenu";
 import { importShopifyOrders } from "./actions";
 import { can, requirePagePermission } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -333,15 +333,8 @@ export default async function OrdersPage({
               /orders/reconcile لو احتجتها، بس مش بتاخد مكان في الشاشة */}
           {/* السلات المتروكة وصحة التشغيل بقوا في القايمة الجانبية —
               اللينك الباهت هنا كان بيتوه جنب الأزرار */}
-          {canCreate && <ImportShopifyOrders action={importShopifyOrders} />}
-          {canCreate && (
-            <Link
-              href="/orders/new"
-              className="rounded-control bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-dark"
-            >
-              إضافة أوردر
-            </Link>
-          )}
+          {/* أوردر جديد + جيب من شوبيفاي — قايمة واحدة (ORDERS-PAGE-REDESIGN §١) */}
+          <OrdersAddMenu canCreate={canCreate} importAction={importShopifyOrders} />
         </div>
       </div>
 

@@ -30,6 +30,17 @@ export type BoardOrder = {
   bostaCreatedAt?: string | null;
   bostaCod?: number | null;
   bostaCollected?: boolean | null;
+  /** مجموع الكميات الراجعة المتسجّلة على البنود */
+  returnedQty?: number | null;
+  /** المستحق للعميل من البنود الراجعة (`refundDue`) */
+  refundDue?: number | null;
+  refundedAt?: string | null;
+  /**
+   * سبب استثناء الأوردر من «مرتجع محتاج تسجيل» (`orders.return_skip_reason`).
+   * ⚠️ **علامة على الأوردر مش تاريخ في الكود** — السبب مكتوب مكانه، ولو
+   * اتشالت الأوردر بيرجع للطابور.
+   */
+  returnSkip?: string | null;
 };
 
 export type BoardRow = {
@@ -95,12 +106,25 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
 
   const coming = pick((o) => o.orderStatus === "returning");
 
-  // اتسلّم والفلوس لسه عند بوسطة
-  const money = pick(
+  // ⚠️ «فلوس عند بوسطة» اتشالت (١٧ سبتمبر): على مينيز و2 SEC صفر دايمًا —
+  // بوسطة بتحوّل بسرعة، واللي «ماتحصّلش» كله من غير رقم تتبع يعني مش عندها.
+
+  // المرتجع بعد التسليم على مرحلتين متتابعتين — الأوردر في واحدة بس:
+  // ١. لسه ماتسجّلش رجع منه إيه (ومش مستثنى)
+  const returned = (o: BoardOrder) => o.orderStatus === "returned_after_delivery";
+  const toRegister = pick(
     (o) =>
-      o.orderStatus === "delivered" &&
-      !o.bostaCollected &&
-      Number(o.bostaCod ?? 0) > 0
+      returned(o) &&
+      !String(o.returnSkip ?? "").trim() &&
+      Number(o.returnedQty ?? 0) <= 0
+  );
+  // ٢. اتسجّل وعليه مستحق ولسه ماتأكّدش التحويل. من غير مستحق = برّه الاتنين
+  const toRefund = pick(
+    (o) =>
+      returned(o) &&
+      Number(o.returnedQty ?? 0) > 0 &&
+      !o.refundedAt &&
+      Number(o.refundDue ?? 0) > 0
   );
 
   const ids = (list: BoardOrder[]) => list.map((o) => o.id);
@@ -142,12 +166,19 @@ export function dailyBoard(orders: BoardOrder[], now: Date): BoardRow[] {
       urgent: false,
     },
     {
-      key: "money",
-      label: "فلوس عند بوسطة",
-      count: money.length,
-      money: money.reduce((s, o) => s + Number(o.bostaCod ?? 0), 0),
-      href: link(ids(money), "/orders?status=delivered"),
-      urgent: false,
+      key: "register",
+      label: "مرتجع محتاج تسجيل",
+      count: toRegister.length,
+      href: link(ids(toRegister), "/orders?status=returned_after_delivery"),
+      urgent: toRegister.length > 0,
+    },
+    {
+      key: "refund",
+      label: "ريفند ماتحوّلش",
+      count: toRefund.length,
+      money: toRefund.reduce((s, o) => s + Number(o.refundDue ?? 0), 0),
+      href: link(ids(toRefund), "/orders?status=returned_after_delivery"),
+      urgent: toRefund.length > 0,
     },
   ];
 }
@@ -163,11 +194,11 @@ export function boardIsClear(rows: BoardRow[]): boolean {
 
 /**
  * ⚠️ **السطر اللي مالوش صلاحية بيتشال خالص** — مش بيتعطّل ولا بيبان باهت.
- * موظف التغليف مايشوفش «فلوس عند بوسطة» ومايعرفش إنها موجودة أصلًا.
+ * موظف التغليف مايشوفش «ريفند ماتحوّلش» (فلوس) ومايعرفش إنه موجود أصلًا.
  * السطور اللي مش هنا مفتوحة لأي حد بيشوف الأوردرات.
  */
 export const ROW_PERMISSION: Partial<Record<string, PermissionKey>> = {
-  money: "cash.view",
+  refund: "cash.view",
 };
 
 export function visibleRows(
