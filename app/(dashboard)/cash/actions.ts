@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { cairoToday } from "@/lib/format";
 import { auditFields, reverseCashRows } from "@/lib/cash-reversal";
+import { OPENING, OPENING_LABEL, checkOpening } from "@/lib/cash-opening";
 
 export async function updateCashTransaction(formData: FormData) {
   const me = await requirePermission("cash.edit");
@@ -150,4 +151,68 @@ export async function addCashTransaction(formData: FormData) {
 
   await logActivity(me, "cash.add", `${direction === "in" ? "إيداع" : "سحب"} خزنة بمبلغ ${amount}`);
   revalidatePath("/cash");
+}
+
+/**
+ * الرصيد الافتتاحي — بيتسجّل أول مرة وبيتعدّل في مكانه (`lib/cash-opening.ts`).
+ */
+export async function setOpeningBalance(formData: FormData) {
+  const me = await requirePermission("cash.edit");
+  const supabase = createAdminClient();
+  const back = (msg: string) =>
+    redirect("/cash?tab=moves&error=" + encodeURIComponent(msg));
+
+  const [{ data: current }, { data: first }] = await Promise.all([
+    supabase
+      .from("cash_transactions")
+      .select("id, amount, transaction_date")
+      .eq("tenant_id", me.tenantId)
+      .eq("source_type", OPENING)
+      .maybeSingle(),
+    supabase
+      .from("cash_transactions")
+      .select("transaction_date")
+      .eq("tenant_id", me.tenantId)
+      .neq("source_type", OPENING)
+      .order("transaction_date", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const check = checkOpening({
+    amount: formData.get("amount"),
+    date: formData.get("transaction_date"),
+    firstMoveDate: first?.transaction_date as string | undefined,
+  });
+  if (!check.ok) return back(check.error);
+
+  if (current) {
+    const { error } = await supabase
+      .from("cash_transactions")
+      .update({ amount: check.amount, transaction_date: check.date })
+      .eq("tenant_id", me.tenantId)
+      .eq("id", current.id);
+    if (error) return back("معرفناش نعدّل الرصيد الافتتاحي: " + error.message);
+    // ⚠️ بيتعدّل في مكانه — فالقيمة القديمة لازم تفضل مكتوبة في مكان
+    await logActivity(
+      me,
+      "cash.opening",
+      `عدّل الرصيد الافتتاحي من ${current.amount} (${String(current.transaction_date).slice(0, 10)}) لـ${check.amount} (${check.date})`
+    );
+  } else {
+    const { error } = await supabase.from("cash_transactions").insert({
+      tenant_id: me.tenantId,
+      direction: "in",
+      amount: check.amount,
+      source_type: OPENING,
+      description: OPENING_LABEL,
+      transaction_date: check.date,
+      ...auditFields(me, "app"),
+    });
+    if (error) return back("معرفناش نسجّل الرصيد الافتتاحي: " + error.message);
+    await logActivity(me, "cash.opening", `سجّل رصيد افتتاحي ${check.amount} (${check.date})`);
+  }
+
+  revalidatePath("/cash");
+  redirect("/cash?tab=moves&saved=opening");
 }
