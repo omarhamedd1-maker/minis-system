@@ -3,7 +3,15 @@ import { allRows } from "@/lib/fetch-all-pages";
 import { formatDate, formatMoney } from "@/lib/format";
 import { can, type SessionUser } from "@/lib/permissions";
 import { ImportStatement } from "@/components/ImportStatement";
-import { applyPayoutImport, previewPayoutImport } from "./payout-actions";
+import { PayoutReview } from "@/components/PayoutReview";
+import { linkToManualCash } from "@/lib/payout-match";
+import {
+  acceptPayoutDiff,
+  applyPayoutImport,
+  createPayoutCash,
+  fixPayoutCash,
+  previewPayoutImport,
+} from "./payout-actions";
 
 /**
  * ==========================================================================
@@ -61,6 +69,37 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
   }
 
   const rows = data ?? [];
+
+  // الحركة اليدوية القريبة من كل تحويل محتاج مراجعة — بنفس منطق الاستيراد،
+  // عشان شاشة المراجعة تعرف تقول «صلّح» ولا «اعمل حركة»
+  const open = rows.filter((r) => r.status === "needs_review" && !r.cash_transaction_id);
+  const { data: manual } = open.length
+    ? await allRows(db
+        .from("cash_transactions")
+        .select("id, amount, transaction_date, related_payout_id")
+        .eq("tenant_id", user.tenantId)
+        .eq("source_type", "manual")
+        .eq("direction", "in")
+        .overrideTypes<
+          { id: string; amount: number; transaction_date: string; related_payout_id: string | null }[]
+        >())
+    : { data: [] };
+  const free = (manual ?? [])
+    .filter((c) => !c.related_payout_id)
+    .map((c) => ({ id: c.id, amount: Number(c.amount), date: String(c.transaction_date).slice(0, 10) }));
+  const candidates = new Map<string, { id: string; amount: number; difference: number }>();
+  for (const r of open) {
+    // ⚠️ من غير سماح — عايزين الحركة اللي فرقها كبير عشان نعرضه
+    const hit = linkToManualCash(
+      { net: Number(r.net_amount), date: r.payout_date },
+      free,
+      new Set([...candidates.values()].map((c) => c.id))
+    );
+    if (hit.kind === "diff") {
+      const amount = free.find((c) => c.id === hit.cashId)?.amount ?? 0;
+      candidates.set(r.id, { id: hit.cashId, amount, difference: hit.difference });
+    }
+  }
   const review = rows.filter((r) => r.status === "needs_review");
   const total = rows.reduce((s, r) => s + Number(r.net_amount), 0);
   const fees = rows.reduce((s, r) => s + Number(r.fees_amount), 0);
@@ -150,6 +189,16 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
                 )}
                 {r.review_reason && (
                   <p className="mt-2 text-xs text-warning">{r.review_reason}</p>
+                )}
+                {canEdit && r.status === "needs_review" && !r.cash_transaction_id && (
+                  <PayoutReview
+                    payoutId={r.id}
+                    net={Number(r.net_amount)}
+                    candidate={candidates.get(r.id) ?? null}
+                    createAction={createPayoutCash}
+                    fixAction={fixPayoutCash}
+                    acceptAction={acceptPayoutDiff}
+                  />
                 )}
               </div>
             );

@@ -177,3 +177,24 @@ describe("النافذة الزمنية — محاولة تانية، ونتيج
     expect(matchPayout({ gross: 500, count: 2, date: "2026-09-10" }, late).ok).toBe(false);
   });
 });
+
+describe("⚠️ الفرق الكبير مش «فرق» — ده تحويل مالوش حركة", () => {
+  const rows = [{ id: "m1", amount: 3388, date: "2026-09-13" }];
+
+  it("تحويل ٦٤٫٨٠ جنب حركة ٣,٣٨٨ = ناقص مش فرق", () => {
+    expect(linkToManualCash({ net: 64.8, date: "2026-09-13" }, rows, new Set(), 1).kind).toBe("gap");
+  });
+
+  it("وخطأ الكتابة المعقول لسه «فرق»", () => {
+    const close = [{ id: "m2", amount: 6400, date: "2026-08-13" }];
+    expect(linkToManualCash({ net: 6437.44, date: "2026-08-13" }, close, new Set(), 1)).toMatchObject({
+      kind: "diff",
+      difference: 37.44,
+    });
+  });
+
+  it("والنسبة بتحمي المبالغ الكبيرة — ١٠٪ فأكتر مش تقريب", () => {
+    const big = [{ id: "m3", amount: 5000, date: "2026-08-13" }];
+    expect(linkToManualCash({ net: 10000, date: "2026-08-13" }, big, new Set(), 1).kind).toBe("gap");
+  });
+});

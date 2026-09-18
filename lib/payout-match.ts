@@ -217,6 +217,12 @@ export type CashLink =
 export const ROUNDING_TOLERANCE = 1;
 
 /**
+ * أكبر فرق يعتبر «نفس التحويل اتكتب غلط» — فوقه بيبقى حركة تانية خالص.
+ * القياس على مينيز: أكبر فرق حقيقي كان ٣٧٫٤٤ (١٣ أغسطس).
+ */
+export const MAX_WRITE_SLIP = 100;
+
+/**
  * التحويل ده يقابله إيه في الخزنة؟
  *
  * - **مطابق** بالمليم وفي نفس اليوم (± يوم، لأن التسجيل بالإيد بيتأخر) → يتربط.
@@ -255,11 +261,21 @@ export function linkToManualCash(
     (a, b) =>
       Math.abs(Number(a.amount) - payout.net) - Math.abs(Number(b.amount) - payout.net)
   )[0];
-  return {
-    kind: "diff",
-    cashId: closest.id,
-    difference: round(Number(payout.net) - Number(closest.amount)),
-  };
+  const difference = round(Number(payout.net) - Number(closest.amount));
+
+  // ⚠️⚠️ **الفرق الكبير = مش نفس التحويل، ده «ناقص».**
+  //
+  // من غير الحد ده، تحويل بـ٦٤٫٨٠ كان بيتربط بحركة ٣,٣٨٨ في نفس اليوم
+  // ويقول «فرق ٣,٣٢٣» — وشاشة المراجعة كانت هتعرض «صلّح الحركة لـ٦٤٫٨٠»،
+  // يعني تلغي حركة مالهاش علاقة وتحط مكانها مبلغ تاني خالص (اتكشف على
+  // التجريبي · ١٨ سبتمبر).
+  //
+  // التقريب بيبقى قروش، وخطأ الكتابة بيبقى في حدود المية — مش أضعاف.
+  if (Math.abs(difference) > Math.max(MAX_WRITE_SLIP, Number(payout.net) * 0.1)) {
+    return { kind: "gap" };
+  }
+
+  return { kind: "diff", cashId: closest.id, difference };
 }
 
 /** نفس اليوم أو اللي قبله أو اللي بعده */
