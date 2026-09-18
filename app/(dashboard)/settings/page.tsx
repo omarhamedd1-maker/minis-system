@@ -18,6 +18,8 @@ import {
 import { EnablePush } from "@/components/EnablePush";
 import { IntegrationHealth } from "@/components/IntegrationHealth";
 import { readShopifyApp } from "@/lib/shopify/app";
+import { gmailConfirmationCode, payoutAddress, setupSteps } from "@/lib/payout-address";
+import { formatDate } from "@/lib/format";
 import { headers } from "next/headers";
 import { ImportHistory } from "@/components/ImportHistory";
 import { CopyLink } from "@/components/CopyLink";
@@ -62,6 +64,36 @@ export default async function SettingsPage({
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
+
+  // ⚠️ قراية لوحدها — العمود لسه ممكن مايكونش اتعمل (`sql/payout-email-key.sql`)
+  const payoutKey = await (async () => {
+    const { data } = await db
+      .from("tenant_credentials")
+      .select("payout_email_key")
+      .eq("tenant_id", me.tenantId)
+      .maybeSingle();
+    return (data?.payout_email_key as string | undefined) ?? null;
+  })().catch(() => null);
+  const inboxAddress = payoutAddress(
+    payoutKey,
+    process.env.NEXT_PUBLIC_MAIL_DOMAIN ?? process.env.NEXT_PUBLIC_SITE_URL ?? null
+  );
+
+  // ⚠️ **كود تأكيد جيميل بيوصل عندنا مش عنده** — من غير عرضه الإعداد بيقف
+  const gmailCode = await (async () => {
+    if (!payoutKey) return null;
+    const { data } = await db
+      .from("courier_payout_emails")
+      .select("subject, raw, received_at")
+      .eq("tenant_id", me.tenantId)
+      .order("received_at", { ascending: false })
+      .limit(10);
+    for (const row of data ?? []) {
+      const code = gmailConfirmationCode(String(row.subject ?? ""), String(row.raw ?? ""));
+      if (code) return { code, at: String(row.received_at) };
+    }
+    return null;
+  })().catch(() => null);
 
   // ⚠️ قراية لوحدها — العمود لسه ممكن مايكونش اتعمل، والفشل مايوقّعش الشاشة
   const flatShipping = await (async () => {
@@ -351,6 +383,41 @@ export default async function SettingsPage({
               </div>
             </details>
           </>
+        )}
+      </div>
+
+      {/* ===== إيميل التحويلات — العنوان السري (TRANSFERS §٣) ===== */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold text-ink">إيميل التحويلات</h2>
+          <Badge on={Boolean(inboxAddress)} />
+        </div>
+        <p className="mt-2 text-xs leading-6 text-ink-muted">
+          بوسطة بتبعت إيميل بعد كل تحويل. بدل ما السيستم يقرا إيميلاتك كلها،
+          بتحوّل الإيميل ده لعنوان سري — وهو اللي بيسجّل التحويل ويطابقه.
+        </p>
+
+        {inboxAddress ? (
+          <>
+            <p className="mt-3 select-all break-all rounded-control bg-sunken px-3 py-2 font-mono text-xs text-ink">
+              {inboxAddress}
+            </p>
+            <ol className="mt-3 list-decimal space-y-1 ps-5 text-xs text-ink-body">
+              {setupSteps(inboxAddress).map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            {gmailCode && (
+              <p className="mt-3 rounded-control bg-success-soft px-3 py-2 text-xs text-success">
+                كود تأكيد جيميل وصل: <b className="font-mono">{gmailCode.code}</b> —{" "}
+                {formatDate(gmailCode.at)}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="mt-3 rounded-control bg-sunken px-3 py-2 text-xs text-ink-muted">
+            لسه مااتعملش — محتاج <code>sql/payout-email-key.sql</code> ومزوّد بريد وارد.
+          </p>
         )}
       </div>
 
