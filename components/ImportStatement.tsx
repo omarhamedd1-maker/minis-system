@@ -140,6 +140,12 @@ export function ImportStatement({
               {plan.totals.needsReview} محتاج مراجعة · {plan.totals.duplicates}{" "}
               متسجّل قبل كده
             </p>
+            {plan.totals.rounding !== 0 && (
+              // ⚠️ القروش دي فرق حقيقي في الرصيد — بتتسجّل على كل تحويل
+              <p className="text-xs text-ink-muted">
+                فروق التقريب في الحركات اليدوية: {plan.totals.rounding} جنيه
+              </p>
+            )}
             <div className="max-h-72 overflow-y-auto rounded-control border border-line">
               {plan.rows.map((r) => (
                 <div

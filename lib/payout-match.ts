@@ -26,7 +26,16 @@ export type PayoutInput = {
   gross: number;
   /** عدد الأوردرات من الإيميل/الكشف — `null` لو مش معروف */
   count: number | null;
+  /** تاريخ التحويل — بيتستعمل في محاولة النافذة الزمنية */
+  date?: string;
 };
+
+/**
+ * ⚠️ **النافذة الزمنية محاولة تانية بعد الفشل** (قرار عمر ١٨ سبتمبر).
+ * بوسطة بتحوّل بعد التسليم بأيام، فاللي بره النافذة غالبًا مش في التحويل.
+ * واللي بيطلع منها **مرجّح مش مؤكد** — بيتكتب `likely` على التحويل.
+ */
+export const WINDOW_DAYS = 10;
 
 /** أوردر متسلّم ولسه مش مربوط بأي تحويل */
 export type PayoutCandidate = {
@@ -38,7 +47,12 @@ export type PayoutCandidate = {
 };
 
 export type MatchResult =
-  | { ok: true; orderIds: string[]; how: "oldest" | "search" }
+  | {
+      ok: true;
+      orderIds: string[];
+      /** `window` = من النافذة الزمنية، يعني **مرجّح مش مؤكد** */
+      how: "oldest" | "search" | "window";
+    }
   | { ok: false; reason: string; options?: string[][] };
 
 /** بيرتّب الأقدم الأول — واللي مالوش تاريخ في الآخر */
@@ -119,6 +133,19 @@ export function matchPayout(
     // ٢) بحث عن أي مجموعة بنفس العدد والمجموع
     const hits = search(sorted, count, gross);
     if (hits.length === 1) return { ok: true, orderIds: hits[0], how: "search" };
+
+    // ٣) محاولة أخيرة: نافذة زمنية حوالين تاريخ التحويل.
+    // ⚠️ **بتتجرّب كمان لما يبقى فيه أكتر من احتمال** — النافذة هي اللي
+    // بتحسمهم، لأن اللي اتسلّم من شهر مش في تحويل النهاردة. والنتيجة
+    // **مرجّحة** (`window`) مش مؤكدة.
+    if (payout.date) {
+      const near = sorted.filter((c) => withinDays(c.deliveredAt, payout.date!, WINDOW_DAYS));
+      if (near.length >= count) {
+        const hit = search(near, count, gross, 1);
+        if (hit.length === 1) return { ok: true, orderIds: hit[0], how: "window" };
+      }
+    }
+
     if (hits.length > 1) {
       return {
         ok: false,
@@ -126,6 +153,7 @@ export function matchPayout(
         options: hits,
       };
     }
+
     const total = sum(sorted.map((o) => o.cod));
     return {
       ok: false,
@@ -170,9 +198,23 @@ export type ManualCashRow = {
 };
 
 export type CashLink =
-  | { kind: "linked"; cashId: string }
+  | { kind: "linked"; cashId: string; rounding?: number }
   | { kind: "gap" }
   | { kind: "diff"; cashId: string; difference: number };
+
+/**
+ * ⚠️⚠️ **السماح هنا غير السماح في مطابقة الأوردرات — وده مقصود.**
+ *
+ * - **بين أرقام بوسطة نفسها** (مجموع COD مقابل مبلغ التحويل): السماح
+ *   **صفر**. أي فرق هناك معناه أوردر ناقص أو زيادة — ده عطل.
+ * - **بين رقم بوسطة والحركة اليدوية**: الفرق ده **تقريب عمر وهو بيكتب**
+ *   (بيسجّل ٤,٠٤٨ بدل ٤,٠٤٨٫٠٤). القاعدة القديمة كانت بتخلط الاتنين،
+ *   فطلع ٢٣ تحويل «محتاج مراجعة» كلهم قروش (مينيز · ١٨ سبتمبر).
+ *
+ * والسماح ده **للاستيراد التاريخي بس**. الإيميل بيدّي الرقم الصحيح ومفيش
+ * تقريب، فهناك بيتنادى بصفر.
+ */
+export const ROUNDING_TOLERANCE = 1;
 
 /**
  * التحويل ده يقابله إيه في الخزنة؟
@@ -183,17 +225,30 @@ export type CashLink =
  * - **ناقص** — مفيش حركة خالص → مستني دوسة تعمل الحركة.
  *
  * @param used حركات اتربطت بتحويلات تانية — مابتتحسبش تاني
+ * @param tolerance فرق مقبول بالجنيه — صفر يعني بالمليم (شوف
+ *   `ROUNDING_TOLERANCE`). اللي جوّه السماح بيتربط ومعاه الفرق مكتوب.
  */
 export function linkToManualCash(
   payout: { net: number; date: string },
   rows: ManualCashRow[],
-  used: Set<string> = new Set()
+  used: Set<string> = new Set(),
+  tolerance = 0
 ): CashLink {
   const free = rows.filter((r) => !used.has(r.id) && near(r.date, payout.date));
   if (free.length === 0) return { kind: "gap" };
 
   const exact = free.find((r) => eq(Number(r.amount), Number(payout.net)));
   if (exact) return { kind: "linked", cashId: exact.id };
+
+  if (tolerance > 0) {
+    const rounded = free
+      .map((r) => ({ r, diff: round(Number(payout.net) - Number(r.amount)) }))
+      .filter((x) => Math.abs(x.diff) < tolerance)
+      .sort((x, y) => Math.abs(x.diff) - Math.abs(y.diff))[0];
+    if (rounded) {
+      return { kind: "linked", cashId: rounded.r.id, rounding: rounded.diff };
+    }
+  }
 
   // أقرب مبلغ — الفرق بيتعرض زي ما هو
   const closest = [...free].sort(
@@ -213,4 +268,13 @@ function near(a: string, b: string): boolean {
   const y = Date.parse(b.slice(0, 10) + "T12:00:00Z");
   if (Number.isNaN(x) || Number.isNaN(y)) return false;
   return Math.abs(x - y) <= 86_400_000;
+}
+
+/** الأوردر اتسلّم في النافذة اللي قبل التحويل؟ */
+function withinDays(delivered: string | null, date: string, days: number): boolean {
+  if (!delivered) return false;
+  const d = Date.parse(delivered.slice(0, 10) + "T12:00:00Z");
+  const p = Date.parse(date.slice(0, 10) + "T12:00:00Z");
+  if (Number.isNaN(d) || Number.isNaN(p)) return false;
+  return d <= p + 86_400_000 && p - d <= days * 86_400_000;
 }

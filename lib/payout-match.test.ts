@@ -130,3 +130,50 @@ describe("⛔ الربط بالحركات اليدوية القديمة", () => 
     expect(linkToManualCash({ net: 100, date: "مش تاريخ" }, rows).kind).toBe("gap");
   });
 });
+
+describe("⚠️ السماح: تقريب الحركة اليدوية مش خطأ مطابقة", () => {
+  const rows = [{ id: "m1", amount: 4048, date: "2026-07-19" }];
+
+  it("فرق قروش جوّه السماح = ربط ومعاه الفرق مكتوب", () => {
+    expect(linkToManualCash({ net: 4048.04, date: "2026-07-19" }, rows, new Set(), 1)).toEqual({
+      kind: "linked",
+      cashId: "m1",
+      rounding: 0.04,
+    });
+  });
+
+  it("من غير سماح = فرق (ده وضع الإيميل)", () => {
+    expect(linkToManualCash({ net: 4048.04, date: "2026-07-19" }, rows).kind).toBe("diff");
+  });
+
+  it("⚠️ الفرق الأكبر من جنيه بيفضل «فرق» — ١٥٫٥١ و٣٧٫٤٤ مش تقريب", () => {
+    const big = [{ id: "m2", amount: 11100, date: "2026-08-16" }];
+    expect(
+      linkToManualCash({ net: 11115.51, date: "2026-08-16" }, big, new Set(), 1)
+    ).toMatchObject({ kind: "diff", difference: 15.51 });
+  });
+});
+
+describe("النافذة الزمنية — محاولة تانية، ونتيجتها مرجّحة", () => {
+  // الأقدم مش بيطابق، والبحث بيلاقي احتمالين على كل القايمة
+  const list = [
+    { orderId: "old1", cod: 400, deliveredAt: "2026-08-01T10:00:00Z" },
+    { orderId: "old2", cod: 150, deliveredAt: "2026-08-02T10:00:00Z" },
+    { orderId: "a", cod: 100, deliveredAt: "2026-09-08T10:00:00Z" },
+    { orderId: "b", cod: 400, deliveredAt: "2026-09-09T10:00:00Z" },
+  ];
+
+  it("بتحسم الاحتمالين لما تتقصر على أيام التحويل", () => {
+    expect(matchPayout({ gross: 500, count: 2 }, list).ok).toBe(false);
+    expect(matchPayout({ gross: 500, count: 2, date: "2026-09-10" }, list)).toEqual({
+      ok: true,
+      orderIds: ["a", "b"],
+      how: "window",
+    });
+  });
+
+  it("⚠️ اللي اتسلّم بعد التحويل بره النافذة", () => {
+    const late = list.map((o) => (o.orderId === "b" ? { ...o, deliveredAt: "2026-09-20T10:00:00Z" } : o));
+    expect(matchPayout({ gross: 500, count: 2, date: "2026-09-10" }, late).ok).toBe(false);
+  });
+});
