@@ -27,6 +27,8 @@ type PayoutRow = {
   status: string;
   review_reason: string | null;
   cash_transaction_id: string | null;
+  /** فرق التقريب بين التحويل والحركة اليدوية — `sql/transfers-02-rounding.sql` */
+  rounding_diff: number | null;
   courier_payout_orders: { id: string }[];
 };
 
@@ -42,7 +44,7 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
   const { data, error } = await allRows(db
     .from("courier_payouts")
     .select(
-      "id, invoice_number, payout_date, gross_amount, fees_amount, net_amount, order_count, status, review_reason, cash_transaction_id, courier_payout_orders(id)"
+      "id, invoice_number, payout_date, gross_amount, fees_amount, net_amount, order_count, status, review_reason, cash_transaction_id, rounding_diff, courier_payout_orders(id)"
     )
     .eq("tenant_id", user.tenantId)
     .order("payout_date", { ascending: false })
@@ -62,6 +64,9 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
   const review = rows.filter((r) => r.status === "needs_review");
   const total = rows.reduce((s, r) => s + Number(r.net_amount), 0);
   const fees = rows.reduce((s, r) => s + Number(r.fees_amount), 0);
+  // ⚠️ فروق التقريب فرق حقيقي في الرصيد — الحركات اليدوية مكتوبة بالجنيه
+  const rounding =
+    Math.round(rows.reduce((s, r) => s + Number(r.rounding_diff ?? 0), 0) * 100) / 100;
   const canEdit = can(user, "cash.edit");
 
   return (
@@ -75,6 +80,12 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
               · {rows.length} تحويل
             </span>
           </p>
+          {rounding !== 0 && (
+            <p className="mt-0.5 text-xs text-ink-muted">
+              فروق تقريب في الحركات اليدوية: {formatMoney(rounding)} — فرق حقيقي
+              في الرصيد، مستني تسوية
+            </p>
+          )}
           {fees > 0 && (
             <p className="mt-0.5 text-xs text-ink-faint">
               رسوم {formatMoney(fees)} — متخصومة على كل أوردر أصلًا، فمابتتطرحش
@@ -132,6 +143,11 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
                     <span className="text-warning">مش مربوط بحركة</span>
                   )}
                 </div>
+                {Number(r.rounding_diff ?? 0) !== 0 && (
+                  <p className="mt-1 text-xs text-ink-faint">
+                    مقرّب — فرق {formatMoney(Number(r.rounding_diff))}
+                  </p>
+                )}
                 {r.review_reason && (
                   <p className="mt-2 text-xs text-warning">{r.review_reason}</p>
                 )}

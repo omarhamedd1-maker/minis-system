@@ -55,6 +55,12 @@ export type ImportPlan = {
     net: number;
     /** رسوم شركة الشحن — ⚠️ للعرض بس، متخصومة من الأوردرات أصلًا */
     fees: number;
+    /**
+     * ⚠️ **مجموع فروق التقريب** — الحركات اليدوية مكتوبة بالجنيه الصحيح،
+     * والفرق ده **فرق حقيقي في الرصيد**. من غير ما يتسجّل، الرصيد بيفضل
+     * ناقص القروش دي للأبد (مينيز ~١٠ جنيه على ٧ شهور).
+     */
+    rounding: number;
   };
 };
 
@@ -65,6 +71,20 @@ export function planImport(
     manualCash: ManualCashRow[];
     /** أرقام الفواتير المتسجّلة قبل كده */
     existingInvoices: Set<string>;
+    /**
+     * فرق مقبول بين مبلغ التحويل والحركة اليدوية (تقريب عمر وهو بيكتب).
+     * ⚠️ للاستيراد التاريخي بس — الإيميل بيدّي الرقم الصحيح.
+     */
+    tolerance?: number;
+    /**
+     * يربط الأوردرات كمان؟
+     *
+     * ⚠️⚠️ **الاستيراد التاريخي: لأ** (قرار عمر ١٨ سبتمبر). كشف المحفظة
+     * مافيهوش عدد الأوردرات، و**٥٥ أوردر متسلّم في مينيز مالهمش `bosta_cod`**
+     * (بوسطة بتصفّره بعد التسوية) — فأي مجموع بيتكسر. الاستيراد بيربط
+     * **الفلوس بس**، وربط الأوردرات بيشتغل من الإيميل اللي بيقول العدد.
+     */
+    matchOrders?: boolean;
   }
 ): ImportPlan {
   // الأقدم الأول — بوسطة بتحوّل بالترتيب، والحجز لازم يمشي بنفس الترتيب
@@ -86,15 +106,24 @@ export function planImport(
     }
 
     const free = input.candidates.filter((c) => !takenOrders.has(c.orderId));
-    const match = matchPayout({ gross: row.gross, count: row.orderCount }, free);
+    const match: MatchResult =
+      input.matchOrders === false
+        ? { ok: false, reason: "الأوردرات بتتربط من الإيميل — الكشف مافيهوش عددها" }
+        : matchPayout({ gross: row.gross, count: row.orderCount }, free);
     const orderIds = match.ok ? match.orderIds : [];
     for (const id of orderIds) takenOrders.add(id);
 
-    const cash = linkToManualCash({ net: row.net, date: row.date }, input.manualCash, takenCash);
+    const cash = linkToManualCash(
+      { net: row.net, date: row.date },
+      input.manualCash,
+      takenCash,
+      input.tolerance ?? 0
+    );
     if (cash.kind === "linked" || cash.kind === "diff") takenCash.add(cash.cashId);
 
     const reasons: string[] = [];
-    if (!match.ok) reasons.push(match.reason);
+    // الأوردرات مش شرط للتسجيل لما الربط بيكون على الفلوس بس
+    if (!match.ok && input.matchOrders !== false) reasons.push(match.reason);
     if (cash.kind === "gap") reasons.push("مفيش حركة خزنة بالمبلغ ده — محتاج دوسة");
     if (cash.kind === "diff") {
       reasons.push(`الحركة اليدوية فرقها ${cash.difference} — محتاج قرار`);
@@ -122,6 +151,12 @@ export function planImport(
       duplicates: rowsOut.filter((r) => r.status === "duplicate").length,
       net: round(fresh.reduce((s, r) => s + r.row.net, 0)),
       fees: round(fresh.reduce((s, r) => s + r.row.fees, 0)),
+      rounding: round(
+        fresh.reduce(
+          (s, r) => s + (r.cash?.kind === "linked" ? (r.cash.rounding ?? 0) : 0),
+          0
+        )
+      ),
     },
   };
 }

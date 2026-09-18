@@ -7,6 +7,7 @@ import { logActivity } from "@/lib/activity";
 import { allRows } from "@/lib/fetch-all-pages";
 import { parseStatement } from "@/lib/payout-statement";
 import { planImport, type ImportPlan } from "@/lib/payout-import";
+import { ROUNDING_TOLERANCE } from "@/lib/payout-match";
 
 /**
  * ==========================================================================
@@ -84,6 +85,10 @@ async function buildPlan(text: string, tenantId: string): Promise<Loaded> {
         date: String(c.transaction_date).slice(0, 10),
       })),
     existingInvoices: new Set((payouts.data ?? []).map((p) => p.invoice_number)),
+    // ⚠️ السماح ده للاستيراد التاريخي بس (تقريب الحركات اليدوية)
+    tolerance: ROUNDING_TOLERANCE,
+    // ⚠️ والأوردرات بتتربط من الإيميل — الكشف مافيهوش عددها (قرار ١٨ سبتمبر)
+    matchOrders: false,
   });
 
   return {
@@ -153,6 +158,9 @@ export async function applyPayoutImport(text: string): Promise<ApplyResult> {
           status: line.status === "matched" ? "matched" : "needs_review",
           review_reason: line.reason ?? null,
           cash_transaction_id: linkedCash,
+          // فرق التقريب بيتسجّل — هو فرق حقيقي في الرصيد
+          rounding_diff:
+            line.cash && line.cash.kind === "linked" ? (line.cash.rounding ?? 0) : 0,
           source: "import",
           created_by_name: me.fullName ?? me.email ?? null,
         })
