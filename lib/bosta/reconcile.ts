@@ -182,6 +182,9 @@ export function decideSync(
   const wipesOurs = cod === 0 && storedCod > 0 && !deadShipment;
   if (cod !== storedCod && !wipesOurs) {
     changes.bosta_cod = cod;
+    // ⚠️ **الرقم بيتكتب ومعاه مصدره** (DESIGN قاعدة ١٠) — الرقم اللي مالوش
+    // مصدر بيتحسب صفر في الجمع من غير أي علامة
+    changes.cod_source = cod > 0 ? "bosta" : "unknown";
     reasons.push(`مبلغ التحصيل بقى ${cod}`);
   }
 
