@@ -342,6 +342,23 @@ describe("بوسطة بتصفّر التحصيل بعد التسوية", () => {
     expect(d.changes.bosta_cod).toBe(0);
   });
 
+  it("⚠️ الرقم بيتكتب ومعاه مصدره (DESIGN قاعدة ١٠)", () => {
+    const taken = decideSync(
+      { ...deliveredShipment, cod: 2037 },
+      syncedOrder({ bosta_cod: 0 }),
+      NOW
+    );
+    expect(taken.changes.cod_source).toBe("bosta");
+
+    // الشحنة الميتة صفرها صح — بس الصفر ده «مش معروف» مش رقم
+    const dead = decideSync(
+      { ...deliveredShipment, cod: 0, state: { value: "Terminated", code: 48 } },
+      syncedOrder({ bosta_cod: 2037 }),
+      NOW
+    );
+    expect(dead.changes.cod_source).toBe("unknown");
+  });
+
   it("ورقم أكبر من بوسطة بيتاخد عادي", () => {
     const d = decideSync(
       { ...deliveredShipment, cod: 4000 },
