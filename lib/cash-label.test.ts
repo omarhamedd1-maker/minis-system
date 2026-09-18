@@ -66,3 +66,9 @@ describe("cashRowLabel", () => {
     ).toBe("مصروف: تغليف (كراتين)");
   });
 });
+
+describe("تحويل شركة الشحن", () => {
+  it("سطر التحويل ليه اسمه — مش «حركة»", () => {
+    expect(cashRowLabel(row({ source_type: "payout" }))).toContain("تحويل شركة الشحن");
+  });
+});

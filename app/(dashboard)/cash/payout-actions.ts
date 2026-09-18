@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requirePermission } from "@/lib/permissions";
+import { requirePermission, type SessionUser } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
+import { auditFields, reverseCashRows } from "@/lib/cash-reversal";
+import { cairoToday } from "@/lib/format";
 import { allRows } from "@/lib/fetch-all-pages";
 import { parseStatement } from "@/lib/payout-statement";
 import { planImport, type ImportPlan } from "@/lib/payout-import";
@@ -220,4 +222,144 @@ export async function applyPayoutImport(text: string): Promise<ApplyResult> {
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
+}
+
+/**
+ * ==========================================================================
+ * المراجعة اليدوية (TRANSFERS §٨ · الخطوة ٤)
+ * --------------------------------------------------------------------------
+ * التلات حالات اللي الاستيراد بيسيبها مفتوحة:
+ *   · **ناقص** — مفيش حركة خزنة بالمبلغ. الدوسة هي اللي بتعمل الحركة.
+ *   · **فرق** — الحركة اليدوية مكتوبة برقم مختلف. يا يتصلّح **بحركة عكسية
+ *     وحركة صح** (MONEY §٦.٢) يا يتقبل زي ما هو بسببه مكتوب.
+ *   · **مربوط** — خلاص، مفيش شغل.
+ *
+ * ⚠️ **الحركة بتتعمل بدوسة بس** — الاستيراد نفسه عمره ما بيغيّر رصيد.
+ * ==========================================================================
+ */
+
+type PayoutRow = {
+  id: string;
+  invoice_number: string;
+  payout_date: string;
+  net_amount: number;
+  cash_transaction_id: string | null;
+};
+
+async function loadPayout(db: ReturnType<typeof createAdminClient>, tenantId: string, id: string) {
+  const { data } = await db
+    .from("courier_payouts")
+    .select("id, invoice_number, payout_date, net_amount, cash_transaction_id")
+    .eq("tenant_id", tenantId)
+    .eq("id", id)
+    .maybeSingle();
+  return (data ?? null) as PayoutRow | null;
+}
+
+/** حركة الخزنة بتاعة التحويل — نفس الشكل في كل الأفعال */
+function payoutCashRow(p: PayoutRow, me: SessionUser) {
+  return {
+    direction: "in",
+    amount: Number(p.net_amount),
+    source_type: "payout",
+    description: `تحويل ${p.invoice_number}`,
+    transaction_date: p.payout_date,
+    related_payout_id: p.id,
+    ...auditFields(me, "app"),
+  };
+}
+
+export type ReviewResult = { ok: true; message: string } | { ok: false; error: string };
+
+/** «ناقص» → اعمل الحركة */
+export async function createPayoutCash(payoutId: string): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const p = await loadPayout(db, me.tenantId, payoutId);
+  if (!p) return { ok: false, error: "التحويل ده مش موجود" };
+  if (p.cash_transaction_id) return { ok: false, error: "التحويل ده مربوط بحركة خلاص" };
+
+  const { data: row, error } = await db
+    .from("cash_transactions")
+    .insert({
+      // ⚠️ **tenant_id صريح** — مفتاح الأدمن بيعدّي فوق قواعد العزل
+      tenant_id: me.tenantId,
+      ...payoutCashRow(p, me),
+    })
+    .select("id")
+    .single();
+  if (error || !row) return { ok: false, error: "معرفناش نعمل الحركة: " + (error?.message ?? "") };
+
+  await db
+    .from("courier_payouts")
+    .update({ cash_transaction_id: row.id as string, status: "confirmed", review_reason: null })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", p.id);
+  await logActivity(me, "payout.cash", `عمل حركة خزنة لتحويل ${p.invoice_number} بمبلغ ${p.net_amount}`);
+  revalidatePath("/cash");
+  return { ok: true, message: `اتعملت حركة بمبلغ ${p.net_amount}` };
+}
+
+/**
+ * «فرق» → الحركة القديمة تتلغي بحركة عكسية، وتتعمل حركة بالرقم الحقيقي.
+ *
+ * ⚠️ **مش تعديل في مكانه** — الدفتر لازم يفضل فيه أثر إن الرقم كان غلط
+ * ومين صلّحه (MONEY §٦.٢).
+ */
+export async function fixPayoutCash(payoutId: string, cashId: string): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const p = await loadPayout(db, me.tenantId, payoutId);
+  if (!p) return { ok: false, error: "التحويل ده مش موجود" };
+
+  const reversed = await reverseCashRows(db, me.tenantId, [cashId], me, cairoToday());
+  if (reversed.error) return { ok: false, error: "معرفناش نلغي الحركة القديمة: " + reversed.error };
+
+  const { data: row, error } = await db
+    .from("cash_transactions")
+    .insert({
+      // ⚠️ **tenant_id صريح** — مفتاح الأدمن بيعدّي فوق قواعد العزل
+      tenant_id: me.tenantId,
+      ...payoutCashRow(p, me),
+    })
+    .select("id")
+    .single();
+  if (error || !row) return { ok: false, error: "معرفناش نعمل الحركة الجديدة: " + (error?.message ?? "") };
+
+  await db
+    .from("courier_payouts")
+    .update({
+      cash_transaction_id: row.id as string,
+      status: "confirmed",
+      review_reason: "اتصلّحت بحركة عكسية وحركة بالرقم الحقيقي",
+    })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", p.id);
+  await logActivity(me, "payout.fix", `صلّح حركة تحويل ${p.invoice_number} للرقم ${p.net_amount}`);
+  revalidatePath("/cash");
+  return { ok: true, message: `اتصلّحت — الحركة القديمة اتلغت والجديدة بـ${p.net_amount}` };
+}
+
+/** «فرق» → سيبها زي ما هي، والفرق بيتكتب على التحويل */
+export async function acceptPayoutDiff(payoutId: string, cashId: string, difference: number): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const p = await loadPayout(db, me.tenantId, payoutId);
+  if (!p) return { ok: false, error: "التحويل ده مش موجود" };
+
+  const { error } = await db
+    .from("courier_payouts")
+    .update({
+      cash_transaction_id: cashId,
+      status: "confirmed",
+      rounding_diff: difference,
+      review_reason: `الفرق ${difference} اتقبل زي ما هو`,
+    })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", p.id);
+  if (error) return { ok: false, error: "معرفناش نحفظ: " + error.message };
+
+  await logActivity(me, "payout.accept", `قبل فرق ${difference} في تحويل ${p.invoice_number}`);
+  revalidatePath("/cash");
+  return { ok: true, message: "اتقبل الفرق" };
 }

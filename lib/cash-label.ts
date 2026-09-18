@@ -29,6 +29,8 @@ const SOURCE_LABELS: Record<string, string> = {
   // الوصف بيتكتب وقت الإلغاء («إلغاء: …») وبيظهر هو
   reversal: "إلغاء حركة",
   refund: "ريفند",
+  // تحويل من شركة الشحن — حركة واحدة لكل تحويل مش لكل أوردر (TRANSFERS §٧)
+  payout: "تحويل شركة الشحن",
 };
 
 export function cashRowLabel(row: CashLabelRow): string {
