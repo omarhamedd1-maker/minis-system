@@ -95,13 +95,20 @@ export default async function SettingsPage({
     if (!payoutKey) return null;
     const { data } = await db
       .from("courier_payout_emails")
-      .select("subject, raw, received_at")
+      .select("subject, raw, received_at, error")
       .eq("tenant_id", me.tenantId)
       .order("received_at", { ascending: false })
       .limit(10);
     for (const row of data ?? []) {
       const code = gmailConfirmationCode(String(row.subject ?? ""), String(row.raw ?? ""));
-      if (code) return { code, at: String(row.received_at) };
+      if (code) return { code, at: String(row.received_at), error: null };
+    }
+    // ⚠️⚠️ **الإيميل وصل ومااتقراش؟ ده لازم يبان.** حصل (٢١ سبتمبر):
+    // أربع إيميلات تأكيد من جيميل وصلوا، ومفتاح Resend ردّ ٤٠١ على قراية
+    // المحتوى — والشاشة كانت فاضية، فالسبب الوحيد الظاهر كان «مفيش كود».
+    const last = (data ?? []).find((r) => r.error);
+    if (last) {
+      return { code: null, at: String(last.received_at), error: String(last.error) };
     }
     return null;
   })().catch(() => null);
@@ -433,10 +440,17 @@ export default async function SettingsPage({
                 </span>
               )}
             </p>
-            {gmailCode && (
+            {gmailCode?.code && (
               <p className="mt-3 rounded-control bg-success-soft px-3 py-2 text-xs text-success">
                 كود تأكيد جيميل وصل: <b className="font-mono">{gmailCode.code}</b> —{" "}
                 {formatDate(gmailCode.at)}
+              </p>
+            )}
+            {gmailCode && !gmailCode.code && (
+              <p className="mt-3 rounded-control bg-warning-soft px-3 py-2 text-xs text-warning">
+                <b>إيميل وصل ومااتقراش</b> — {formatDate(gmailCode.at)}
+                <br />
+                {gmailCode.error}
               </p>
             )}
           </>
