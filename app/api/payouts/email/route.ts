@@ -93,6 +93,8 @@ export async function POST(req: Request) {
   // ⚠️ **الويب هوك مابيبعتش الجسم** — بيتجاب بنداء تاني بمفتاح Resend
   let raw = inbound.body;
   let dkimOk: boolean | null = inbound.dkim ? /pass/i.test(inbound.dkim) : null;
+  /** سبب إننا مجبناش المحتوى — بيتسجّل وبيتعرض في الإعدادات */
+  let fetchError: string | null = null;
   if (!raw && inbound.emailId) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
@@ -103,14 +105,15 @@ export async function POST(req: Request) {
       raw = mail.html || mail.text;
       dkimOk = dkimPassed(mail.headers);
     } catch (e) {
-      await db.from("courier_payout_emails").insert({
-        tenant_id: tenantId,
-        from_address: from || null,
-        subject: subject || null,
-        parsed_ok: false,
-        error: (e as Error).message,
-      });
-      return NextResponse.json({ error: "معرفناش نجيب محتوى الإيميل" }, { status: 502 });
+      // ⚠️⚠️ **الفشل هنا مش نهاية الطريق.** حصل فعلًا (٢١ سبتمبر): مفتاح
+      // Resend كان صلاحيته «إرسال» بس فردّت ٤٠١ على قراية المحتوى — وأربع
+      // إيميلات اتسجّلوا بجسم فاضي، وكود تأكيد جيميل ضاع معاهم.
+      //
+      // فبدل ما نرمي، بنكمّل باللي الويب هوك بعته. **وبنخزّن الحمولة
+      // كلها** — لأن اللي مش متخزّن مايتشافش، والمرة الجاية بنعرف إيه
+      // اللي وصل بالظبط من غير ما نستنى الغلط يتكرر.
+      fetchError = (e as Error).message;
+      raw = JSON.stringify(body);
     }
   }
 
@@ -131,8 +134,13 @@ export async function POST(req: Request) {
   };
 
   if (!parsed.ok) {
-    await log({ parsed_ok: false, error: parsed.reason });
-    return NextResponse.json({ ok: true, skipped: parsed.reason });
+    // ⚠️ سبب الفشل الحقيقي الأول — «مالقيناش رقم فاتورة» على إيميل
+    // مجبناش محتواه أصلًا بتوصّل الواحد للمكان الغلط
+    await log({
+      parsed_ok: false,
+      error: fetchError ? `${fetchError} (فالمحتوى ناقص)` : parsed.reason,
+    });
+    return NextResponse.json({ ok: true, skipped: fetchError ?? parsed.reason });
   }
   const p = parsed.payout;
 
