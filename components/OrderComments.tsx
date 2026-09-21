@@ -71,6 +71,8 @@ export function OrderComments({
     <>
       <button
         type="button"
+        // السحب الجانبي على الموبايل بيدوس الزرار ده (`SelectableOrderCard`)
+        data-order-comments
         onClick={() => setOpen(true)}
         title={
           comments.length > 0
