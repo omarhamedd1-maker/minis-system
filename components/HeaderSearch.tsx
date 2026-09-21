@@ -26,7 +26,8 @@ const SCOPES: Scope[] = [
   {
     path: "/orders",
     placeholder: "دور في الأوردرات — رقم · اسم · تليفون",
-    keep: ["status", "archived", "period", "from", "to"],
+    // ⚠️ `tab` معاهم — من غيره البحث من تبويب «شغل» كان بيرجّعك «الكل»
+    keep: ["status", "tab", "archived", "period", "from", "to"],
   },
   { path: "/customers", placeholder: "دور في العملاء — اسم · تليفون", keep: ["sort"] },
   { path: "/products", placeholder: "دور في المنتجات — اسم · كود", keep: [] },

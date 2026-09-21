@@ -22,6 +22,7 @@ import { CopyLink } from "@/components/CopyLink";
 import { headers } from "next/headers";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { RememberOpenedOrder } from "@/components/LastOpenedOrder";
 import { StatusBox } from "@/components/StatusBox";
 import { DiscountBox } from "@/components/DiscountBox";
 import { AddOrderItem } from "@/components/AddOrderItem";
@@ -561,6 +562,8 @@ export default async function OrderDetailsPage({
   return (
     <div className="space-y-6">
       <AutoRefresh seconds={30} />
+      {/* علامة مكانك في القايمة لما ترجع (ORDERS §٥ · الخطوة ٩) */}
+      <RememberOpenedOrder orderId={order.id} />
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="truncate text-lg font-bold text-ink sm:text-xl">
