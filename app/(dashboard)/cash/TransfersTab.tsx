@@ -13,7 +13,11 @@ import {
   createPayoutCash,
   fixPayoutCash,
   previewPayoutImport,
+  archivePayout,
+  cancelPayout,
+  unlinkPayoutCash,
 } from "./payout-actions";
+import { PayoutActions } from "@/components/PayoutActions";
 
 /**
  * ==========================================================================
@@ -39,6 +43,8 @@ type PayoutRow = {
   cash_transaction_id: string | null;
   /** فرق التقريب بين التحويل والحركة اليدوية — `sql/transfers-02-rounding.sql` */
   rounding_diff: number | null;
+  /** متخفي من التاب ولسه في التاريخ — `sql/transfers-04-actions.sql` */
+  archived?: boolean | null;
   courier_payout_orders: { id: string }[];
 };
 
@@ -50,15 +56,20 @@ const STATUS: Record<string, { label: string; className: string }> = {
 
 export async function TransfersTab({ user }: { user: SessionUser }) {
   const db = createAdminClient();
+  const BASE =
+    "id, invoice_number, payout_date, gross_amount, fees_amount, net_amount, order_count, status, review_reason, cash_transaction_id, rounding_diff, courier_payout_orders(id)";
   // ⚠️ **tenant_id إجباري مع مفتاح الأدمن** — بيعدّي فوق قواعد العزل
-  const { data, error } = await allRows(db
-    .from("courier_payouts")
-    .select(
-      "id, invoice_number, payout_date, gross_amount, fees_amount, net_amount, order_count, status, review_reason, cash_transaction_id, rounding_diff, courier_payout_orders(id)"
-    )
-    .eq("tenant_id", user.tenantId)
-    .order("payout_date", { ascending: false })
-    .overrideTypes<PayoutRow[]>());
+  const read = (cols: string) =>
+    allRows(db
+      .from("courier_payouts")
+      .select(cols)
+      .eq("tenant_id", user.tenantId)
+      .order("payout_date", { ascending: false })
+      .overrideTypes<PayoutRow[]>());
+  // ⚠️ `archived` من `sql/transfers-04-actions.sql` — لحد ما يتشغّل
+  // بنقرا من غيره، والتاب بيشتغل عادي
+  let { data, error } = await read(`${BASE}, archived`);
+  if (error?.code === "42703") ({ data, error } = await read(BASE));
 
   if (error) {
     return (
@@ -70,7 +81,11 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
     );
   }
 
-  const rows = data ?? [];
+  // ⚠️ **المتأرشف بيتشال من العرض بس** — لسه في التاريخ، وعشان كده
+  // الأرقام فوق (المجموع والرسوم) بتتحسب على الكل مش على الظاهر
+  const all = data ?? [];
+  const hidden = all.filter((r) => r.archived === true);
+  const rows = all.filter((r) => r.archived !== true);
 
   // الحركة اليدوية القريبة من كل تحويل محتاج مراجعة — بنفس منطق الاستيراد،
   // عشان شاشة المراجعة تعرف تقول «صلّح» ولا «اعمل حركة»
@@ -103,11 +118,12 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
     }
   }
   const review = rows.filter((r) => r.status === "needs_review");
-  const total = rows.reduce((s, r) => s + Number(r.net_amount), 0);
-  const fees = rows.reduce((s, r) => s + Number(r.fees_amount), 0);
+  // ⚠️ **على الكل مش على الظاهر** — الإخفاء بيخفي من عينك مش من حسابك
+  const total = all.reduce((s, r) => s + Number(r.net_amount), 0);
+  const fees = all.reduce((s, r) => s + Number(r.fees_amount), 0);
   // ⚠️ فروق التقريب فرق حقيقي في الرصيد — الحركات اليدوية مكتوبة بالجنيه
   const rounding =
-    Math.round(rows.reduce((s, r) => s + Number(r.rounding_diff ?? 0), 0) * 100) / 100;
+    Math.round(all.reduce((s, r) => s + Number(r.rounding_diff ?? 0), 0) * 100) / 100;
   const canEdit = can(user, "cash.edit");
 
   return (
@@ -118,9 +134,15 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
           <p className="mt-0.5 text-2xl font-bold tabular-nums text-ink sm:text-3xl">
             {formatMoney(total)}
             <span className="ms-2 text-sm font-normal text-ink-muted">
-              · {rows.length} تحويل
+              · {all.length} تحويل
             </span>
           </p>
+          {/* ⚠️ اللي متخفي لازم يتقال — الصفحة اللي بتخفي بالصمت بتكدب */}
+          {hidden.length > 0 && (
+            <p className="mt-0.5 text-xs text-ink-faint">
+              {hidden.length} متخفي — لسه محسوبين في الرقم ده
+            </p>
+          )}
           {rounding !== 0 && (
             <p className="mt-0.5 text-xs text-ink-muted">
               فروق تقريب في الحركات اليدوية: {formatMoney(rounding)} — فرق حقيقي
@@ -204,10 +226,56 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
                     acceptAction={acceptPayoutDiff}
                   />
                 )}
+                {canEdit && (
+                  <PayoutActions
+                    payoutId={r.id}
+                    linked={Boolean(r.cash_transaction_id)}
+                    archived={r.archived === true}
+                    unlinkAction={unlinkPayoutCash}
+                    cancelAction={cancelPayout}
+                    archiveAction={archivePayout}
+                  />
+                )}
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* المتخفي — بيفضل يوصله من هنا، وإلا الإخفاء بيبقى حذف باسم تاني */}
+      {hidden.length > 0 && (
+        <details className="rounded-card bg-surface p-4 shadow-card">
+          <summary className="cursor-pointer text-sm text-ink-muted">
+            المتخفي ({hidden.length})
+          </summary>
+          <div className="mt-3 space-y-2">
+            {hidden.map((r) => (
+              <div key={r.id} className="rounded-control bg-sunken p-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                  <span className="font-bold text-ink">
+                    {formatMoney(Number(r.net_amount))}
+                  </span>
+                  <span className="font-mono text-xs text-ink-muted">
+                    {r.invoice_number}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  {formatDate(r.payout_date)}
+                </p>
+                {canEdit && (
+                  <PayoutActions
+                    payoutId={r.id}
+                    linked={Boolean(r.cash_transaction_id)}
+                    archived
+                    unlinkAction={unlinkPayoutCash}
+                    cancelAction={cancelPayout}
+                    archiveAction={archivePayout}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </details>
       )}
     </div>
   );

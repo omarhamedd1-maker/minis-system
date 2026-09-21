@@ -470,3 +470,159 @@ export async function addPayoutManually(formData: FormData): Promise<ReviewResul
   revalidatePath("/cash");
   return { ok: true, message: "اتسجّل واتربط بالحركة الموجودة" };
 }
+
+// ==========================================================================
+// تلات أفعال على التحويل — ومافيش فيهم «حذف» (قرار عمر ٢١ سبتمبر)
+// --------------------------------------------------------------------------
+// ⚠️⚠️ **الحذف ممنوع في سجل مالي** (نفس قاعدة MONEY §٦.٢): بيغيّر الرصيد
+// بأثر رجعي ومحدش يعرف ليه. فالفعل بيتسمّى باللي بيعمله:
+//
+//   فُك الربط    ← الحركة تفضل زي ما هي، والتحويل يرجع «محتاج مراجعة»
+//   ألغِ التحويل ← يتشال، **وحركته هو** تتلغي بحركة عكسية
+//   أخفِ         ← يتأرشف ويفضل في التاريخ وفي الحسابات
+// ==========================================================================
+
+/**
+ * «فُك الربط» — التحويل بيسيب الحركة.
+ *
+ * ⚠️ **الحركة مابتتلمسش خالص** — الفلوس دخلت فعلًا، إحنا بس بنقول إن
+ * الحركة دي مش بتاعة التحويل ده. الرصيد ما بيتغيّرش ولا مليم.
+ */
+export async function unlinkPayoutCash(payoutId: string): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const p = await loadPayout(db, me.tenantId, payoutId);
+  if (!p) return { ok: false, error: "التحويل ده مش موجود" };
+  if (!p.cash_transaction_id) return { ok: false, error: "التحويل ده مش مربوط بحركة أصلًا" };
+
+  const { error } = await db
+    .from("courier_payouts")
+    .update({
+      cash_transaction_id: null,
+      status: "needs_review",
+      review_reason: "اتفك ربطه بالإيد — الحركة سايبة زي ما هي",
+    })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", p.id);
+  if (error) return { ok: false, error: "معرفناش نفك الربط: " + error.message };
+
+  await logActivity(me, "payout.unlink", `فك ربط تحويل ${p.invoice_number} عن حركة الخزنة`);
+  revalidatePath("/cash");
+  return { ok: true, message: "اتفك الربط — الحركة والرصيد زي ما هما" };
+}
+
+/**
+ * «ألغِ التحويل» — الصف بيتشال، والفلوس بترجع صح.
+ *
+ * ⚠️⚠️ **الحركة العكسية بتتعمل للي السيستم عمله بس** (`source_type` =
+ * `payout`). لو التحويل كان مربوط بحركة **موجودة قبله** (إيداع يدوي
+ * مثلًا)، إلغاؤه مايلمسش الفلوس — الفلوس دي اتسجّلت لوحدها، وعكسها
+ * كان هيشيل مبلغ حقيقي من الرصيد.
+ *
+ * ⚠️ **والحركة اللي اتلغت قبل كده مابتتعكسش تاني** — `reverseCashRows`
+ * بيتأكد من ده، وده اللي بيمنع الخصم مرتين.
+ */
+export async function cancelPayout(payoutId: string): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const p = await loadPayout(db, me.tenantId, payoutId);
+  if (!p) return { ok: false, error: "التحويل ده مش موجود" };
+
+  let reversedCount = 0;
+  let ownCash = false;
+  if (p.cash_transaction_id) {
+    const { data: cash } = await db
+      .from("cash_transactions")
+      .select("id, source_type")
+      .eq("tenant_id", me.tenantId)
+      .eq("id", p.cash_transaction_id)
+      .maybeSingle();
+    ownCash = String(cash?.source_type ?? "") === "payout";
+    if (ownCash) {
+      const r = await reverseCashRows(db, me.tenantId, [p.cash_transaction_id], me, cairoToday());
+      if (r.error) return { ok: false, error: "معرفناش نلغي الحركة: " + r.error };
+      reversedCount = r.reversed;
+    }
+  }
+
+  // الأوردرات بترجع «لسه مااتحصّلتش» — الصف نفسه بيتشال بالـcascade
+  const { data: links } = await allRows(db
+    .from("courier_payout_orders")
+    .select("order_id")
+    .eq("tenant_id", me.tenantId)
+    .eq("payout_id", p.id)
+    .overrideTypes<{ order_id: string }[]>());
+  const orderIds = (links ?? []).map((l) => l.order_id as string);
+  if (orderIds.length > 0) {
+    await db
+      .from("orders")
+      .update({ cash_received_at: null })
+      .eq("tenant_id", me.tenantId)
+      .in("id", orderIds);
+  }
+
+  const { error } = await db
+    .from("courier_payouts")
+    .delete()
+    .eq("tenant_id", me.tenantId)
+    .eq("id", p.id);
+  if (error) return { ok: false, error: "معرفناش نشيل التحويل: " + error.message };
+
+  await logActivity(
+    me,
+    "payout.cancel",
+    `ألغى تحويل ${p.invoice_number} بمبلغ ${p.net_amount}` +
+      (reversedCount > 0 ? " — واتعملت حركة عكسية" : " — من غير حركة عكسية")
+  );
+  revalidatePath("/cash");
+  revalidatePath("/orders");
+
+  const money =
+    reversedCount > 0
+      ? `والحركة اتلغت بعكسية (الرصيد نقص ${p.net_amount})`
+      : ownCash
+        ? "وحركته كانت متلغية قبل كده — الرصيد زي ما هو"
+        : "والحركة المربوطة سايبة زي ما هي — الرصيد زي ما هو";
+  return {
+    ok: true,
+    message: `التحويل اتشال${orderIds.length > 0 ? ` و${orderIds.length} أوردر رجعوا مستنيين` : ""} ${money}`,
+  };
+}
+
+/**
+ * «أخفِ» — بيتأرشف.
+ *
+ * ⚠️ **مش حذف ومش حالة**: التحويل لسه في التاريخ ولسه مربوط ولسه محسوب،
+ * هو بس مش ظاهر في التاب. اللي بيتخفي بيرجع بدوسة.
+ */
+export async function archivePayout(payoutId: string, archived: boolean): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const p = await loadPayout(db, me.tenantId, payoutId);
+  if (!p) return { ok: false, error: "التحويل ده مش موجود" };
+
+  const { error } = await db
+    .from("courier_payouts")
+    .update({ archived })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", p.id);
+  // ⚠️ **العمود لسه ممكن مايكونش اتعمل** (`sql/transfers-04-actions.sql`).
+  // القراية بترجع `42703`، لكن **الكتابة بترجع `PGRST204`** ونصها بيسمّي
+  // العمود — فالاتنين لازم يتمسكوا، وإلا الرسالة بتطلع تقنية ومالهاش معنى.
+  if (error) {
+    const missing =
+      error.code === "42703" ||
+      error.code === "PGRST204" ||
+      /archived/i.test(error.message ?? "");
+    return {
+      ok: false,
+      error: missing
+        ? "الإخفاء محتاج sql/transfers-04-actions.sql يتشغّل الأول"
+        : "معرفناش نخفيه: " + error.message,
+    };
+  }
+
+  await logActivity(me, "payout.archive", `${archived ? "خفى" : "رجّع"} تحويل ${p.invoice_number}`);
+  revalidatePath("/cash");
+  return { ok: true, message: archived ? "اتخفى — لسه في التاريخ" : "رجع يبان" };
+}

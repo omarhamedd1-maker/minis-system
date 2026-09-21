@@ -17,6 +17,9 @@
 //   ٣. المطابقة شرط — اللي مايطابقش بيبقى «محتاج مراجعة» مش حركة.
 //   ٤. رقم الفاتورة فريد — التكرار بيتعدّى.
 //   ٥. كل إيميل بيتسجّل كامل، حتى المرفوض.
+//   ٦. توقيع Resend نفسها (`RESEND_WEBHOOK_SECRET`) — بيقول إن الطلب من
+//      Resend مش من أي حد عارف الرابط. ⚠️ **من غير المتغيّر الطبقة دي
+//      مطفية**، والشاشة في الإعدادات بتقول كده.
 // ==========================================================================
 
 import { NextResponse } from "next/server";
@@ -26,13 +29,40 @@ import { parsePayoutEmail } from "@/lib/payout-email";
 import { matchPayout } from "@/lib/payout-match";
 import { allRows } from "@/lib/fetch-all-pages";
 import { dkimPassed, fetchResendEmail, readInbound } from "@/lib/resend-inbound";
+import { verifySvix } from "@/lib/svix-verify";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  // ⚠️ **الجسم الخام الأول** — التوقيع بيتحسب عليه بالحرف، والتحويل
+  // لـJSON والرجوع بيكسره (`lib/svix-verify.ts`)
+  const rawBody = await req.text();
+
+  // ===== الطبقة ٦: توقيع Resend نفسه =====
+  //
+  // ⚠️ **ده غير توقيع بوسطة.** ده بيقول «الطلب ده من Resend»، وDKIM بيقول
+  // «الإيميل ده من بوسطة». من غير الأول، اللي يعرف الرابط يقدر يبعت
+  // «إيميل» مخترع من أي مكان.
+  const signingSecret = process.env.RESEND_WEBHOOK_SECRET ?? "";
+  if (signingSecret) {
+    const check = verifySvix({
+      payload: rawBody,
+      headers: {
+        id: req.headers.get("svix-id"),
+        timestamp: req.headers.get("svix-timestamp"),
+        signature: req.headers.get("svix-signature"),
+      },
+      secret: signingSecret,
+      nowSeconds: Math.floor(Date.now() / 1000),
+    });
+    if (!check.ok) {
+      return NextResponse.json({ error: check.reason }, { status: 401 });
+    }
+  }
+
   let body: Record<string, unknown>;
   try {
-    body = (await req.json()) as Record<string, unknown>;
+    body = JSON.parse(rawBody) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ error: "الجسم مش JSON" }, { status: 400 });
   }
