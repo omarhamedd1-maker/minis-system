@@ -25,18 +25,9 @@ import { keyFromAddress } from "@/lib/payout-address";
 import { parsePayoutEmail } from "@/lib/payout-email";
 import { matchPayout } from "@/lib/payout-match";
 import { allRows } from "@/lib/fetch-all-pages";
+import { dkimPassed, fetchResendEmail, readInbound } from "@/lib/resend-inbound";
 
 export const dynamic = "force-dynamic";
-
-/** المزوّدين بيسمّوا الحقول بأسامي مختلفة — بناخد أول واحد موجود */
-function pick(body: Record<string, unknown>, names: string[]): string {
-  for (const n of names) {
-    const v = n.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], body);
-    if (typeof v === "string" && v.trim()) return v;
-    if (Array.isArray(v) && typeof v[0] === "string") return v[0];
-  }
-  return "";
-}
 
 export async function POST(req: Request) {
   let body: Record<string, unknown>;
@@ -46,13 +37,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "الجسم مش JSON" }, { status: 400 });
   }
 
-  const to = pick(body, ["to", "To", "recipient", "envelope.to", "headers.to"]);
-  const from = pick(body, ["from", "From", "sender", "envelope.from", "headers.from"]);
-  const subject = pick(body, ["subject", "Subject", "headers.subject"]);
-  const raw = pick(body, ["html", "html_body", "body-html", "text", "text_body", "body-plain", "body"]);
-  const dkim = pick(body, ["dkim", "dkim_result", "authentication.dkim"]);
+  const inbound = readInbound(body);
+  const from = inbound.from;
+  const subject = inbound.subject;
 
-  const key = keyFromAddress(to);
+  // العنوان بتاعنا ممكن يكون في أكتر من حقل — أول واحد فيه مفتاح معروف
+  let key: string | null = null;
+  for (const address of inbound.to) {
+    const k = keyFromAddress(address);
+    if (k) { key = k; break; }
+  }
   const db = createAdminClient();
 
   // ⚠️ **المفتاح هو اللي بيحدد البيزنس** — من غيره مفيش مكان نسجّل فيه أصلًا
@@ -66,7 +60,30 @@ export async function POST(req: Request) {
   const tenantId = (cred?.tenant_id as string | undefined) ?? null;
   if (!tenantId) return NextResponse.json({ error: "العنوان مش معروف" }, { status: 404 });
 
-  const dkimOk = /pass/i.test(dkim) || null;
+  // ⚠️ **الويب هوك مابيبعتش الجسم** — بيتجاب بنداء تاني بمفتاح Resend
+  let raw = inbound.body;
+  let dkimOk: boolean | null = inbound.dkim ? /pass/i.test(inbound.dkim) : null;
+  if (!raw && inbound.emailId) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "RESEND_API_KEY ناقص" }, { status: 500 });
+    }
+    try {
+      const mail = await fetchResendEmail(inbound.emailId, apiKey);
+      raw = mail.html || mail.text;
+      dkimOk = dkimPassed(mail.headers);
+    } catch (e) {
+      await db.from("courier_payout_emails").insert({
+        tenant_id: tenantId,
+        from_address: from || null,
+        subject: subject || null,
+        parsed_ok: false,
+        error: (e as Error).message,
+      });
+      return NextResponse.json({ error: "معرفناش نجيب محتوى الإيميل" }, { status: 502 });
+    }
+  }
+
   const parsed = parsePayoutEmail(raw);
 
   const log = async (fields: Record<string, unknown>) => {
