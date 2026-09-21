@@ -419,6 +419,21 @@ export async function addPayoutManually(formData: FormData): Promise<ReviewResul
   );
   const linked = link.kind === "linked" ? link.cashId : null;
 
+  // ⚠️⚠️ **مفيش حركة بالمبلغ ده؟ مايتسجّلش أصلًا** (قرار عمر ٢١ سبتمبر).
+  //
+  // التحويل اللي بيتسجّل من غير حركة بيفتح باب الازدواج: بتسجّله، تنسى
+  // الحركة، وبعدين تدوس «اعمل حركة» وتكون سجّلتها بإيدك برضه. والترتيب
+  // الصح إن الفلوس تتسجّل الأول لأنها هي اللي حصلت فعلًا.
+  if (!linked) {
+    return {
+      ok: false,
+      error:
+        link.kind === "diff"
+          ? `أقرب حركة في نفس اليوم فرقها ${link.difference} — راجع المبلغ أو سجّل الحركة الصح الأول`
+          : "مفيش حركة خزنة بالمبلغ ده — سجّلها الأول من تاب الحركات",
+    };
+  }
+
   const { data: payout, error } = await db
     .from("courier_payouts")
     .insert({
@@ -431,12 +446,8 @@ export async function addPayoutManually(formData: FormData): Promise<ReviewResul
       fees_amount: fees,
       net_amount: amount,
       order_count: null,
-      status: linked ? "confirmed" : "needs_review",
-      review_reason: linked
-        ? null
-        : link.kind === "diff"
-          ? `الحركة اليدوية فرقها ${link.difference} — محتاج قرار`
-          : "مفيش حركة خزنة بالمبلغ ده — محتاج دوسة",
+      status: "confirmed",
+      review_reason: null,
       cash_transaction_id: linked,
       rounding_diff: link.kind === "linked" ? (link.rounding ?? 0) : 0,
       source: "manual",
@@ -457,8 +468,5 @@ export async function addPayoutManually(formData: FormData): Promise<ReviewResul
 
   await logActivity(me, "payout.manual", `سجّل تحويل ${invoice} بمبلغ ${amount}`);
   revalidatePath("/cash");
-  return {
-    ok: true,
-    message: linked ? "اتسجّل واتربط بالحركة الموجودة" : "اتسجّل — محتاج مراجعة",
-  };
+  return { ok: true, message: "اتسجّل واتربط بالحركة الموجودة" };
 }
