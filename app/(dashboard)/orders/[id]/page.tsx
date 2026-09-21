@@ -1205,10 +1205,21 @@ export default async function OrderDetailsPage({
               </dd>
             </div>
           </dl>
+          {/*
+            ⚠️ **الفورم مقفول ووراه «تعديل»** (ORDER §٣). كان مفتوح على طول،
+            فالكرت اللي بيتقرا في سطرين بقى نص شاشة خانات — والخانة المفتوحة
+            بتقول «املاني» وانت مش عايز تعدّل حاجة.
+            ⚠️ و`details` مش مكوّن عميل: بيشتغل من غير جافاسكريبت.
+          */}
           {canItems && (
+            <details className="group mt-3 border-t border-line pt-3">
+              <summary className="flex min-h-9 cursor-pointer list-none items-center text-xs font-medium text-primary [&::-webkit-details-marker]:hidden">
+                <span className="group-open:hidden">تعديل</span>
+                <span className="hidden group-open:inline">إخفاء التعديل</span>
+              </summary>
             <form
               action={updatePayment}
-              className="mt-3 flex flex-wrap items-end gap-2 border-t border-line pt-3"
+              className="mt-3 flex flex-wrap items-end gap-2"
             >
               <input type="hidden" name="order_id" value={order.id} />
               <div className="flex flex-col gap-1">
@@ -1244,6 +1255,7 @@ export default async function OrderDetailsPage({
                 حفظ
               </button>
             </form>
+            </details>
           )}
         </div>
 
@@ -1341,8 +1353,27 @@ export default async function OrderDetailsPage({
           </div>
         )}
 
-        {/* تاسكات الأوردر ده — «كلّم العميل» وكده */}
-        {orderTasks && (
+        {/*
+          تاسكات الأوردر ده — «كلّم العميل» وكده.
+
+          ⚠️ **الفاضي بيبقى سطر مش كرت** (ORDER §٤): الكرت بعنوان وحدود
+          وحشو عشان يقول «مفيش» بياخد مساحة قد المحتوى الحقيقي، والصفحة
+          بتطول من غير ما تضيف معلومة.
+        */}
+        {orderTasks && orderTasks.list.length === 0 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-4 py-2.5 shadow-card">
+            <span className="text-xs text-ink-muted">مفيش تاسكات على الأوردر ده</span>
+            {orderTasks.canEdit && (
+              <AddTask
+                team={orderTasks.team}
+                canAssign={orderTasks.canAssign}
+                action={createTask}
+                orderId={order.id}
+              />
+            )}
+          </div>
+        )}
+        {orderTasks && orderTasks.list.length > 0 && (
           <div className="card mt-4 p-4">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-sm font-bold text-ink">تاسكات الأوردر</h2>
@@ -1355,10 +1386,7 @@ export default async function OrderDetailsPage({
                 />
               )}
             </div>
-            {orderTasks.list.length === 0 ? (
-              <p className="text-xs text-ink-faint">مفيش تاسكات على الأوردر ده</p>
-            ) : (
-              <ul className="space-y-1.5">
+            <ul className="space-y-1.5">
                 {orderTasks.list.map((t) => (
                   <li key={t.id}>
                     <Link
@@ -1388,8 +1416,7 @@ export default async function OrderDetailsPage({
                     </Link>
                   </li>
                 ))}
-              </ul>
-            )}
+            </ul>
           </div>
         )}
 
@@ -1638,48 +1665,70 @@ export default async function OrderDetailsPage({
           </tfoot>
         </table>
 
+        {/*
+          ⚠️ **الفورم مقفول ورا زرار** (ORDER §٥) — إضافة منتج لأوردر موجود
+          حاجة نادرة، وكانت واخدة خانات مفتوحة تحت كل جدول بنود.
+          ⚠️ و`details` بيشتغل من غير جافاسكريبت.
+        */}
         {canItems && (
-          <AddOrderItem
-            orderId={order.id}
-            variants={variants}
-            addAction={addOrderItem}
-          />
+          <details className="group border-t border-line">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 text-xs font-medium text-primary [&::-webkit-details-marker]:hidden">
+              <span className="group-open:hidden">+ إضافة منتج</span>
+              <span className="hidden group-open:inline">إلغاء</span>
+            </summary>
+            <AddOrderItem
+              orderId={order.id}
+              variants={variants}
+              addAction={addOrderItem}
+            />
+          </details>
         )}
       </div>
 
+      {/*
+        ===== إجراءات (ORDER §٧) =====
+        ⚠️ **كانوا زرارين سايبين بين كرتين من غير حاوية** — الزرار اللي
+        مالوش عنوان بيتقرا كأنه بتاع الكرت اللي فوقه.
+        ⚠️ **والأرشفة زرار ثانوي عادي** مش لون تحذير: دي مش عملية هدّامة،
+        والأوردر بيرجع بدوسة. اللون التحذيري بيخلّي فعل آمن شكله خطر.
+      */}
       {(canArchive || canDelete) && (
-        <div className="flex items-center justify-end gap-3 border-t border-line pt-6">
-          {canArchive && (
-            <form action={toggleOrderArchive}>
-              <input type="hidden" name="order_id" value={order.id} />
-              <input
-                type="hidden"
-                name="archive"
-                value={order.archived ? "0" : "1"}
-              />
-              <button
-                type="submit"
-                className="rounded-control bg-warning-soft px-4 py-1.5 text-sm font-medium text-warning hover:bg-warning-line"
-              >
-                {order.archived ? "رجّع من الأرشيف" : "أرشفة الأوردر"}
-              </button>
-            </form>
-          )}
-          {canDelete && (
-            <form action={deleteOrder}>
-              <input type="hidden" name="order_id" value={order.id} />
-              <ConfirmButton
-                message={
-                  isAdmin
-                    ? `متأكد إنك عايز تمسح أوردر ${order.order_number ?? ""} نهائياً؟ هيتمسح ببنوده وشحناته، والمخزون هيرجع زي ما كان.`
-                    : `هتبعت طلب حذف لأوردر ${order.order_number ?? ""} للأدمن يوافق عليه. تمام؟`
-                }
-                className="rounded-control bg-danger-soft px-4 py-1.5 text-sm font-medium text-danger hover:bg-danger-line"
-              >
-                {isAdmin ? "مسح الأوردر نهائياً" : "اطلب حذف الأوردر"}
-              </ConfirmButton>
-            </form>
-          )}
+        <div className="card p-4 sm:p-5">
+          <h2 className="text-sm font-bold text-ink">إجراءات</h2>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {canArchive && (
+              <form action={toggleOrderArchive}>
+                <input type="hidden" name="order_id" value={order.id} />
+                <input
+                  type="hidden"
+                  name="archive"
+                  value={order.archived ? "0" : "1"}
+                />
+                <button
+                  type="submit"
+                  className="min-h-9 rounded-control border border-line-strong px-4 py-1.5 text-sm font-medium text-ink-body hover:bg-sunken"
+                >
+                  {order.archived ? "رجّع من الأرشيف" : "أرشفة الأوردر"}
+                </button>
+              </form>
+            )}
+            {canDelete && (
+              <form action={deleteOrder} className="ms-auto">
+                <input type="hidden" name="order_id" value={order.id} />
+                {/* ⚠️ نص أحمر صغير — الفعل الهدّام مايتساويش بصريًا مع الآمن */}
+                <ConfirmButton
+                  message={
+                    isAdmin
+                      ? `متأكد إنك عايز تمسح أوردر ${order.order_number ?? ""} نهائياً؟ هيتمسح ببنوده وشحناته، والمخزون هيرجع زي ما كان.`
+                      : `هتبعت طلب حذف لأوردر ${order.order_number ?? ""} للأدمن يوافق عليه. تمام؟`
+                  }
+                  className="min-h-9 rounded-control px-2 py-1.5 text-xs font-medium text-danger hover:bg-danger-soft"
+                >
+                  {isAdmin ? "مسح الأوردر نهائياً" : "اطلب حذف الأوردر"}
+                </ConfirmButton>
+              </form>
+            )}
+          </div>
         </div>
       )}
 
@@ -1692,16 +1741,27 @@ export default async function OrderDetailsPage({
         مش رقم التتبع، فالعميل يقدر يطمن قبل ما الشحنة تتعمل.
       */}
       {trackLink && (
-        <div className="card p-4 sm:p-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-bold text-ink">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-surface px-4 py-2.5 shadow-card">
+          <div className="min-w-0">
+            <span className="text-sm font-medium text-ink">
               لينك التتبع للعميل
-            </h2>
-            <span className="text-[11px] text-ink-faint">
+            </span>
+            <span className="ms-2 text-[11px] text-ink-faint">
               بيفتح صفحة باسم متجرك
             </span>
           </div>
-          <CopyLink url={trackLink} href={trackLink} />
+          {/* ⚠️ الرابط نفسه مايتعرضش — سطر حروف مالهاش معنى لحد (ORDER §٦) */}
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={trackLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-9 items-center rounded-control px-2 text-xs text-ink-muted hover:text-info hover:underline"
+            >
+              افتحه
+            </a>
+            <CopyLink url={trackLink} hideUrl />
+          </div>
         </div>
       )}
 
