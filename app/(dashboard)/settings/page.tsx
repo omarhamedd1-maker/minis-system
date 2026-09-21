@@ -418,6 +418,21 @@ export default async function SettingsPage({
                 <li key={step}>{step}</li>
               ))}
             </ol>
+            {/*
+              ⚠️ **الطبقة اللي مطفية لازم تبان.** التحقق من توقيع Resend
+              بيشتغل بس لو `RESEND_WEBHOOK_SECRET` موجود — ومن غير السطر
+              ده الحماية بتكون ناقصة ومحدش يعرف.
+            */}
+            <p className="mt-3 text-[11px] text-ink-faint">
+              توقيع Resend:{" "}
+              {process.env.RESEND_WEBHOOK_SECRET ? (
+                <span className="text-success">بيتفحص</span>
+              ) : (
+                <span className="text-warning">
+                  مطفي — مفيش <code>RESEND_WEBHOOK_SECRET</code>
+                </span>
+              )}
+            </p>
             {gmailCode && (
               <p className="mt-3 rounded-control bg-success-soft px-3 py-2 text-xs text-success">
                 كود تأكيد جيميل وصل: <b className="font-mono">{gmailCode.code}</b> —{" "}
