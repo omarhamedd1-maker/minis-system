@@ -35,6 +35,9 @@ const SCOPES: Scope[] = [
 
 const GLOBAL = "دور على أوردر · عميل · تليفون · رقم تتبع";
 
+/** الحدث اللي بيفتح البحث من برّه — اختصار `/` */
+export const OPEN_SEARCH = "minis-open-search";
+
 export function searchTarget(
   pathname: string,
   currentSearch: string,
@@ -71,6 +74,16 @@ export function HeaderSearch({ className = "" }: { className?: string }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  // اختصار `/` في الصفحات بينادي البحث من برّه (`components/PageKeys.tsx`)
+  useEffect(() => {
+    const onOpen = () => {
+      setValue(new URLSearchParams(window.location.search).get("q") ?? "");
+      setOpen(true);
+    };
+    document.addEventListener(OPEN_SEARCH, onOpen);
+    return () => document.removeEventListener(OPEN_SEARCH, onOpen);
+  }, []);
 
   return (
     <>

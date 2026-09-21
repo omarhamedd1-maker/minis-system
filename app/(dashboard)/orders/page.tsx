@@ -75,6 +75,7 @@ import { isStuckShipment } from "@/lib/daily-board";
 import { dayHasHeader, groupDays } from "@/lib/group-days";
 import { LastSearchHint } from "@/components/LastSearchHint";
 import { MarkLastOpenedOrder } from "@/components/LastOpenedOrder";
+import { OrderKeys } from "@/components/OrderKeys";
 
 type OrderRow = {
   id: string;
@@ -508,6 +509,9 @@ export default async function OrdersPage({
       {/* العلامة الخفيفة على آخر أوردر فتحته — بتتشال بعد أول رجعة */}
       <MarkLastOpenedOrder />
 
+      {/* `/` بحث · `N` جديد · `↑↓` تنقل · `Enter` فتح (ORDERS §٥) */}
+      <OrderKeys />
+
       {orders.length === 0 ? (
         <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
           {searchTerm
@@ -640,6 +644,8 @@ export default async function OrdersPage({
                         href={wa}
                         target="_blank"
                         rel="noopener noreferrer"
+                        // السحب الجانبي بيدوس اللينك ده (`SelectableOrderCard`)
+                        data-order-wa
                         title="واتساب العميل"
                         className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted hover:bg-success-soft hover:text-success active:bg-success-soft active:text-success"
                       >
