@@ -5,9 +5,10 @@
 // الشكل بيختلف من مزوّد للتاني، فبنقرا **أي حقل بيشبه** اللي محتاجينه
 // (`to` · `from` · `subject` · `html`/`text`) بدل ما نتقفل على واحد.
 //
-// ⛔⛔ **مفيش حركة خزنة بتتعمل هنا.** الإيميل بيتسجّل، والتحويل بيتقيّد
-// بحالته (`matched` أو `needs_review`) — وتسجيل الفلوس تلقائي **مستني
-// قرار عمر** (§١٢ · الخطوة ٧).
+// ⚠️⚠️ **الحركة بتتعمل تلقائي للمطابق بس** (قرار عمر ٢١ سبتمبر · الخطوة ٧).
+// «مطابق» معناها إن مجموع أوردرات حقيقية عندنا = مبلغ التحويل بالمليم —
+// فالإيميل اتحقق من جوّه السيستم مش من شكله. واللي مايطابقش بيفضل مستني
+// دوسة في التاب.
 //
 // الطبقات (§٤):
 //   ١. العنوان سري — المفتاح بيحدد البيزنس، واللي مالوش مفتاح بيترفض.
@@ -169,13 +170,59 @@ export async function POST(req: Request) {
       .in("id", match.orderIds);
   }
 
+  // ===== التسجيل التلقائي (الخطوة ٧ · قرار عمر ٢١ سبتمبر) =====
+  //
+  // ⚠️⚠️ **الحركة بتتعمل للمطابق بس.** المطابقة معناها إن مجموع أوردرات
+  // حقيقية عندنا = مبلغ التحويل بالمليم، يعني الإيميل مش بس «وصل» — هو
+  // اتحقق من جوّه السيستم. واللي مايطابقش بيفضل مستني دوسة.
+  //
+  // والحركة نوعها `payout` ومربوطة بالتحويل، فأي مراجعة بعدين بتعرف
+  // مصدرها، والإلغاء بيمشي بالحركة العكسية زي أي حركة (MONEY §٦.٢).
+  let cashId: string | null = null;
+  if (match.ok && p.net > 0) {
+    const { data: row, error: cashError } = await db
+      .from("cash_transactions")
+      .insert({
+        // ⚠️ **tenant_id صريح** — مفتاح الأدمن بيعدّي فوق قواعد العزل
+        tenant_id: tenantId,
+        direction: "in",
+        amount: p.net,
+        source_type: "payout",
+        description: `تحويل ${p.invoiceNumber}`,
+        transaction_date: p.date,
+        related_payout_id: payout.id as string,
+        created_by_name: "إيميل التحويل",
+        origin: "system",
+      })
+      .select("id")
+      .single();
+    if (!cashError && row) {
+      cashId = row.id as string;
+      await db
+        .from("courier_payouts")
+        .update({ cash_transaction_id: cashId, status: "confirmed" })
+        .eq("tenant_id", tenantId)
+        .eq("id", payout.id as string);
+    } else {
+      // الحركة فشلت؟ التحويل بيفضل مستني دوسة بدل ما يبان متأكّد وهو ناقص
+      await db
+        .from("courier_payouts")
+        .update({
+          status: "needs_review",
+          review_reason: "الإيميل طابق بس الحركة مااتعملتش — دوس «اعمل حركة»",
+        })
+        .eq("tenant_id", tenantId)
+        .eq("id", payout.id as string);
+    }
+  }
+
   await log({ parsed_ok: true, payout_id: payout.id as string });
 
-  // ⛔ **مفيش حركة خزنة** — التسجيل التلقائي مستني قرار عمر (§١٢ · الخطوة ٧)
   return NextResponse.json({
     ok: true,
     invoice: p.invoiceNumber,
-    status: match.ok ? "matched" : "needs_review",
+    status: match.ok ? (cashId ? "confirmed" : "needs_review") : "needs_review",
     orders: match.ok ? match.orderIds.length : 0,
+    cash: cashId ? p.net : 0,
   });
 }

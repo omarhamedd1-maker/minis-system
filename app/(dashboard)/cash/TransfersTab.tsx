@@ -1,12 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { allRows } from "@/lib/fetch-all-pages";
-import { formatDate, formatMoney } from "@/lib/format";
+import { cairoToday, formatDate, formatMoney } from "@/lib/format";
 import { can, type SessionUser } from "@/lib/permissions";
 import { ImportStatement } from "@/components/ImportStatement";
+import { AddPayout } from "@/components/AddPayout";
 import { PayoutReview } from "@/components/PayoutReview";
 import { linkToManualCash } from "@/lib/payout-match";
 import {
   acceptPayoutDiff,
+  addPayoutManually,
   applyPayoutImport,
   createPayoutCash,
   fixPayoutCash,
@@ -133,6 +135,8 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
           )}
         </div>
       </div>
+
+      {canEdit && <AddPayout action={addPayoutManually} today={cairoToday()} />}
 
       {canEdit && (
         <ImportStatement

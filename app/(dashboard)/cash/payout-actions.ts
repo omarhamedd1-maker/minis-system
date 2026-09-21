@@ -9,7 +9,7 @@ import { cairoToday } from "@/lib/format";
 import { allRows } from "@/lib/fetch-all-pages";
 import { parseStatement } from "@/lib/payout-statement";
 import { planImport, type ImportPlan } from "@/lib/payout-import";
-import { ROUNDING_TOLERANCE } from "@/lib/payout-match";
+import { linkToManualCash, ROUNDING_TOLERANCE } from "@/lib/payout-match";
 
 /**
  * ==========================================================================
@@ -362,4 +362,103 @@ export async function acceptPayoutDiff(payoutId: string, cashId: string, differe
   await logActivity(me, "payout.accept", `قبل فرق ${difference} في تحويل ${p.invoice_number}`);
   revalidatePath("/cash");
   return { ok: true, message: "اتقبل الفرق" };
+}
+
+/**
+ * إضافة تحويل بالإيد (TRANSFERS §٩).
+ *
+ * ⚠️ **لازمتها:** الكشف بينزل مرة كل فترة، والإيميل لسه مش موصّل — فالتحويل
+ * اللي حصل النهاردة مالوش طريق يدخل بيه. من غير ده الخزنة بتفضل فيها حركة
+ * يدوية مالهاش مصدر.
+ *
+ * ⚠️ **ومابتعملش حركة خزنة.** بتربط بالحركة الموجودة لو لقتها (بنفس سماح
+ * الاستيراد — تقريب الجنيه)، وإلا بتتسجّل «ناقص» ودوسة «اعمل حركة» هي اللي
+ * بتعمل الفلوس.
+ */
+export async function addPayoutManually(formData: FormData): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+
+  const date = String(formData.get("payout_date") ?? "").slice(0, 10);
+  const amount = Number(formData.get("net_amount"));
+  const typed = String(formData.get("invoice_number") ?? "").trim();
+  const fees = Number(formData.get("fees_amount") ?? 0) || 0;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(amount) || amount <= 0) {
+    return { ok: false, error: "اكتب التاريخ ومبلغ أكبر من صفر" };
+  }
+
+  // رقم الفاتورة من بوسطة لو معاك، وإلا رقم من التاريخ عشان مايتكررش
+  const invoice = typed || `MANUAL${date.replace(/-/g, "")}`;
+
+  const { data: exists } = await db
+    .from("courier_payouts")
+    .select("id")
+    .eq("tenant_id", me.tenantId)
+    .eq("invoice_number", invoice)
+    .maybeSingle();
+  if (exists) return { ok: false, error: `${invoice} متسجّل قبل كده` };
+
+  // حركة يدوية داخلة في نفس اليوم (± يوم) مش مربوطة بتحويل تاني
+  const { data: cash } = await allRows(db
+    .from("cash_transactions")
+    .select("id, amount, transaction_date, related_payout_id")
+    .eq("tenant_id", me.tenantId)
+    .eq("source_type", "manual")
+    .eq("direction", "in")
+    .overrideTypes<
+      { id: string; amount: number; transaction_date: string; related_payout_id: string | null }[]
+    >());
+  const link = linkToManualCash(
+    { net: amount, date },
+    (cash ?? [])
+      .filter((c) => !c.related_payout_id)
+      .map((c) => ({ id: c.id, amount: Number(c.amount), date: String(c.transaction_date).slice(0, 10) })),
+    new Set(),
+    ROUNDING_TOLERANCE
+  );
+  const linked = link.kind === "linked" ? link.cashId : null;
+
+  const { data: payout, error } = await db
+    .from("courier_payouts")
+    .insert({
+      // ⚠️ **tenant_id صريح** — مفتاح الأدمن بيعدّي فوق قواعد العزل
+      tenant_id: me.tenantId,
+      courier: COURIER,
+      invoice_number: invoice,
+      payout_date: date,
+      gross_amount: Math.round((amount + fees) * 100) / 100,
+      fees_amount: fees,
+      net_amount: amount,
+      order_count: null,
+      status: linked ? "confirmed" : "needs_review",
+      review_reason: linked
+        ? null
+        : link.kind === "diff"
+          ? `الحركة اليدوية فرقها ${link.difference} — محتاج قرار`
+          : "مفيش حركة خزنة بالمبلغ ده — محتاج دوسة",
+      cash_transaction_id: linked,
+      rounding_diff: link.kind === "linked" ? (link.rounding ?? 0) : 0,
+      source: "manual",
+      created_by_name: me.fullName ?? me.email ?? null,
+    })
+    .select("id")
+    .single();
+
+  if (error || !payout) return { ok: false, error: "معرفناش نسجّل التحويل: " + (error?.message ?? "") };
+
+  if (linked) {
+    await db
+      .from("cash_transactions")
+      .update({ related_payout_id: payout.id as string })
+      .eq("tenant_id", me.tenantId)
+      .eq("id", linked);
+  }
+
+  await logActivity(me, "payout.manual", `سجّل تحويل ${invoice} بمبلغ ${amount}`);
+  revalidatePath("/cash");
+  return {
+    ok: true,
+    message: linked ? "اتسجّل واتربط بالحركة الموجودة" : "اتسجّل — محتاج مراجعة",
+  };
 }
