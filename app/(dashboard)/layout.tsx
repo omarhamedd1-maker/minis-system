@@ -8,6 +8,7 @@ import { can, getSessionUser } from "@/lib/permissions";
 import { sendAnnouncement } from "./notify/actions";
 import type { NotifyMember } from "@/components/SendAnnouncement";
 import { HeaderSearch } from "@/components/HeaderSearch";
+import { HeaderTitle } from "@/components/HeaderTitle";
 
 // ترحيب بالاسم الأول حسب وقت اليوم (بتوقيت مصر)
 function greeting(name: string | null) {
@@ -119,8 +120,8 @@ export default async function DashboardLayout({
           Gridpoint
         </span>
         <div className="flex min-w-0 items-center gap-1">
-          <span className="truncate text-sm text-ink-muted">
-            {greeting(user.fullName ?? user.email)}
+          <span className="min-w-0 truncate text-sm text-ink-muted">
+            <HeaderTitle greeting={greeting(user.fullName ?? user.email)} />
           </span>
           <HeaderSearch />
           <NotificationsBell
@@ -143,7 +144,7 @@ export default async function DashboardLayout({
         <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 pb-28 md:pb-8">
           {/* ترحيب على الكمبيوتر (على التليفون بيظهر في الهيدر فوق) */}
           <div className="mb-4 hidden items-center justify-between gap-3 text-sm text-ink-muted md:flex">
-            <span>{greeting(user.fullName ?? user.email)}</span>
+            <HeaderTitle greeting={greeting(user.fullName ?? user.email)} />
             <span className="flex items-center gap-1">
           <HeaderSearch />
             <NotificationsBell

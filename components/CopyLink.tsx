@@ -8,7 +8,21 @@ import { useState } from "react";
  * **اللينك ده بيتبعت للتيم**، فالنسخ بضغطة أهم من إنه يبان كامل — التحديد
  * بالإيد على التليفون بياخد نص دقيقة وبيجيب معاه مسافة زيادة.
  */
-export function CopyLink({ url, href }: { url: string; href?: string }) {
+export function CopyLink({
+  url,
+  href,
+  hideUrl = false,
+}: {
+  url: string;
+  href?: string;
+  /**
+   * الرابط نفسه مايتعرضش — زرار النسخ بس (ORDER §٦).
+   *
+   * ⚠️ **للروابط اللي بتتبعت مش اللي بتتقرا**: لينك التتبع طوله سطر كامل
+   * من حروف مالهاش معنى لحد، وبياخد كرت كامل عشان حاجة فعلها دوسة واحدة.
+   */
+  hideUrl?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
@@ -22,13 +36,19 @@ export function CopyLink({ url, href }: { url: string; href?: string }) {
   };
 
   return (
-    <div className="mt-1.5 flex items-center gap-1 rounded-control bg-sunken px-2 py-1">
+    <div
+      className={
+        hideUrl
+          ? "flex items-center gap-1"
+          : "mt-1.5 flex items-center gap-1 rounded-control bg-sunken px-2 py-1"
+      }
+    >
       {/*
         **من غير `href` بيبقى نص مش لينك.** فيه روابط مالهاش لازمة تتفتح —
         زي رابط الويب هوك: هو بيستقبل `POST` بس، فالضغط عليه بيفتح صفحة
         خطأ ٤٠٥ وبيخلّي اللي ضغط يفتكر إن فيه حاجة بايظة.
       */}
-      {href ? (
+      {hideUrl ? null : href ? (
         <a
           href={href}
           target="_blank"
@@ -53,12 +73,19 @@ export function CopyLink({ url, href }: { url: string; href?: string }) {
         onClick={copy}
         title="انسخ اللينك"
         aria-label="انسخ اللينك"
-        className={`shrink-0 rounded-chip px-1.5 py-1 transition ${
+        className={`shrink-0 transition ${
+          hideUrl
+            ? "inline-flex min-h-9 items-center gap-1.5 rounded-control border border-line-strong px-3 py-1.5 text-xs font-medium"
+            : "rounded-chip px-1.5 py-1"
+        } ${
           copied
             ? "bg-success-line text-success"
-            : "text-ink-faint hover:bg-line hover:text-ink-body"
+            : hideUrl
+              ? "text-ink-body hover:bg-sunken"
+              : "text-ink-faint hover:bg-line hover:text-ink-body"
         }`}
       >
+        {hideUrl && <span>{copied ? "اتنسخ" : "نسخ"}</span>}
         {copied ? (
           <svg
             viewBox="0 0 24 24"
