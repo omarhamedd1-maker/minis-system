@@ -6,6 +6,7 @@ import { ImportStatement } from "@/components/ImportStatement";
 import { AddPayout } from "@/components/AddPayout";
 import { PayoutReview } from "@/components/PayoutReview";
 import { linkToManualCash } from "@/lib/payout-match";
+import { stalePayouts } from "@/lib/payout-health";
 import {
   acceptPayoutDiff,
   addPayoutManually,
@@ -81,9 +82,62 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
     );
   }
 
+  // ===== ⚠️ فحص: «متأكّد» وتحته حركة اتلغت =====
+  //
+  // ⚠️⚠️ **دي أوحش من الغلط الواضح** — الشاشة بتقول تمام فمحدش بيراجع.
+  // حصلت على مينيز (٥,٦٩١ · `MANUAL20260921`): الحركة اتلغت والتحويل فضل
+  // «متأكّد». الفحص بيرجّعه «محتاج مراجعة» **وسببه مكتوب**.
+  //
+  // ⚠️ **مابيلمسش فلوس** — بيصحّح وصف التحويل بس (`lib/payout-health.ts`).
+  const loaded = data ?? [];
+  const cashIds = loaded
+    .map((r) => r.cash_transaction_id)
+    .filter((v): v is string => Boolean(v));
+  if (cashIds.length > 0) {
+    const [{ data: reversedRows }, { data: liveRows }] = await Promise.all([
+      allRows(db
+        .from("cash_transactions")
+        .select("reversal_of")
+        .eq("tenant_id", user.tenantId)
+        .in("reversal_of", cashIds)
+        .overrideTypes<{ reversal_of: string }[]>()),
+      allRows(db
+        .from("cash_transactions")
+        .select("id")
+        .eq("tenant_id", user.tenantId)
+        .in("id", cashIds)
+        .overrideTypes<{ id: string }[]>()),
+    ]);
+    const reversed = new Set((reversedRows ?? []).map((r) => r.reversal_of));
+    const live = new Set((liveRows ?? []).map((r) => r.id));
+    const missing = new Set(cashIds.filter((id) => !live.has(id)));
+    const stale = stalePayouts(
+      loaded.map((r) => ({
+        id: r.id,
+        status: r.status,
+        cashTransactionId: r.cash_transaction_id,
+      })),
+      reversed,
+      missing
+    );
+    for (const s of stale) {
+      await db
+        .from("courier_payouts")
+        .update({ status: "needs_review", review_reason: s.reason })
+        .eq("tenant_id", user.tenantId)
+        .eq("id", s.id);
+      // الشاشة بتعرض المصحَّح على طول — مش مستنية تحديث تاني
+      const row = loaded.find((r) => r.id === s.id);
+      if (row) {
+        row.status = "needs_review";
+        row.review_reason = s.reason;
+      }
+    }
+  }
+
   // ⚠️ **المتأرشف بيتشال من العرض بس** — لسه في التاريخ، وعشان كده
   // الأرقام فوق (المجموع والرسوم) بتتحسب على الكل مش على الظاهر
-  const all = data ?? [];
+  const all = loaded;
   const hidden = all.filter((r) => r.archived === true);
   const rows = all.filter((r) => r.archived !== true);
 
