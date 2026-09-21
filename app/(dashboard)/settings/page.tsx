@@ -14,6 +14,7 @@ import {
   saveMetaAccounts,
   disconnectMeta,
   connectMeta,
+  saveIssuesSince,
 } from "./actions";
 import { EnablePush } from "@/components/EnablePush";
 import { IntegrationHealth } from "@/components/IntegrationHealth";
@@ -64,6 +65,16 @@ export default async function SettingsPage({
       .eq("tenant_id", me.tenantId)
       .maybeSingle(),
   ]);
+
+  // ⚠️ قراية لوحدها — العمود لسه ممكن مايكونش اتعمل (`sql/issues-since.sql`)
+  const issuesSince = await (async () => {
+    const { data } = await db
+      .from("tenant_credentials")
+      .select("issues_since")
+      .eq("tenant_id", me.tenantId)
+      .maybeSingle();
+    return (data?.issues_since as string | undefined) ?? "";
+  })().catch(() => "");
 
   // ⚠️ قراية لوحدها — العمود لسه ممكن مايكونش اتعمل (`sql/payout-email-key.sql`)
   const payoutKey = await (async () => {
@@ -721,6 +732,34 @@ export default async function SettingsPage({
             min="0"
             defaultValue={flatShipping}
             className="w-28 rounded-control border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <button
+            type="submit"
+            className="rounded-control bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+          >
+            احفظ
+          </button>
+        </form>
+      </div>
+
+      {/*
+        مشاكل الأوردرات من تاريخ.
+
+        ⚠️ **ده تاريخ إعداد مش رقم في الكود.** شاشات المشاكل (مراجعة الداتا
+        · صحة التشغيل · الشغل) كانت بتعيد نفس المشاكل على أوردرات قديمة
+        خلاص اتقرر تتساب، فالتنبيه الحقيقي كان بيضيع وسطها.
+      */}
+      <div className="card p-5">
+        <h2 className="text-sm font-bold text-ink">مشاكل الأوردرات من تاريخ</h2>
+        <p className="mt-0.5 text-[11px] text-ink-faint">
+          شاشات المشاكل بتعرض اللي من التاريخ ده وبعده. فاضي = كل حاجة.
+        </p>
+        <form action={saveIssuesSince} className="mt-3 flex flex-wrap gap-2">
+          <input
+            name="issues_since"
+            type="date"
+            defaultValue={issuesSince}
+            className="rounded-control border border-line px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <button
             type="submit"

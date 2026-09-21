@@ -5,6 +5,7 @@ import { loadHealth } from "./actions";
 import { discountVerdict } from "@/lib/discount-impact";
 import { FillReasons } from "@/components/FillReasons";
 import { fillReasonsAction } from "./fill-actions";
+import { IssuesSinceNote } from "@/components/IssuesSinceNote";
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +29,23 @@ export default async function HealthPage() {
     );
   }
 
-  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts, codGap, prepaid } = r;
+  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts, codGap, prepaid, issuesSince, hiddenOld } = r;
   const verdict = discountVerdict(discounts);
 
   return (
     <div className="space-y-4">
       <BackLink href="/orders" label="الأوردرات" />
       <h1 className="text-2xl font-bold text-ink">صحة التشغيل</h1>
+
+      {/*
+        ⚠️ الفلتر على أقسام المشاكل بس — النِّسَب على التاريخ كله بقصد،
+        لأن فلترة رقم علشان يهدي تنبيه أخطر من التنبيه (DESIGN قاعدة ٨).
+      */}
+      <IssuesSinceNote
+        since={issuesSince}
+        hidden={hiddenOld}
+        scope="الفلوس الواقفة والفروق بس — النِّسَب على التاريخ كله"
+      />
 
       {/* نِسَب الشحن — المقام هو اللي اتشحن فعلاً مش كل الأوردرات */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
