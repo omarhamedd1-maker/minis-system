@@ -103,6 +103,8 @@ export function SelectableOrderCard({
 
   return (
     <div
+      // علامة «آخر أوردر فتحته» بتتحط من هنا (`components/LastOpenedOrder.tsx`)
+      data-order-id={orderId}
       onPointerDown={(e) => start(e)}
       onPointerUp={cancel}
       onPointerLeave={cancel}

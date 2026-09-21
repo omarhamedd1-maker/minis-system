@@ -73,6 +73,8 @@ import { allRows } from "@/lib/fetch-all-pages";
 import { ORDER_TABS, resolveOrderTab } from "@/lib/order-tabs";
 import { isStuckShipment } from "@/lib/daily-board";
 import { dayHasHeader, groupDays } from "@/lib/group-days";
+import { LastSearchHint } from "@/components/LastSearchHint";
+import { MarkLastOpenedOrder } from "@/components/LastOpenedOrder";
 
 type OrderRow = {
   id: string;
@@ -496,6 +498,16 @@ export default async function OrdersPage({
         />
       </FilterBar>
 
+      {/*
+        ⚠️ **اقتراح مش تطبيق** — `/orders` نضيف بيفضل كل الأوردرات دايمًا،
+        لأن اللينك بيتبعت لموظفين (ORDERS §٥). الشريحة بتختفي لوحدها لما
+        يكون فيه بحث شغّال.
+      */}
+      <LastSearchHint current={searchTerm} />
+
+      {/* العلامة الخفيفة على آخر أوردر فتحته — بتتشال بعد أول رجعة */}
+      <MarkLastOpenedOrder />
+
       {orders.length === 0 ? (
         <div className="rounded-card bg-surface p-12 text-center text-ink-muted shadow-card">
           {searchTerm
@@ -737,6 +749,8 @@ export default async function OrdersPage({
                 return (
                   <tr
                     key={order.id}
+                    // علامة «آخر أوردر فتحته» (`components/LastOpenedOrder.tsx`)
+                    data-order-id={order.id}
                     className="border-b border-line last:border-0 hover:bg-sunken"
                   >
                     <td className="px-4 py-3">
@@ -894,10 +908,13 @@ export default async function OrdersPage({
               basePath="/orders"
               query={{
                 status: showArchived ? undefined : status,
+                tab: showArchived || status ? undefined : tabParam,
                 archived: showArchived ? "1" : undefined,
                 ...periodParams,
               }}
               shown={showCount}
+              // بيجيب اللي بعدهم وانت نازل — والدوسة اليدوية لسه موجودة (ORDERS §٥)
+              auto
             />
           )}
         </>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SHOW_MAX, SHOW_STEP } from "@/lib/show-more";
+import { AutoLoadMore } from "@/components/AutoLoadMore";
 
 /**
  * زرار «عرض المزيد» — مكوّن واحد لكل القوايم.
@@ -13,6 +14,7 @@ export function ShowMore({
   shown,
   total,
   step = SHOW_STEP,
+  auto = false,
 }: {
   basePath: string;
   /** باقي الفلاتر — عشان الضغط ما يضيّعهاش */
@@ -22,6 +24,13 @@ export function ShowMore({
   /** الإجمالي الموجود — سيبه فاضي لو مش معروف (زي الأوردرات) */
   total?: number;
   step?: number;
+  /**
+   * يجيب اللي بعدهم لوحده وانت نازل (`AutoLoadMore`).
+   *
+   * ⚠️ **الافتراضي إطفا** — القوايم اللي صفوفها تقيلة (أو اللي بتتطبع)
+   * تفضل بدوسة. الأوردرات بس دلوقتي (ORDERS §٥).
+   */
+  auto?: boolean;
 }) {
   if (total !== undefined && shown >= total) return null;
   // ⚠️ فوق الألف مابنقدرش نعرض أكتر في صفحة واحدة — بنقول كده بدل زرار مابيعملش حاجة
@@ -36,6 +45,13 @@ export function ShowMore({
   const params = new URLSearchParams();
   for (const [k, v] of Object.entries(query)) if (v) params.set(k, v);
   params.set("show", String(shown + step));
+
+  const label =
+    total !== undefined ? `عرض المزيد (باقي ${total - shown})` : "عرض المزيد";
+
+  if (auto) {
+    return <AutoLoadMore href={`${basePath}?${params.toString()}`} label={label} />;
+  }
 
   return (
     <div className="mt-4 flex justify-center">
