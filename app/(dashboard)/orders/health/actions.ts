@@ -19,6 +19,8 @@ import { prepaidValue } from "@/lib/prepaid-value";
 import { fetchShopifyOrders } from "@/lib/shopify/orders";
 import { resolveShopifyToken } from "@/lib/shopify/token";
 import { allRows } from "@/lib/fetch-all-pages";
+import { loadIssuesSince } from "@/lib/tenant-settings";
+import { withinIssueWindow, type IssueOrder } from "@/lib/issues-since";
 
 export type HealthReport =
   | {
@@ -48,6 +50,14 @@ export type HealthReport =
       discounts: DiscountReport;
       /** رقمنا مقابل رقم بوسطة */
       codGap: GapReport;
+      /**
+       * تاريخ بداية شاشات المشاكل، وكام أوردر برّه بسببه.
+       *
+       * ⚠️ **بيتعرض في الشاشة** — الصفحة اللي بتخفي من غير ما تقول بتكدب
+       * بالصمت (DESIGN قاعدة ٨).
+       */
+      issuesSince: string | null;
+      hiddenOld: number;
     }
   | { ok: false; error: string };
 
@@ -82,6 +92,19 @@ export async function loadHealth(): Promise<HealthReport> {
   const rows = (data ?? []) as unknown as OpsOrder[];
 
   const codes = await loadDiscountCodes(db, me.tenantId);
+
+  /**
+   * ⚠️⚠️ **الفلتر ده على الأقسام اللي بتقول «فيه مشكلة» بس** — فلوس واقفة
+   * عند بوسطة، والفرق مع شوبيفاي، ورقمنا مقابل رقم بوسطة.
+   *
+   * ⚠️ **النِّسَب مابتتفلترش بقصد**: نسبة الرجوع وزمن التوصيل وأسباب
+   * الرجوع بتتحسب على التاريخ كله. لو فلترناها كنا نكون **غيّرنا رقم**
+   * علشان نخفي تنبيه — وده أخطر من التنبيه نفسه.
+   */
+  const issuesSince = await loadIssuesSince(db, me.tenantId);
+  const recent = rows.filter((o) =>
+    withinIssueWindow(o as unknown as IssueOrder, issuesSince)
+  );
 
   /**
    * ⚠️⚠️ **قيمة الدفع المقدم بتتحسب من رجوع الاستلام، مش من مقارنة
@@ -146,6 +169,8 @@ export async function loadHealth(): Promise<HealthReport> {
 
   return {
     ok: true,
+    issuesSince,
+    hiddenOld: rows.length - recent.length,
     prepaid: prepaidValue({
       codSettled,
       codReturned,
@@ -155,9 +180,9 @@ export async function loadHealth(): Promise<HealthReport> {
     }),
     rates: carrierRates(rows),
     lead: leadTime(rows),
-    aging: collectionAging(rows as never, cairoToday()),
+    aging: collectionAging(recent as never, cairoToday()),
     reasons: breakdownReturnReasons(rows as never),
-    drift: await loadDrift(db, me.tenantId, rows as never),
+    drift: await loadDrift(db, me.tenantId, recent as never),
     productReturns: productReturnRates(toRate(rows as never)),
     customerReturns: customerReturnRates(toRate(rows as never)),
     prices: priceTests(toPrice(rows as never)),
@@ -172,7 +197,7 @@ export async function loadHealth(): Promise<HealthReport> {
     // ⚠️ **الإجمالي هنا هو اللي العميل دفعه** (بنود − خصم + شحن) مش قيمة
     // البضاعة — الفرق ده هو الفرق بين «الخصم بيزوّد الأوردر» و«بياكله».
     codGap: codGaps(
-      rows.map((o) => {
+      recent.map((o) => {
         const r = o as unknown as {
           order_number: string | null;
           order_status: string | null;

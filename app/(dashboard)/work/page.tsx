@@ -22,6 +22,9 @@ import {
   QUEUE_LINKS,
 } from "@/lib/work-queues";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { loadIssuesSince } from "@/lib/tenant-settings";
+import { withinIssueWindow } from "@/lib/issues-since";
+import { IssuesSinceNote } from "@/components/IssuesSinceNote";
 
 export const dynamic = "force-dynamic";
 
@@ -75,34 +78,46 @@ export default async function WorkPage() {
   // (التمانية القدام هيبانوا في الطابور لحد ساعتها).
   let result = await read(`${BASE}, return_skip_reason`);
   if (result.error?.code === "42703") result = await read(BASE);
-  const data = result.data;
+  const rowsAll = result.data ?? [];
 
-  const board = dailyBoard(
-    (data ?? []).map((o) => ({
-      id: o.id,
-      orderStatus: o.order_status,
-      orderDate: o.order_date,
-      bostaTracking: o.bosta_tracking,
-      bostaCreatedAt: o.bosta_created_at,
-      bostaCod: o.bosta_cod,
-      bostaCollected: o.bosta_collected,
-      refundedAt: o.refunded_at,
-      returnSkip: o.return_skip_reason ?? null,
-      returnedQty: (o.order_items ?? []).reduce((s, i) => s + Number(i.returned_quantity ?? 0), 0),
-      refundDue: refundDue(
-        (o.order_items ?? []).map((i) => ({
-          returnedQuantity: i.returned_quantity,
-          salePriceAtOrder: i.sale_price_at_order,
-        }))
-      ),
-    })),
-    new Date()
-  );
+  // ⚠️ **الأوردرات اللي قبل التاريخ المختار برّه الطوابير** — الطابور اللي
+  // فيه رقم ثابت من شهور بيتعلّم إنه يتتجاهل، وساعتها اللي دخل النهاردة
+  // بيضيع وسطه. التاريخ إعداد (`tenant_credentials.issues_since`) مش رقم
+  // في الكود.
+  const admin = createAdminClient();
+  const issuesSince = await loadIssuesSince(admin, user.tenantId);
+  const data = rowsAll.filter((o) => withinIssueWindow(o, issuesSince));
+
+  const toBoardOrder = (o: WorkRow) => ({
+    id: o.id,
+    orderStatus: o.order_status,
+    orderDate: o.order_date,
+    bostaTracking: o.bosta_tracking,
+    bostaCreatedAt: o.bosta_created_at,
+    bostaCod: o.bosta_cod,
+    bostaCollected: o.bosta_collected,
+    refundedAt: o.refunded_at,
+    returnSkip: o.return_skip_reason ?? null,
+    returnedQty: (o.order_items ?? []).reduce((s, i) => s + Number(i.returned_quantity ?? 0), 0),
+    refundDue: refundDue(
+      (o.order_items ?? []).map((i) => ({
+        returnedQuantity: i.returned_quantity,
+        salePriceAtOrder: i.sale_price_at_order,
+      }))
+    ),
+  });
+
+  const now = new Date();
+  const board = dailyBoard(data.map(toBoardOrder), now);
+  // ⚠️ **العدّ اللي بيتقال في سطر «متخفيين» على الطوابير مش على الأوردرات.**
+  // مينيز فيها مئات أوردرات قبل التاريخ، واللي كان بيقف في طابور منها أقل
+  // بكتير — فالرقم الخام كان هيخوّف من غير سبب.
+  const boardAll = dailyBoard(rowsAll.map(toBoardOrder), now);
+  const sumCounts = (list: BoardRow[]) => list.reduce((s, r) => s + r.count, 0);
 
   // الطوابير اللي مصدرها مش الأوردرات (`lib/work-queues.ts`).
   // ⚠️ جدول التقييمات وطلبات الحذف مقفولين في الـRLS، فبيتقروا بمفتاح
   // الأدمن **بفلتر البيزنس** — من غيره بيرجّعوا كل البيزنسات.
-  const admin = createAdminClient();
   const [deletions, ratings] = await Promise.all([
     allRows(admin
       .from("deletion_requests")
@@ -124,9 +139,17 @@ export default async function WorkPage() {
       .filter((n) => Number.isFinite(n));
     return days.length > 0 ? Math.max(...days) : null;
   };
-  const zeroCostOrders = (data ?? []).filter((o) =>
+  const zeroCostOrders = data.filter((o) =>
     (o.order_items ?? []).some((i) => !Number(i.cost_price_at_order))
   );
+  const zeroCostAll = rowsAll.filter((o) =>
+    (o.order_items ?? []).some((i) => !Number(i.cost_price_at_order))
+  );
+  // طلبات الحذف والتقييمات مالهاش تاريخ أوردر فمابتتفلترش — فرقها صفر
+  const hiddenOld =
+    sumCounts(boardAll) -
+    sumCounts(board) +
+    (zeroCostAll.length - zeroCostOrders.length);
   const extra = extraQueues({
     deletionOrderIds: (deletions.data ?? []).map((d) => d.order_id).filter((v): v is string => Boolean(v)),
     deletionOldestDays: oldestOf((deletions.data ?? []).map((d) => d.created_at)),
@@ -171,6 +194,14 @@ export default async function WorkPage() {
         <p className="mt-1 text-xs text-ink-faint">
           كل رقم بيفتح نفس الأوردرات دي بالظبط — مش فلتر قريب منها.
         </p>
+        {/* ⚠️ الصفحة اللي بتخفي من غير ما تقول بتكدب بالصمت (DESIGN قاعدة ٨) */}
+        <div className="mt-1">
+          <IssuesSinceNote
+            since={issuesSince}
+            hidden={hiddenOld}
+            scope="مجموع الطوابير — الأوردر ممكن يبقى في أكتر من طابور"
+          />
+        </div>
       </div>
 
       {/*

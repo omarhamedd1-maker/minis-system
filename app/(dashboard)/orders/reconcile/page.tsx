@@ -14,6 +14,9 @@ import { BostaCoverage } from "@/components/BostaCoverage";
 import { requirePagePermission } from "@/lib/permissions";
 import { checkBostaCoverage, linkMissingShipments } from "./actions";
 import { allRows } from "@/lib/fetch-all-pages";
+import { loadIssuesSince } from "@/lib/tenant-settings";
+import { withinIssueWindow } from "@/lib/issues-since";
+import { IssuesSinceNote } from "@/components/IssuesSinceNote";
 
 type Row = {
   id: string;
@@ -90,6 +93,11 @@ export default async function ReconcilePage() {
   const me = await requirePagePermission("finance.dashboard");
   const admin = createAdminClient();
 
+  // ⚠️ **الفلتر ده إعداد مش رقم في الكود** (`lib/issues-since.ts`) —
+  // الأوردرات اللي قبل التاريخ اتقرر تتساب، وإعادة نفس المشاكل عليها
+  // كانت بتعلّم اللي بيبص إنه يتجاهل الصفحة كلها.
+  const issuesSince = await loadIssuesSince(admin, me.tenantId);
+
   const { data, error } = await allRows(admin
     .from("orders")
     .select(
@@ -117,6 +125,7 @@ export default async function ReconcilePage() {
   const orderTotal = (o: Row) =>
     itemsTotal(o) - o.discount + (o.order_status === "cancelled" ? 0 : o.shipping_price);
 
+  const found: Issue[] = [];
   const issues: Issue[] = [];
 
   for (const o of orders) {
@@ -140,7 +149,7 @@ export default async function ReconcilePage() {
       !ambiguousDelivered &&
       sysStatus !== "returned_after_delivery" // دي بنحددها إحنا بإيدنا
     ) {
-      issues.push({
+      found.push({
         order: o,
         kind: "الحالة مش مطابقة لبوسطة",
         detail: `عندنا "${orderStatusBadge(sysStatus).label}" وبوسطة "${o.bosta_state}" (يعني ${orderStatusBadge(bostaMapped).label})`,
@@ -150,7 +159,7 @@ export default async function ReconcilePage() {
 
     // 2) اتسلّم بس مفيش تاريخ تسليم — التحصيل مش هيتحسب صح
     if (sysStatus === "delivered" && !o.delivered_at) {
-      issues.push({
+      found.push({
         order: o,
         kind: "متسلّم بلا تاريخ تسليم",
         detail: "التحصيل مش هيدخل في الداشبورد لأن تاريخ التسليم فاضي",
@@ -167,7 +176,7 @@ export default async function ReconcilePage() {
       Math.abs(cod - total) > 1 &&
       !EXCLUDED_STATUSES.includes(sysStatus)
     ) {
-      issues.push({
+      found.push({
         order: o,
         kind: "التحصيل مش مطابق للإجمالي",
         detail: `بوسطة بتحصّل ${formatMoney(cod)} والإجمالي عندنا ${formatMoney(total)} (فرق ${formatMoney(Math.abs(cod - total))})`,
@@ -177,7 +186,7 @@ export default async function ReconcilePage() {
 
     // 4) أوردر مع شركة الشحن بس مفيش رقم تتبع
     if (AT_CARRIER_STATUSES.includes(sysStatus) && !o.bosta_tracking) {
-      issues.push({
+      found.push({
         order: o,
         kind: "مع الشحن بلا رقم تتبع",
         detail: "الحالة بتقول مع الشحن بس مفيش شحنة بوسطة مربوطة",
@@ -190,7 +199,7 @@ export default async function ReconcilePage() {
       (i) => Number(i.cost_price_at_order ?? 0) === 0
     );
     if (zeroCost && !EXCLUDED_STATUSES.includes(sysStatus)) {
-      issues.push({
+      found.push({
         order: o,
         kind: "تكلفة بند = صفر",
         detail: "الربح بيتحسب أكبر من الحقيقة — املأ تكلفة المنتج",
@@ -200,7 +209,7 @@ export default async function ReconcilePage() {
 
     // 6) أوردر بلا بنود
     if (o.order_items.length === 0) {
-      issues.push({
+      found.push({
         order: o,
         kind: "أوردر بلا منتجات",
         detail: "مفيش بنود — يا إما ناقص يا إما ملغي",
@@ -211,7 +220,7 @@ export default async function ReconcilePage() {
     // 7) العميل ملوش تليفون — مش هينفع نبعته لبوسطة
     const digits = (o.customers?.phone ?? "").replace(/\D/g, "");
     if (digits.length < 10 && !EXCLUDED_STATUSES.includes(sysStatus)) {
-      issues.push({
+      found.push({
         order: o,
         kind: "تليفون العميل ناقص",
         detail: "مش هينفع نعمل شحنة بوسطة من غير رقم صح",
@@ -224,7 +233,7 @@ export default async function ReconcilePage() {
       o.bosta_collected &&
       (sysStatus === "returned" || sysStatus === "cancelled")
     ) {
-      issues.push({
+      found.push({
         order: o,
         kind: "بوسطة حصّلت والأوردر معلّم مرتجع/ملغي",
         detail: `بوسطة حصّلت ${formatMoney(cod)} — راجع الحالة`,
@@ -239,7 +248,7 @@ export default async function ReconcilePage() {
       bostaMapped !== "cancelled" &&
       !o.bosta_collected
     ) {
-      issues.push({
+      found.push({
         order: o,
         kind: "ملغي عندنا وبوسطة لسه شغالة عليه",
         detail: `بوسطة بتقول "${o.bosta_state}" — يا إما تلغي الشحنة في بوسطة يا إما ترجّع حالة الأوردر`,
@@ -247,6 +256,14 @@ export default async function ReconcilePage() {
       });
     }
   }
+
+  // ⚠️ **العدّ بيتم على المشاكل مش على الأوردرات.** الفرق مهم: مينيز فيها
+  // مئات أوردرات قبل التاريخ، بس اللي كان بيطلع منها مشاكل أقل بكتير —
+  // فسطر «متخفيين» لازم يقول العدد اللي كان هيبان فعلًا.
+  for (const i of found) {
+    if (withinIssueWindow(i.order, issuesSince)) issues.push(i);
+  }
+  const hiddenOld = found.length - issues.length;
 
   const bySeverity = { high: 0, mid: 0, low: 0 };
   for (const i of issues) bySeverity[i.severity]++;
@@ -313,6 +330,9 @@ export default async function ReconcilePage() {
           {ordersWithIssues > 0 && ` — ${ordersWithIssues} منهم فيهم حاجة`}.
         </p>
       </div>
+
+      {/* ⚠️ الصفحة اللي بتخفي من غير ما تقول بتكدب بالصمت (DESIGN قاعدة ٨) */}
+      <IssuesSinceNote since={issuesSince} hidden={hiddenOld} />
 
       {/* الصفحة كانت بتكشف بس — دي أول أداة بتصلّح */}
       <LinkMissingShipments action={linkMissingShipments} />

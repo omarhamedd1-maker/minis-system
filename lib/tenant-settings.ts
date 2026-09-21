@@ -109,3 +109,23 @@ export function bostaWebhookUrl(token: string | null | undefined): string | null
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://minis-system.vercel.app";
   return `${origin.replace(/\/+$/, "")}/api/bosta/webhook?key=${token}`;
 }
+
+/**
+ * تاريخ بداية شاشات المشاكل (`issues_since`).
+ *
+ * ⚠️ **العمود ممكن يكون لسه مش متضاف** (`sql/issues-since.sql`) — وساعتها
+ * بنرجّع `null` يعني «اعرض كل حاجة». الشاشة اللي بتقع لأن إعداد اختياري
+ * ناقص أسوأ من الشاشة اللي بتعرض زيادة.
+ */
+export async function loadIssuesSince(
+  db: SupabaseClient,
+  tenantId: string
+): Promise<string | null> {
+  const { data, error } = await db
+    .from("tenant_credentials")
+    .select("issues_since")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error) return null;
+  return (data?.issues_since as string | null) ?? null;
+}

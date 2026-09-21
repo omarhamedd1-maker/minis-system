@@ -644,3 +644,36 @@ export async function saveBackupGroup(formData: FormData) {
   revalidatePath("/settings");
   back("تمام — بعتنا رسالة تجربة على الجروب", true);
 }
+
+/**
+ * تاريخ بداية شاشات المشاكل (`issues_since`).
+ *
+ * ⚠️ **الفاضي معناه «اعرض كل حاجة»** مش «اقفل الشاشة» — فبنسمح بمسحه.
+ * والتاريخ هنا مش في الكود بقصد: الرقم المكتوب في الكود بعد شهور محدش
+ * بيعرف ليه اتحط، والشاشة بتبقى بتخفي من غير ما حد يعرف.
+ */
+export async function saveIssuesSince(formData: FormData) {
+  const me = await requirePermission("admin.settings");
+  const raw = String(formData.get("issues_since") ?? "").trim();
+  const value = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : null;
+  if (raw && !value) back("التاريخ مش مظبوط");
+
+  const db = createAdminClient();
+  const { error } = await db
+    .from("tenant_credentials")
+    .update({ issues_since: value, updated_at: new Date().toISOString() })
+    .eq("tenant_id", me.tenantId);
+
+  if (error) back("معرفناش نحفظ التاريخ: " + error.message);
+
+  await logActivity(
+    me,
+    "settings.issues_since",
+    value ? `مشاكل الأوردرات من ${value}` : "شال تاريخ المشاكل — بقى بيعرض الكل"
+  );
+  revalidatePath("/settings");
+  revalidatePath("/work");
+  revalidatePath("/orders/reconcile");
+  revalidatePath("/orders/health");
+  back(value ? "تمام — المشاكل من " + value : "تمام — بقى بيعرض كل المشاكل", true);
+}
