@@ -5,6 +5,9 @@ import { loadCashTotals } from "@/lib/cash-totals";
 import { moneyTabsFor, pickMoneyTab } from "@/lib/money-tabs";
 import { MovesTab } from "./MovesTab";
 import { BalanceFigure } from "./BalanceFigure";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { cairoToday, formatMoney } from "@/lib/format";
+import { loadAtCourier } from "@/lib/payout-cash";
 import { ExpensesTab } from "./ExpensesTab";
 import { TransfersTab } from "./TransfersTab";
 
@@ -44,6 +47,16 @@ export default async function MoneyPage({
     }
   }
 
+  /**
+   * «الفلوس فين» (MONEY §١.١) — الخزنة وعند بوسطة في مكان واحد.
+   *
+   * ⚠️ **الرصيد لوحده مش كل فلوسك.** فيه فلوس اتحصّلت من العملاء ولسه
+   * عند شركة الشحن — والسؤال «أنا عندي كام؟» جوابه الاتنين مع بعض.
+   */
+  const atCourier = canCash
+    ? await loadAtCourier(createAdminClient(), user.tenantId, cairoToday()).catch(() => null)
+    : null;
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-ink">الفلوس</h1>
@@ -64,7 +77,20 @@ export default async function MoneyPage({
       */}
       <div className="flex flex-col gap-2 border-b border-line sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-4 sm:gap-y-3">
         {totals && (
-          <div className="order-first sm:order-last">
+          <div className="order-first flex flex-wrap items-end justify-end gap-x-6 gap-y-1 sm:order-last">
+            {/*
+              ⚠️ **«عند بوسطة» جنب الرصيد** — ده «الفلوس فين» (MONEY §١.١).
+              الرصيد لوحده بيجاوب نص السؤال: فيه فلوس اتحصّلت من العملاء
+              ولسه عند شركة الشحن.
+            */}
+            {atCourier && atCourier.total > 0 && (
+              <div className="pb-2 text-end">
+                <p className="text-[11px] font-medium text-ink-muted">عند بوسطة</p>
+                <p className="mt-0.5 text-lg font-bold leading-none tabular-nums text-warning sm:text-xl">
+                  {formatMoney(atCourier.total)}
+                </p>
+              </div>
+            )}
             <BalanceFigure balance={totals.balance} />
           </div>
         )}

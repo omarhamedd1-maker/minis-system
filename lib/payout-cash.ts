@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { allRows } from "./fetch-all-pages";
+import { moneyAtCourier, type AtCourier } from "./money-at-courier";
 
 /**
  * ==========================================================================
@@ -71,4 +72,45 @@ export async function liveManualCash(
       amount: Number(c.amount),
       date: String(c.transaction_date).slice(0, 10),
     }));
+}
+
+/**
+ * «فلوس عند بوسطة» جاهزة للعرض — مصدر واحد لكل الشاشات.
+ *
+ * ⚠️ **الشاشات التلاتة كانت هتحسبه كل واحدة لوحدها** (الفلوس · التحويلات ·
+ * صحة التشغيل)، وأول ما التعريف يتغيّر في واحدة بس بيبقى فيه رقمين
+ * مختلفين لنفس السؤال.
+ */
+export async function loadAtCourier(
+  db: SupabaseClient,
+  tenantId: string,
+  today: string
+): Promise<AtCourier & { lastPayoutDate: string | null }> {
+  const [{ data: last }, { data: orders }] = await Promise.all([
+    db
+      .from("courier_payouts")
+      .select("payout_date")
+      .eq("tenant_id", tenantId)
+      .order("payout_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    allRows(db
+      .from("orders")
+      .select("bosta_cod, delivered_at")
+      .eq("tenant_id", tenantId)
+      .eq("order_status", "delivered")
+      .overrideTypes<{ bosta_cod: number | null; delivered_at: string | null }[]>()),
+  ]);
+  const lastPayoutDate = (last?.payout_date as string | undefined) ?? null;
+  return {
+    ...moneyAtCourier({
+      orders: (orders ?? []).map((o) => ({
+        cod: Number(o.bosta_cod ?? 0),
+        deliveredAt: o.delivered_at,
+      })),
+      lastPayoutDate,
+      today,
+    }),
+    lastPayoutDate,
+  };
 }

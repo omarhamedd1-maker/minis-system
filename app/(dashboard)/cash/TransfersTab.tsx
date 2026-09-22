@@ -8,7 +8,7 @@ import { PayoutReview } from "@/components/PayoutReview";
 import { linkToManualCash } from "@/lib/payout-match";
 import { stalePayouts } from "@/lib/payout-health";
 import { liveManualCash } from "@/lib/payout-cash";
-import { moneyAtCourier } from "@/lib/money-at-courier";
+import { courierAging, moneyAtCourier } from "@/lib/money-at-courier";
 import {
   acceptPayoutDiff,
   addPayoutManually,
@@ -198,6 +198,20 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
     lastPayoutDate: lastPayout,
     today: cairoToday(),
   });
+  /**
+   * «فلوس بوسطة بالعمر» (MONEY §١.٥) — نفس المجموعة مقسّمة بالقِدَم.
+   *
+   * ⚠️ **على نفس المجموعة بالظبط** اللي الرقم فوق بيتحسب منها — رقم فوق
+   * وتفصيل تحته بيقولوا حاجتين مختلفين بيخلّي الاتنين مش موثوقين.
+   */
+  const aging = courierAging({
+    orders: (deliveredRows ?? []).map((o) => ({
+      cod: Number(o.bosta_cod ?? 0),
+      deliveredAt: o.delivered_at,
+    })),
+    lastPayoutDate: lastPayout,
+    today: cairoToday(),
+  });
 
   const canEdit = can(user, "cash.edit");
 
@@ -259,6 +273,23 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
               ? `${atCourier.count} أوردر اتسلّموا بعد آخر تحويل`
               : "كل اللي اتسلّم اتحوّل"}
           </p>
+          {/*
+            «فلوس بوسطة بالعمر» (MONEY §١.٥) — بيبان لما يكون فيه فلوس بس.
+            ⚠️ العمر هو اللي بيفرّق بين «طبيعي» و«فيه حاجة واقفة»: يومين
+            عادي، وأسبوعين معناها حاجة محتاجة سؤال.
+          */}
+          {atCourier.count > 0 && (
+            <div className="mt-1 space-y-0.5">
+              {aging
+                .filter((b) => b.count > 0)
+                .map((b) => (
+                  <p key={b.label} className="text-[11px] text-ink-muted">
+                    {b.label}: <span className="tabular-nums">{formatMoney(b.amount)}</span>
+                    <span className="text-ink-faint"> ({b.count})</span>
+                  </p>
+                ))}
+            </div>
+          )}
           {/* ⚠️ الرقم معتمد على آخر تحويل — لو التحويل وقف بيكبر كذب */}
           {atCourier.warning && (
             <p className="mt-1 max-w-56 rounded-control bg-warning-soft px-2 py-1 text-[11px] text-warning">
