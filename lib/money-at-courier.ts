@@ -109,3 +109,53 @@ export function moneyAtCourier({
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * نفس الفلوس مقسّمة بالقِدَم (MONEY §١.٥).
+ *
+ * ⚠️⚠️ **مش `collectionAging`.** الدالة دي بتتخطّى الأوردر اللي
+ * `bosta_collected` عليه — ودي بالظبط حالة «الفلوس عند بوسطة»: بوسطة
+ * حصّلت من العميل ولسه محوّلتش لنا. فاستعمالها هنا كان بيرجّع **صفر
+ * شرايح** جنب رقم مش صفر.
+ *
+ * ⚠️ **ونفس المجموعة اللي الرقم اتحسب منها** — رقم فوق وتفصيل تحته
+ * بيقولوا حاجتين مختلفين بيخلّي الاتنين مش موثوقين.
+ */
+const RANGES: { label: string; from: number; to: number | null }[] = [
+  { label: "أقل من أسبوع", from: 0, to: 7 },
+  { label: "٨ لـ١٤ يوم", from: 8, to: 14 },
+  { label: "١٥ لـ٣٠ يوم", from: 15, to: 30 },
+  { label: "أكتر من شهر", from: 31, to: null },
+];
+
+export type CourierBucket = { label: string; amount: number; count: number };
+
+export function courierAging({
+  orders,
+  lastPayoutDate,
+  today,
+}: {
+  orders: CourierOrder[];
+  lastPayoutDate: string | null;
+  today: string;
+}): CourierBucket[] {
+  const buckets: CourierBucket[] = RANGES.map((r) => ({
+    label: r.label,
+    amount: 0,
+    count: 0,
+  }));
+  const day = (v: string | null) => String(v ?? "").slice(0, 10);
+  const end = Date.parse(day(today) + "T12:00:00Z");
+
+  for (const o of orders) {
+    const d = day(o.deliveredAt);
+    if (!d || Number(o.cod) <= 0) continue;
+    if (lastPayoutDate && d <= day(lastPayoutDate)) continue;
+    const age = Math.max(0, Math.round((end - Date.parse(d + "T12:00:00Z")) / 86_400_000));
+    const i = RANGES.findIndex((r) => age >= r.from && (r.to === null || age <= r.to));
+    const b = buckets[i < 0 ? buckets.length - 1 : i];
+    b.amount = round(b.amount + Number(o.cod));
+    b.count += 1;
+  }
+  return buckets;
+}
