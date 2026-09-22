@@ -19,8 +19,11 @@ import {
   cancelPayout,
   unlinkPayoutCash,
   rematchPayout,
+  previewRoundingFixes,
+  fixAllRounding,
 } from "./payout-actions";
 import { PayoutActions } from "@/components/PayoutActions";
+import { FixRounding } from "@/components/FixRounding";
 
 /**
  * ==========================================================================
@@ -203,6 +206,11 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
           )}
         </div>
       </div>
+
+      {/* ⚠️ الفرق ده ناقص من الرصيد فعلًا — والتصليح بمعاينة الأول */}
+      {canEdit && rounding !== 0 && (
+        <FixRounding previewAction={previewRoundingFixes} applyAction={fixAllRounding} />
+      )}
 
       {canEdit && <AddPayout action={addPayoutManually} today={cairoToday()} />}
 
