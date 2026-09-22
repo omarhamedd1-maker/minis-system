@@ -8,6 +8,7 @@ import { PayoutReview } from "@/components/PayoutReview";
 import { linkToManualCash } from "@/lib/payout-match";
 import { stalePayouts } from "@/lib/payout-health";
 import { liveManualCash } from "@/lib/payout-cash";
+import { moneyAtCourier } from "@/lib/money-at-courier";
 import {
   acceptPayoutDiff,
   addPayoutManually,
@@ -174,6 +175,30 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
   // ⚠️ فروق التقريب فرق حقيقي في الرصيد — الحركات اليدوية مكتوبة بالجنيه
   const rounding =
     Math.round(all.reduce((s, r) => s + Number(r.rounding_diff ?? 0), 0) * 100) / 100;
+  /**
+   * «فلوس عند بوسطة» — اللي اتسلّم **بعد آخر تحويل** (TRANSFERS §١٠).
+   *
+   * ⚠️ **مش مجموع كل اللي مش متعلّم عليه** — ده كان بيطلع ٤٥٥ ألف على
+   * مينيز، وفلوسه وصلت من زمان. والربط بالأوردرات مش شرط للرقم ده.
+   */
+  const lastPayout = all.length
+    ? all.map((r) => r.payout_date).sort().slice(-1)[0]
+    : null;
+  const { data: deliveredRows } = await allRows(db
+    .from("orders")
+    .select("bosta_cod, delivered_at")
+    .eq("tenant_id", user.tenantId)
+    .eq("order_status", "delivered")
+    .overrideTypes<{ bosta_cod: number | null; delivered_at: string | null }[]>());
+  const atCourier = moneyAtCourier({
+    orders: (deliveredRows ?? []).map((o) => ({
+      cod: Number(o.bosta_cod ?? 0),
+      deliveredAt: o.delivered_at,
+    })),
+    lastPayoutDate: lastPayout,
+    today: cairoToday(),
+  });
+
   const canEdit = can(user, "cash.edit");
 
   return (
@@ -212,6 +237,32 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
             <p className="mt-0.5 text-xs text-ink-faint">
               رسوم {formatMoney(fees)} — متخصومة على كل أوردر أصلًا، فمابتتطرحش
               تاني من الربح
+            </p>
+          )}
+        </div>
+
+        {/*
+          ⚠️⚠️ **فلوس عند بوسطة = اللي اتسلّم بعد آخر تحويل.** مش مجموع كل
+          اللي مش متعلّم عليه — ده كان بيطلع ٤٥٥ ألف وفلوسه وصلت من زمان.
+        */}
+        <div className="text-end">
+          <p className="text-xs text-ink-muted">فلوس عند بوسطة</p>
+          <p
+            className={`mt-0.5 text-xl font-bold tabular-nums sm:text-2xl ${
+              atCourier.total > 0 ? "text-warning" : "text-success"
+            }`}
+          >
+            {formatMoney(atCourier.total)}
+          </p>
+          <p className="text-[11px] text-ink-faint">
+            {atCourier.count > 0
+              ? `${atCourier.count} أوردر اتسلّموا بعد آخر تحويل`
+              : "كل اللي اتسلّم اتحوّل"}
+          </p>
+          {/* ⚠️ الرقم معتمد على آخر تحويل — لو التحويل وقف بيكبر كذب */}
+          {atCourier.warning && (
+            <p className="mt-1 max-w-56 rounded-control bg-warning-soft px-2 py-1 text-[11px] text-warning">
+              {atCourier.warning}
             </p>
           )}
         </div>
