@@ -29,7 +29,7 @@ export default async function HealthPage() {
     );
   }
 
-  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts, codGap, prepaid, issuesSince, hiddenOld } = r;
+  const { rates, lead, aging, reasons, drift, productReturns, customerReturns, prices, timing, discounts, codGap, prepaid, issuesSince, hiddenOld, atCourier } = r;
   const verdict = discountVerdict(discounts);
 
   return (
@@ -82,10 +82,21 @@ export default async function HealthPage() {
           <h2 className="text-sm font-bold text-ink">
             فلوس واقفة عند بوسطة
           </h2>
+          {/*
+            ⚠️⚠️ **التعريف اتغيّر** (٢٢ سبتمبر): كان «مسلَّم ولسه مااتحصّلش»
+            فبيجمع تاريخ التسليم كله — ٤٥٥ ألف على مينيز، وفلوسها وصلت من
+            زمان في ٩٤ تحويل. الصح: اللي اتسلّم **بعد آخر تحويل**.
+          */}
           <span className="text-xs text-ink-muted">
-            مسلَّم ولسه مااتحصّلش
+            اتسلّم بعد آخر تحويل
           </span>
         </div>
+        {/* ⚠️ الرقم ده معتمد على إن آخر تحويل متسجّل — لو التحويل وقف بيكبر كذب */}
+        {atCourier.warning && (
+          <p className="mt-2 rounded-control bg-warning-soft px-3 py-2 text-xs text-warning">
+            {atCourier.warning}
+          </p>
+        )}
         {aging.count === 0 ? (
           <p className="mt-3 text-sm text-success">
             مفيش — بوسطة مصفّية كل حاجة.

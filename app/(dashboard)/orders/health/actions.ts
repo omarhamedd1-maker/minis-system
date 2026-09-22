@@ -21,6 +21,7 @@ import { resolveShopifyToken } from "@/lib/shopify/token";
 import { allRows } from "@/lib/fetch-all-pages";
 import { loadIssuesSince } from "@/lib/tenant-settings";
 import { withinIssueWindow, type IssueOrder } from "@/lib/issues-since";
+import { moneyAtCourier, type AtCourier } from "@/lib/money-at-courier";
 
 export type HealthReport =
   | {
@@ -30,6 +31,8 @@ export type HealthReport =
       rates: ReturnType<typeof carrierRates>;
       lead: ReturnType<typeof leadTime>;
       aging: Aging;
+      /** فلوس لسه عند شركة الشحن — اللي اتسلّم بعد آخر تحويل */
+      atCourier: AtCourier;
       reasons: ReasonBreakdown;
       /**
        * أوردرات إجماليها عندنا مختلف عن شوبيفاي.
@@ -102,6 +105,37 @@ export async function loadHealth(): Promise<HealthReport> {
    * علشان نخفي تنبيه — وده أخطر من التنبيه نفسه.
    */
   const issuesSince = await loadIssuesSince(db, me.tenantId);
+
+  /**
+   * ⚠️⚠️ **«فلوس واقفة عند بوسطة» كانت بتجمع تاريخ التسليم كله** — ٤٥٥
+   * ألف على مينيز، وفلوسها وصلت من زمان في ٩٤ تحويل. الرقم الصح هو
+   * **اللي اتسلّم بعد آخر تحويل** (`lib/money-at-courier.ts`).
+   */
+  const lastPayout = await (async () => {
+    const { data } = await db
+      .from("courier_payouts")
+      .select("payout_date")
+      .eq("tenant_id", me.tenantId)
+      .order("payout_date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (data?.payout_date as string | undefined) ?? null;
+  })().catch(() => null);
+
+  const atCourier = moneyAtCourier({
+    orders: (rows as unknown as { bosta_cod: number | null; delivered_at: string | null }[]).map(
+      (o) => ({ cod: Number(o.bosta_cod ?? 0), deliveredAt: o.delivered_at })
+    ),
+    lastPayoutDate: lastPayout,
+    today: cairoToday(),
+  });
+  // الشيخوخة على نفس المجموعة — عشان الرقم فوق والتفصيل تحته يقولوا نفس الحاجة
+  const atCourierRows = (rows as unknown as { delivered_at: string | null }[]).filter(
+    (o) =>
+      !lastPayout ||
+      (String(o.delivered_at ?? "").slice(0, 10) &&
+        String(o.delivered_at ?? "").slice(0, 10) > lastPayout)
+  );
   const recent = rows.filter((o) =>
     withinIssueWindow(o as unknown as IssueOrder, issuesSince)
   );
@@ -180,7 +214,8 @@ export async function loadHealth(): Promise<HealthReport> {
     }),
     rates: carrierRates(rows),
     lead: leadTime(rows),
-    aging: collectionAging(recent as never, cairoToday()),
+    aging: collectionAging(atCourierRows as never, cairoToday()),
+    atCourier,
     reasons: breakdownReturnReasons(rows as never),
     drift: await loadDrift(db, me.tenantId, recent as never),
     productReturns: productReturnRates(toRate(rows as never)),
