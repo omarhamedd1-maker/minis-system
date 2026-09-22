@@ -54,8 +54,20 @@ export default async function MoneyPage({
         </div>
       )}
 
-      {/* التابات والرصيد على سطر واحد — الرصيد هو الرقم الأساسي في الصفحة */}
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-line">
+      {/*
+        التابات والرصيد على سطر واحد — الرصيد هو الرقم الأساسي في الصفحة.
+
+        ⚠️ **والرصيد أول حاجة على الضيق مش آخر حاجة.** أول ما تاب
+        «التحويلات» اتضاف بقى التلاتة أعرض من السطر، فالرصيد كان بينزل
+        تحتهم — الرقم الأساسي في الصفحة يبقى تحت أزرار التنقل. `order`
+        بيخلّيه فوق على الموبايل، ومكانه الأصلي (آخر السطر) على الأوسع.
+      */}
+      <div className="flex flex-col gap-2 border-b border-line sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-x-4 sm:gap-y-3">
+        {totals && (
+          <div className="order-first sm:order-last">
+            <BalanceFigure balance={totals.balance} />
+          </div>
+        )}
         {tabs.length > 1 ? (
         <nav aria-label="أقسام الفلوس" className="flex gap-1">
           {tabs.map((t) => (
@@ -76,7 +88,6 @@ export default async function MoneyPage({
         ) : (
           <span />
         )}
-        {totals && <BalanceFigure balance={totals.balance} />}
       </div>
 
       {tab === "expenses" ? (

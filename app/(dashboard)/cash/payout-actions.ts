@@ -712,3 +712,157 @@ export async function rematchPayout(payoutId: string): Promise<ReviewResult> {
   revalidatePath("/orders");
   return { ok: true, message: `اتطابق ${match.orderIds.length} أوردر` };
 }
+
+// ==========================================================================
+// «صلّح كل الفروق» — التقريب اللي اتراكم على الحركات اليدوية
+// --------------------------------------------------------------------------
+// ⚠️⚠️ **الفرق ده مش شكلي — هو فرق حقيقي في الرصيد.** التحويلات القديمة
+// اتسجّلت بإيد بأرقام مقرّبة (٥,٦٩١ بدل ٥,٦٩١٫١٥)، والاستيراد ربطها
+// بالتحويل وسجّل الفرق بدل ما يعدّل الحركة. المجموع بيتراكم.
+//
+// ⚠️ **والتصليح بحركة عكسية + حركة بالرقم الصح** مش تعديل في مكانه
+// (MONEY §٦.٢) — الدفتر لازم يفضل فيه أثر إن الرقم كان غلط ومين صلّحه.
+//
+// ⚠️ **والمعاينة بتتحسب من الحركة نفسها مش من `rounding_diff`** — العمود
+// المتخزّن ممكن يكون اتكتب غلط، والحركة هي الحقيقة.
+// ==========================================================================
+
+export type RoundingRow = {
+  payoutId: string;
+  invoice: string;
+  cashId: string;
+  /** اللي متسجّل دلوقتي في الخزنة */
+  oldAmount: number;
+  /** اللي بوسطة حوّلته فعلًا */
+  newAmount: number;
+  difference: number;
+};
+
+export type RoundingPreview =
+  | { ok: true; rows: RoundingRow[]; total: number }
+  | { ok: false; error: string };
+
+/** المعاينة — **مابتكتبش حاجة** */
+export async function previewRoundingFixes(): Promise<RoundingPreview> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+
+  const { data: payouts } = await allRows(db
+    .from("courier_payouts")
+    .select("id, invoice_number, net_amount, cash_transaction_id")
+    .eq("tenant_id", me.tenantId)
+    .not("cash_transaction_id", "is", null)
+    .overrideTypes<
+      { id: string; invoice_number: string; net_amount: number; cash_transaction_id: string }[]
+    >());
+
+  const ids = (payouts ?? []).map((p) => p.cash_transaction_id);
+  if (ids.length === 0) return { ok: true, rows: [], total: 0 };
+
+  const [{ data: cash }, { data: reversals }] = await Promise.all([
+    allRows(db
+      .from("cash_transactions")
+      .select("id, amount")
+      .eq("tenant_id", me.tenantId)
+      .in("id", ids)
+      .overrideTypes<{ id: string; amount: number }[]>()),
+    allRows(db
+      .from("cash_transactions")
+      .select("reversal_of")
+      .eq("tenant_id", me.tenantId)
+      .in("reversal_of", ids)
+      .overrideTypes<{ reversal_of: string }[]>()),
+  ]);
+  const amountOf = new Map((cash ?? []).map((c) => [c.id, Number(c.amount)]));
+  // ⚠️ اللي اتلغت خلاص برّه — تصليحها هيعمل عكسية تانية على حاجة ملغية
+  const dead = new Set((reversals ?? []).map((r) => r.reversal_of));
+
+  const rows: RoundingRow[] = [];
+  for (const p of payouts ?? []) {
+    if (dead.has(p.cash_transaction_id)) continue;
+    const old = amountOf.get(p.cash_transaction_id);
+    if (old === undefined) continue;
+    const next = Number(p.net_amount);
+    const diff = Math.round((next - old) * 100) / 100;
+    if (diff === 0) continue;
+    rows.push({
+      payoutId: p.id,
+      invoice: p.invoice_number,
+      cashId: p.cash_transaction_id,
+      oldAmount: old,
+      newAmount: next,
+      difference: diff,
+    });
+  }
+  const total = Math.round(rows.reduce((s, r) => s + r.difference, 0) * 100) / 100;
+  return { ok: true, rows, total };
+}
+
+export type RoundingApply =
+  | { ok: true; fixed: number; total: number; failed: number }
+  | { ok: false; error: string };
+
+/**
+ * التنفيذ — كل تحويل: حركة عكسية للقديمة، وحركة بالرقم الصح.
+ *
+ * ⚠️ **كل تعديل بيتسجّل في النشاط بالقيمة القديمة والجديدة** (شرط عمر) —
+ * مش سطر واحد بيقول «اتصلّح ٢٣»، لأن ده مابيسمحش بمراجعة واحد فيهم.
+ */
+export async function fixAllRounding(): Promise<RoundingApply> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const preview = await previewRoundingFixes();
+  if (!preview.ok) return { ok: false, error: preview.error };
+  if (preview.rows.length === 0) return { ok: true, fixed: 0, total: 0, failed: 0 };
+
+  const today = cairoToday();
+  let fixed = 0;
+  let failed = 0;
+  let applied = 0;
+
+  for (const r of preview.rows) {
+    const p = await loadPayout(db, me.tenantId, r.payoutId);
+    if (!p) { failed++; continue; }
+
+    const reversed = await reverseCashRows(db, me.tenantId, [r.cashId], me, today);
+    if (reversed.error) { failed++; continue; }
+
+    const { data: row, error } = await db
+      .from("cash_transactions")
+      .insert({
+        // ⚠️ **tenant_id صريح** — مفتاح الأدمن بيعدّي فوق قواعد العزل
+        tenant_id: me.tenantId,
+        ...payoutCashRow(p, me),
+      })
+      .select("id")
+      .single();
+    if (error || !row) { failed++; continue; }
+
+    await db
+      .from("courier_payouts")
+      .update({
+        cash_transaction_id: row.id as string,
+        status: "confirmed",
+        rounding_diff: 0,
+        review_reason: null,
+      })
+      .eq("tenant_id", me.tenantId)
+      .eq("id", p.id);
+
+    await logActivity(
+      me,
+      "payout.rounding",
+      `صلّح تقريب تحويل ${r.invoice}: ${r.oldAmount} ← ${r.newAmount} (فرق ${r.difference})`
+    );
+    fixed++;
+    applied = Math.round((applied + r.difference) * 100) / 100;
+  }
+
+  await logActivity(
+    me,
+    "payout.rounding.all",
+    `صلّح ${fixed} فرق تقريب بمجموع ${applied}` + (failed ? ` · ${failed} مااتصلّحوش` : "")
+  );
+  revalidatePath("/cash");
+  return { ok: true, fixed, total: applied, failed };
+}

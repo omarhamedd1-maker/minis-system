@@ -115,6 +115,27 @@ export default async function SettingsPage({
     return null;
   })().catch(() => null);
 
+  /**
+   * ⚠️⚠️ **بوسطة بتترجم مصطلحاتها، والقارئ بيعتمد على كلمات بعينها.**
+   *
+   * حصل فعلًا: «orders» اتترجمت **«أمرًا»**، فالعدد مااتقراش والتحويل
+   * اتسجّل بمبلغه الصح و**صفر أوردرات** — وده الجزء اللي الإيميل كان
+   * المفروض يحله. والقراية فشلت **في صمت**: التحويل بان في الشاشة عادي.
+   *
+   * فأي تحويل جاي من إيميل ومالوش عدد = علامة إن الصيغة اتغيّرت. بيبان
+   * من **أول إيميل** مش بعد شهر.
+   */
+  const noCount = await (async () => {
+    const { data } = await db
+      .from("courier_payouts")
+      .select("invoice_number")
+      .eq("tenant_id", me.tenantId)
+      .eq("source", "email")
+      .is("order_count", null)
+      .limit(20);
+    return (data ?? []).map((r) => String(r.invoice_number));
+  })().catch(() => []);
+
   // ⚠️ قراية لوحدها — العمود لسه ممكن مايكونش اتعمل، والفشل مايوقّعش الشاشة
   const flatShipping = await (async () => {
     const { data, error } = await db
@@ -468,6 +489,21 @@ export default async function SettingsPage({
                   بيفتح صفحة جيميل وتقول Confirmation Success.
                 </p>
               </div>
+            )}
+            {/*
+              ⚠️ **صيغة بوسطة اتغيّرت؟ لازم يبان.** القارئ بيعتمد على
+              كلمات بعينها، وأي تحديث في ترجمتهم بيكسر القراية في صمت.
+            */}
+            {noCount.length > 0 && (
+              <p className="mt-3 rounded-control bg-warning-soft px-3 py-2 text-xs text-warning">
+                <b>
+                  {noCount.length} تحويل قرينا مبلغه ومالقيناش عدد أوردراته
+                </b>
+                <br />
+                ممكن بوسطة غيّرت صيغة الرسالة — والأوردرات مش هتتربط لحد ما
+                القراية تتظبّط. ({noCount.slice(0, 3).join(" · ")}
+                {noCount.length > 3 ? " …" : ""})
+              </p>
             )}
             {gmailCode && !gmailCode.link && (
               <p className="mt-3 rounded-control bg-warning-soft px-3 py-2 text-xs text-warning">
