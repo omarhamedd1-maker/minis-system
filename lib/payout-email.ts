@@ -61,7 +61,18 @@ const INVOICE = /\b([A-Z]{3}COD\d{2}[A-Z]{3}\d{2})\b/;
 
 /** الأسامي اللي بتسبق كل رقم — عربي وإنجليزي */
 const LABELS = {
-  net: ["مبلغ التحويل", "الصافي", "cashout amount", "net amount", "amount transferred", "transferred amount"],
+  // ⚠️ «Transfer Amount» هو الاسم الحقيقي في القسم الإنجليزي من إيميل
+  // بوسطة — اتشاف في `MONCOD21SEP26`، وماكانش في القايمة
+  net: [
+    "مبلغ التحويل",
+    "الصافي",
+    "transfer amount",
+    "cashout amount",
+    "cash-out amount",
+    "net amount",
+    "amount transferred",
+    "transferred amount",
+  ],
   gross: ["دورات التحصيل", "التحصيل", "cod collected", "collected amount", "cod cycles", "total cod"],
   fees: ["رسوم بوسطة", "الرسوم", "bosta fees", "fees", "charges"],
   date: ["التاريخ", "date", "cashout date"],
@@ -92,10 +103,22 @@ function valueFor(lines: string[], names: string[]): string | null {
   return null;
 }
 
-/** «٣,٧٧٩ لـ٣ أوردرات» · «for 3 orders» → 3 */
+/**
+ * عدد الأوردرات — **وده المفتاح اللي بيخلّي الربط بالأوردرات يشتغل**.
+ *
+ * ⚠️⚠️ **بوسطة بتترجم «orders» لـ«أمرًا»**، والريجيكس القديم كان بيدوّر
+ * على «أوردر/شحن/طلب» بس. النتيجة: `MONCOD21SEP26` اتسجّل بمبلغه الصح
+ * و**صفر أوردرات** — والمطابقة من غير عدد بترجع لـ«أقدم N» اللي مالهاش
+ * معنى وسط ٢٤١ أوردر مش مربوط.
+ *
+ * الشكل الحقيقي (٢١ سبتمبر): «دورات التحصيل النقدي ٥٨١٦ جنيه **بالنسبة
+ * لـ ٣ أمرًا**» · والإنجليزي «For 3 deposited orders».
+ *
+ * ⚠️ **والأسامي بتتقري بالبادئة** — «أمرًا» و«أمرا» و«أوامر» كلهم `أمر`.
+ */
 function orderCountFrom(text: string): number | null {
-  const ar = /(?:لـ|ل)\s*([\d٠-٩]+)\s*(?:أوردر|اوردر|شحن|طلب)/.exec(text);
-  const en = /\bfor\s+(\d+)\s+(?:orders?|shipments?)\b/i.exec(text);
+  const ar = /(?:لـ|ل)\s*([\d٠-٩]+)\s*(?:أوردر|اوردر|أمر|امر|أوامر|اوامر|شحن|طلب)/.exec(text);
+  const en = /\bfor\s+(\d+)\s+(?:deposited\s+|delivered\s+)?(?:orders?|shipments?)\b/i.exec(text);
   const raw = ar?.[1] ?? en?.[1];
   if (!raw) return null;
   const n = parseAmount(raw);

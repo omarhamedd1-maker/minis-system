@@ -40,6 +40,42 @@ Bosta Fees 107.37`;
     if (r.ok) expect(r.payout).toMatchObject({ net: 3671.63, orderCount: 3, gross: 3779 });
   });
 
+  it("⚠️⚠️ «بالنسبة لـ ٣ أمرًا» — ترجمة بوسطة لـ«orders»", () => {
+    // ده نص إيميل حقيقي وصل (MONCOD21SEP26 · ٢١ سبتمبر). الريجيكس القديم
+    // كان بيدوّر على «أوردر/شحن/طلب» بس، فالعدد طلع فاضي والتحويل اتسجّل
+    // بـ**صفر أوردرات** — وده الجزء اللي الإيميل كان المفروض يحله
+    const ar = `ايصال الصرف النقدي
+رقم الفاتورة MONCOD21SEP26
+التاريخ 21 Sep, 2026
+مبلغ التحويل ٥٦٩١.١٥ جنيه
+دورات التحصيل النقدي ٥٨١٦ جنيه بالنسبة لـ ٣ أمرًا
+رسوم بوسطة ١٢٤.٨٥ جنيه بالنسبة لـ ٣ أمرًا`;
+    const r = parsePayoutEmail(ar);
+    expect(r.ok).toBe(true);
+    if (r.ok)
+      expect(r.payout).toMatchObject({
+        invoiceNumber: "MONCOD21SEP26",
+        net: 5691.15,
+        gross: 5816,
+        fees: 124.85,
+        orderCount: 3,
+      });
+  });
+
+  it("«Transfer Amount» و«For 3 deposited orders» — القسم الإنجليزي الحقيقي", () => {
+    // ⚠️ «Transfer Amount» ماكانش في قايمة الأسامي، فالقسم الإنجليزي
+    // لوحده كان بيرجع «مالقيناش مبلغ التحويل»
+    const en = `Cash-out Receipt
+Receipt ID MONCOD21SEP26
+Date 21 Sep, 2026
+Transfer Amount 5691.15 EGP
+COD Collected 5816 EGP For 3 deposited orders
+Bosta Fees 124.85 EGP`;
+    const r = parsePayoutEmail(en);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.payout).toMatchObject({ net: 5691.15, gross: 5816, orderCount: 3 });
+  });
+
   it("الاسم في سطر والقيمة في اللي بعده", () => {
     const r = parsePayoutEmail("SUNCOD06SEP26\nمبلغ التحويل\n3,671.63\nالتاريخ\n2026-09-06");
     expect(r.ok && r.payout.net).toBe(3671.63);
