@@ -30,23 +30,44 @@ export type StatementRow = {
 
 export type StatementProblem = { line: number; reason: string; raw: string };
 
+/** سطر من دفتر الحركات مش تحويل — رسوم أو تعويض أو تحصيل */
+export type LedgerLine = {
+  /** `Transactions ID` — المفتاح اللي بيمنع التكرار بين الرفعات */
+  txnId: string;
+  /** YYYY-MM-DD */
+  date: string;
+  /** زي ما بوسطة كتباه: `Bosta Fees Cycle` … */
+  category: string;
+  /** بإشارته زي ما هي في الكشف — السالب مصروف والموجب دخل */
+  amount: number;
+};
+
 export type Statement = {
   rows: StatementRow[];
   problems: StatementProblem[];
   /** الأعمدة اللي اتعرفت — بتتعرض في المعاينة */
   columns: Partial<Record<Field, string>>;
+  /**
+   * ⚠️⚠️ **بنود الكشف الكامل** — بتتملي بس لما يكون فيه عمود `Category`
+   * (§٧.١). الملف المقصوص بيرجّعها فاضية، ودي كانت السنة اللي خلّتنا
+   * نقول «الكشف مافيهوش رسوم».
+   */
+  ledger: LedgerLine[];
 };
 
-type Field = "invoice" | "date" | "gross" | "fees" | "net" | "count";
+type Field = "invoice" | "date" | "gross" | "fees" | "net" | "count" | "category";
 
 /** أسماء الأعمدة المعروفة — عربي وإنجليزي، بأي حالة أحرف */
 const HEADERS: Record<Field, string[]> = {
-  invoice: ["invoice", "invoice number", "invoice no", "reference", "رقم الفاتورة", "الفاتورة", "المرجع"],
+  invoice: ["invoice", "invoice number", "invoice no", "reference", "transactions id", "transaction id", "رقم الفاتورة", "الفاتورة", "المرجع", "رقم الحركة"],
   date: ["date", "payout date", "transfer date", "التاريخ", "تاريخ التحويل"],
   gross: ["cod", "collected", "cod amount", "gross", "دورات التحصيل", "التحصيل", "المحصّل", "المحصل"],
   fees: ["fees", "fee", "bosta fees", "charges", "رسوم", "رسوم بوسطة", "الرسوم"],
   net: ["net", "amount", "transferred", "payout", "مبلغ التحويل", "الصافي", "المحوّل", "المحول"],
   count: ["orders", "order count", "count", "عدد الأوردرات", "الأوردرات", "عدد الشحنات"],
+  // ⚠️ **العمود ده هو الفرق بين الكشف الكامل والمقصوص** — لما يكون
+  // موجود، الملف دفتر حركات مش قايمة تحويلات (§٧.١)
+  category: ["category", "type", "transaction type", "النوع", "التصنيف", "نوع الحركة"],
 };
 
 const clean = (s: string) => s.replace(/^﻿/, "").replace(/^"|"$/g, "").trim();
@@ -105,6 +126,17 @@ export function parseDate(raw: string): string | null {
   // ⚠️ **يوم/شهر/سنة** — الكشف مصري، واللبس بين ٠٦/٠٩ و٠٩/٠٦ بيتحسم للمصري
   const slash = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})/.exec(t);
   if (slash) return `${slash[3]}-${slash[2].padStart(2, "0")}-${slash[1].padStart(2, "0")}`;
+
+  // ⚠️ **رقم إكسل التسلسلي** (46275 = ١٠ سبتمبر ٢٠٢٦) — بيطلع لما الكشف
+  // يتحفظ CSV من إكسل من غير تنسيق. **بحدود ضيقة بقصد**: ٤٠٠٠٠ لـ٦٠٠٠٠
+  // (٢٠٠٩ → ٢٠٦٤)، عشان رقم عادي مايتقراش كأنه تاريخ.
+  const serial = /^\d{5}(\.\d+)?$/.exec(t);
+  if (serial) {
+    const n = Number(t);
+    if (n >= 40000 && n <= 60000) {
+      return new Date(Math.round((n - 25569) * 86_400_000)).toISOString().slice(0, 10);
+    }
+  }
   return null;
 }
 
@@ -148,8 +180,19 @@ export function parseStatement(text: string): Statement {
   }
 
   if (headerAt < 0) {
-    return { rows: [], problems: [{ line: 1, reason: "مالقيناش سطر عناوين الأعمدة", raw: lines[0] ?? "" }], columns };
+    return { rows: [], problems: [{ line: 1, reason: "مالقيناش سطر عناوين الأعمدة", raw: lines[0] ?? "" }], columns, ledger: [] };
   }
+  /**
+   * ⚠️⚠️ **الكشف الكامل دفتر حركات مش قايمة تحويلات.** لما يكون فيه عمود
+   * `Category`، كل سطر بيبقى حركة واحدة: التحويل نفسه (`Cash Out`)، أو
+   * رسوم، أو تحصيل، أو تعويض. فالقراية بتتغيّر بالكامل:
+   *
+   *   `Cash Out`  ← تحويل (المبلغ بالسالب، بناخد قيمته المطلقة)
+   *   الباقي       ← بنود بتتخزّن زي ما هي وبتتصنّف في `lib/courier-fees.ts`
+   */
+  const isLedger = map.category !== undefined;
+  if (isLedger) return parseLedger(lines, headerAt, map, columns);
+
   for (const need of ["invoice", "net"] as Field[]) {
     if (map[need] === undefined) {
       problems.push({
@@ -159,7 +202,7 @@ export function parseStatement(text: string): Statement {
       });
     }
   }
-  if (problems.length > 0) return { rows: [], problems, columns };
+  if (problems.length > 0) return { rows: [], problems, columns, ledger: [] };
 
   const at = (cells: string[], f: Field) => {
     const i = map[f];
@@ -217,5 +260,79 @@ export function parseStatement(text: string): Statement {
     unique.push(r);
   }
 
-  return { rows: unique, problems, columns };
+  return { rows: unique, problems, columns, ledger: [] };
+}
+
+/** التصنيف اللي معناه «ده تحويل» في دفتر الحركات */
+const CASH_OUT = ["cash out", "cashout", "تحويل", "صرف"];
+
+/**
+ * قراية دفتر الحركات (الكشف الكامل · ٨ أعمدة).
+ *
+ * ⚠️ **التحويل سطر والرسوم سطور تانية** — مش أعمدة في نفس السطر. فالصف
+ * بتاع `Cash Out` بيدّي الصافي بس، والتحصيل والرسوم بيتجمّعوا من بنود
+ * منفصلة (§٧.١).
+ *
+ * ⚠️ **والمبالغ بإشارتها**: التحويل والرسوم بالسالب، والتحصيل والتعويض
+ * بالموجب. بنسيبها زي ما هي في البنود عشان التصنيف يعرف يفرّق.
+ */
+function parseLedger(
+  lines: string[],
+  headerAt: number,
+  map: Partial<Record<Field, number>>,
+  columns: Partial<Record<Field, string>>
+): Statement {
+  const problems: StatementProblem[] = [];
+  const rows: StatementRow[] = [];
+  const ledger: LedgerLine[] = [];
+  const at = (cells: string[], f: Field) => {
+    const i = map[f];
+    return i === undefined ? "" : (cells[i] ?? "");
+  };
+
+  for (let i = headerAt + 1; i < lines.length; i++) {
+    const raw = lines[i];
+    if (!raw.trim()) continue;
+    const cells = splitRow(raw);
+    const line = i + 1;
+    const id = at(cells, "invoice");
+    const category = at(cells, "category").trim();
+    const amount = parseAmount(at(cells, "net"));
+    const date = parseDate(at(cells, "date"));
+
+    if (!category) continue; // سطر فاضي أو مجموع
+    if (!id || amount === null || !date) {
+      problems.push({ line, reason: "سطر ناقص (رقم أو مبلغ أو تاريخ)", raw });
+      continue;
+    }
+
+    if (CASH_OUT.includes(category.toLowerCase())) {
+      rows.push({
+        invoiceNumber: id,
+        date,
+        // ⚠️ التحصيل والرسوم مش في السطر ده — بيتجمّعوا من البنود
+        gross: Math.abs(amount),
+        fees: 0,
+        net: Math.abs(amount),
+        orderCount: null,
+        line,
+      });
+    } else {
+      ledger.push({ txnId: id, date, category, amount });
+    }
+  }
+
+  // ⚠️ نفس رقم التحويل مرتين في نفس الملف = التاني بيتشال
+  const seen = new Set<string>();
+  const unique: StatementRow[] = [];
+  for (const r of rows) {
+    if (seen.has(r.invoiceNumber)) {
+      problems.push({ line: r.line, reason: `رقم التحويل ${r.invoiceNumber} متكرر في الملف`, raw: "" });
+      continue;
+    }
+    seen.add(r.invoiceNumber);
+    unique.push(r);
+  }
+
+  return { rows: unique, problems, columns, ledger };
 }

@@ -9,6 +9,7 @@ import { linkToManualCash } from "@/lib/payout-match";
 import { stalePayouts } from "@/lib/payout-health";
 import { liveManualCash } from "@/lib/payout-cash";
 import { courierAging, moneyAtCourier } from "@/lib/money-at-courier";
+import { breakdownFees, GROUP_LABEL } from "@/lib/courier-fees";
 import {
   acceptPayoutDiff,
   addPayoutManually,
@@ -213,6 +214,31 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
     today: cairoToday(),
   });
 
+  /**
+   * تفصيل الرسوم من بنود الكشف (§٧.١).
+   *
+   * ⚠️ **الجدول لسه ممكن مايكونش اتعمل** (`sql/transfers-05-fees.sql`) —
+   * وساعتها القسم مابيبانش، والتاب شغّال عادي.
+   */
+  const feeRows = await (async () => {
+    const { data, error } = await allRows(db
+      .from("courier_fee_lines")
+      .select("category, amount")
+      .eq("tenant_id", user.tenantId)
+      .overrideTypes<{ category: string; amount: number }[]>());
+    if (error) return null;
+    return data ?? [];
+  })().catch(() => null);
+  const feeBreakdown =
+    feeRows && feeRows.length > 0
+      ? breakdownFees(
+          feeRows.map((r) => ({ category: r.category, amount: Number(r.amount) })),
+          feeRows
+            .filter((r) => /collection/i.test(r.category))
+            .reduce((sum, r) => sum + Number(r.amount), 0)
+        )
+      : null;
+
   const canEdit = can(user, "cash.edit");
 
   return (
@@ -247,11 +273,47 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
               )}
             </>
           )}
-          {fees > 0 && (
+          {fees > 0 && !feeBreakdown && (
             <p className="mt-0.5 text-xs text-ink-faint">
               رسوم {formatMoney(fees)} — متخصومة على كل أوردر أصلًا، فمابتتطرحش
               تاني من الربح
             </p>
+          )}
+
+          {/*
+            ⚠️⚠️ **تلات مجموعات مش رقم واحد** (§٧.١ · قرار عمر ٢٢ سبتمبر):
+            رسوم الشحن بتكبر مع عدد الشحنات وسعرها قابل للتفاوض، والثابتة
+            مابتكبرش، والتعويضات **دخل** عن شحنات ضاعت مش مصروف.
+            ⚠️ **والنسبة هي اللي بتتقارن** شهر بشهر — الرقم المطلق بيكبر
+            مع النمو فمايقولش حاجة لوحده.
+          */}
+          {feeBreakdown && (
+            <div className="mt-1.5 space-y-0.5 text-xs">
+              <p className="text-ink-body">
+                رسوم بوسطة {formatMoney(feeBreakdown.net)}
+                {feeBreakdown.percent !== null && (
+                  <span className="ms-1 font-medium text-ink">
+                    ({feeBreakdown.percent}٪ من التحصيل)
+                  </span>
+                )}
+              </p>
+              <p className="text-ink-muted">
+                {GROUP_LABEL.shipping} {formatMoney(feeBreakdown.shipping)}
+                {" · "}
+                {GROUP_LABEL.fixed} {formatMoney(feeBreakdown.fixed)}
+                {feeBreakdown.income > 0 && (
+                  <>
+                    {" · "}
+                    <span className="text-success">
+                      {GROUP_LABEL.income} +{formatMoney(feeBreakdown.income)}
+                    </span>
+                  </>
+                )}
+              </p>
+              <p className="text-[11px] text-ink-faint">
+                متخصومة على كل أوردر أصلًا، فمابتتطرحش تاني من الربح
+              </p>
+            </div>
           )}
         </div>
 

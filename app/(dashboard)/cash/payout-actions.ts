@@ -7,7 +7,7 @@ import { logActivity } from "@/lib/activity";
 import { auditFields, reverseCashRows } from "@/lib/cash-reversal";
 import { cairoToday } from "@/lib/format";
 import { allRows } from "@/lib/fetch-all-pages";
-import { parseStatement } from "@/lib/payout-statement";
+import { parseStatement, type LedgerLine } from "@/lib/payout-statement";
 import { planImport, type ImportPlan } from "@/lib/payout-import";
 import { linkToManualCash, ROUNDING_TOLERANCE } from "@/lib/payout-match";
 import { liveManualCash } from "@/lib/payout-cash";
@@ -31,6 +31,8 @@ const COURIER = "bosta";
 
 type Loaded = {
   plan: ImportPlan;
+  /** بنود الكشف الكامل — رسوم وتعويضات (§٧.١) */
+  ledger: LedgerLine[];
   /** مبلغ التحصيل لكل أوردر — بيتسجّل على صف الربط */
   codById: Map<string, number>;
   problems: { line: number; reason: string; raw: string }[];
@@ -85,6 +87,7 @@ async function buildPlan(text: string, tenantId: string): Promise<Loaded> {
 
   return {
     plan,
+    ledger: statement.ledger,
     codById: new Map((orders.data ?? []).map((o) => [o.id, Number(o.bosta_cod ?? 0)])),
     problems: statement.problems,
     columns: statement.columns,
@@ -92,15 +95,22 @@ async function buildPlan(text: string, tenantId: string): Promise<Loaded> {
 }
 
 export type PreviewResult =
-  | { ok: true; plan: ImportPlan; problems: Loaded["problems"]; columns: Loaded["columns"] }
+  | {
+      ok: true;
+      plan: ImportPlan;
+      problems: Loaded["problems"];
+      columns: Loaded["columns"];
+      /** عدد بنود الرسوم في الملف — صفر يعني الكشف مقصوص (§٧.١) */
+      ledgerCount: number;
+    }
   | { ok: false; error: string };
 
 /** معاينة — **مابتكتبش حاجة** */
 export async function previewPayoutImport(text: string): Promise<PreviewResult> {
   const me = await requirePermission("cash.edit");
   try {
-    const { plan, problems, columns } = await buildPlan(text, me.tenantId);
-    return { ok: true, plan, problems, columns };
+    const { plan, problems, columns, ledger } = await buildPlan(text, me.tenantId);
+    return { ok: true, plan, problems, columns, ledgerCount: ledger.length };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -124,7 +134,7 @@ export async function applyPayoutImport(text: string): Promise<ApplyResult> {
   let skipped = 0;
 
   try {
-    const { plan, codById } = await buildPlan(text, me.tenantId);
+    const { plan, codById, ledger } = await buildPlan(text, me.tenantId);
 
     for (const line of plan.rows) {
       if (line.status === "duplicate") {
@@ -202,10 +212,34 @@ export async function applyPayoutImport(text: string): Promise<ApplyResult> {
       else needsReview++;
     }
 
+    /**
+     * ⚠️ **بنود الرسوم بتتخزّن هنا** — لو الكشف مقصوص (٣ أعمدة) القايمة
+     * فاضية ومفيش حاجة بتتكتب، والاستيراد بيفضل شغّال زي ما هو (§٧.١).
+     */
+    let feeLines = 0;
+    if (ledger.length > 0) {
+      // ⚠️ الكشف بينزل كامل كل مرة — فالموجود بيتعدّى بالمفتاح الفريد
+      const { error: feeError } = await db.from("courier_fee_lines").upsert(
+        ledger.map((l) => ({
+          // ⚠️ **tenant_id صريح** — مفتاح الأدمن بيعدّي فوق قواعد العزل
+          tenant_id: me.tenantId,
+          courier: COURIER,
+          txn_id: l.txnId,
+          line_date: l.date,
+          category: l.category,
+          amount: l.amount,
+        })),
+        { onConflict: "tenant_id,courier,txn_id", ignoreDuplicates: true }
+      );
+      // الجدول لسه ماتعملش؟ التحويلات اتسجّلت خلاص — مانوقعش الاستيراد
+      if (!feeError) feeLines = ledger.length;
+    }
+
     await logActivity(
       me,
       "payout.import",
-      `استورد كشف المحفظة: ${saved} مطابق · ${needsReview} محتاج مراجعة · ${skipped} متسجّل قبل كده`
+      `استورد كشف المحفظة: ${saved} مطابق · ${needsReview} محتاج مراجعة · ${skipped} متسجّل قبل كده` +
+        (feeLines > 0 ? ` · ${feeLines} بند رسوم` : "")
     );
     revalidatePath("/cash");
     return { ok: true, saved, needsReview, skipped };
