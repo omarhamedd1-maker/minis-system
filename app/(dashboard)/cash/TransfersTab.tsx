@@ -7,6 +7,7 @@ import { AddPayout } from "@/components/AddPayout";
 import { PayoutReview } from "@/components/PayoutReview";
 import { linkToManualCash } from "@/lib/payout-match";
 import { stalePayouts } from "@/lib/payout-health";
+import { liveManualCash } from "@/lib/payout-cash";
 import {
   acceptPayoutDiff,
   addPayoutManually,
@@ -17,6 +18,7 @@ import {
   archivePayout,
   cancelPayout,
   unlinkPayoutCash,
+  rematchPayout,
 } from "./payout-actions";
 import { PayoutActions } from "@/components/PayoutActions";
 
@@ -143,21 +145,11 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
 
   // الحركة اليدوية القريبة من كل تحويل محتاج مراجعة — بنفس منطق الاستيراد،
   // عشان شاشة المراجعة تعرف تقول «صلّح» ولا «اعمل حركة»
+  // ⚠️⚠️ **والملغية برّه المرشحين** — الحركة الملغية بتفضل في الدفتر
+  // ومجموعها صفر، فالربط بيها بيقول «مربوط» والفلوس مش في الرصيد
+  // (`lib/payout-cash.ts`)
   const open = rows.filter((r) => r.status === "needs_review" && !r.cash_transaction_id);
-  const { data: manual } = open.length
-    ? await allRows(db
-        .from("cash_transactions")
-        .select("id, amount, transaction_date, related_payout_id")
-        .eq("tenant_id", user.tenantId)
-        .eq("source_type", "manual")
-        .eq("direction", "in")
-        .overrideTypes<
-          { id: string; amount: number; transaction_date: string; related_payout_id: string | null }[]
-        >())
-    : { data: [] };
-  const free = (manual ?? [])
-    .filter((c) => !c.related_payout_id)
-    .map((c) => ({ id: c.id, amount: Number(c.amount), date: String(c.transaction_date).slice(0, 10) }));
+  const free = open.length ? await liveManualCash(db, user.tenantId) : [];
   const candidates = new Map<string, { id: string; amount: number; difference: number }>();
   for (const r of open) {
     // ⚠️ من غير سماح — عايزين الحركة اللي فرقها كبير عشان نعرضه
@@ -278,6 +270,7 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
                     createAction={createPayoutCash}
                     fixAction={fixPayoutCash}
                     acceptAction={acceptPayoutDiff}
+                    rematchAction={rematchPayout}
                   />
                 )}
                 {canEdit && (

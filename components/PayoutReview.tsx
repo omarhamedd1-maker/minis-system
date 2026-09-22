@@ -18,6 +18,7 @@ export function PayoutReview({
   createAction,
   fixAction,
   acceptAction,
+  rematchAction,
 }: {
   payoutId: string;
   net: number;
@@ -26,6 +27,8 @@ export function PayoutReview({
   createAction: (payoutId: string) => Promise<ReviewResult>;
   fixAction: (payoutId: string, cashId: string) => Promise<ReviewResult>;
   acceptAction: (payoutId: string, cashId: string, difference: number) => Promise<ReviewResult>;
+  /** بيعيد قراية الإيميل المتخزّن ويطابق من جديد */
+  rematchAction?: (payoutId: string) => Promise<ReviewResult>;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -76,6 +79,21 @@ export function PayoutReview({
           className={`${button} bg-primary text-white hover:bg-primary-dark`}
         >
           اعمل حركة بـ{net}
+        </button>
+      )}
+      {/*
+        ⚠️ **أي تحسين في قراية الإيميل لازم يكون ليه طريق يتطبّق على اللي
+        اتسجّل** — غير كده كل إصلاح بيخدم الجاي بس واللي فات بيفضل غلط.
+        حصل في `MONCOD21SEP26`: العدد مااتقراش فاتسجّل بصفر أوردرات.
+      */}
+      {rematchAction && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void run(() => rematchAction(payoutId))}
+          className={`${button} bg-sunken text-ink-body hover:bg-line`}
+        >
+          جرّب المطابقة تاني
         </button>
       )}
       {msg && (

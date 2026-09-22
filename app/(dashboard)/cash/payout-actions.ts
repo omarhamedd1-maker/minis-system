@@ -10,6 +10,9 @@ import { allRows } from "@/lib/fetch-all-pages";
 import { parseStatement } from "@/lib/payout-statement";
 import { planImport, type ImportPlan } from "@/lib/payout-import";
 import { linkToManualCash, ROUNDING_TOLERANCE } from "@/lib/payout-match";
+import { liveManualCash } from "@/lib/payout-cash";
+import { matchPayout } from "@/lib/payout-match";
+import { parsePayoutEmail } from "@/lib/payout-email";
 
 /**
  * ==========================================================================
@@ -45,15 +48,8 @@ async function buildPlan(text: string, tenantId: string): Promise<Loaded> {
       .eq("tenant_id", tenantId)
       .eq("order_status", "delivered")
       .overrideTypes<{ id: string; bosta_cod: number | null; delivered_at: string | null }[]>()),
-    allRows(db
-      .from("cash_transactions")
-      .select("id, amount, transaction_date, related_payout_id")
-      .eq("tenant_id", tenantId)
-      .eq("source_type", "manual")
-      .eq("direction", "in")
-      .overrideTypes<
-        { id: string; amount: number; transaction_date: string; related_payout_id: string | null }[]
-      >()),
+    // ⚠️ **الملغي مش مرشّح** — `lib/payout-cash.ts`
+    liveManualCash(db, tenantId),
     allRows(db
       .from("courier_payouts")
       .select("invoice_number")
@@ -78,14 +74,8 @@ async function buildPlan(text: string, tenantId: string): Promise<Loaded> {
         cod: Number(o.bosta_cod ?? 0),
         deliveredAt: o.delivered_at,
       })),
-    // الحركة المربوطة بتحويل قبل كده مابتتحسبش
-    manualCash: (cash.data ?? [])
-      .filter((c) => !c.related_payout_id)
-      .map((c) => ({
-        id: c.id,
-        amount: Number(c.amount),
-        date: String(c.transaction_date).slice(0, 10),
-      })),
+    // الحيّة المش مربوطة بس (الفلترة جوّه `liveManualCash`)
+    manualCash: cash,
     existingInvoices: new Set((payouts.data ?? []).map((p) => p.invoice_number)),
     // ⚠️ السماح ده للاستيراد التاريخي بس (تقريب الحركات اليدوية)
     tolerance: ROUNDING_TOLERANCE,
@@ -400,23 +390,9 @@ export async function addPayoutManually(formData: FormData): Promise<ReviewResul
   if (exists) return { ok: false, error: `${invoice} متسجّل قبل كده` };
 
   // حركة يدوية داخلة في نفس اليوم (± يوم) مش مربوطة بتحويل تاني
-  const { data: cash } = await allRows(db
-    .from("cash_transactions")
-    .select("id, amount, transaction_date, related_payout_id")
-    .eq("tenant_id", me.tenantId)
-    .eq("source_type", "manual")
-    .eq("direction", "in")
-    .overrideTypes<
-      { id: string; amount: number; transaction_date: string; related_payout_id: string | null }[]
-    >());
-  const link = linkToManualCash(
-    { net: amount, date },
-    (cash ?? [])
-      .filter((c) => !c.related_payout_id)
-      .map((c) => ({ id: c.id, amount: Number(c.amount), date: String(c.transaction_date).slice(0, 10) })),
-    new Set(),
-    ROUNDING_TOLERANCE
-  );
+  // ⚠️ **والملغية مش مرشّحة** — `lib/payout-cash.ts`
+  const cash = await liveManualCash(db, me.tenantId);
+  const link = linkToManualCash({ net: amount, date }, cash, new Set(), ROUNDING_TOLERANCE);
   const linked = link.kind === "linked" ? link.cashId : null;
 
   // ⚠️⚠️ **مفيش حركة بالمبلغ ده؟ مايتسجّلش أصلًا** (قرار عمر ٢١ سبتمبر).
@@ -625,4 +601,114 @@ export async function archivePayout(payoutId: string, archived: boolean): Promis
   await logActivity(me, "payout.archive", `${archived ? "خفى" : "رجّع"} تحويل ${p.invoice_number}`);
   revalidatePath("/cash");
   return { ok: true, message: archived ? "اتخفى — لسه في التاريخ" : "رجع يبان" };
+}
+
+/**
+ * «جرّب المطابقة تاني» — بيعيد قراية الإيميل المتخزّن ويطابق من جديد.
+ *
+ * ⚠️⚠️ **التحويل اللي اتسجّل بقراية ناقصة بيفضل ناقص للأبد.** حصل على
+ * `MONCOD21SEP26`: بوسطة بتترجم «orders» لـ«أمرًا»، والقارئ كان بيدوّر
+ * على «أوردر/شحن/طلب» — فالعدد طلع فاضي والتحويل اتسجّل بـ**صفر أوردرات**
+ * رغم إن التلاتة موجودين ومجموعهم بالمليم.
+ *
+ * فأي تحسين في القارئ لازم يكون ليه طريق يتطبّق على اللي اتسجّل — غير كده
+ * كل إصلاح بيخدم الجاي بس، واللي فات بيفضل غلط.
+ *
+ * ⚠️ **مابيلمسش فلوس** — بيربط أوردرات ويصحّح العدد والحالة بس.
+ */
+export async function rematchPayout(payoutId: string): Promise<ReviewResult> {
+  const me = await requirePermission("cash.edit");
+  const db = createAdminClient();
+  const { data: p } = await db
+    .from("courier_payouts")
+    .select("id, invoice_number, payout_date, gross_amount, order_count")
+    .eq("tenant_id", me.tenantId)
+    .eq("id", payoutId)
+    .maybeSingle();
+  if (!p) return { ok: false, error: "التحويل ده مش موجود" };
+
+  // العدد من الصف، وإلا من الإيميل المتخزّن بعد ما القارئ اتحسّن
+  let count = p.order_count as number | null;
+  if (count === null) {
+    const { data: mails } = await allRows(db
+      .from("courier_payout_emails")
+      .select("raw")
+      .eq("tenant_id", me.tenantId)
+      .ilike("raw", `%${p.invoice_number}%`)
+      .overrideTypes<{ raw: string | null }[]>());
+    for (const m of mails ?? []) {
+      const again = parsePayoutEmail(String(m.raw ?? ""));
+      if (again.ok && again.payout.orderCount) {
+        count = again.payout.orderCount;
+        break;
+      }
+    }
+  }
+
+  const [{ data: orders }, { data: taken }] = await Promise.all([
+    allRows(db
+      .from("orders")
+      .select("id, bosta_cod, delivered_at")
+      .eq("tenant_id", me.tenantId)
+      .eq("order_status", "delivered")
+      .overrideTypes<{ id: string; bosta_cod: number | null; delivered_at: string | null }[]>()),
+    allRows(db
+      .from("courier_payout_orders")
+      .select("order_id")
+      .eq("tenant_id", me.tenantId)
+      .overrideTypes<{ order_id: string }[]>()),
+  ]);
+  const used = new Set((taken ?? []).map((t) => t.order_id));
+  const match = matchPayout(
+    { gross: Number(p.gross_amount), count, date: p.payout_date as string },
+    (orders ?? [])
+      .filter((o) => !used.has(o.id))
+      .map((o) => ({ orderId: o.id, cod: Number(o.bosta_cod ?? 0), deliveredAt: o.delivered_at }))
+  );
+
+  if (!match.ok) {
+    await db
+      .from("courier_payouts")
+      .update({ order_count: count, review_reason: match.reason })
+      .eq("tenant_id", me.tenantId)
+      .eq("id", p.id);
+    return { ok: false, error: match.reason };
+  }
+
+  const codOf = new Map((orders ?? []).map((o) => [o.id, Number(o.bosta_cod ?? 0)]));
+  // ⚠️ **tenant_id صريح** — مفتاح الأدمن بيعدّي فوق قواعد العزل
+  await db.from("courier_payout_orders").insert(
+    match.orderIds.map((orderId) => ({
+      tenant_id: me.tenantId,
+      payout_id: p.id as string,
+      order_id: orderId,
+      cod_amount: codOf.get(orderId) ?? 0,
+      fee_amount: 0,
+    }))
+  );
+  await db
+    .from("orders")
+    .update({ cash_received_at: p.payout_date })
+    .eq("tenant_id", me.tenantId)
+    .in("id", match.orderIds);
+  await db
+    .from("courier_payouts")
+    .update({
+      order_count: count,
+      status: "matched",
+      review_reason: null,
+      // ⚠️ النافذة الزمنية نتيجتها **مرجّحة** مش مؤكدة
+      match_confidence: match.how === "window" ? "likely" : "exact",
+    })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", p.id);
+
+  await logActivity(
+    me,
+    "payout.rematch",
+    `طابق تحويل ${p.invoice_number} من جديد — ${match.orderIds.length} أوردر (${match.how})`
+  );
+  revalidatePath("/cash");
+  revalidatePath("/orders");
+  return { ok: true, message: `اتطابق ${match.orderIds.length} أوردر` };
 }
