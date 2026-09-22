@@ -75,8 +75,40 @@ describe("كشف المحفظة", () => {
   });
 
   it("ملف مش مفهوم = سبب واضح مش صفوف فاضية", () => {
-    expect(parseStatement("كلام\nتاني").problems[0].reason).toContain("عناوين الأعمدة");
+    // ⚠️ من غير أي فاصل: السبب الحقيقي إن الملف بيتقرا عمود واحد
+    expect(parseStatement("كلام\nتاني").problems[0].reason).toContain("عمود واحد");
     expect(parseStatement("Date,Orders\n2026-09-06,3").problems[0].reason).toContain("رقم الفاتورة");
+  });
+
+  it("⚠️⚠️ الفاصلة المنقوطة بتتقرا — إكسل العربي بيحفظ بيها", () => {
+    // ده اللي وقف رفعة ٢٣ سبتمبر: الملف صح والأعمدة موجودة، والقارئ
+    // كان بيقول «مفيش عمود Category» — والعمود موجود
+    const semi = [
+      "Transactions ID;Date;Category;Amount;Balance",
+      "THUCOD10SEP26;2026-09-10;Cash Out;-4394.36;0",
+      "2214150753;2026-09-09;Bosta Fees Cycle;-156.64;4394.36",
+    ].join("\n");
+    const s = parseStatement(semi);
+    expect(s.rows).toHaveLength(1);
+    expect(s.rows[0].invoiceNumber).toBe("THUCOD10SEP26");
+    expect(s.ledger).toHaveLength(1);
+  });
+
+  it("والتاب كمان", () => {
+    const tabbed = [
+      "Transactions ID\tDate\tCategory\tAmount",
+      "THUCOD10SEP26\t2026-09-10\tCash Out\t-4394.36",
+    ].join("\n");
+    expect(parseStatement(tabbed).rows).toHaveLength(1);
+  });
+
+  it("⚠️ الفاصل بيتحدد من الترويسة — نص جوّه خلية مايقلبوش", () => {
+    const mixed = [
+      "Invoice Number;Date;Net Amount",
+      'SUNCOD06SEP26;2026-09-06;"3,671.63"',
+    ].join("\n");
+    const s = parseStatement(mixed);
+    expect(s.rows[0].net).toBe(3671.63);
   });
 });
 

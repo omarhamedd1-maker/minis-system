@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ApplyResult, PreviewResult } from "@/app/(dashboard)/cash/payout-actions";
+import type {
+  ApplyResult,
+  PreviewResult,
+  StatementInput,
+} from "@/app/(dashboard)/cash/payout-actions";
 
 /**
  * رفع كشف محفظة شركة الشحن — **معاينة قبل التسجيل** (TRANSFERS §٩).
@@ -17,37 +21,72 @@ export function ImportStatement({
   previewAction,
   applyAction,
 }: {
-  previewAction: (text: string) => Promise<PreviewResult>;
-  applyAction: (text: string) => Promise<ApplyResult>;
+  previewAction: (input: StatementInput) => Promise<PreviewResult>;
+  applyAction: (input: StatementInput) => Promise<ApplyResult>;
 }) {
   const router = useRouter();
   const [text, setText] = useState("");
+  /** ملف إكسل متقري base64 — بيتبعت زي ما هو والسيرفر بيحوّله */
+  const [xlsx, setXlsx] = useState<{ name: string; base64: string } | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [done, setDone] = useState<ApplyResult | null>(null);
 
+  /**
+   * ⚠️⚠️ **اختيار ملف جديد بيمسح اللي قبله بالكامل.** قبل كده الاختيار
+   * الجديد ماكانش بيشيل النص القديم، فالشاشة تفضل على الملف الأول
+   * والمعاينة تعرض بياناته — وانت مختار الملف الصح.
+   */
   async function readFile(file: File) {
-    const content = await file.text();
-    setText(content);
     setPreview(null);
     setDone(null);
+    setFileError(null);
+    setText("");
+    setXlsx(null);
+
+    // ⚠️ **كشف بوسطة بينزل `.xlsx`** — والتحويل لـCSV بإيد المستخدم خطوة
+    // زيادة بتقع مع كل مشتري (§٩)
+    if (/\.(xlsx|xlsm)$/i.test(file.name)) {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i += 8192) {
+        bin += String.fromCharCode(...buf.subarray(i, i + 8192));
+      }
+      setXlsx({ name: file.name, base64: btoa(bin) });
+      return;
+    }
+    if (/\.(csv|tsv|txt)$/i.test(file.name) || file.type.startsWith("text/")) {
+      setText(await file.text());
+      return;
+    }
+    // ⚠️ **النوع المرفوض بيتقال** — السكوت بيخلّي الشاشة تفضل على القديم
+    setFileError(`الملف ده نوعه مش مدعوم (${file.name}) — ارفع xlsx أو CSV`);
   }
 
+  const chosen = (): StatementInput | null =>
+    xlsx ? { xlsxBase64: xlsx.base64 } : text.trim() ? { text } : null;
+
   async function run() {
+    const i = chosen();
+    if (!i) return;
     setBusy(true);
     setDone(null);
-    setPreview(await previewAction(text));
+    setPreview(await previewAction(i));
     setBusy(false);
   }
 
   async function save() {
+    const i = chosen();
+    if (!i) return;
     setBusy(true);
-    const r = await applyAction(text);
+    const r = await applyAction(i);
     setBusy(false);
     setDone(r);
     setPreview(null);
     if (r.ok) {
       setText("");
+      setXlsx(null);
       router.refresh();
     }
   }
@@ -68,13 +107,14 @@ export function ImportStatement({
 
       <div className="space-y-3 border-t border-line p-4">
         <p className="text-xs text-ink-muted">
-          نزّل الكشف من لوحة شركة الشحن واحفظه CSV، أو الصق محتواه هنا. الرفع
-          **بيربط** التحويلات بالحركات المسجّلة — ومابيعملش حركة خزنة جديدة.
+          نزّل الكشف من لوحة شركة الشحن وارفعه زي ما هو (xlsx)، أو الصق محتواه
+          هنا. الرفع بيربط التحويلات بالحركات المسجّلة — ومابيعملش حركة خزنة
+          جديدة.
         </p>
 
         <input
           type="file"
-          accept=".csv,.txt,text/csv,text/plain"
+          accept=".xlsx,.xlsm,.csv,.tsv,.txt,text/csv,text/plain"
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) void readFile(f);
@@ -82,15 +122,28 @@ export function ImportStatement({
           className="block w-full text-xs text-ink-muted file:me-3 file:rounded-control file:border-0 file:bg-sunken file:px-3 file:py-2 file:text-xs file:text-ink-body"
         />
 
+        {/* ⚠️ اللي اتقرا فعلًا بيتقال بالاسم — مش اللي الرافع فاكره */}
+        {xlsx && (
+          <p className="rounded-control bg-sunken px-3 py-1.5 text-xs text-ink-body">
+            الملف المقروء: <b className="font-mono">{xlsx.name}</b>
+          </p>
+        )}
+        {fileError && (
+          <p className="rounded-control bg-danger-soft px-3 py-1.5 text-xs text-danger">
+            {fileError}
+          </p>
+        )}
+
         <textarea
-          value={text}
+          value={xlsx ? "" : text}
+          disabled={Boolean(xlsx)}
           onChange={(e) => {
             setText(e.target.value);
             setPreview(null);
           }}
           rows={4}
           dir="ltr"
-          placeholder="Invoice Number,Date,COD,Fees,Net Amount,Orders"
+          placeholder={xlsx ? "الملف المرفوع هو اللي هيتقرا" : "Invoice Number,Date,COD,Fees,Net Amount,Orders"}
           className="w-full rounded-control border border-line-strong px-3 py-2 font-mono text-xs text-ink focus:border-primary focus:outline-none"
         />
 
@@ -98,7 +151,7 @@ export function ImportStatement({
           <button
             type="button"
             onClick={() => void run()}
-            disabled={busy || text.trim().length === 0}
+            disabled={busy || chosen() === null}
             className="rounded-control bg-sunken px-4 py-2 text-sm font-medium text-ink-body hover:bg-line disabled:opacity-50"
           >
             {busy && !plan ? "بنقرا…" : "اقرا الكشف"}
