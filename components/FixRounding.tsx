@@ -51,24 +51,19 @@ export function FixRounding({
   }
 
   return (
-    <div className="rounded-card bg-surface p-4 shadow-card">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-bold text-ink">فروق التقريب</h3>
-          <p className="mt-0.5 text-[11px] text-ink-faint">
-            التحويلات القديمة اتسجّلت بأرقام مقرّبة — والفرق ده ناقص من
-            رصيدك فعلًا.
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void look()}
-          className="min-h-9 rounded-control border border-line-strong px-3 py-1.5 text-xs font-medium text-ink-body hover:bg-sunken disabled:opacity-50"
-        >
-          {busy && !plan ? "بيحسب…" : "شوف الفروق"}
-        </button>
-      </div>
+    /*
+      ⚠️ **الزرار جنب سطر الفروق نفسه** (قرار عمر ٢٢ سبتمبر) — كان كرت
+      لوحده تحت، فاللي بيقرا السطر مايلاقيش الفعل جنبه.
+    */
+    <div className="mt-1">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => void look()}
+        className="min-h-9 rounded-control border border-line-strong px-3 py-1.5 text-xs font-medium text-ink-body hover:bg-sunken disabled:opacity-50"
+      >
+        {busy && !plan ? "بيحسب…" : "صلّح كل الفروق"}
+      </button>
 
       {plan && plan.ok && plan.rows.length === 0 && (
         <p className="mt-3 text-xs text-success">مفيش فروق — كل حركة بالرقم الصح.</p>
@@ -103,7 +98,7 @@ export function FixRounding({
               onClick={() => void apply()}
               className="min-h-9 rounded-control bg-primary px-4 py-1.5 text-xs font-medium text-white hover:bg-primary-dark disabled:opacity-50"
             >
-              {busy ? "بيصلّح…" : "صلّح كل الفروق"}
+              {busy ? "بيصلّح…" : "أيوه، صلّح"}
             </button>
             <button
               type="button"

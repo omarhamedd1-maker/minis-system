@@ -24,6 +24,7 @@ import {
 } from "./payout-actions";
 import { PayoutActions } from "@/components/PayoutActions";
 import { FixRounding } from "@/components/FixRounding";
+import { RematchPayout } from "@/components/RematchPayout";
 
 /**
  * ==========================================================================
@@ -193,10 +194,19 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
             </p>
           )}
           {rounding !== 0 && (
-            <p className="mt-0.5 text-xs text-ink-muted">
-              فروق تقريب في الحركات اليدوية: {formatMoney(rounding)} — فرق حقيقي
-              في الرصيد، مستني تسوية
-            </p>
+            <>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                فروق تقريب في الحركات اليدوية: {formatMoney(rounding)} — فرق
+                حقيقي في الرصيد، مستني تسوية
+              </p>
+              {/* ⚠️ الفعل جنب السطر اللي بيوصف المشكلة */}
+              {canEdit && (
+                <FixRounding
+                  previewAction={previewRoundingFixes}
+                  applyAction={fixAllRounding}
+                />
+              )}
+            </>
           )}
           {fees > 0 && (
             <p className="mt-0.5 text-xs text-ink-faint">
@@ -206,11 +216,6 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
           )}
         </div>
       </div>
-
-      {/* ⚠️ الفرق ده ناقص من الرصيد فعلًا — والتصليح بمعاينة الأول */}
-      {canEdit && rounding !== 0 && (
-        <FixRounding previewAction={previewRoundingFixes} applyAction={fixAllRounding} />
-      )}
 
       {canEdit && <AddPayout action={addPayoutManually} today={cairoToday()} />}
 
@@ -278,8 +283,15 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
                     createAction={createPayoutCash}
                     fixAction={fixPayoutCash}
                     acceptAction={acceptPayoutDiff}
-                    rematchAction={rematchPayout}
                   />
+                )}
+                {/*
+                  ⚠️⚠️ **الشرط هنا عدد الأوردرات مش الحالة.** الربط
+                  بالأوردرات سؤال تاني غير الربط بالحركة — والتحويل ممكن
+                  يبقى «متأكّد» وفلوسه في الخزنة و**مالوش ولا أوردر**.
+                */}
+                {canEdit && (r.courier_payout_orders?.length ?? 0) === 0 && (
+                  <RematchPayout payoutId={r.id} action={rematchPayout} />
                 )}
                 {canEdit && (
                   <PayoutActions
