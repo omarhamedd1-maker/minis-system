@@ -79,3 +79,58 @@ describe("كشف المحفظة", () => {
     expect(parseStatement("Date,Orders\n2026-09-06,3").problems[0].reason).toContain("رقم الفاتورة");
   });
 });
+
+describe("دفتر الحركات — الكشف الكامل (٨ أعمدة)", () => {
+  /**
+   * ⚠️ **الشكل ده حقيقي** — من كشف مينيز (`18-09-2026-01_42_34.xlsx`).
+   * الملف اللي كنا بنقرا منه قبل كده كان **مقصوص لتلات أعمدة**، وعشان
+   * كده اتقال «الكشف مافيهوش رسوم» (CONTEXT قاعدة ٩).
+   */
+  const LEDGER = [
+    "Transactions ID,Date,Category,Amount,Balance,Cashout ID,Cashout Date,Cashout Amount",
+    "THUCOD10SEP26,46275,Cash Out,-4394.36,0.00,,,",
+    "2214150753,46274.87,Bosta Fees Cycle,-156.64,4394.36,,,",
+    "603312968,46274.87,Cash Collection Cycle,4551.00,4551.00,,,",
+    "9911,46200,Pickup Fees,-70.00,100,TUECOD01SEP26,46200,500",
+    "9912,46100,Compensation,700.00,800,,,",
+  ].join("\n");
+
+  it("بيفرّق بين التحويل والبنود", () => {
+    const s = parseStatement(LEDGER);
+    expect(s.rows).toHaveLength(1);
+    expect(s.rows[0]).toMatchObject({
+      invoiceNumber: "THUCOD10SEP26",
+      net: 4394.36,
+      date: "2026-09-10",
+    });
+    expect(s.ledger).toHaveLength(4);
+  });
+
+  it("⚠️ البنود بتحتفظ بإشارتها — السالب مصروف والموجب دخل", () => {
+    const s = parseStatement(LEDGER);
+    const fees = s.ledger.find((l) => l.category === "Bosta Fees Cycle");
+    const comp = s.ledger.find((l) => l.category === "Compensation");
+    expect(fees?.amount).toBe(-156.64);
+    expect(comp?.amount).toBe(700);
+  });
+
+  it("⚠️ تاريخ إكسل الرقمي بيتقرا", () => {
+    const s = parseStatement(LEDGER);
+    expect(s.rows[0].date).toBe("2026-09-10");
+    // ⚠️ ٤٦٢٧٤٫٨٧ = مسا ٩ سبتمبر — دورة الرسوم بتجري قبل التحويل بليلة
+    expect(s.ledger[0].date).toBe("2026-09-09");
+  });
+
+  it("⚠️ الرقم العادي مايتقراش كأنه تاريخ", () => {
+    expect(parseDate("123")).toBeNull();
+    expect(parseDate("99999")).toBeNull();
+    expect(parseDate("46275")).toBe("2026-09-10");
+  });
+
+  it("الملف المقصوص لسه بيشتغل — وبنوده فاضية", () => {
+    const trimmed = ["invoice_number,date,amount", "SUNCOD06SEP26,2026-09-06,3671.63"].join("\n");
+    const s = parseStatement(trimmed);
+    expect(s.rows).toHaveLength(1);
+    expect(s.ledger).toEqual([]);
+  });
+});
