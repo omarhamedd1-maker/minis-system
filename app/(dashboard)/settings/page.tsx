@@ -19,7 +19,7 @@ import {
 import { EnablePush } from "@/components/EnablePush";
 import { IntegrationHealth } from "@/components/IntegrationHealth";
 import { readShopifyApp } from "@/lib/shopify/app";
-import { gmailConfirmationCode, payoutAddress, setupSteps } from "@/lib/payout-address";
+import { gmailConfirmLink, payoutAddress, setupSteps } from "@/lib/payout-address";
 import { formatDate } from "@/lib/format";
 import { headers } from "next/headers";
 import { ImportHistory } from "@/components/ImportHistory";
@@ -90,7 +90,7 @@ export default async function SettingsPage({
     process.env.NEXT_PUBLIC_MAIL_DOMAIN ?? process.env.NEXT_PUBLIC_SITE_URL ?? null
   );
 
-  // ⚠️ **كود تأكيد جيميل بيوصل عندنا مش عنده** — من غير عرضه الإعداد بيقف
+  // ⚠️ **رابط تأكيد جيميل بيوصل عندنا مش عنده** — من غير عرضه الإعداد بيقف
   const gmailCode = await (async () => {
     if (!payoutKey) return null;
     const { data } = await db
@@ -99,16 +99,18 @@ export default async function SettingsPage({
       .eq("tenant_id", me.tenantId)
       .order("received_at", { ascending: false })
       .limit(10);
+    // ⚠️ **أحدث رسالة الأول** (`received_at` نازل) — عمر دوس Re-send كذا
+    // مرة، وكل ضغطة بتبطّل اللي قبلها. أقدم رسالة = رابط ميت
     for (const row of data ?? []) {
-      const code = gmailConfirmationCode(String(row.subject ?? ""), String(row.raw ?? ""));
-      if (code) return { code, at: String(row.received_at), error: null };
+      const link = gmailConfirmLink(String(row.subject ?? ""), String(row.raw ?? ""));
+      if (link) return { link, at: String(row.received_at), error: null };
     }
     // ⚠️⚠️ **الإيميل وصل ومااتقراش؟ ده لازم يبان.** حصل (٢١ سبتمبر):
     // أربع إيميلات تأكيد من جيميل وصلوا، ومفتاح Resend ردّ ٤٠١ على قراية
     // المحتوى — والشاشة كانت فاضية، فالسبب الوحيد الظاهر كان «مفيش كود».
     const last = (data ?? []).find((r) => r.error);
     if (last) {
-      return { code: null, at: String(last.received_at), error: String(last.error) };
+      return { link: null, at: String(last.received_at), error: String(last.error) };
     }
     return null;
   })().catch(() => null);
@@ -440,13 +442,34 @@ export default async function SettingsPage({
                 </span>
               )}
             </p>
-            {gmailCode?.code && (
-              <p className="mt-3 rounded-control bg-success-soft px-3 py-2 text-xs text-success">
-                كود تأكيد جيميل وصل: <b className="font-mono">{gmailCode.code}</b> —{" "}
-                {formatDate(gmailCode.at)}
-              </p>
+            {/*
+              ⚠️⚠️ **جيميل بيأكّد برابط مش بكود.** صفحة الـForwarding
+              بتوري «Verify» **من غير أي خانة إدخال** — فاللي معاه كود
+              بس مالوش مكان يحطه فيه، وده اللي وقّف الإعداد ساعات.
+              والرابط بيوصل عندنا إحنا لأن التحويل على عنواننا.
+
+              ⚠️ **والزرار بيروح لـ`vf-` مش `uf-`**: الرسالة فيها رابطين،
+              والتاني **بيلغي** الطلب (`lib/payout-address.ts`).
+            */}
+            {gmailCode?.link && (
+              <div className="mt-3 rounded-control bg-success-soft px-3 py-3">
+                <p className="text-xs text-success">
+                  طلب التحويل من جيميل وصل — {formatDate(gmailCode.at)}
+                </p>
+                <a
+                  href={gmailCode.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex min-h-11 items-center rounded-control bg-success px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                >
+                  أكّد التحويل
+                </a>
+                <p className="mt-2 text-[11px] text-success opacity-80">
+                  بيفتح صفحة جيميل وتقول Confirmation Success.
+                </p>
+              </div>
             )}
-            {gmailCode && !gmailCode.code && (
+            {gmailCode && !gmailCode.link && (
               <p className="mt-3 rounded-control bg-warning-soft px-3 py-2 text-xs text-warning">
                 <b>إيميل وصل ومااتقراش</b> — {formatDate(gmailCode.at)}
                 <br />
