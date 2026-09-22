@@ -140,6 +140,22 @@ export function ImportStatement({
               {plan.totals.needsReview} محتاج مراجعة · {plan.totals.duplicates}{" "}
               متسجّل قبل كده
             </p>
+            {/*
+              ⚠️⚠️ **الملف المقصوص شكله زي الكامل.** الكشف الأصلي ٨ أعمدة
+              وفيه `Category` — واللي اتقصّ لتلات أعمدة بيرفع التحويلات
+              عادي **والرسوم بتضيع في صمت**. حصل مرتين (CONTEXT قاعدة ٩)،
+              فالمعاينة بقت تقول الملف ده أنهي واحد **قبل** التسجيل.
+            */}
+            {preview?.ok && preview.ledgerCount > 0 ? (
+              <p className="rounded-control bg-success-soft px-3 py-1.5 text-xs text-success">
+                كشف كامل — ومعاه {preview.ledgerCount} بند رسوم
+              </p>
+            ) : (
+              <p className="rounded-control bg-warning-soft px-3 py-1.5 text-xs text-warning">
+                ⚠️ الملف ده مافيهوش عمود <b>Category</b> — التحويلات هتترفع
+                والرسوم لأ. نزّل الكشف الأصلي من بوسطة (٨ أعمدة).
+              </p>
+            )}
             {plan.totals.rounding !== 0 && (
               // ⚠️ القروش دي فرق حقيقي في الرصيد — بتتسجّل على كل تحويل
               <p className="text-xs text-ink-muted">
