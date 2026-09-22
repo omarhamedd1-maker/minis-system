@@ -8,6 +8,7 @@ import { auditFields, reverseCashRows } from "@/lib/cash-reversal";
 import { cairoToday } from "@/lib/format";
 import { allRows } from "@/lib/fetch-all-pages";
 import { parseStatement, type LedgerLine } from "@/lib/payout-statement";
+import { xlsxBase64ToCsv } from "@/lib/xlsx-csv";
 import { planImport, type ImportPlan } from "@/lib/payout-import";
 import { linkToManualCash, ROUNDING_TOLERANCE } from "@/lib/payout-match";
 import { liveManualCash } from "@/lib/payout-cash";
@@ -28,6 +29,20 @@ import { parsePayoutEmail } from "@/lib/payout-email";
  */
 
 const COURIER = "bosta";
+
+/**
+ * اللي الشاشة بتبعته — نص ملصوق أو ملف إكسل.
+ *
+ * ⚠️⚠️ **كشف بوسطة بينزل `.xlsx`.** الرافع كان بيقبل CSV بس والشاشة
+ * بتقول «احفظه CSV» — يعني خطوة تحويل يدوية على كل مشتري، ودي اللي
+ * خلّت الملف المقصوص يترفع مرتين (§٩).
+ */
+export type StatementInput = { text: string } | { xlsxBase64: string };
+
+function toCsv(input: StatementInput): string {
+  if ("xlsxBase64" in input) return xlsxBase64ToCsv(input.xlsxBase64);
+  return input.text;
+}
 
 type Loaded = {
   plan: ImportPlan;
@@ -106,10 +121,12 @@ export type PreviewResult =
   | { ok: false; error: string };
 
 /** معاينة — **مابتكتبش حاجة** */
-export async function previewPayoutImport(text: string): Promise<PreviewResult> {
+export async function previewPayoutImport(
+  input: StatementInput
+): Promise<PreviewResult> {
   const me = await requirePermission("cash.edit");
   try {
-    const { plan, problems, columns, ledger } = await buildPlan(text, me.tenantId);
+    const { plan, problems, columns, ledger } = await buildPlan(toCsv(input), me.tenantId);
     return { ok: true, plan, problems, columns, ledgerCount: ledger.length };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
@@ -126,7 +143,9 @@ export type ApplyResult =
  * ⚠️ **مافيش حركة خزنة جديدة، ومفيش مبلغ حركة بيتعدّل.** أقصى اللي بيحصل
  * على الخزنة هو إن الحركة الموجودة بتعرف تحويلها.
  */
-export async function applyPayoutImport(text: string): Promise<ApplyResult> {
+export async function applyPayoutImport(
+  input: StatementInput
+): Promise<ApplyResult> {
   const me = await requirePermission("cash.edit");
   const db = createAdminClient();
   let saved = 0;
@@ -134,7 +153,7 @@ export async function applyPayoutImport(text: string): Promise<ApplyResult> {
   let skipped = 0;
 
   try {
-    const { plan, codById, ledger } = await buildPlan(text, me.tenantId);
+    const { plan, codById, ledger } = await buildPlan(toCsv(input), me.tenantId);
 
     for (const line of plan.rows) {
       if (line.status === "duplicate") {

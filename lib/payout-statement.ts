@@ -72,9 +72,27 @@ const HEADERS: Record<Field, string[]> = {
 
 const clean = (s: string) => s.replace(/^﻿/, "").replace(/^"|"$/g, "").trim();
 
-/** بيفصل السطر بالفاصلة أو التاب — ومحترم علامات الاقتباس */
-export function splitRow(line: string): string[] {
-  const sep = line.includes("\t") && !line.includes(",") ? "\t" : ",";
+/**
+ * الفاصل اللي الملف متكتوب بيه.
+ *
+ * ⚠️⚠️ **إكسل على ويندوز العربي بيحفظ CSV بفاصلة منقوطة `;`** مش فاصلة.
+ * والافتراض إنها فاصلة بيخلّي السطر كله عمود واحد، والرسالة بتطلع «مفيش
+ * عمود كذا» — **والعمود موجود**. عمر نزّل الكشف تلات مرات بسبب الرسالة دي.
+ *
+ * **الاختيار بالأكتر تكرارًا** في السطر — مش بأول واحد يظهر.
+ */
+export function detectSeparator(line: string): string {
+  const counts = [",", ";", "\t"].map((sep) => ({
+    sep,
+    n: line.split(sep).length - 1,
+  }));
+  const best = counts.sort((x, y) => y.n - x.n)[0];
+  return best.n > 0 ? best.sep : ",";
+}
+
+/** بيفصل السطر — ومحترم علامات الاقتباس */
+export function splitRow(line: string, separator?: string): string[] {
+  const sep = separator ?? detectSeparator(line);
   const out: string[] = [];
   let cur = "";
   let quoted = false;
@@ -162,9 +180,13 @@ export function parseStatement(text: string): Statement {
   let headerAt = -1;
   let map: Partial<Record<Field, number>> = {};
   const columns: Partial<Record<Field, string>> = {};
+  // ⚠️ **الفاصل بيتحدد من سطر الترويسة وبيتستعمل في الملف كله** — لو
+  // كل سطر حدّد فاصله لوحده، سطر فيه فاصلة جوّه نص بيقلب القراية
+  let separator = ",";
   for (let i = 0; i < lines.length && headerAt < 0; i++) {
     if (!lines[i].trim()) continue;
-    const cells = splitRow(lines[i]);
+    const sep = detectSeparator(lines[i]);
+    const cells = splitRow(lines[i], sep);
     const found: Partial<Record<Field, number>> = {};
     cells.forEach((cell, idx) => {
       const f = matchHeader(cell);
@@ -176,11 +198,30 @@ export function parseStatement(text: string): Statement {
     if (Object.keys(found).length >= 2) {
       headerAt = i;
       map = found;
+      separator = sep;
     }
   }
 
   if (headerAt < 0) {
-    return { rows: [], problems: [{ line: 1, reason: "مالقيناش سطر عناوين الأعمدة", raw: lines[0] ?? "" }], columns, ledger: [] };
+    // ⚠️⚠️ **السبب الحقيقي مش «العمود ناقص»** — لو السطر كله بيتقرا عمود
+    // واحد يبقى **الفاصل** هو المشكلة. الرسالة الغلط ودّت عمر يدوّر في
+    // الاتجاه الغلط وينزّل الكشف تلات مرات.
+    const first = lines.find((l) => l.trim()) ?? "";
+    const oneColumn = splitRow(first).length < 2;
+    return {
+      rows: [],
+      problems: [
+        {
+          line: 1,
+          reason: oneColumn
+            ? "الفاصل بين الأعمدة مش معروف — الملف كله بيتقرا عمود واحد"
+            : "مالقيناش سطر عناوين الأعمدة",
+          raw: first,
+        },
+      ],
+      columns,
+      ledger: [],
+    };
   }
   /**
    * ⚠️⚠️ **الكشف الكامل دفتر حركات مش قايمة تحويلات.** لما يكون فيه عمود
@@ -191,7 +232,7 @@ export function parseStatement(text: string): Statement {
    *   الباقي       ← بنود بتتخزّن زي ما هي وبتتصنّف في `lib/courier-fees.ts`
    */
   const isLedger = map.category !== undefined;
-  if (isLedger) return parseLedger(lines, headerAt, map, columns);
+  if (isLedger) return parseLedger(lines, headerAt, map, columns, separator);
 
   for (const need of ["invoice", "net"] as Field[]) {
     if (map[need] === undefined) {
@@ -212,7 +253,7 @@ export function parseStatement(text: string): Statement {
   for (let i = headerAt + 1; i < lines.length; i++) {
     const raw = lines[i];
     if (!raw.trim()) continue;
-    const cells = splitRow(raw);
+    const cells = splitRow(raw, separator);
     const invoice = at(cells, "invoice");
     const net = parseAmount(at(cells, "net"));
     const line = i + 1;
@@ -280,7 +321,8 @@ function parseLedger(
   lines: string[],
   headerAt: number,
   map: Partial<Record<Field, number>>,
-  columns: Partial<Record<Field, string>>
+  columns: Partial<Record<Field, string>>,
+  separator: string
 ): Statement {
   const problems: StatementProblem[] = [];
   const rows: StatementRow[] = [];
@@ -293,7 +335,7 @@ function parseLedger(
   for (let i = headerAt + 1; i < lines.length; i++) {
     const raw = lines[i];
     if (!raw.trim()) continue;
-    const cells = splitRow(raw);
+    const cells = splitRow(raw, separator);
     const line = i + 1;
     const id = at(cells, "invoice");
     const category = at(cells, "category").trim();
