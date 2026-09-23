@@ -326,15 +326,21 @@ export function AppNav({
                 href={i.href}
                 title={i.label}
                 aria-label={i.label}
-                className={`relative flex h-11 w-11 items-center justify-center rounded-full transition-transform active:scale-[0.88] ${
+                /*
+                  ⚠️ **كلمة تحت كل أيقونة** (DESIGN §١١) — خمس أيقونات من
+                  غير كلام بتخلّي اللي فاتح السيستم لأول مرة يدوس عشان
+                  يعرف. والمساحة بتفضل ٤٤px للّمس (قاعدة ١).
+                */
+                className={`relative flex min-h-11 w-14 flex-col items-center justify-center gap-0.5 rounded-full py-1 transition-transform active:scale-[0.88] ${
                   active
                     ? "bg-primary text-white active:bg-primary-dark"
                     : "text-ink-muted active:bg-line"
                 }`}
               >
                 <Icon href={i.href} className="h-5 w-5" />
+                <span className="text-[10px] leading-none">{i.label}</span>
                 {i.href === "/inbox" && inboxWaiting > 0 && (
-                  <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-danger" />
+                  <span className="absolute end-2 top-1 h-2.5 w-2.5 rounded-full bg-danger" />
                 )}
               </Link>
             );
@@ -345,14 +351,14 @@ export function AppNav({
               onClick={() => setMoreOpen(true)}
               title="المزيد"
               aria-label="المزيد"
-              className="relative flex h-11 w-11 items-center justify-center rounded-full text-ink-muted transition-transform active:scale-[0.88] active:bg-line"
+              className="relative flex min-h-11 w-14 flex-col items-center justify-center gap-0.5 rounded-full py-1 text-ink-muted transition-transform active:scale-[0.88] active:bg-line"
             >
               {/*
                 ⚠️ **النقطة على «المزيد» كمان.** «الرسايل» مش في الشريط
                 السفلي، فمن غيرها الرقم بيتخبّى ورا قايمة ومحدش بيشوفه.
               */}
               {overflow.some((o) => o.href === "/inbox") && inboxWaiting > 0 && (
-                <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-danger" />
+                <span className="absolute end-2 top-1 h-2.5 w-2.5 rounded-full bg-danger" />
               )}
               <svg
                 viewBox="0 0 24 24"
@@ -364,6 +370,7 @@ export function AppNav({
               >
                 <path d="M4 7h16M4 12h16M4 17h16" />
               </svg>
+              <span className="text-[10px] leading-none">المزيد</span>
             </button>
           )}
         </div>
