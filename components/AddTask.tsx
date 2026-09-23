@@ -15,6 +15,7 @@ export function AddTask({
   action,
   orderId,
   compact,
+  secondary = false,
 }: {
   team: Member[];
   canAssign: boolean;
@@ -22,6 +23,8 @@ export function AddTask({
   /** لو الفورم جوّه أوردر، التاسك بيتربط بيه لوحده */
   orderId?: string;
   compact?: boolean;
+  /** ثانوي — لما الشاشة يكون ليها فعل رئيسي تاني (ORDER §١٠) */
+  secondary?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   // بنتابع الاختيار عشان خانة التنبيه تعرف تحذّر: التنبيه بيروح للي التاسك
@@ -33,11 +36,18 @@ export function AddTask({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={
-          compact
-            ? "flex w-full items-center justify-center gap-2 rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"
-            : "rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"
-        }
+        /*
+          ⚠️ **رئيسي واحد لكل شاشة** (ORDER §١٠). في صفحة التاسكات ده
+          الفعل الأساسي، وفي صفحة الأوردر لأ — الأساسي هناك «ابعت لبوسطة».
+          فالمستوى بيتحدد من اللي بينده، مش من المكوّن.
+        */
+        className={`rounded-control px-3 py-2 text-sm font-medium ${
+          compact ? "flex w-full items-center justify-center gap-2" : ""
+        } ${
+          secondary
+            ? "border border-line-strong bg-surface text-ink-body hover:bg-sunken"
+            : "bg-primary text-white"
+        }`}
       >
         + تاسك جديد
       </button>

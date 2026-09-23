@@ -617,7 +617,7 @@ export default async function OrderDetailsPage({
               </svg>
             </span>
           )}
-          <BackLink href="/orders" label="الرجوع للأوردرات" variant="exit" />
+          <BackLink href="/orders" label="الأوردرات" variant="exit" withLabel />
         </div>
       </div>
 
@@ -671,7 +671,7 @@ export default async function OrderDetailsPage({
             </div>
             <form action={resyncFromShopify}>
               <input type="hidden" name="order_id" value={order.id} />
-              <button className="btn btn-primary btn-sm px-4">
+              <button className="btn btn-secondary btn-sm px-4">
                 ظبّطه من شوبيفاي
               </button>
             </form>
@@ -1036,7 +1036,7 @@ export default async function OrderDetailsPage({
             </div>
             <button
               type="submit"
-              className="rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
+              className="rounded-control border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink-body hover:bg-sunken"
             >
               حفظ
             </button>
@@ -1354,7 +1354,7 @@ export default async function OrderDetailsPage({
                 href={`/orders/${order.id}/awb`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 flex items-center justify-center gap-2 rounded-control bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary-dark"
+                className="mt-1 flex items-center justify-center gap-2 rounded-control border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-ink-body hover:bg-sunken"
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -1444,7 +1444,7 @@ export default async function OrderDetailsPage({
               />
               <button
                 type="submit"
-                className="rounded-control bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-dark"
+                className="rounded-control border border-line-strong bg-surface px-3 py-1 text-xs font-medium text-ink-body hover:bg-sunken"
               >
                 ربط
               </button>
@@ -1532,7 +1532,7 @@ export default async function OrderDetailsPage({
             </select>
             <button
               type="submit"
-              className="btn btn-primary px-4"
+              className="btn btn-secondary px-4"
             >
               حفظ
             </button>
@@ -1694,6 +1694,7 @@ export default async function OrderDetailsPage({
           <span className="text-xs text-ink-muted">مفيش تاسكات على الأوردر ده</span>
           {orderTasks.canEdit && (
             <AddTask
+              secondary
               team={orderTasks.team}
               canAssign={orderTasks.canAssign}
               action={createTask}
@@ -1708,6 +1709,7 @@ export default async function OrderDetailsPage({
             <h2 className="text-sm font-bold text-ink">تاسكات الأوردر</h2>
             {orderTasks.canEdit && (
               <AddTask
+                secondary
                 team={orderTasks.team}
                 canAssign={orderTasks.canAssign}
                 action={createTask}
