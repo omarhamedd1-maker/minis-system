@@ -35,7 +35,8 @@ update orders set
   bosta_cod           = 0,
   bosta_collected     = false,
   bosta_created_at    = null,
-  bosta_shipping_cost = null,
+  -- ⚠️ `bosta_shipping_cost` عمود `not null` — بيتصفّر مابيتفضّاش
+  bosta_shipping_cost = 0,
   bosta_exception     = null,
   cod_alerted_diff    = null,
   delivered_at        = null

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { SendToBostaDialog } from "./SendToBostaDialog";
 
 // زرار إرسال أوردر واحد لبوسطة من قايمة الأوردرات (من غير ما تفتح الأوردر)
 export function SendBostaRowButton({
@@ -22,11 +23,12 @@ export function SendBostaRowButton({
 }) {
   const router = useRouter();
   const [sending, setSending] = useState(false);
+  const [asking, setAsking] = useState(false);
 
-  async function send() {
-    if (!confirm(`تبعت أوردر ${orderNumber} لبوسطة كشحنة؟`)) return;
+  async function send(allowOpen: boolean) {
     const fd = new FormData();
     fd.append("order_ids", orderId);
+    if (allowOpen) fd.append("allow_open", "1");
     setSending(true);
     const r = await sendAction(fd);
     setSending(false);
@@ -45,9 +47,20 @@ export function SendBostaRowButton({
   }
 
   return (
+    <>
+      <SendToBostaDialog
+        open={asking}
+        title="إرسال لبوسطة"
+        detail={`أوردر ${orderNumber}`}
+        onCancel={() => setAsking(false)}
+        onConfirm={(allowOpen) => {
+          setAsking(false);
+          void send(allowOpen);
+        }}
+      />
     <button
       type="button"
-      onClick={send}
+      onClick={() => setAsking(true)}
       disabled={sending}
       title="ابعت لبوسطة"
       className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sunken text-ink-muted hover:bg-danger-soft hover:text-[#E30613] disabled:opacity-50"
@@ -67,5 +80,6 @@ export function SendBostaRowButton({
         </svg>
       )}
     </button>
+    </>
   );
 }

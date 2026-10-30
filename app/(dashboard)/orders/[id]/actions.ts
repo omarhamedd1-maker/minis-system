@@ -1147,6 +1147,28 @@ export async function bulkSendToBosta(formData: FormData): Promise<{
   // ملحوظة: بنمسك رقم البيزنس في متغير لأن `sendOne` جوّه دالة، و`me`
   // بيرجع "ممكن يكون فاضي" جوّه القفل
   const tenantId = me.tenantId;
+
+  /*
+    الفتح قبل الدفع — **قرار واحد للدفعة كلها**، واللي عايز يفرّق بين
+    أوردر وأوردر بيبعت من صفحة الأوردر. وبيتكتب على الأوردرات قبل
+    الإرسال عشان يفضل محفوظ لو الشحنة ماتت واتعادت.
+  */
+  const allowOpen = formData.get("allow_open") !== null;
+  const { error: prefError } = await db
+    .from("orders")
+    .update({ allow_open_package: allowOpen })
+    .eq("tenant_id", tenantId)
+    .in("id", orderIds);
+  // العمود لسه ماتعملش؟ الإرسال يكمّل بالافتراضي — ماينفعش يقف عشان إعداد
+  if (prefError && !/allow_open_package/i.test(prefError.message)) {
+    return {
+      ok: false,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+      error: "معرفناش نحفظ إعداد فتح الطرد: " + prefError.message,
+    };
+  }
   // المدن مرة واحدة للدفعة كلها بدل مرة لكل أوردر
   const cities = await loadBostaCities(db, tenantId);
 

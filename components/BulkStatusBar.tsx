@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { SendToBostaDialog } from "./SendToBostaDialog";
 
 type Option = { value: string; label: string };
 
@@ -34,6 +35,8 @@ export function BulkStatusBar({
   const [status, setStatus] = useState(options[0]?.value ?? "");
   const [pending, setPending] = useState(false);
   const [sending, setSending] = useState(false);
+  // الأوردرات اللي شاشة التأكيد مفتوحة عليها
+  const [asking, setAsking] = useState<{ ids: string[]; detail: string } | null>(null);
 
   useEffect(() => {
     const recount = () => {
@@ -114,7 +117,7 @@ export function BulkStatusBar({
   }
 
   // إرسال الأوردرات المحددة لبوسطة (اللي لسه مالهاش شحنة بس)
-  async function sendSelected() {
+  function askSend() {
     if (!sendAction) return;
     const checked = Array.from(
       document.querySelectorAll<HTMLInputElement>(
@@ -127,13 +130,17 @@ export function BulkStatusBar({
       alert("كل الأوردرات المحددة معاها شحنة بالفعل");
       return;
     }
-    let msg = `هنبعت ${sendable.length} أوردر لبوسطة كشحنات.`;
-    if (already > 0) msg += ` (${already} معاهم شحنة هنتخطّاهم)`;
-    msg += " تمام؟";
-    if (!confirm(msg)) return;
+    let detail = `${sendable.length} أوردر`;
+    if (already > 0) detail += ` — و${already} معاهم شحنة هنتخطّاهم`;
+    setAsking({ ids: sendable.map((el) => el.value), detail });
+  }
 
+  async function sendSelected(ids: string[], allowOpen: boolean) {
+    if (!sendAction) return;
     const fd = new FormData();
-    sendable.forEach((el) => fd.append("order_ids", el.value));
+    ids.forEach((id) => fd.append("order_ids", id));
+    // ⚠️ قرار واحد للمجموعة كلها — اللي عايز يفرّق يبعت من صفحة الأوردر
+    if (allowOpen) fd.append("allow_open", "1");
     setSending(true);
     const result = await sendAction(fd);
     setSending(false);
@@ -156,6 +163,17 @@ export function BulkStatusBar({
 
   return (
     <div className="sticky top-14 z-[35] mb-4 rounded-card bg-primary p-3 text-white shadow-float md:top-0">
+      <SendToBostaDialog
+        open={asking !== null}
+        title="إرسال لبوسطة"
+        detail={asking?.detail ?? ""}
+        onCancel={() => setAsking(null)}
+        onConfirm={(allowOpen) => {
+          const ids = asking?.ids ?? [];
+          setAsking(null);
+          void sendSelected(ids, allowOpen);
+        }}
+      />
       {/* سطر فوق: العدد + إلغاء */}
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium">
@@ -247,7 +265,7 @@ export function BulkStatusBar({
         {canSend && sendAction && (
           <button
             type="button"
-            onClick={sendSelected}
+            onClick={askSend}
             disabled={sending}
             title="ابعت لبوسطة"
             aria-label="ابعت لبوسطة"
