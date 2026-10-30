@@ -331,3 +331,74 @@ describe("رابط الويب هوك في الشحنة", () => {
     }
   });
 });
+
+// ==========================================================================
+// الفتح قبل الدفع وصور المنتجات (٣٠ أكتوبر ٢٠٢٦)
+// --------------------------------------------------------------------------
+// بوسطة وقفت كل الشحنات بـ`Product images are required when
+// allowToOpenPackage is enabled` — والكود ماكانش بيبعت صور أصلاً.
+// ==========================================================================
+describe("الفتح قبل الدفع", () => {
+  const img = "https://cdn.shopify.com/s/files/1/0981/box-front.png";
+  const withImage = [
+    { quantity: 1, salePrice: 500, productName: "مرايه", productImage: img },
+  ];
+
+  const built = (over: Partial<ShipmentInput> = {}) => {
+    const r = buildShipment(input(over));
+    if (!r.ok) throw new Error(r.error);
+    return r.shipment;
+  };
+
+  it("فيه صورة والفتح مطلوب = الصور بتتبعت في deliveryImages", () => {
+    const s = built({ items: withImage, allowOpenPackage: true });
+    expect(s.base.allowToOpenPackage).toBe(true);
+    expect(s.base.deliveryImages).toEqual([
+      { type: "ALLOW_TO_OPEN_THE_PACKAGE", images: [img] },
+    ]);
+    expect(s.openingDisabled).toBe(false);
+  });
+
+  it("الفتح مرفوض = مفيش صور أصلاً", () => {
+    const s = built({ items: withImage, allowOpenPackage: false });
+    expect(s.base.allowToOpenPackage).toBe(false);
+    expect(s.base.deliveryImages).toBeUndefined();
+    expect(s.openingDisabled).toBe(false);
+  });
+
+  it("مفيش صورة = الفتح بيتقفل والشحنة بتمشي", () => {
+    const s = built({ allowOpenPackage: true });
+    expect(s.base.allowToOpenPackage).toBe(false);
+    expect(s.base.deliveryImages).toBeUndefined();
+    // ⚠️ ده اللي بيخلّي اللي بينده يقدر يقول لصاحب البيزنس
+    expect(s.openingDisabled).toBe(true);
+  });
+
+  it("فاضي = مسموح — نفس السلوك القديم", () => {
+    const s = built({ items: withImage });
+    expect(s.base.allowToOpenPackage).toBe(true);
+  });
+
+  it("رابط مش https بوسطة بترفضه (كود ٢١٥١) فمابنبعتوش", () => {
+    const s = built({
+      items: [
+        { quantity: 1, salePrice: 500, productName: "مرايه", productImage: "http://x.com/a.png" },
+      ],
+      allowOpenPackage: true,
+    });
+    expect(s.base.allowToOpenPackage).toBe(false);
+  });
+
+  it("الصور المكررة بتتشال والحد عشرة", () => {
+    const many = Array.from({ length: 14 }, (_, i) => ({
+      quantity: 1,
+      salePrice: 10,
+      productName: "منتج",
+      productImage: `https://x.com/${i % 12}.png`,
+    }));
+    const s = built({ items: many, allowOpenPackage: true });
+    const entry = (s.base.deliveryImages as { images: string[] }[])[0];
+    expect(entry.images).toHaveLength(10);
+    expect(new Set(entry.images).size).toBe(10);
+  });
+});

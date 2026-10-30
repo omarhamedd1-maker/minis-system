@@ -18,6 +18,7 @@ import { shortLogText } from "@/lib/log-text";
 import { orderFlags } from "@/lib/order-flags";
 import { resyncOrder } from "@/lib/shopify/order-resync-run";
 import { trackingLink } from "@/lib/tracking-view";
+import { loadAllowOpenPackage } from "@/lib/tenant-settings";
 import { CopyLink } from "@/components/CopyLink";
 import { headers } from "next/headers";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -106,6 +107,8 @@ type OrderDetails = {
   return_tracking: string | null;
   payment_method: string | null;
   amount_paid: number | null;
+  /** الفتح قبل الدفع — فاضي يعني ارجع لإعداد البيزنس */
+  allow_open_package: boolean | null;
   customers: {
     id: string;
     full_name: string | null;
@@ -122,7 +125,7 @@ type OrderDetails = {
     returned_condition: "restocked" | "damaged" | null;
     product_variants: {
       variant_name: string | null;
-      products: { name: string | null } | null;
+      products: { name: string | null; image_url: string | null } | null;
     } | null;
   }[];
 };
@@ -167,9 +170,10 @@ export default async function OrderDetailsPage({
        bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking, bosta_shipping_cost,
        bosta_created_at, refunded_at, refunded_amount, cash_received_at,
        delivered_at, return_note, return_reason, return_tracking, payment_method, amount_paid,
+       allow_open_package,
        customers(id, full_name, phone, address),
        order_items(id, quantity, sale_price_at_order, cost_price_at_order, returned_quantity, returned_condition,
-         product_variants(variant_name, products(name)))`
+         product_variants(variant_name, products(name, image_url)))`
     )
     .eq("id", id)
     .maybeSingle()
@@ -252,6 +256,21 @@ export default async function OrderDetailsPage({
       : null;
 
   const badge = orderStatusBadge(order.order_status);
+
+  /*
+    بوسطة بترفض «الفتح قبل الدفع» من غير صور المنتجات (أكتوبر ٢٠٢٦).
+    بنقرا الصور من نفس بنود الأوردر عشان الخانة تقول الحقيقة قبل الإرسال
+    بدل ما بوسطة ترفض بعديها.
+  */
+  const hasProductImage = order.order_items.some((i) =>
+    String(i.product_variants?.products?.image_url ?? "")
+      .trim()
+      .startsWith("https://")
+  );
+  // فاضي = ارجع لإعداد البيزنس، والفاضي عند البيزنس = مسموح
+  const allowOpenDefault =
+    order.allow_open_package ??
+    (canSend ? await loadAllowOpenPackage(supabase, user.tenantId) : true);
 
   // الشحنة ميتة (مؤرشفة/ملغية عند بوسطة)؟ وقاعدة كام يوم؟
   const shipmentDead =
@@ -1412,6 +1431,36 @@ export default async function OrderDetailsPage({
             className="mt-3 border-t border-line pt-3"
           >
             <input type="hidden" name="order_id" value={order.id} />
+
+            {/*
+              ⚠️ **الفتح قبل الدفع قرار لكل أوردر** — كان مفروض على كل
+              الشحنات في الكود. وبوسطة بقت بترفض الفتح من غير صور منتجات
+              (أكتوبر ٢٠٢٦)، فلو مفيش صورة الخانة بتتقفل والسبب بيتكتب.
+            */}
+            <label
+              className={`mb-2 flex items-start gap-2 rounded-control bg-sunken px-2.5 py-2 text-xs ${
+                hasProductImage ? "cursor-pointer text-ink-body" : "text-ink-faint"
+              }`}
+            >
+              <input
+                type="checkbox"
+                name="allow_open"
+                value="1"
+                disabled={!hasProductImage}
+                defaultChecked={allowOpenDefault && hasProductImage}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                العميل يفتح الطرد قبل ما يدفع
+                {!hasProductImage && (
+                  <span className="mt-0.5 block text-[11px] text-warning">
+                    مش متاح — بوسطة بتطلب صورة للمنتج، ومفيش صورة على منتجات
+                    الأوردر ده.
+                  </span>
+                )}
+              </span>
+            </label>
+
             <ConfirmButton
               message={`متأكد إنك عايز تبعت أوردر ${order.order_number ?? ""} لبوسطة كشحنة؟`}
               className="flex w-full items-center justify-center gap-2 rounded-control bg-primary px-3 py-2 text-sm font-medium text-white"

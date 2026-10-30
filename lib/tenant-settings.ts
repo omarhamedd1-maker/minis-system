@@ -15,6 +15,11 @@ export type TenantCredentials = {
   bostaPickupAddressId: string | null;
   /** مفتاح ويب هوك البيزنس — بيتحط في رابط كل شحنة، اقرا `bostaWebhookUrl` */
   bostaWebhookToken: string | null;
+  /**
+   * الافتراضي للبيزنس: العميل يفتح الطرد قبل الدفع؟
+   * الأوردر يقدر يخالفه، وفاضي = مسموح (السلوك القديم).
+   */
+  bostaAllowOpenPackage: boolean;
   shopifyShop: string | null;
   shopifyAccessToken: string | null;
   shopifyWebhookSecret: string | null;
@@ -64,6 +69,7 @@ export async function loadTenantCredentials(
     bostaApiKey: data?.bosta_api_key ?? null,
     bostaPickupAddressId: data?.bosta_pickup_address_id ?? null,
     bostaWebhookToken: data?.bosta_webhook_token ?? null,
+    bostaAllowOpenPackage: data?.bosta_allow_open_package ?? true,
     shopifyShop: data?.shopify_shop ?? null,
     shopifyAccessToken: data?.shopify_access_token ?? null,
     shopifyWebhookSecret: data?.shopify_webhook_secret ?? null,
@@ -128,4 +134,26 @@ export async function loadIssuesSince(
     .maybeSingle();
   if (error) return null;
   return (data?.issues_since as string | null) ?? null;
+}
+
+/**
+ * الافتراضي للبيزنس: العميل يفتح الطرد قبل الدفع؟
+ *
+ * ⚠️ قرايه لوحدها مش من `loadTenantCredentials` — دي بتجيب المفاتيح
+ * السرية كلها، والصفحة مش محتاجاها عشان خانة واحدة.
+ *
+ * ولو العمود لسه ماتعملش بنرجّع «مسموح» — نفس السلوك اللي كان في الكود
+ * قبل الإعداد ده، عشان مايتغيرش حاجة من تحت أي حد قبل تشغيل الـSQL.
+ */
+export async function loadAllowOpenPackage(
+  db: SupabaseClient,
+  tenantId: string
+): Promise<boolean> {
+  const { data, error } = await db
+    .from("tenant_credentials")
+    .select("bosta_allow_open_package")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error) return true;
+  return (data?.bosta_allow_open_package as boolean | null) ?? true;
 }
