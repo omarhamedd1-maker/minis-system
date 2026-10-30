@@ -44,7 +44,7 @@ import {
 } from "../unconfirmed";
 import { allRows } from "../fetch-all-pages";
 
-const ORDER_FIELDS = `id, order_number, order_status, delivered_at,
+const ORDER_FIELDS = `id, order_number, order_status, order_date, delivered_at,
   bosta_state, bosta_exception, bosta_cod, bosta_collected, bosta_tracking,
   bosta_shipping_cost, return_tracking, bosta_created_at, bosta_stale_alerted_day, cod_alerted_diff, cod_diff_ignored,
   shipping_price, discount, amount_paid,
@@ -55,6 +55,8 @@ type OrderRow = {
   id: string;
   order_number: string | number | null;
   order_status: string | null;
+  /** تاريخ الأوردر الحقيقي — المطابقة بالتليفون بتقارن بيه */
+  order_date: string | null;
   delivered_at: string | null;
   bosta_state: string | null;
   bosta_exception: string | null;
@@ -299,6 +301,7 @@ export async function runBostaSync(opts: {
       bosta_tracking: o.bosta_tracking,
       customerName: o.customers?.full_name ?? null,
       customerPhone: o.customers?.phone ?? null,
+      orderDate: o.order_date,
       row: o,
     }))
   );
