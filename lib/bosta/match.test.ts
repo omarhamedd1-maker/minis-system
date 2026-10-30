@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildIndex, matchDelivery, namesShare } from "./match";
+import { buildIndex, matchDelivery, namesShare, shipmentTooOld, type MatchTarget } from "./match";
 
 const orders = [
   { id: "1", order_number: "1360", bosta_tracking: "8550116799", customerName: "محمد حسن" },
@@ -144,5 +144,124 @@ describe("المطابقة بالتليفون — لما المرجع ناقص",
       idx
     );
     expect(r.kind).toBe("none");
+  });
+});
+
+// ==========================================================================
+// الشحنة القديمة ما تنطّش على أوردر جديد (٣٠ أكتوبر ٢٠٢٦)
+// --------------------------------------------------------------------------
+// الحالتين دول حصلوا فعلًا في ٢ سِك — الأرقام والتواريخ زي ما هي.
+// ==========================================================================
+describe("الشحنة أقدم من الأوردر", () => {
+  const order = (over: Partial<MatchTarget> = {}): MatchTarget => ({
+    id: "o1",
+    order_number: "1582",
+    bosta_tracking: null,
+    customerName: "محمد اشرف",
+    customerPhone: "01008580016",
+    orderDate: "2026-10-30T15:27:01Z",
+    ...over,
+  });
+
+  it("أوردر ١٥٨٢: شحنة ٢٥ فبراير ما تتربطش بأوردر ٣٠ أكتوبر", () => {
+    const r = matchDelivery(
+      {
+        trackingNumber: "82930382",
+        createdAt: "2026-02-25T22:03:06Z",
+        receiver: { fullName: "محمد اشرف", phone: "01008580016" },
+      },
+      buildIndex([order()])
+    );
+    expect(r.kind).toBe("none");
+  });
+
+  it("أوردر ١٥٧٧: شحنة ١١ فبراير ما تتربطش بأوردر ٢٩ أكتوبر", () => {
+    const r = matchDelivery(
+      {
+        trackingNumber: "44638627",
+        createdAt: "2026-02-11T00:54:24Z",
+        receiver: { fullName: "كارما Ramy", phone: "01113458260" },
+      },
+      buildIndex([
+        order({
+          id: "o2",
+          order_number: "1577",
+          customerName: "كارما Ramy",
+          customerPhone: "01113458260",
+          orderDate: "2026-10-29T15:22:37Z",
+        }),
+      ])
+    );
+    expect(r.kind).toBe("none");
+  });
+
+  it("الشحنة بعد الأوردر بأيام = ربط عادي", () => {
+    const r = matchDelivery(
+      {
+        createdAt: "2026-11-01T10:00:00Z",
+        receiver: { fullName: "محمد اشرف", phone: "01008580016" },
+      },
+      buildIndex([order()])
+    );
+    expect(r.kind).toBe("phone");
+  });
+
+  it("فرق ١٣ يوم لسه مقبول — ده أقصى فرق سليم في البيانات", () => {
+    const r = matchDelivery(
+      {
+        createdAt: "2026-10-17T15:27:01Z",
+        receiver: { fullName: "محمد اشرف", phone: "01008580016" },
+      },
+      buildIndex([order()])
+    );
+    expect(r.kind).toBe("phone");
+  });
+
+  it("مفيش تاريخ أوردر؟ ما نقفلش الربط — الأوردرات المستوردة مالهاش", () => {
+    const r = matchDelivery(
+      {
+        createdAt: "2026-02-25T22:03:06Z",
+        receiver: { fullName: "محمد اشرف", phone: "01008580016" },
+      },
+      buildIndex([order({ orderDate: null })])
+    );
+    expect(r.kind).toBe("phone");
+  });
+
+  it("رقم التتبع المربوط أقوى من التاريخ", () => {
+    const r = matchDelivery(
+      {
+        trackingNumber: "82930382",
+        createdAt: "2026-02-25T22:03:06Z",
+        receiver: { fullName: "محمد اشرف", phone: "01008580016" },
+      },
+      buildIndex([order({ bosta_tracking: "82930382" })])
+    );
+    expect(r.kind).toBe("tracking");
+  });
+
+  it("المرجع برقم الأوردر أقوى من التاريخ", () => {
+    const r = matchDelivery(
+      {
+        businessReference: "1582",
+        createdAt: "2026-02-25T22:03:06Z",
+        receiver: { fullName: "محمد اشرف", phone: "01008580016" },
+      },
+      buildIndex([order()])
+    );
+    expect(r.kind).toBe("order_number");
+  });
+});
+
+describe("shipmentTooOld", () => {
+  it("تاريخ ناقص = مابنقفلش", () => {
+    expect(shipmentTooOld(null, "2026-10-30")).toBe(false);
+    expect(shipmentTooOld("2026-02-25", null)).toBe(false);
+  });
+  it("تاريخ مش مفهوم = مابنقفلش", () => {
+    expect(shipmentTooOld("مش تاريخ", "2026-10-30")).toBe(false);
+  });
+  it("الشحنة بعد الأوردر = عادي مهما كان الفرق", () => {
+    expect(shipmentTooOld("2027-01-01", "2026-10-30")).toBe(false);
   });
 });

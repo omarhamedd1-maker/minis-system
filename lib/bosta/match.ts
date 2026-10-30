@@ -8,8 +8,9 @@
 // **ودور تالت اتزاد ٢٤ أغسطس: التليفون.** الشحنة اللي تتعمل من لوحة بوسطة
 // من غير مرجع كانت ضايفة للأبد (٢ سِك: ٢٢٩ شحنة من ٣٩٩ كده)، والأوردر
 // بيفضل على «تم التسليم» التخميني جاي من شوبيفاي. التليفون بيربط بس
-// بشرطين: أوردر **واحد** غير مربوط بنفس التليفون، والاسم مؤكد — غير كده
-// مافيش تخمين.
+// بتلات شروط: أوردر **واحد** غير مربوط بنفس التليفون، والاسم مؤكد،
+// **والشحنة مش أقدم من الأوردر بشهر** (اتزاد ٣٠ أكتوبر — اقرا
+// `STALE_SHIPMENT_DAYS`). غير كده مافيش تخمين.
 // ==========================================================================
 
 import { deliveryOrderNumber, type BostaDelivery } from "./reconcile";
@@ -50,7 +51,47 @@ export type MatchTarget = {
   customerName: string | null;
   /** تليفون العميل — لدور المطابقة بالتليفون لما المرجع ناقص */
   customerPhone?: string | null;
+  /**
+   * تاريخ الأوردر عند شوبيفاي — **مش** `created_at` بتاعنا.
+   *
+   * ⚠️ الفرق ده مش تفصيلة: الأوردرات القديمة كلها اتسجّلت عندنا يوم
+   * الاستيراد (مينيز ١٩ يوليو · ٢ سِك ١٧ و٢٤ أغسطس · مينو ١١ أغسطس)،
+   * فـ`created_at` بتاعها بعد شحنتها بشهور. المقارنة بيه كانت هتقفل
+   * المطابقة على ٥٦٨ أوردر تاريخي صح.
+   */
+  orderDate?: string | null;
 };
+
+/**
+ * ⚠️⚠️ **الشحنة اللي أقدم من الأوردر بكتير مش شحنته.**
+ *
+ * دور التليفون (تحت) بيربط شحنة بلا مرجع بأوردر غير مربوط لنفس
+ * الرقم. المشكلة إن الشحنة اللي مالهاش مرجع **بتفضل بلا أوردر للأبد**،
+ * فأول ما نفس العميل يطلب تاني بعد شهور، الشحنة القديمة بتنطّ على
+ * الأوردر الجديد — والأوردر بيتولد وهو «رجع ومتسلمش» أو «تم التسليم».
+ *
+ * حصل فعلًا في ٢ سِك: أوردر ١٥٧٧ (٢٩ أكتوبر) اتربط بشحنة من ١١ فبراير،
+ * وأوردر ١٥٨٢ (٣٠ أكتوبر) اتربط بشحنة من ٢٥ فبراير واتقال عليه «تم
+ * التسليم» بعد تلت دقايق من دخوله. والتحصيل كان بيفضح الربط: ٣٬٦٨٠
+ * عندنا و٠ عند بوسطة، و٧٧٠ عندنا و٦٦٠ عند بوسطة.
+ *
+ * **والرقم ٣٠ مقروء من البيانات مش متخمّن**: في ٨٧٥ أوردر مربوط على
+ * التلات بيزنس، أقصى فرق سليم كان ١٣ يوم، وأقرب ربط غلط كان ٦٠ يوم.
+ * فالحد في نص الفجوة — بيقفل الأربعة الغلط وما بيلمسش ٨٧١ ربط صح.
+ */
+export const STALE_SHIPMENT_DAYS = 30;
+
+/** الشحنة أقدم من الأوردر بأكتر من الحد؟ لو تاريخ ناقص بنعدّي */
+export function shipmentTooOld(
+  deliveryCreatedAt: string | null | undefined,
+  orderDate: string | null | undefined
+): boolean {
+  if (!deliveryCreatedAt || !orderDate) return false;
+  const d = new Date(deliveryCreatedAt).getTime();
+  const o = new Date(orderDate).getTime();
+  if (Number.isNaN(d) || Number.isNaN(o)) return false;
+  return o - d > STALE_SHIPMENT_DAYS * 86_400_000;
+}
 
 export type MatchResult<T> =
   | { kind: "tracking"; order: T }
@@ -111,8 +152,11 @@ export function matchDelivery<T extends MatchTarget>(
   // مختلف تمامًا = مافيش تخمين — بيتسيبوا للمراجعة.
   const key = phoneKey(d.receiver?.phone);
   if (key) {
-    const confirmed = (index.byPhone.get(key) ?? []).filter((o) =>
-      namesShare(o.customerName ?? "", d.receiver?.fullName ?? "")
+    const confirmed = (index.byPhone.get(key) ?? []).filter(
+      (o) =>
+        namesShare(o.customerName ?? "", d.receiver?.fullName ?? "") &&
+        // والتاريخ شرط تالت — اقرا `STALE_SHIPMENT_DAYS` فوق
+        !shipmentTooOld(d.createdAt, o.orderDate)
     );
     if (confirmed.length === 1) return { kind: "phone", order: confirmed[0] };
   }
