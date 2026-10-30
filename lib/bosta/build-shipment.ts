@@ -34,7 +34,43 @@ export type ShipmentItem = {
   quantity: number;
   salePrice: number;
   productName: string | null;
+  /** صورة المنتج من شوبيفاي — بوسطة بتطلبها، اقرا `deliveryImages` تحت */
+  productImage?: string | null;
 };
+
+/**
+ * ⚠️⚠️ **بوسطة بقت بترفض الشحنة من غير صور المنتجات.**
+ *
+ * الكود ماتغيرش، وفجأة الإرسال وقف من ١٠ أكتوبر ٢٠٢٦ والرسالة:
+ * `Product images are required when allowToOpenPackage is enabled`
+ * (كود ٢١٥٠ عندهم). يعني الشرط اتضاف من ناحيتهم.
+ *
+ * الشكل من توثيقهم: حقل `deliveryImages` **في أعلى الطلب** — مش جوّه
+ * `specs.packageDetails` — ومعاه `type` لازم يكون
+ * `ALLOW_TO_OPEN_THE_PACKAGE`، والصور من ١ لـ١٠ روابط https.
+ *
+ * **ولو مفيش ولا صورة، بنطفّي `allowToOpenPackage` بدل ما نوقف الشحنة.**
+ * الشحنة اللي ماتتبعتش بتقف الشغل، والشحنة من غير «افتح قبل الدفع»
+ * بتوصل عادي. ودي حالة نادرة: مينيز عندها صور في ١٠٠ منتج من ١٠١،
+ * و٢ سِك في منتجها الوحيد (قياس ٣٠ أكتوبر). والنتيجة بترجّع
+ * `openingDisabled` عشان اللي بينده يعرف ويقول لصاحب البيزنس.
+ */
+const OPEN_PACKAGE_IMAGE_TYPE = "ALLOW_TO_OPEN_THE_PACKAGE";
+const MAX_DELIVERY_IMAGES = 10;
+
+/** روابط صور المنتجات، من غير تكرار وفي الحد اللي بوسطة بتقبله */
+export function deliveryImageUrls(
+  items: { productImage?: string | null }[]
+): string[] {
+  const seen = new Set<string>();
+  for (const i of items) {
+    const url = String(i.productImage ?? "").trim();
+    // بوسطة بترفض أي رابط مش https (كود ٢١٥١)
+    if (url.startsWith("https://")) seen.add(url);
+    if (seen.size >= MAX_DELIVERY_IMAGES) break;
+  }
+  return [...seen];
+}
 
 export type ShipmentInput = {
   orderNumber: string | number | null;
@@ -66,6 +102,17 @@ export type ShipmentInput = {
    * للمزامنة الدورية كل ربع ساعة، أو لرابط الحساب لو اتحط.
    */
   webhookUrl?: string | null;
+  /**
+   * العميل يقدر يفتح الطرد قبل ما يدفع؟ **قرار لكل أوردر.**
+   *
+   * كان مفروض `true` على كل الشحنات في الكود. وده مش دايمًا اللي صاحب
+   * البيزنس عايزه — في منتجات الفتح فيها معناه إنها اترجعت (البرفانات
+   * والأكل والحاجات المختومة)، وفي منتجات الفتح بيبيعها.
+   *
+   * فاضي = ارجع لإعداد البيزنس، وإعداد البيزنس الفاضي = مسموح (نفس
+   * السلوك القديم، عشان مايتغيّرش حاجة من تحت أي حد).
+   */
+  allowOpenPackage?: boolean | null;
 };
 
 export type PayloadVariant = {
@@ -80,6 +127,13 @@ export type BuiltShipment = {
   addressLine: string;
   city: { id: string; name: string };
   zone: { id: string; name: string } | null;
+  /** الفتح قبل الدفع مسموح في الشحنة دي فعلاً؟ */
+  allowToOpenPackage: boolean;
+  /**
+   * الفتح كان مطلوب واتطفّى عشان مفيش صور — اللي بينده بيوري ده لصاحب
+   * البيزنس، مش بيسكت عليه
+   */
+  openingDisabled: boolean;
   /** الأساس اللي مابيتغيرش بين المحاولات */
   base: Record<string, unknown>;
   /** أشكال العنوان بالترتيب — بنجرّبهم واحد ورا التاني لو بوسطة رفضت */
@@ -216,6 +270,11 @@ export function buildShipment(input: ShipmentInput): BuildResult {
       .join(" + ")
       .slice(0, 250) || "شحنة";
 
+  // الفتح قرار الأوردر، والصور شرط بوسطة عشان الفتح يتقبل
+  const wantsOpen = input.allowOpenPackage ?? true;
+  const images = wantsOpen ? deliveryImageUrls(input.items) : [];
+  const allowToOpenPackage = wantsOpen && images.length > 0;
+
   const base: Record<string, unknown> = {
     type: DELIVERY_TYPE_SEND,
     specs: {
@@ -226,7 +285,10 @@ export function buildShipment(input: ShipmentInput): BuildResult {
     cod,
     receiver: { firstName, lastName, phone },
     businessReference: String(input.orderNumber ?? ""),
-    allowToOpenPackage: true,
+    allowToOpenPackage,
+    ...(allowToOpenPackage
+      ? { deliveryImages: [{ type: OPEN_PACKAGE_IMAGE_TYPE, images }] }
+      : {}),
     ...(input.pickupAddressId ? { pickupAddressId: input.pickupAddressId } : {}),
     // اقرا `webhookUrl` في `ShipmentInput` — دي بتلغي خطوة يدوية في التركيب
     ...(input.webhookUrl ? { webhookUrl: input.webhookUrl } : {}),
@@ -266,6 +328,8 @@ export function buildShipment(input: ShipmentInput): BuildResult {
       zone: input.zone
         ? { id: input.zone._id, name: input.zone.nameAr || input.zone.name || "" }
         : null,
+      allowToOpenPackage,
+      openingDisabled: wantsOpen && images.length === 0,
       base,
       variants,
     },

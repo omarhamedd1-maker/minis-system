@@ -27,8 +27,9 @@ import { isDeadShipment } from "./order-status";
 import { bostaWebhookUrl, loadTenantCredentials } from "../tenant-settings";
 
 const ORDER_FIELDS = `id, order_number, discount, shipping_price, amount_paid, bosta_tracking, tenant_id,
+  allow_open_package,
   customers(full_name, phone, address, city, zone, street, building, floor, apartment, landmark),
-  order_items(quantity, sale_price_at_order, product_variants(products(name, name_ar)))`;
+  order_items(quantity, sale_price_at_order, product_variants(products(name, name_ar, image_url)))`;
 
 type OrderRow = {
   id: string;
@@ -38,13 +39,19 @@ type OrderRow = {
   amount_paid: number | null;
   bosta_tracking: string | null;
   tenant_id: string;
+  /** الفتح قبل الدفع — فاضي يعني ارجع لإعداد البيزنس */
+  allow_open_package: boolean | null;
   customers: ShipmentCustomer | null;
   order_items:
     | {
         quantity: number;
         sale_price_at_order: number;
         product_variants: {
-          products: { name: string | null; name_ar: string | null } | null;
+          products: {
+            name: string | null;
+            name_ar: string | null;
+            image_url: string | null;
+          } | null;
         } | null;
       }[]
     | null;
@@ -165,6 +172,8 @@ export async function runBostaCreate(opts: {
       i.product_variants?.products?.name_ar ||
       i.product_variants?.products?.name ||
       null,
+    // بوسطة بترفض الفتح من غير صور — اقرا `deliveryImageUrls`
+    productImage: i.product_variants?.products?.image_url ?? null,
   }));
 
   let cities = opts.cities ?? null;
@@ -202,6 +211,8 @@ export async function runBostaCreate(opts: {
     zone,
     pickupAddressId: creds.bostaPickupAddressId,
     webhookUrl: bostaWebhookUrl(creds.bostaWebhookToken),
+    // قرار الأوردر، ولو فاضي يبقى إعداد البيزنس
+    allowOpenPackage: order.allow_open_package ?? creds.bostaAllowOpenPackage,
   });
 
   if (!result.ok) return { ok: false, error: result.error };

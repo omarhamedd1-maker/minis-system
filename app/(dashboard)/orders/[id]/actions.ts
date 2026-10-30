@@ -1073,10 +1073,34 @@ export async function sendOrderToBosta(formData: FormData) {
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) redirect("/orders");
 
+  const db = createAdminClient();
+
+  /*
+    ⚠️ **الفتح قبل الدفع بيتحفظ على الأوردر قبل الإرسال** — مش بيتبعت
+    لبوسطة وخلاص. لأن الشحنة ممكن تموت وتتعاد، والبوليصة بتتطبع بعدين،
+    وصاحب البيزنس لازم يفضل شايف قرر إيه على الأوردر ده.
+
+    وبنكتب القيمة حتى لو هي نفس الافتراضي، عشان الأوردر يبقى شايل قراره
+    بنفسه ومايتأثرش لو الافتراضي اتغير بعدين.
+  */
+  const allowOpen = formData.get("allow_open") !== null;
+  const { error: prefError } = await db
+    .from("orders")
+    .update({ allow_open_package: allowOpen })
+    .eq("tenant_id", me.tenantId)
+    .eq("id", orderId);
+  // العمود لسه ماتعملش؟ الإرسال يكمّل بالافتراضي — ماينفعش يقف عشان إعداد
+  if (prefError && !/allow_open_package/i.test(prefError.message)) {
+    redirect(
+      `/orders/${orderId}?error=` +
+        encodeURIComponent("معرفناش نحفظ إعداد فتح الطرد: " + prefError.message)
+    );
+  }
+
   let ok = false;
   let message = "معرفناش نبعت الشحنة لبوسطة";
   try {
-    const res = await runBostaCreate({ db: createAdminClient(), tenantId: me.tenantId, orderId });
+    const res = await runBostaCreate({ db, tenantId: me.tenantId, orderId });
     if (res.ok) ok = true;
     else message = res.error;
   } catch (e) {
