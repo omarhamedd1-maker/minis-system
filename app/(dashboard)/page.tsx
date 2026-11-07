@@ -8,7 +8,7 @@ import {
 } from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { PeriodFilter } from "@/components/PeriodFilter";
-import { resolvePeriod } from "@/lib/periods";
+import { DEFAULT_PERIOD, resolvePeriod } from "@/lib/periods";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
 import { loadHeadline } from "@/lib/profit-headline";
@@ -125,9 +125,12 @@ export default async function StatsPage({
   const [todayYear, todayMonth] = today.split("-").map(Number);
 
   // ⚠️ **الفترة من `lib/periods`** — مصدر واحد لكل الصفحات (المرحلة ٢).
-  // الافتراضي آخر ٣٠ يوم: «النهارده» في بيزنس بالدفع عند الاستلام بتوري
-  // أوردرات من غير فلوسها. يوم واحد لسه متاح من «مدة مخصصة».
-  const range = resolvePeriod(query, { today, defaultKey: "30d" });
+  // والافتراضي من `DEFAULT_PERIOD` عشان كروت الفلوس الحيّة
+  // تفضل على نفس الفترة — اقرا التعليق جنبه.
+  const range = resolvePeriod(query, {
+    today,
+    defaultKey: DEFAULT_PERIOD,
+  });
   const periodStart = range.start ?? today;
   const periodEnd = range.end;
   const periodLabel = range.label;

@@ -1,7 +1,13 @@
 import { PeriodFilter } from "@/components/PeriodFilter";
 import { FilterBar } from "@/components/FilterBar";
 import { FilterSelect } from "@/components/FilterSelect";
-import { periodHref, previousPeriod, resolvePeriod, type PresetKey } from "@/lib/periods";
+import {
+  DEFAULT_PERIOD,
+  periodHref,
+  previousPeriod,
+  resolvePeriod,
+  type PresetKey,
+} from "@/lib/periods";
 import { SupplierField } from "@/components/SupplierField";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -73,10 +79,10 @@ export async function ExpensesTab({
 
   const today = cairoToday();
   // ⚠️ **الفترة من `lib/periods`** — مصدر واحد لكل الصفحات (المرحلة ٢).
-  // الافتراضي آخر ٣٠ يوم، و«كل الوقت» متاحة عشان دي قايمة.
+  // الافتراضي من `DEFAULT_PERIOD`، و«كل الوقت» متاحة عشان دي قايمة.
   const range = resolvePeriod(
     { period: rawPeriod, from: rawFrom, to: rawTo },
-    { today, defaultKey: "30d", allowAll: true }
+    { today, defaultKey: DEFAULT_PERIOD, allowAll: true }
   );
   const periodStart = range.start;
   // الفترة في اللينكات — عشان فلتر النوع مايضيّعهاش

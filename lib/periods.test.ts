@@ -1,7 +1,13 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { periodHref, previousPeriod, resolvePeriod, shiftDays } from "./periods";
+import {
+  DEFAULT_PERIOD,
+  periodHref,
+  previousPeriod,
+  resolvePeriod,
+  shiftDays,
+} from "./periods";
 
 const today = "2026-09-15";
 
@@ -16,9 +22,22 @@ describe("resolvePeriod", () => {
     expect(r).toMatchObject({ key: "30d", start: "2026-08-17", days: 30 });
   });
 
-  it("الشهر ده من أول الشهر", () => {
+  it("الشهر ده — من يوم ١ لآخر يوم في الشهر", () => {
     const r = resolvePeriod({ period: "month" }, { today, defaultKey: "30d" });
-    expect(r).toMatchObject({ key: "month", start: "2026-09-01", days: 15 });
+    expect(r).toMatchObject({
+      key: "month",
+      start: "2026-09-01",
+      end: "2026-09-30",
+      days: 30,
+    });
+  });
+
+  it("وآخر يوم بيتحسب صح في فبراير والشهور الناقصة", () => {
+    const end = (today: string) =>
+      resolvePeriod({ period: "month" }, { today, defaultKey: "30d" }).end;
+    expect(end("2026-02-10")).toBe("2026-02-28");
+    expect(end("2028-02-10")).toBe("2028-02-29"); // سنة كبيسة
+    expect(end("2026-12-01")).toBe("2026-12-31");
   });
 
   it("من غير اختيار = افتراضي الصفحة", () => {
@@ -92,17 +111,22 @@ describe("periodHref", () => {
   });
 });
 
-describe("⚠️ مفيش صفحة بتعرّف فتراتها بنفسها", () => {
-  const files: string[] = [];
+// كل ملفات app/ وcomponents/ — الحرّاس تحت بيمشوا على نفس القايمة
+const sourceFiles: string[] = [];
+{
   const walk = (dir: string) => {
     for (const name of readdirSync(dir)) {
       const p = join(dir, name);
       if (statSync(p).isDirectory()) walk(p);
-      else if (/\.(ts|tsx)$/.test(name) && !name.endsWith(".test.ts")) files.push(p);
+      else if (/\.(ts|tsx)$/.test(name) && !name.endsWith(".test.ts"))
+        sourceFiles.push(p);
     }
   };
   walk(join(process.cwd(), "app"));
   walk(join(process.cwd(), "components"));
+}
+
+describe("⚠️ مفيش صفحة بتعرّف فتراتها بنفسها", () => {
 
   const OWN_PERIODS = /const\s+\w*PERIODS\s*[:=]/;
 
@@ -112,7 +136,7 @@ describe("⚠️ مفيش صفحة بتعرّف فتراتها بنفسها", ()
   });
 
   it("app/ وcomponents/ مافيهمش ولا تعريف فترات", () => {
-    const offenders = files.filter((f) => OWN_PERIODS.test(readFileSync(f, "utf8")));
+    const offenders = sourceFiles.filter((f) => OWN_PERIODS.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
   });
 });
@@ -133,13 +157,13 @@ describe("previousPeriod", () => {
     expect(previousPeriod(r("7d"))).toMatchObject({ start: "2026-09-02", end: "2026-09-08" });
   });
 
-  it("الشهر ده (١٥ يوم) ← أول ١٥ يوم من الشهر اللي فات", () => {
-    expect(previousPeriod(r("month"))).toMatchObject({ start: "2026-08-01", end: "2026-08-15" });
+  it("الشهر ده ← الشهر اللي فات كامل", () => {
+    expect(previousPeriod(r("month"))).toMatchObject({ start: "2026-08-01", end: "2026-08-31" });
   });
 
-  it("الشهر اللي فات أقصر — مايعدّيش آخره", () => {
-    const march31 = resolvePeriod({ period: "month" }, { today: "2026-03-31", defaultKey: "30d" });
-    expect(previousPeriod(march31)).toMatchObject({ start: "2026-02-01", end: "2026-02-28" });
+  it("الشهر اللي فات أقصر — بياخد آخره هو مش ٣١", () => {
+    const march = resolvePeriod({ period: "month" }, { today: "2026-03-15", defaultKey: "30d" });
+    expect(previousPeriod(march)).toMatchObject({ start: "2026-02-01", end: "2026-02-28" });
   });
 
   it("مدة مخصصة ← نفس الطول قبلها", () => {
@@ -151,5 +175,55 @@ describe("previousPeriod", () => {
 
   it("كل الوقت مالهاش قبل", () => {
     expect(previousPeriod(r("all"))).toBeNull();
+  });
+});
+
+// ==========================================================================
+// ⚠️ الداشبورد بتتحسب في مكانين — ولازم يفضلوا على نفس الفترة
+// --------------------------------------------------------------------------
+// السيرفر في `app/(dashboard)/page.tsx`، وكروت الفلوس الحيّة في
+// `components/LiveMoneyCards.tsx` اللي بتعيد الحساب في المتصفح. كانوا
+// مكتوبين بإيد والتعليق بس هو اللي رابطهم — فأي تغيير في واحد بيخلّي نفس
+// الشاشة توري رقمين مختلفين لنفس الحاجة.
+// ==========================================================================
+describe("الفترة الافتراضية", () => {
+  /*
+    ⚠️ `defaultKey: "all"` مستثنى بقصد — دي مش «فترة إحصائيات»، دي قايمة
+    بتفتح على كل حاجة (صفحة الأوردرات). الممنوع هو إن صفحة تكتب فترة
+    زمنية بإيدها وتفضل ورا الباقي لما الافتراضي يتغيّر.
+  */
+  it("⚠️ مفيش ولا صفحة كاتبة فترتها الافتراضية بإيدها", () => {
+    const offenders = sourceFiles.filter((f) =>
+      /defaultKey:\s*"(today|7d|30d|month)"/.test(readFileSync(f, "utf8"))
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it("الداشبورد بمكانيها الاتنين على الثابت", () => {
+    // ⚠️ بتتحسب في السيرفر وفي المتصفح — لو افترقوا، نفس الشاشة بتوري
+    // رقمين مختلفين لنفس الحاجة
+    for (const f of ["app/(dashboard)/page.tsx", "components/LiveMoneyCards.tsx"]) {
+      expect(readFileSync(join(process.cwd(), f), "utf8")).toContain(
+        "DEFAULT_PERIOD"
+      );
+    }
+  });
+
+  it("الافتراضي «الشهر ده» — من يوم ١ لآخر يوم في الشهر", () => {
+    expect(DEFAULT_PERIOD).toBe("month");
+    const r = resolvePeriod({}, { today, defaultKey: DEFAULT_PERIOD });
+    expect(r).toMatchObject({
+      key: "month",
+      start: "2026-09-01",
+      end: "2026-09-30",
+      days: 30,
+    });
+  });
+
+  it("والمقارنة بالشهر اللي فات كامل", () => {
+    const prev = previousPeriod(
+      resolvePeriod({}, { today, defaultKey: DEFAULT_PERIOD })
+    );
+    expect(prev).toMatchObject({ start: "2026-08-01", end: "2026-08-31" });
   });
 });

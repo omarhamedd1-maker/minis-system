@@ -21,7 +21,7 @@ import { cairoToday, orderStatusBadge } from "@/lib/format";
 import { can, getSessionUser } from "@/lib/permissions";
 import { allRows, fetchAllPages } from "@/lib/fetch-all-pages";
 import { csvResponse, csvText } from "@/lib/csv";
-import { resolvePeriod } from "@/lib/periods";
+import { DEFAULT_PERIOD, resolvePeriod } from "@/lib/periods";
 import { cashRowLabel, type CashLabelRow } from "@/lib/cash-label";
 import { withRunningBalance } from "@/lib/cash-ledger";
 
@@ -147,7 +147,7 @@ export async function GET(request: Request) {
           from: params.get("from") ?? undefined,
           to: params.get("to") ?? undefined,
         },
-        { today, defaultKey: "30d", allowAll: true }
+        { today, defaultKey: DEFAULT_PERIOD, allowAll: true }
       );
       const cat = (params.get("cat") ?? "").trim();
       const data = await fetchAllPages<ExpenseRow>((from, to) => {
