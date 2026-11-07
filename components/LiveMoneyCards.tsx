@@ -10,7 +10,11 @@ import {
   type StatExpense,
 } from "@/lib/dashboard-stats";
 import { CountUp } from "./CountUp";
-import { resolvePeriod, shiftDays } from "@/lib/periods";
+import {
+  DEFAULT_PERIOD,
+  resolvePeriod,
+  shiftDays,
+} from "@/lib/periods";
 import { allRows } from "@/lib/fetch-all-pages";
 import { NOT_IN_PROFIT } from "@/lib/profit-exclusions";
 import { loadHeadline } from "@/lib/profit-headline";
@@ -72,7 +76,10 @@ export function LiveMoneyCards({
     const supabase = createClient();
     // ⚠️ نفس الفترة اللي السيرفر حسبها — من `lib/periods` بنفس الافتراضي
     const today = cairoToday();
-    const range = resolvePeriod({ period, from, to }, { today, defaultKey: "30d" });
+    const range = resolvePeriod(
+      { period, from, to },
+      { today, defaultKey: DEFAULT_PERIOD }
+    );
     const periodStart = range.start ?? today;
     const periodEnd = range.end;
     const fetchStart = shiftDays(periodStart, -1); // يوم زيادة لفرق التوقيت

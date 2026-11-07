@@ -206,6 +206,73 @@ describe("الإجمالي بالملغي والمرتجع", () => {
     expect(h.grossSales).toBe(0);
   });
 
+  // ==========================================================================
+  // ⚠️ التلاتة لازم يقفلوا: الإجمالي = المبيعات + الضايع (٧ نوفمبر ٢٠٢٦)
+  // --------------------------------------------------------------------------
+  // التلات أرقام دول على الشاشة مع بعض، وكانوا بمعادلتين مختلفتين فما
+  // كانوش بيطلّعوا بعض: ٢ سِك في نوفمبر الفرق بين الكبيرين ٨٬٣٧٧ و«الفرص
+  // الضايعة» كانت بتقول ٩٬٧٧٥.
+  // ==========================================================================
+  it("الضايع = الإجمالي ناقص المبيعات بالظبط", () => {
+    const h = computeHeadline(
+      [
+        order({ order_items: [item(1, 800)], discount: 50, shipping_price: 40 }),
+        order({
+          order_status: "cancelled",
+          order_items: [item(1, 250)],
+          discount: 25,
+          shipping_price: 30,
+        }),
+        order({
+          order_status: "returned",
+          order_items: [item(2, 100)],
+          discount: 0,
+          shipping_price: 15,
+        }),
+      ],
+      [empty],
+      day,
+      day
+    );
+    expect(h.sales).toBe(790); // 800 − 50 + 40
+    expect(h.lostValue).toBe(470); // (250 − 25 + 30) + (200 + 15)
+    expect(h.grossSales).toBe(1260);
+    expect(h.grossSales - h.sales).toBe(h.lostValue);
+  });
+
+  it("⚠️ والريفند بيتطرح من الإجمالي كمان — من غير كده مابيقفلش", () => {
+    const h = computeHeadline(
+      [
+        order({
+          order_status: "returned_after_delivery",
+          order_items: [
+            { quantity: 2, sale_price_at_order: 500, cost_price_at_order: 0, returned_quantity: 1 },
+          ],
+        }),
+        order({ order_status: "cancelled", order_items: [item(1, 300)] }),
+      ],
+      [empty],
+      day,
+      day
+    );
+    // الراجع بعد التسليم مش مستبعد — بس مستحقه بيتطرح من المبيعات
+    expect(h.sales).toBe(500); // 1000 − 500 مستحق
+    expect(h.lostValue).toBe(300);
+    expect(h.grossSales).toBe(800);
+    expect(h.grossSales - h.sales).toBe(h.lostValue);
+  });
+
+  it("مفيش ملغي ولا مرتجع؟ الضايع صفر والرقمين متساويين", () => {
+    const h = computeHeadline(
+      [order({ order_items: [item(2, 150)] })],
+      [empty],
+      day,
+      day
+    );
+    expect(h.lostValue).toBe(0);
+    expect(h.grossSales).toBe(h.sales);
+  });
+
   it("كله سليم؟ الإجمالي يساوي المبيعات", () => {
     const h = computeHeadline(
       [order({ order_items: [item(2, 150)] })],

@@ -8,7 +8,7 @@ import {
 } from "@/lib/format";
 import { GroupedBars, HBarList, LineChart } from "@/components/charts";
 import { PeriodFilter } from "@/components/PeriodFilter";
-import { resolvePeriod } from "@/lib/periods";
+import { DEFAULT_PERIOD, resolvePeriod } from "@/lib/periods";
 import { LiveMoneyCards } from "@/components/LiveMoneyCards";
 import { computeHeadline } from "@/lib/dashboard-stats";
 import { loadHeadline } from "@/lib/profit-headline";
@@ -125,9 +125,12 @@ export default async function StatsPage({
   const [todayYear, todayMonth] = today.split("-").map(Number);
 
   // ⚠️ **الفترة من `lib/periods`** — مصدر واحد لكل الصفحات (المرحلة ٢).
-  // الافتراضي آخر ٣٠ يوم: «النهارده» في بيزنس بالدفع عند الاستلام بتوري
-  // أوردرات من غير فلوسها. يوم واحد لسه متاح من «مدة مخصصة».
-  const range = resolvePeriod(query, { today, defaultKey: "30d" });
+  // والافتراضي من `DEFAULT_PERIOD` عشان كروت الفلوس الحيّة
+  // تفضل على نفس الفترة — اقرا التعليق جنبه.
+  const range = resolvePeriod(query, {
+    today,
+    defaultKey: DEFAULT_PERIOD,
+  });
   const periodStart = range.start ?? today;
   const periodEnd = range.end;
   const periodLabel = range.label;
@@ -254,8 +257,16 @@ export default async function StatsPage({
       ? Math.round((excludedOrders.length / periodOrders.length) * 100)
       : 0;
 
-  // الفرص الضايعة: قيمة الأوردرات الملغية والمرتجعة
-  const lostValue = excludedOrders.reduce((s, o) => s + itemsTotal(o), 0);
+  /**
+   * الفرص الضايعة: قيمة الأوردرات الملغية والمرتجعة.
+   *
+   * ⚠️ **من `headline` مش محسوبة هنا.** كانت بتتجمع في الصفحة بسعر
+   * البضاعة الخام — من غير خصم ومن غير شحن — والمبيعات بمعادلة تانية.
+   * فالرقمين الكبيرين على الشاشة ماكانوش بيطلّعوا الرقم التالت: ٨٬٣٧٧
+   * مقابل ٩٬٧٧٥ في ٢ سِك (نوفمبر ٢٠٢٦). دلوقتي التلاتة من مصدر واحد
+   * وبمعادلة واحدة، والأوردرات الداخلة هي الفرق الوحيد بينهم.
+   */
+  const lostValue = headline.lostValue;
 
   // العملاء المكررين
   const customerOrderCounts = new Map<string, number>();
@@ -578,7 +589,7 @@ export default async function StatsPage({
             basePath="/"
             query={query}
             current={range}
-            defaultKey="30d"
+            defaultKey={DEFAULT_PERIOD}
           />
           {seasons.length > 0 && (
             <p className="text-xs text-ink-muted">

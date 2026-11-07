@@ -15,7 +15,7 @@ export type PresetKey = "today" | "7d" | "30d" | "month";
 export type PeriodKey = PresetKey | "all" | "custom";
 
 // «النهارده» رجعت اختيار ثابت في كل الصفحات (قرار عمر ١٧ سبتمبر) — كانت
-// متاحة من «مدة مخصصة» بس. الافتراضي في الداشبورد لسه «آخر ٣٠ يوم».
+// متاحة من «مدة مخصصة» بس.
 export const PERIOD_PRESETS: { key: PresetKey; label: string }[] = [
   { key: "today", label: "النهارده" },
   { key: "7d", label: "آخر ٧ أيام" },
@@ -25,6 +25,28 @@ export const PERIOD_PRESETS: { key: PresetKey; label: string }[] = [
 
 /** «كل الوقت» — بس في القوايم اللي محتاجاها (مش في الحسابات) */
 export const ALL_LABEL = "كل الوقت";
+
+/**
+ * ⚠️⚠️ **الفترة اللي أي صفحة بتفتح عليها — ثابت واحد، مش مكتوب في كل مكان.**
+ *
+ * **«الشهر ده» بطلب عمر (٧ نوفمبر ٢٠٢٦).** التقفيل بيتعمل بالشهر،
+ * فالرقم اللي بيفتح عليه يبقى هو نفس الرقم اللي بيحاسب عليه. «آخر ٣٠
+ * يوم» كانت بتخلط شهرين على طول: يوم ٥ نوفمبر = ٥ أيام من نوفمبر و٢٥
+ * من أكتوبر في رقم واحد، ورقم كده مابتقفلش بيه.
+ *
+ * ومقابله معروف ومقبول: **أول الشهر الشاشة بتبان شبه فاضية** — يوم ٢
+ * بتحسب يومين. «آخر ٣٠ يوم» ماكانتش بتفضى أبدًا لأنها بتمشي مع
+ * النهارده. ده فرق في المعنى مش عطل.
+ *
+ * ⚠️ **والثابت مهم مش رفاهية.** الداشبورد بتتحسب في **مكانين**:
+ * السيرفر في `app/(dashboard)/page.tsx`، وكروت الفلوس الحيّة في
+ * `components/LiveMoneyCards.tsx` اللي بتعيد الحساب في المتصفح كل
+ * شوية. كان مكتوب `"30d"` في الاتنين بإيد والتعليق بس هو اللي رابطهم —
+ * ولو واحد اتغيّر من غير التاني، نفس الشاشة بتوري رقمين مختلفين لنفس
+ * الحاجة ومحدش يعرف مين الصح. فيه اختبار بيقع لو رجعت القيمة مكتوبة
+ * بإيد في أي من الاتنين.
+ */
+export const DEFAULT_PERIOD: PresetKey = "month";
 
 export type ResolvedPeriod = {
   key: PeriodKey;
@@ -112,8 +134,26 @@ export function resolvePeriod(
       : key === "30d"
         ? shiftDays(today, -29)
         : today.slice(0, 8) + "01";
+
+  /**
+   * ⚠️ **«الشهر ده» بينتهي بآخر يوم في الشهر مش بالنهارده** (قرار عمر
+   * ٧ نوفمبر ٢٠٢٦). يعني الشهر كامل من يوم ١ لآخر يوم فيه.
+   *
+   * الأيام الجاية فاضية طبعًا — مفيش أوردرات في المستقبل — فالأرقام
+   * هي هي. اللي بيتغيّر إن الشهر بيتقارن بشهر كامل زيه، والمدى اللي
+   * على الشاشة بيبقى الشهر زي ما هو مكتوب في أي تقفيل.
+   */
+  const end =
+    key === "month" ? lastDayOfMonth(today) : today;
   const label = PERIOD_PRESETS.find((p) => p.key === key)!.label;
-  return { key, start, end: today, label, days: daysBetween(start, today) };
+  return { key, start, end, label, days: daysBetween(start, end) };
+}
+
+/** آخر يوم في شهر التاريخ ده (YYYY-MM-DD) */
+export function lastDayOfMonth(dateStr: string): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  // اليوم صفر من الشهر اللي بعده = آخر يوم في الشهر ده
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
 }
 
 /**
@@ -150,21 +190,21 @@ export function periodHref(
 /**
  * الفترة اللي قبلها بنفس الطول — للمقارنة («↓ ٤٠٪ عن اللي قبلها»).
  *
- * ⚠️ **«الشهر ده» بيتقارن بنفس الأيام من الشهر اللي فات** مش بالشهر كله —
- * يوم ١٠ في الشهر مايتقارنش بـ٣٠ يوم. و«كل الوقت» مالهاش قبل.
+ * ⚠️ **«الشهر ده» بقى شهر كامل، فبيتقارن بالشهر اللي فات كامل** (٧ نوفمبر
+ * ٢٠٢٦). قبل كده كان بينتهي بالنهارده، فكان لازم يتقارن بنفس عدد الأيام
+ * من الشهر اللي فات عشان يوم ١٠ مايتقارنش بـ٣٠ يوم. و«كل الوقت» مالهاش قبل.
  */
 export function previousPeriod(
   range: ResolvedPeriod
 ): { start: string; end: string; label: string } | null {
   if (!range.start || !range.days) return null;
   if (range.key === "month") {
-    const start = shiftDays(range.start, -1).slice(0, 8) + "01";
+    // الشهر كامل بيتقارن بالشهر اللي قبله كامل — من يوم ١ لآخر يوم
     const lastOfPrev = shiftDays(range.start, -1);
-    const end = shiftDays(start, range.days - 1);
     return {
-      start,
-      end: end > lastOfPrev ? lastOfPrev : end,
-      label: "نفس الأيام من الشهر اللي فات",
+      start: lastOfPrev.slice(0, 8) + "01",
+      end: lastOfPrev,
+      label: "الشهر اللي فات",
     };
   }
   return {

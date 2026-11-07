@@ -110,3 +110,56 @@ export async function loadCashTotals(
   );
   return sumCash(rows);
 }
+
+/**
+ * نفس المجاميع بس لفترة — لتاب «الحركات» لما يكون فيه فلتر وقت.
+ *
+ * ⚠️ **مابتعدّيش على `cash_totals`** — الدالة في الداتابيز بتجمع الكل
+ * ومابتاخدش تواريخ. فالمدة بتتحسب بالصفحات، وده أبطأ بس مابيقصّش.
+ *
+ * @param tenantId ⚠️ إجباري — زي `loadCashTotals`.
+ */
+export async function loadCashTotalsBetween(
+  db: SupabaseClient,
+  tenantId: string,
+  start: string,
+  end: string
+): Promise<CashTotals> {
+  const rows = await fetchAllPages<Move>((from, to) =>
+    db
+      .from("cash_transactions")
+      .select("direction, amount")
+      .eq("tenant_id", tenantId)
+      .gte("transaction_date", start)
+      .lte("transaction_date", end)
+      .order("id")
+      .range(from, to)
+  );
+  return sumCash(rows);
+}
+
+/**
+ * الرصيد لحد تاريخ معيّن — **مش الرصيد النهارده**.
+ *
+ * ⚠️⚠️ **ده شرط عشان الرصيد الجاري في الدفتر يبقى صح.** الدفتر بيحسب
+ * الرصيد من فوق لتحت: بيبدأ من رصيد آخر سطر معروض وبيطرح لتحت. ولو
+ * الفلتر على شهر فات، الرصيد اللي بيبدأ منه لازم يكون رصيد **آخر يوم في
+ * الفترة** — لو بدأنا برصيد النهارده، كل سطر في الصفحة هيطلع غلط
+ * بمقدار كل اللي حصل بعد الفترة.
+ */
+export async function loadBalanceAsOf(
+  db: SupabaseClient,
+  tenantId: string,
+  end: string
+): Promise<number> {
+  const rows = await fetchAllPages<Move>((from, to) =>
+    db
+      .from("cash_transactions")
+      .select("direction, amount")
+      .eq("tenant_id", tenantId)
+      .lte("transaction_date", end)
+      .order("id")
+      .range(from, to)
+  );
+  return sumCash(rows).balance;
+}
