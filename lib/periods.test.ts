@@ -193,10 +193,25 @@ describe("الفترة الافتراضية", () => {
     زمنية بإيدها وتفضل ورا الباقي لما الافتراضي يتغيّر.
   */
   it("⚠️ مفيش ولا صفحة كاتبة فترتها الافتراضية بإيدها", () => {
+    /*
+      ⚠️ الشكلين — `defaultKey: "30d"` في استدعاء `resolvePeriod`،
+      و`defaultKey="30d"` كـprop على `PeriodFilter`. أول ما الحارس اتكتب
+      على الشكل الأول بس، فضل تلات مواضع بالشكل التاني في `ExpensesTab`
+      وواحد في الداشبورد — والفلتر كان هيعلّم على افتراضي مش موجود.
+    */
+    const HARDCODED = /defaultKey[:=]\s*"(today|7d|30d|month)"/;
     const offenders = sourceFiles.filter((f) =>
-      /defaultKey:\s*"(today|7d|30d|month)"/.test(readFileSync(f, "utf8"))
+      HARDCODED.test(readFileSync(f, "utf8"))
     );
     expect(offenders).toEqual([]);
+  });
+
+  it("الحارس نفسه بيمسك الشكلين", () => {
+    const HARDCODED = /defaultKey[:=]\s*"(today|7d|30d|month)"/;
+    expect(HARDCODED.test('{ today, defaultKey: "30d" }')).toBe(true);
+    expect(HARDCODED.test('<PeriodFilter defaultKey="month" />')).toBe(true);
+    // «كل الوقت» مسموحة — دي قايمة مش فترة إحصائيات
+    expect(HARDCODED.test('defaultKey="all"')).toBe(false);
   });
 
   it("الداشبورد بمكانيها الاتنين على الثابت", () => {

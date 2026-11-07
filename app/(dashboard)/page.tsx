@@ -581,7 +581,7 @@ export default async function StatsPage({
             basePath="/"
             query={query}
             current={range}
-            defaultKey="30d"
+            defaultKey={DEFAULT_PERIOD}
           />
           {seasons.length > 0 && (
             <p className="text-xs text-ink-muted">

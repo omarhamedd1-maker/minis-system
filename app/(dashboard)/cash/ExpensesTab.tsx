@@ -89,7 +89,7 @@ export async function ExpensesTab({
   const periodParams: Record<string, string> =
     range.key === "custom" && range.from && range.to
       ? { from: range.from, to: range.to }
-      : range.key !== "30d"
+      : range.key !== DEFAULT_PERIOD
         ? { period: range.key }
         : {};
 
@@ -187,7 +187,7 @@ export async function ExpensesTab({
       "/cash",
       { tab: "expenses", cat: c },
       range.key === "custom" ? { from: range.from!, to: range.to! } : { key: range.key as PresetKey | "all" },
-      "30d"
+      DEFAULT_PERIOD
     );
   };
 
@@ -244,13 +244,13 @@ export async function ExpensesTab({
       {/* شريط الفلاتر الموحّد — التصنيفات منسدلة (١٣ نوع ماينفعوش شرايح) */}
       <FilterBar
         chips={cat ? [{ label: cat, removeHref: buildHref({ cat: null }) }] : []}
-        clearHref={cat || range.key !== "30d" ? "/cash?tab=expenses" : undefined}
+        clearHref={cat || range.key !== DEFAULT_PERIOD ? "/cash?tab=expenses" : undefined}
       >
         <PeriodFilter
           basePath="/cash"
           query={{ tab: "expenses", cat }}
           current={range}
-          defaultKey="30d"
+          defaultKey={DEFAULT_PERIOD}
           allowAll
         />
         <FilterSelect

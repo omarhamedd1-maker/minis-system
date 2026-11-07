@@ -5,7 +5,11 @@ import { CashManualRow } from "@/components/CashManualRow";
 import { CashCard } from "@/components/CashCard";
 import { can, type SessionUser } from "@/lib/permissions";
 import { SubmitOnce } from "@/components/SubmitOnce";
-import type { CashTotals } from "@/lib/cash-totals";
+import {
+  loadBalanceAsOf,
+  loadCashTotalsBetween,
+  type CashTotals,
+} from "@/lib/cash-totals";
 import { cashRowLabel, type CashLabelRow } from "@/lib/cash-label";
 import { cashSourceNote } from "@/lib/cash-reversal";
 import {
@@ -24,6 +28,12 @@ import {
 import { OPENING, OPENING_LABEL, latestOpeningDate } from "@/lib/cash-opening";
 import { resolveShowCount } from "@/lib/show-more";
 import { allRows } from "@/lib/fetch-all-pages";
+import { PeriodFilter } from "@/components/PeriodFilter";
+import {
+  periodHref,
+  resolvePeriod,
+  type PresetKey,
+} from "@/lib/periods";
 
 /** الخزنة بتعرض ١٠٠ حركة في المرة — زي ما كانت */
 const CASH_STEP = 100;
@@ -62,6 +72,9 @@ export async function MovesTab({
     deleted?: string;
     show?: string;
     dir?: string;
+    period?: string;
+    from?: string;
+    to?: string;
   };
   user: SessionUser;
   totals: CashTotals;
@@ -72,12 +85,29 @@ export async function MovesTab({
   const isAdmin = can(user, "cash.edit");
   const supabase = await createClient();
 
+  /**
+   * ⚠️ **الافتراضي «كل الوقت» مش «الشهر ده»** زي باقي الصفحات.
+   *
+   * ده دفتر مش تقرير: مينيز عندها ١٢٣ حركة منهم ٢ في نوفمبر، ومينو
+   * ١٣٥ منهم صفر (قياس ٧ نوفمبر ٢٠٢٦). افتراضي بالشهر معناه إن اللي
+   * بيفتح الخزنة يلاقي دفتره فاضي — والفلتر موجود لو عايز شهر بعينه.
+   */
+  const range = resolvePeriod(
+    { period: params.period, from: params.from, to: params.to },
+    { today: cairoToday(), defaultKey: "all", allowAll: true }
+  );
+
   let rowsQuery = supabase
     .from("cash_transactions")
     .select(
       "id, direction, amount, source_type, description, transaction_date, created_by_name, origin, orders(order_number, customers(full_name)), expenses(category, description)"
     );
   if (dir) rowsQuery = rowsQuery.eq("direction", dir);
+  if (range.start) {
+    rowsQuery = rowsQuery
+      .gte("transaction_date", range.start)
+      .lte("transaction_date", range.end);
+  }
 
   const rowsResult = await rowsQuery
       .order("transaction_date", { ascending: false })
@@ -95,7 +125,30 @@ export async function MovesTab({
     );
   }
 
-  const { totalIn, totalOut, balance, countAll, countIn, countOut } = totals;
+  /**
+   * ⚠️ **المجاميع بتتبع الفلتر، والرصيد الكبير فوق لأ.**
+   *
+   * «الرصيد» في رأس الصفحة هو الفلوس اللي في الدرج دلوقتي — رقم واحد
+   * مالوش علاقة بأي فلتر. أما «الداخل» و«الخارج» وسطر المجموع فدول
+   * بيوصفوا اللي معروض، فلازم يتحركوا مع الفترة وإلا الفلتر بيبقى كدّاب.
+   */
+  const scoped = range.start
+    ? await loadCashTotalsBetween(supabase, user.tenantId, range.start, range.end)
+    : totals;
+  const { totalIn, totalOut, countAll, countIn, countOut } = scoped;
+  /**
+   * ⚠️ **رقمين مختلفين وبيتلخبطوا بسهولة:**
+   *
+   * - `net` = داخل ناقص خارج **في الفترة** — ده اللي في سطر المجموع.
+   * - `seedBalance` = رصيد الخزنة في **آخر يوم في الفترة** — ده اللي
+   *   الدفتر بيبدأ بيه عدّه من فوق لتحت (اقرا `loadBalanceAsOf`).
+   *
+   * من غير فلتر الاتنين بيبقوا نفس الرقم، ومع فلتر بيفترقوا تمامًا.
+   */
+  const net = scoped.balance;
+  const seedBalance = range.start
+    ? await loadBalanceAsOf(supabase, user.tenantId, range.end)
+    : totals.balance;
 
   // الرصيد الافتتاحي وأول حركة — السطر بتاعه بيقول هو كام وآخر تاريخ ينفع
   const [{ data: opening }, { data: firstMove }] = await Promise.all([
@@ -138,9 +191,29 @@ export async function MovesTab({
   const ledger: ((typeof transactions)[number] & {
     balanceAfter: number | undefined;
   })[] = showBalance
-    ? withRunningBalance(transactions, balance)
+    ? withRunningBalance(transactions, seedBalance)
     : transactions.map((row) => ({ ...row, balanceAfter: undefined }));
   const days = groupByDay(ledger, matching > transactions.length);
+
+  const exportHref = periodHref(
+    "/export",
+    { what: "cash", dir: dir || undefined },
+    range.key === "custom"
+      ? { from: range.from!, to: range.to! }
+      : { key: range.key as PresetKey | "all" },
+    "all"
+  );
+
+  /** لينك الاتجاه — بيحافظ على الفترة المختارة */
+  const dirHref = (key: string) =>
+    periodHref(
+      "/cash",
+      { tab: "moves", dir: key || undefined },
+      range.key === "custom"
+        ? { from: range.from!, to: range.to! }
+        : { key: range.key as PresetKey | "all" },
+      "all"
+    );
 
   // سطر المجموع — بإشارة مع اللون، مش بداله
   const summary =
@@ -148,7 +221,7 @@ export async function MovesTab({
       ? `${moves(countIn)} داخلة · +${formatMoney(totalIn)}`
       : dir === "out"
         ? `${moves(countOut)} خارجة · −${formatMoney(totalOut)}`
-        : `${moves(countAll)} · صافي ${balance < 0 ? "−" : "+"}${formatMoney(Math.abs(balance))}`;
+        : `${moves(countAll)} · صافي ${net < 0 ? "−" : "+"}${formatMoney(Math.abs(net))}`;
 
   return (
     <div className="space-y-4">
@@ -263,6 +336,15 @@ export async function MovesTab({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
+        <PeriodFilter
+          basePath="/cash"
+          query={{ tab: "moves", dir: dir || undefined }}
+          current={range}
+          defaultKey="all"
+          allowAll
+          // الصفحة بترجع لأولها لما الفترة تتغيّر
+          resetKeys={["show"]}
+        />
         <div
           role="group"
           aria-label="الاتجاه"
@@ -271,7 +353,8 @@ export async function MovesTab({
           {DIRECTIONS.map((d) => (
             <Link
               key={d.key}
-              href={d.key ? `/cash?tab=moves&dir=${d.key}` : "/cash?tab=moves"}
+              // ⚠️ الفترة لازم تتحفظ — من غير كده الاتجاه بيصفّرها
+              href={dirHref(d.key)}
               aria-current={dir === d.key ? "true" : undefined}
               className={`rounded-control px-3 py-1 text-xs font-medium ${
                 dir === d.key
@@ -287,7 +370,8 @@ export async function MovesTab({
           <span className="text-xs tabular-nums text-ink-muted">{summary}</span>
           {can(user, "finance.export") && (
             <a
-              href={`/export?what=cash${dir ? `&dir=${dir}` : ""}`}
+              // الملف بيطلع بنفس اللي على الشاشة — الاتجاه والفترة
+              href={exportHref}
               className="rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-body hover:bg-sunken"
             >
               تنزيل Excel

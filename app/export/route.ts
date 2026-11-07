@@ -188,6 +188,14 @@ export async function GET(request: Request) {
         return new Response("مالكش صلاحية تشوف الخزنة", { status: 403 });
       }
       const dir = params.get("dir");
+      const range = resolvePeriod(
+        {
+          period: params.get("period") ?? undefined,
+          from: params.get("from") ?? undefined,
+          to: params.get("to") ?? undefined,
+        },
+        { today, defaultKey: "all", allowAll: true }
+      );
       // بترتيب الدفتر (الأحدث الأول) عشان الرصيد الجاري — والملف بيطلع من الأقدم
       const data = await fetchAllPages<CashRow>((from, to) =>
         supabase
@@ -205,9 +213,15 @@ export async function GET(request: Request) {
         (s, r) => s + (r.direction === "in" ? 1 : r.direction === "out" ? -1 : 0) * Number(r.amount),
         0
       );
-      // الرصيد الجاري على كل الحركات، وبعدين الفلتر — عشان الرقم يفضل صح
+      /*
+        ⚠️ **الرصيد الجاري على كل الحركات، وبعدين الفلتر** — عشان الرقم
+        يفضل صح. ده بيسري على فلتر التاريخ زي فلتر الاتجاه بالظبط: لو
+        قصّينا الصفوف الأول، كل رصيد في الملف هيطلع غلط.
+      */
+      const inRange = (d: string | null) =>
+        !range.start || (!!d && d >= range.start && d <= range.end);
       const rows = withRunningBalance(data, balance)
-        .filter((r) => !dir || r.direction === dir)
+        .filter((r) => (!dir || r.direction === dir) && inRange(r.transaction_date))
         .reverse();
       return csvResponse(
         csvText(
