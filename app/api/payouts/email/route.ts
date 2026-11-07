@@ -190,7 +190,9 @@ export async function POST(req: Request) {
       fees_amount: p.fees,
       net_amount: p.net,
       order_count: p.orderCount,
-      status: match.ok ? "matched" : "needs_review",
+      // ⚠️ الأوردرات مش شرط للتسجيل — الفلوس وصلت بغض النظر عنها.
+      // السبب بيتكتب للعرض بس، مش عشان يوقّف حاجة.
+      status: "matched",
       review_reason: match.ok ? null : match.reason,
       // ⚠️ النافذة الزمنية نتيجتها **مرجّحة** مش مؤكدة
       match_confidence: match.ok ? (match.how === "window" ? "likely" : "exact") : null,
@@ -225,16 +227,25 @@ export async function POST(req: Request) {
       .in("id", match.orderIds);
   }
 
-  // ===== التسجيل التلقائي (الخطوة ٧ · قرار عمر ٢١ سبتمبر) =====
-  //
-  // ⚠️⚠️ **الحركة بتتعمل للمطابق بس.** المطابقة معناها إن مجموع أوردرات
-  // حقيقية عندنا = مبلغ التحويل بالمليم، يعني الإيميل مش بس «وصل» — هو
-  // اتحقق من جوّه السيستم. واللي مايطابقش بيفضل مستني دوسة.
-  //
-  // والحركة نوعها `payout` ومربوطة بالتحويل، فأي مراجعة بعدين بتعرف
-  // مصدرها، والإلغاء بيمشي بالحركة العكسية زي أي حركة (MONEY §٦.٢).
+  /*
+    ===== التسجيل التلقائي (الخطوة ٧ · قرار عمر ٢١ سبتمبر) =====
+
+    ⚠️⚠️ **الحركة بقت بتتعمل لكل تحويل، مش للمطابق بس** (قرار عمر
+    ٧ نوفمبر ٢٠٢٦).
+
+    كانت مشروطة بإن مجموع أوردرات عندنا = مبلغ التحويل بالمليم. والشرط
+    ده كان بيقف كتير: ٢ سِك عندها ١٢٦ تحويل و٥١ حركة يدوية بس، يعني
+    الأغلبية كانت هتستنى دوسة للأبد.
+
+    **والفلوس وصلت فعلًا بغض النظر عن الأوردرات.** بوسطة حوّلت، والخزنة
+    لازم تعكس ده. مطابقة الأوردرات حاجة تانية — بتأثر على ربط الأوردر
+    بتحويله، مش على إن الفلوس دخلت.
+
+    والحركة نوعها `payout` ومربوطة بالتحويل، فأي مراجعة بعدين بتعرف
+    مصدرها، والإلغاء بيمشي بالحركة العكسية زي أي حركة (MONEY §٦.٢).
+  */
   let cashId: string | null = null;
-  if (match.ok && p.net > 0) {
+  if (p.net > 0) {
     const { data: row, error: cashError } = await db
       .from("cash_transactions")
       .insert({
@@ -259,12 +270,13 @@ export async function POST(req: Request) {
         .eq("tenant_id", tenantId)
         .eq("id", payout.id as string);
     } else {
-      // الحركة فشلت؟ التحويل بيفضل مستني دوسة بدل ما يبان متأكّد وهو ناقص
+      // ⚠️ الحركة فشلت فعلًا (عطل في الداتابيز) — دي الحالة الوحيدة اللي
+      // لسه بتستنى تدخّل، لأن الفلوس مش في الرصيد والسيستم عارف كده
       await db
         .from("courier_payouts")
         .update({
           status: "needs_review",
-          review_reason: "الإيميل طابق بس الحركة مااتعملتش — دوس «اعمل حركة»",
+          review_reason: "الحركة مااتعملتش — " + (cashError?.message ?? "سبب مش معروف"),
         })
         .eq("tenant_id", tenantId)
         .eq("id", payout.id as string);
@@ -276,7 +288,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     invoice: p.invoiceNumber,
-    status: match.ok ? (cashId ? "confirmed" : "needs_review") : "needs_review",
+    status: cashId ? "confirmed" : "needs_review",
     orders: match.ok ? match.orderIds.length : 0,
     cash: cashId ? p.net : 0,
   });
