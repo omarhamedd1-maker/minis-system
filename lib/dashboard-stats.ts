@@ -1,7 +1,12 @@
 // حسابات كروت الداشبورد — مشتركة بين السيرفر (أول تحميل) والعميل (التحديث اللايف)
 import { AT_CARRIER_STATUSES, EXCLUDED_STATUSES } from "./format";
 import { splitExpenses } from "./profit-exclusions";
-import { itemCost, orderRefund, type MoneyItem } from "./returned-items";
+import {
+  itemCost,
+  orderNetTotal,
+  orderRefund,
+  type MoneyItem,
+} from "./returned-items";
 
 // ملحوظة: الشحن اللي العميل بيدفعه مابقاش رقم ثابت — بيتقرا من كل أوردر
 // زي ما نزل من شوبيفاي، فلو اختلف من أوردر للتاني الحسبة تفضل صح.
@@ -157,6 +162,8 @@ export type Headline = {
    * بيوري حجم الحركة كله في الفترة زي ما شوبيفاي شايفاه.
    */
   grossSales: number;
+  /** قيمة الملغي والمرتجع — بتساوي `grossSales` ناقص `sales` بالظبط */
+  lostValue: number;
   profit: number;
   /** المصاريف اللي بتدخل الربح بس */
   expensesTotal: number;
@@ -197,23 +204,32 @@ export function computeHeadline(
       !EXCLUDED.includes(o.order_status ?? "")
   );
 
+  /*
+    ==========================================================================
+    التلات أرقام دي **لازم تقفل على بعضها**: الإجمالي = المبيعات + الضايع.
+    --------------------------------------------------------------------------
+    ⚠️ قبل ٧ نوفمبر ٢٠٢٦ ماكانتش بتقفل، وكانوا تلاتتهم على الشاشة مع بعض:
+
+      • `grossSales` ماكانش بيطرح الريفند أصلاً.
+      • و«الفرص الضايعة» في الداشبورد كانت بتجمع **سعر البضاعة الخام** —
+        من غير خصم ومن غير شحن.
+
+    النتيجة إن الفرق بين الرقمين الكبيرين مايساويش الرقم التالت: ٨٬٣٧٧
+    مقابل ٩٬٧٥٧ في ٢ سِك (نوفمبر)، و٦٬٠٦٠ فرق في مينيز على السنة.
+
+    دلوقتي تلاتتهم بـ`orderNetTotal` — **معادلة واحدة** (البنود − الخصم +
+    الشحن − الريفند)، والاختلاف الوحيد بينهم هو الأوردرات الداخلة في كل
+    واحد. وفيه اختبار بيتأكد إن المعادلة بتقفل.
+    ==========================================================================
+  */
   // المبيعات شاملة الشحن اللي العميل دفعه — عشان الرقم يقارن بشوبيفاي على طول
-  const sales = validOrders.reduce(
-    (s, o) =>
-      s +
-      itemsTotal(o) -
-      o.discount +
-      Number(o.shipping_price ?? 0) -
-      orderRefund(o),
-    0
-  );
-  // ⚠️ **الإجمالي من غير فلتر حالة** — نفس معادلة المبيعات بالظبط، بس على
-  // كل الأوردرات اللي اتعملت في الفترة: الملغي والمرتجع كمان. الفرق بينه
-  // وبين `sales` هو بالظبط قيمة اللي اتلغى أو رجع.
-  const grossSales = periodOrders.reduce(
-    (s, o) => s + itemsTotal(o) - o.discount + Number(o.shipping_price ?? 0),
-    0
-  );
+  const sales = validOrders.reduce((s, o) => s + orderNetTotal(o), 0);
+  /** الإجمالي من غير فلتر حالة — الملغي والمرتجع كمان */
+  const grossSales = periodOrders.reduce((s, o) => s + orderNetTotal(o), 0);
+  /** الضايع: الملغي والمرتجع بس — بنفس المعادلة عشان الفرق يبقى هو هو */
+  const lostValue = periodOrders
+    .filter((o) => EXCLUDED.includes(o.order_status ?? ""))
+    .reduce((s, o) => s + orderNetTotal(o), 0);
   const profit = validOrders.reduce(
     (s, o) => s + itemsProfit(o) - o.discount,
     0
@@ -270,6 +286,7 @@ export function computeHeadline(
   return {
     sales,
     grossSales,
+    lostValue,
     profit,
     expensesTotal,
     expensesExcluded,

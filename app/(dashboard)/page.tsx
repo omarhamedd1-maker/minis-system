@@ -257,8 +257,16 @@ export default async function StatsPage({
       ? Math.round((excludedOrders.length / periodOrders.length) * 100)
       : 0;
 
-  // الفرص الضايعة: قيمة الأوردرات الملغية والمرتجعة
-  const lostValue = excludedOrders.reduce((s, o) => s + itemsTotal(o), 0);
+  /**
+   * الفرص الضايعة: قيمة الأوردرات الملغية والمرتجعة.
+   *
+   * ⚠️ **من `headline` مش محسوبة هنا.** كانت بتتجمع في الصفحة بسعر
+   * البضاعة الخام — من غير خصم ومن غير شحن — والمبيعات بمعادلة تانية.
+   * فالرقمين الكبيرين على الشاشة ماكانوش بيطلّعوا الرقم التالت: ٨٬٣٧٧
+   * مقابل ٩٬٧٧٥ في ٢ سِك (نوفمبر ٢٠٢٦). دلوقتي التلاتة من مصدر واحد
+   * وبمعادلة واحدة، والأوردرات الداخلة هي الفرق الوحيد بينهم.
+   */
+  const lostValue = headline.lostValue;
 
   // العملاء المكررين
   const customerOrderCounts = new Map<string, number>();

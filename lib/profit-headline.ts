@@ -29,15 +29,24 @@ type Row = {
   net_profit: number | string;
   cod: number | string;
   order_count: number | string;
+  /** ممكن ميكونش موجود — الدالة القديمة في الداتابيز مكانتش بترجّعه */
+  lost_value?: number | string | null;
 };
 
 export function headlineFromRow(row: Row | undefined): Headline {
   const n = (k: keyof Row) => Number(row?.[k] ?? 0);
   const orderCount = n("order_count");
   const sales = n("sales");
+  const grossSales = n("gross_sales");
   return {
     sales,
-    grossSales: n("gross_sales"),
+    grossSales,
+    /*
+      ⚠️ **لو الدالة القديمة لسه في الداتابيز** (قبل `sql/profit-headline.sql`
+      بتاع ٧ نوفمبر ٢٠٢٦) الخانة دي بترجع فاضية — ساعتها بنحسبها بالطرح.
+      في الدالة الجديدة الرقمين متساويين، فالنتيجة واحدة في الحالتين.
+    */
+    lostValue: row?.lost_value == null ? grossSales - sales : n("lost_value"),
     profit: n("profit"),
     expensesTotal: n("expenses_total"),
     expensesExcluded: n("expenses_excluded"),
