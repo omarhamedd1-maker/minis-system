@@ -38,9 +38,11 @@ export type PlanRow = {
   orderIds: string[];
   match: MatchResult;
   cash: CashLink | null;
-  /** `matched` = جاهز للتسجيل · `needs_review` = مستني عمر · `duplicate` = متسجّل قبل كده */
-  status: "matched" | "needs_review" | "duplicate";
-  /** ليه محتاج مراجعة — بيتكتب على الصف زي ما هو */
+  /** `matched` = هيتسجّل · `duplicate` = متسجّل قبل كده */
+  status: "matched" | "duplicate";
+  /** مفيش حركة خزنة بالمبلغ ده — السيستم هو اللي هيعملها */
+  createCash?: boolean;
+  /** ملاحظة للعرض — **مش** حاجة بتوقّف التسجيل */
   reason?: string;
 };
 
@@ -49,7 +51,8 @@ export type ImportPlan = {
   totals: {
     all: number;
     matched: number;
-    needsReview: number;
+    /** عدد الحركات اللي السيستم هيعملها لوحده */
+    autoCash: number;
     duplicates: number;
     /** مجموع الصافي لكل التحويلات الجديدة */
     net: number;
@@ -121,12 +124,21 @@ export function planImport(
     );
     if (cash.kind === "linked" || cash.kind === "diff") takenCash.add(cash.cashId);
 
-    const reasons: string[] = [];
-    // الأوردرات مش شرط للتسجيل لما الربط بيكون على الفلوس بس
-    if (!match.ok && input.matchOrders !== false) reasons.push(match.reason);
-    if (cash.kind === "gap") reasons.push("مفيش حركة خزنة بالمبلغ ده — محتاج دوسة");
+    /*
+      ⚠️⚠️ **مفيش حاجة بتستنى دوسة** (قرار عمر ٧ نوفمبر ٢٠٢٦).
+
+      الأسباب دي كانت بتوقّف التحويل على «محتاج مراجعة». والواقع إن
+      الفلوس وصلت بغض النظر عنها: ٢ سِك عندها ١٢٦ تحويل و٥١ حركة يدوية
+      بس، يعني الأغلبية كانت هتستنى للأبد.
+
+      دلوقتي كل تحويل بيتسجّل، والسبب بيتكتب **ملاحظة للعرض** مش حالة
+      بتوقّف. واللي مالوش حركة خزنة، السيستم بيعملها له (`createCash`).
+    */
+    const notes: string[] = [];
+    if (!match.ok && input.matchOrders !== false) notes.push(match.reason);
+    if (cash.kind === "gap") notes.push("الحركة اتعملت تلقائي");
     if (cash.kind === "diff") {
-      reasons.push(`الحركة اليدوية فرقها ${cash.difference} — محتاج قرار`);
+      notes.push(`الحركة اليدوية فرقها ${cash.difference}`);
     }
 
     out.push({
@@ -134,8 +146,9 @@ export function planImport(
       orderIds,
       match,
       cash,
-      status: reasons.length === 0 ? "matched" : "needs_review",
-      ...(reasons.length > 0 ? { reason: reasons.join(" · ") } : {}),
+      status: "matched",
+      createCash: cash.kind === "gap",
+      ...(notes.length > 0 ? { reason: notes.join(" · ") } : {}),
     });
   }
 
@@ -147,7 +160,8 @@ export function planImport(
     totals: {
       all: rowsOut.length,
       matched: rowsOut.filter((r) => r.status === "matched").length,
-      needsReview: rowsOut.filter((r) => r.status === "needs_review").length,
+      // الحركات اللي السيستم هيعملها بنفسه — بتتعرض في المعاينة
+      autoCash: rowsOut.filter((r) => r.createCash).length,
       duplicates: rowsOut.filter((r) => r.status === "duplicate").length,
       net: round(fresh.reduce((s, r) => s + r.row.net, 0)),
       fees: round(fresh.reduce((s, r) => s + r.row.fees, 0)),

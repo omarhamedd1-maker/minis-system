@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordPayoutCash } from "@/lib/payout-cash";
 import { requirePermission, type SessionUser } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity";
 import { auditFields, reverseCashRows } from "@/lib/cash-reversal";
@@ -134,7 +135,7 @@ export async function previewPayoutImport(
 }
 
 export type ApplyResult =
-  | { ok: true; saved: number; needsReview: number; skipped: number }
+  | { ok: true; saved: number; autoCash: number; skipped: number }
   | { ok: false; error: string };
 
 /**
@@ -149,7 +150,7 @@ export async function applyPayoutImport(
   const me = await requirePermission("cash.edit");
   const db = createAdminClient();
   let saved = 0;
-  let needsReview = 0;
+  let autoCash = 0;
   let skipped = 0;
 
   try {
@@ -176,7 +177,8 @@ export async function applyPayoutImport(
           fees_amount: line.row.fees,
           net_amount: line.row.net,
           order_count: line.row.orderCount,
-          status: line.status === "matched" ? "matched" : "needs_review",
+          // ⚠️ مفيش «محتاج مراجعة» من الاستيراد — السبب ملاحظة للعرض بس
+          status: "matched",
           review_reason: line.reason ?? null,
           cash_transaction_id: linkedCash,
           // فرق التقريب بيتسجّل — هو فرق حقيقي في الرصيد
@@ -227,8 +229,38 @@ export async function applyPayoutImport(
           .eq("id", linkedCash);
       }
 
-      if (line.status === "matched") saved++;
-      else needsReview++;
+      saved++;
+
+      /*
+        ⚠️⚠️ **التحويل اللي مالوش حركة خزنة، السيستم بيعملها له.**
+
+        قبل كده كان بيقف مستني دوسة — و٢ سِك عندها ١٢٦ تحويل و٥١ حركة
+        يدوية بس، يعني الأغلبية كانت هتستنى للأبد (قرار عمر ٧ نوفمبر
+        ٢٠٢٦).
+      */
+      if (line.createCash && line.row.net > 0) {
+        const made = await recordPayoutCash(db, {
+          tenantId: me.tenantId,
+          payoutId: payout.id as string,
+          invoiceNumber: line.row.invoiceNumber,
+          date: line.row.date,
+          net: line.row.net,
+          byName: me.fullName ?? me.email ?? "استيراد الكشف",
+        });
+        if (made.ok) autoCash++;
+        else {
+          // ⚠️ الحركة فشلت = الفلوس مش في الرصيد. دي الحالة الوحيدة
+          // اللي لسه بتستاهل وقفة، لأن السيستم عارف إن فيه نقص
+          await db
+            .from("courier_payouts")
+            .update({
+              status: "needs_review",
+              review_reason: "الحركة مااتعملتش — " + made.error,
+            })
+            .eq("tenant_id", me.tenantId)
+            .eq("id", payout.id as string);
+        }
+      }
     }
 
     /**
@@ -257,11 +289,11 @@ export async function applyPayoutImport(
     await logActivity(
       me,
       "payout.import",
-      `استورد كشف المحفظة: ${saved} مطابق · ${needsReview} محتاج مراجعة · ${skipped} متسجّل قبل كده` +
+      `استورد كشف المحفظة: ${saved} تحويل · ${autoCash} حركة خزنة تلقائي · ${skipped} متسجّل قبل كده` +
         (feeLines > 0 ? ` · ${feeLines} بند رسوم` : "")
     );
     revalidatePath("/cash");
-    return { ok: true, saved, needsReview, skipped };
+    return { ok: true, saved, autoCash, skipped };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }

@@ -114,3 +114,75 @@ export async function loadAtCourier(
     lastPayoutDate,
   };
 }
+
+/**
+ * ==========================================================================
+ * حركة الخزنة بتاعة التحويل — بتتعمل لوحدها (قرار عمر ٧ نوفمبر ٢٠٢٦)
+ * --------------------------------------------------------------------------
+ * قبل كده التحويل اللي مالوش حركة خزنة بنفس المبلغ كان بيقف على
+ * «محتاج مراجعة» ويستنى حد يعمل الحركة بإيده. ودي كانت أكتر حاجة
+ * بتوقّف التحويلات: ٢ سِك عندها ١٢٦ تحويل و٥١ حركة يدوية بس.
+ *
+ * دلوقتي الفلوس اللي بوسطة حوّلتها بتنزل الخزنة لوحدها.
+ *
+ * ⚠️ **`source_type = 'payout'` مش `'manual'`** — عشان تبان إنها جاية من
+ * تحويل مش من إيد حد، وعشان متتعدّلش من شاشة الحركات اليدوية.
+ *
+ * ⚠️ **ومربوطة بالتحويل في الاتجاهين** (`related_payout_id` على الحركة،
+ * و`cash_transaction_id` على التحويل). من غير الاتجاهين، إلغاء التحويل
+ * مابيلاقيش حركته والفلوس بتفضل في الرصيد.
+ * ==========================================================================
+ */
+export async function recordPayoutCash(
+  db: SupabaseClient,
+  input: {
+    tenantId: string;
+    payoutId: string;
+    invoiceNumber: string | null;
+    date: string;
+    net: number;
+    byName: string;
+  }
+): Promise<{ ok: true; cashId: string } | { ok: false; error: string }> {
+  const { data, error } = await db
+    .from("cash_transactions")
+    .insert({
+      // ⚠️ صريح — مفتاح الأدمن بيعدّي فوق قواعد العزل
+      tenant_id: input.tenantId,
+      direction: "in",
+      amount: input.net,
+      source_type: "payout",
+      transaction_date: input.date,
+      related_payout_id: input.payoutId,
+      description: `تحويل بوسطة${input.invoiceNumber ? ` ${input.invoiceNumber}` : ""}`,
+      created_by_name: input.byName,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { ok: false, error: error?.message ?? "معرفناش نسجّل حركة الخزنة" };
+  }
+
+  const cashId = data.id as string;
+  const { error: linkError } = await db
+    .from("courier_payouts")
+    .update({ cash_transaction_id: cashId })
+    .eq("tenant_id", input.tenantId)
+    .eq("id", input.payoutId);
+
+  /*
+    ⚠️⚠️ **الحركة مابتتمسحش لو الربط فشل.**
+
+    الحركة اتعملت فعلًا والفلوس بقت في الرصيد — ومسحها بيخالف قاعدة
+    السيستم (MONEY §٦.٢: الحركات بتتلغى بحركة عكسية، مابتتمسحش).
+    وفيه اختبار بيقع لو حد حاول (`lib/cash-reversal.test.ts`).
+
+    وهي مش ضايعة: `related_payout_id` اتكتب عليها وقت الإنشاء، فالحركة
+    عارفة تحويلها حتى لو التحويل مش عارف حركته. والتحويل بيتعلّم
+    «محتاج مراجعة» من اللي بينده، فالنقص بيبان مش بيختفي.
+  */
+  if (linkError) return { ok: false, error: linkError.message };
+
+  return { ok: true, cashId };
+}

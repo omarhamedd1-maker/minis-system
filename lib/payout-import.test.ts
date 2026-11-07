@@ -26,22 +26,33 @@ describe("⛔ خطة الاستيراد — بتربط مش بتسجّل", () =>
   it("مطابق + حركة يدوية موجودة = جاهز، ومفيش حركة جديدة", () => {
     const p = plan([row({})], [cand("a", 1000, "05")], [{ id: "m1", amount: 1000, date: "2026-09-06" }]);
     expect(p.rows[0]).toMatchObject({ status: "matched", orderIds: ["a"], cash: { kind: "linked", cashId: "m1" } });
-    expect(p.totals).toMatchObject({ matched: 1, needsReview: 0 });
+    expect(p.totals).toMatchObject({ matched: 1, autoCash: 0 });
   });
 
-  it("⚠️ مفيش حركة = «ناقص» ومستني دوسة", () => {
+  // ==========================================================================
+  // ⚠️ مفيش «مستني دوسة» (قرار عمر ٧ نوفمبر ٢٠٢٦)
+  // --------------------------------------------------------------------------
+  // كل تحويل بيتسجّل، واللي مالوش حركة خزنة السيستم بيعملها له. السبب
+  // بقى ملاحظة للعرض مش حالة بتوقّف.
+  // ==========================================================================
+  it("مفيش حركة = التحويل يتسجّل والسيستم يعمل الحركة", () => {
     const p = plan([row({})], [cand("a", 1000, "05")]);
-    expect(p.rows[0].status).toBe("needs_review");
-    expect(p.rows[0].reason).toContain("محتاج دوسة");
+    expect(p.rows[0].status).toBe("matched");
+    expect(p.rows[0].createCash).toBe(true);
+    expect(p.rows[0].reason).toContain("تلقائي");
+    expect(p.totals).toMatchObject({ matched: 1, autoCash: 1 });
   });
 
-  it("⚠️ فرق التقريب = مستني قرار مش تصليح", () => {
+  it("⚠️ فيه حركة بفرق = بتتربط والفرق بيتكتب، من غير وقفة", () => {
     const p = plan([row({ net: 6437.44, gross: 6437.44 })], [cand("a", 6437.44, "05")], [
       { id: "m2", amount: 6400, date: "2026-09-06" },
     ]);
-    expect(p.rows[0].status).toBe("needs_review");
+    expect(p.rows[0].status).toBe("matched");
+    // ⚠️ الفرق بيفضل مكتوب — اللي اتشال هو الوقفة مش الشفافية
     expect(p.rows[0].reason).toContain("37.44");
     expect(p.rows[0].cash).toMatchObject({ kind: "diff", cashId: "m2" });
+    // الحركة موجودة بالفعل، فمفيش حركة جديدة
+    expect(p.rows[0].createCash).toBe(false);
   });
 
   it("⚠️ الأوردر والحركة بيتحجزوا لأول تحويل — مش بيتكرروا", () => {

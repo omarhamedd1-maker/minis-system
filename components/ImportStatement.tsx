@@ -181,7 +181,7 @@ export function ImportStatement({
             }`}
           >
             {done.ok
-              ? `اتسجّل ${done.saved} تحويل متطابق · ${done.needsReview} محتاج مراجعة · ${done.skipped} كان متسجّل قبل كده`
+              ? `اتسجّل ${done.saved} تحويل · ${done.autoCash} حركة خزنة اتعملت تلقائي · ${done.skipped} كان متسجّل قبل كده`
               : done.error}
           </p>
         )}
@@ -189,9 +189,9 @@ export function ImportStatement({
         {plan && (
           <div className="space-y-2">
             <p className="text-xs text-ink-body">
-              {plan.totals.all} تحويل · {plan.totals.matched} متطابق ·{" "}
-              {plan.totals.needsReview} محتاج مراجعة · {plan.totals.duplicates}{" "}
-              متسجّل قبل كده
+              {plan.totals.all} تحويل · {plan.totals.matched} هيتسجّل ·{" "}
+              {plan.totals.autoCash} حركة خزنة هتتعمل تلقائي ·{" "}
+              {plan.totals.duplicates} متسجّل قبل كده
             </p>
             {/*
               ⚠️⚠️ **الملف المقصوص شكله زي الكامل.** الكشف الأصلي ٨ أعمدة
