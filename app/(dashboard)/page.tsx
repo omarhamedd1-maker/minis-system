@@ -659,7 +659,7 @@ export default async function StatsPage({
             </p>
           </div>
           <div className="rounded-card bg-surface p-4 shadow-card sm:p-5">
-            <p className="text-sm text-ink-muted">فرص ضايعة (ملغي ومرتجع)</p>
+            <p className="text-sm text-ink-muted">ملغي ومرتجع</p>
             <p className="mt-1 text-xl font-bold sm:text-2xl text-danger">
               {formatMoney(lostValue)}
             </p>
@@ -932,7 +932,7 @@ export default async function StatsPage({
         كل الأرقام محسوبة لايف من الأوردرات والمصاريف — صافي الربح = أرباح
         المنتجات + الشحن المحصّل من العملاء − المصاريف − تكلفة شحن بوسطة
         الحقيقية. الأوردرات الملغية والمرتجعة مستبعدة من المبيعات والأرباح،
-        وبتظهر في توزيع الحالات والفرص الضايعة بس
+        وبتظهر في توزيع الحالات وكرت «ملغي ومرتجع» بس
       </p>
     </div>
   );

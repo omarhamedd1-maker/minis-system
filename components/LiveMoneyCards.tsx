@@ -190,7 +190,7 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
-      <Card label="تحصيل بوسطة (المسلّمة)">
+      <Card label="أوردرات اتسلمت">
         <span className="text-success">
           <CountUp key={key} baseline={base} value={s.cod} format={money} />
         </span>
@@ -213,16 +213,29 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
+      {/*
+        ⚠️ **الكرت ده بيقلب اسمه، مابيوريش رقم بالسالب.**
+
+        الرقم هو رسوم بوسطة ناقص اللي العميل دفعه. السالب معناه العميل
+        دفع شحن أكتر من تكلفة بوسطة — يعني **كسب** مش خسارة. وكان بيتعرض
+        «شحن دفعته من جيبك: ؜−٢٬٠٨٧» وده بيتقرا غلط: إشارة ناقص جنب كلمة
+        «دفعته» معناها إيه بالظبط؟
+        دلوقتي الاسم بيقول الاتجاه، والرقم موجب دايمًا (قرار عمر ٨ نوفمبر).
+      */}
       <Card
-        label="شحن دفعته من جيبك"
-        hint="رسوم بوسطة ناقص اللي العميل دفعه — بيتخصم من صافي الربح، وبيتحسب بعد ما بوسطة تستلم"
+        label={s.netShipping >= 0 ? "شحن دفعته من جيبك" : "شحن كسبت فيه"}
+        hint={
+          s.netShipping >= 0
+            ? "رسوم بوسطة أكتر من اللي العميل دفعه — الفرق بيتخصم من صافي الربح"
+            : "العميل دفع شحن أكتر من رسوم بوسطة — الفرق بيتضاف لصافي الربح"
+        }
         className="lg:col-span-2"
       >
-        <span className="text-danger">
+        <span className={s.netShipping >= 0 ? "text-danger" : "text-success"}>
           <CountUp
             key={key}
             baseline={base}
-            value={s.netShipping}
+            value={Math.abs(s.netShipping)}
             format={money}
           />
         </span>
