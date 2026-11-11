@@ -22,7 +22,7 @@
 //      مطفية**، والشاشة في الإعدادات بتقول كده.
 // ==========================================================================
 
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { keyFromAddress } from "@/lib/payout-address";
 import { parsePayoutEmail } from "@/lib/payout-email";
@@ -33,15 +33,17 @@ import { verifySvix } from "@/lib/svix-verify";
 
 export const dynamic = "force-dynamic";
 /**
- * ⚠️⚠️ **من غير ده الشغل في الخلفية بيتقطع** (١١ نوفمبر ٢٠٢٦).
+ * ⚠️⚠️ **الراوت ده بيخلّص شغله قبل ما يرد — بقصد** (١١ نوفمبر ٢٠٢٦).
  *
- * `after()` بيشتغل بعد ما الرد يروح، بس الدالة لازم تفضل عايشة — والحد
- * الافتراضي ١٠ ثواني. والشغل هنا بيجيب نص الإيميل من ريسِند ويقرا
- * أوردرات البيزنس ويطابق، وده بيعدّيها.
+ * جرّبنا نخلّيه يرد فورًا ويكمّل في `after()` زي راوت بوسطة، عشان ريسِند
+ * كانت بتقطع بـ`request timed out`. والنتيجة طلعت **أسوأ**: ريسِند بقت
+ * تشوف `200` وتمشي، و`after()` مااشتغلش أصلًا — ولا سطر اتكتب في
+ * `courier_payout_emails`، ولا حتى سطر فشل. يعني الإيصال بيضيع في صمت
+ * بدل ما يفشل ويتعاد.
  *
- * والنتيجة كانت أسوأ من الـtimeout اللي قبله: ريسِند بتشوف ٢٠٠ وتعتبرها
- * نجحت، والتحويل مايتسجّلش ومحدش ياخد باله. راوت بوسطة معاه ٣٠٠ من
- * زمان لنفس السبب — وده فات.
+ * **والفشل الصريح أأمن من النجاح الكاذب**: ريسِند بتعيد المحاولة ٥ مرات،
+ * وفيه زرار Replay في لوحتها. فرجّعناه يشتغل كامل، ومعاه مهلة طويلة
+ * عشان مايتقطعش في النص.
  */
 export const maxDuration = 300;
 
@@ -102,41 +104,6 @@ export async function POST(req: Request) {
   const tenantId = (cred?.tenant_id as string | undefined) ?? null;
   if (!tenantId) return NextResponse.json({ error: "العنوان مش معروف" }, { status: 404 });
 
-  /*
-    ⚠️⚠️ **الرد بيروح فورًا والشغل بيكمّل بعده** (١١ نوفمبر ٢٠٢٦).
-
-    ريسِند بتستنى ثواني معدودة. والراوت ده بيجيب نص الإيميل بنداء تاني
-    لريسِند، وبعدين يقرا أوردرات البيزنس كلها ويطابق ويكتب — وده أطول
-    من صبرها. النتيجة: `request timed out` و٥ محاولات فاشلة لكل إيصال،
-    وإيصالات ٩ و١٠ نوفمبر ضاعت كده.
-
-    ⚠️ **ومش حل مؤقت** — ده نفس اللي عامله راوت بوسطة من زمان لنفس
-    السبب بالظبط. الويب هوك بيتأكد من هويته ويرد، والشغل بيكمّل في
-    الخلفية. لو الشغل وقع، السطر بيتسجّل في `courier_payout_emails`
-    زي ما كان.
-  */
-  after(() => handleInbound({ db, tenantId, inbound, from, subject, body }));
-  return NextResponse.json({ ok: true, queued: true });
-}
-
-/** الشغل التقيل — بيجري بعد ما الرد اتبعت */
-async function handleInbound({
-  db,
-  tenantId,
-  inbound,
-  from,
-  subject,
-  body,
-}: {
-  db: ReturnType<typeof createAdminClient>;
-  tenantId: string;
-  inbound: ReturnType<typeof readInbound>;
-  from: string | null;
-  subject: string | null;
-  /** الحمولة الخام — بتتخزّن لو جلب المحتوى من ريسِند فشل */
-  body: unknown;
-}) {
-
   // ⚠️ **الويب هوك مابيبعتش الجسم** — بيتجاب بنداء تاني بمفتاح Resend
   let raw = inbound.body;
   let dkimOk: boolean | null = inbound.dkim ? /pass/i.test(inbound.dkim) : null;
@@ -145,7 +112,7 @@ async function handleInbound({
   if (!raw && inbound.emailId) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      return;
+      return NextResponse.json({ error: "RESEND_API_KEY ناقص" }, { status: 500 });
     }
     try {
       const mail = await fetchResendEmail(inbound.emailId, apiKey);
@@ -187,7 +154,7 @@ async function handleInbound({
       parsed_ok: false,
       error: fetchError ? `${fetchError} (فالمحتوى ناقص)` : parsed.reason,
     });
-    return;
+    return NextResponse.json({ ok: true, skipped: fetchError ?? parsed.reason });
   }
   const p = parsed.payout;
 
@@ -200,7 +167,7 @@ async function handleInbound({
     .maybeSingle();
   if (already) {
     await log({ parsed_ok: true, payout_id: already.id as string, error: "متسجّل قبل كده" });
-    return;
+    return NextResponse.json({ ok: true, duplicate: p.invoiceNumber });
   }
 
   // المطابقة بالأوردرات — **السماح صفر هنا**، الإيميل بيدّي الرقم الصحيح
@@ -251,7 +218,7 @@ async function handleInbound({
 
   if (error || !payout) {
     await log({ parsed_ok: true, error: "معرفناش نسجّل التحويل: " + (error?.message ?? "") });
-    return;
+    return NextResponse.json({ error: "معرفناش نسجّل التحويل" }, { status: 500 });
   }
 
   if (match.ok && match.orderIds.length > 0) {
@@ -332,4 +299,11 @@ async function handleInbound({
 
   await log({ parsed_ok: true, payout_id: payout.id as string });
 
+  return NextResponse.json({
+    ok: true,
+    invoice: p.invoiceNumber,
+    status: cashId ? "confirmed" : "needs_review",
+    orders: match.ok ? match.orderIds.length : 0,
+    cash: cashId ? p.net : 0,
+  });
 }
