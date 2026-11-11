@@ -67,8 +67,28 @@ export async function fetchResendEmail(
   apiKey: string,
   fetchImpl: typeof fetch = fetch
 ): Promise<FetchedEmail> {
+  /*
+    ⚠️⚠️ **المهلة دي هي الفرق بين «بطيء» و«ميت»** (١١ نوفمبر ٢٠٢٦).
+
+    النداء ده كان من غير مهلة خالص. ولما علّق، الراوت كله فضل مستني
+    لحد ما فيرسل قتلته:
+
+      Vercel Runtime Timeout Error: Task timed out after 300 seconds
+
+    والنتيجة إن إيصالات التحويل بطّلت تدخل من ٩ نوفمبر. وأسوأ حاجة إن
+    **ولا سطر اتكتب في `courier_payout_emails`** — لأن التسجيل بيحصل
+    بعد النداء ده، فالإيصال كان بيضيع من غير أي أثر.
+
+    وبوسطة عندها نفس الحماية من زمان (`lib/bosta/client.ts`)، وده
+    الملف الوحيد اللي كان ناسيها.
+
+    **والفشل أحسن من التعليق**: الكود اللي تحت بيمسك الخطأ ويكمّل
+    بالحمولة اللي الويب هوك بعتها، فالإيصال بيتسجّل حتى لو المحتوى
+    مجاش.
+  */
   const res = await fetchImpl(`https://api.resend.com/emails/receiving/${emailId}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) {
     throw new Error(`Resend ردّت ${res.status} وإحنا بنجيب محتوى الإيميل`);
