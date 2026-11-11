@@ -253,8 +253,29 @@ export async function runBostaSync(opts: {
   dry?: boolean;
   now?: Date;
   fetchImpl?: typeof fetch;
+  /**
+   * ⚠️⚠️ **شحنة واحدة بس — لرنّة الويب هوك.**
+   *
+   * الرنّة بتوصل ومعاها رقم التتبع، وكنا برضه بنعمل مزامنة **كاملة**:
+   * كل شحنات البيزنس من بوسطة (٥٦٥ شحنة) وكل أوردراته. القياس على ٣٠
+   * يوم: ٩٧٧ رنّة × ٣٣ ثانية = **٩ ساعات معالجة** عشان نقرا شحنة
+   * واحدة كنا عارفين رقمها من الأول. ودي لوحدها كانت ربع استهلاك
+   * فيرسل اللي قفل المشروع (٩ نوفمبر ٢٠٢٦).
+   *
+   * لما تتحدد: بنجيب الشحنة دي بس، وبنقرا أوردرها هو، وبنعدّي
+   * الصيانة الدورية كلها (الشحنات الواقفة · فلوس المرتجع · اللي
+   * محدش أكّدها · رسوم بوسطة) — دي شغل اللفة الدورية مش شغل الرنّة.
+   */
+  onlyTracking?: string;
 }): Promise<SyncSummary> {
-  const { db, tenantId, dry = false, now = new Date(), fetchImpl } = opts;
+  const {
+    db,
+    tenantId,
+    dry = false,
+    now = new Date(),
+    fetchImpl,
+    onlyTracking,
+  } = opts;
 
   const creds = await loadTenantCredentials(db, tenantId);
 
@@ -283,13 +304,31 @@ export async function runBostaSync(opts: {
     returnsNeedReview: [],
   };
 
-  const deliveries = await fetchAllDeliveries(apiKey, fetchImpl);
+  // شحنة واحدة أو الكل — اقرا `onlyTracking` فوق
+  let deliveries: BostaRawDelivery[];
+  if (onlyTracking) {
+    const one = await fetchDeliveryByTracking(apiKey, onlyTracking, fetchImpl);
+    deliveries = one ? [one as unknown as BostaRawDelivery] : [];
+  } else {
+    deliveries = await fetchAllDeliveries(apiKey, fetchImpl);
+  }
   summary.fetched = deliveries.length;
 
-  const { data: orders, error } = await allRows(db
-    .from("orders")
-    .select(ORDER_FIELDS)
-    .eq("tenant_id", tenantId));
+  /*
+    ⚠️ **الأوردرات كمان بتتقيّد.** مع شحنة واحدة، قراية ٥٦٥ أوردر مالهاش
+    لازمة — والمطابقة هتلاقيها برقم التتبع على طول.
+  */
+  const { data: orders, error } = onlyTracking
+    ? await db
+        .from("orders")
+        .select(ORDER_FIELDS)
+        .eq("tenant_id", tenantId)
+        .eq("bosta_tracking", onlyTracking)
+        // رقم التتبع فريد — والحد هنا عشان الحارس يشوفها محدودة
+        .limit(1)
+    : await allRows(
+        db.from("orders").select(ORDER_FIELDS).eq("tenant_id", tenantId)
+      );
   if (error) throw new Error("معرفناش نقرا الأوردرات: " + error.message);
 
   const rows = (orders ?? []) as unknown as OrderRow[];
@@ -738,6 +777,19 @@ export async function runBostaSync(opts: {
       }
     }
   }
+
+  /*
+    ==========================================================================
+    ⚠️⚠️ **الصيانة الدورية — بتتعدّى في رنّة الويب هوك** (٩ نوفمبر ٢٠٢٦)
+    --------------------------------------------------------------------------
+    كل اللي تحت بيمشي على **كل** أوردرات البيزنس: الشحنات الواقفة، وفلوس
+    المرتجع، واللي محدش أكّدها، ورسوم بوسطة الحقيقية. ده شغل اللفة
+    الدورية — مالوش علاقة بالشحنة اللي رنّت.
+
+    وكان بيتعمل في كل رنّة، ٩٧٧ مرة في الشهر. اقرا `onlyTracking` فوق.
+    ==========================================================================
+  */
+  if (onlyTracking) return summary;
 
   // ===== الشحنات الواقفة: المندوب مجاش ياخدها =====
   // بنقرا من جديد بعد التحديثات عشان الحالات تبقى أحدث حاجة. ودي مسألة
