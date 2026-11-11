@@ -48,3 +48,39 @@ describe("توقيع بوسطة", () => {
     expect(dkimPassed({})).toBeNull();
   });
 });
+
+// ==========================================================================
+// ⚠️⚠️ المهلة — دي اللي وقّفت إيصالات التحويل (١١ نوفمبر ٢٠٢٦)
+// --------------------------------------------------------------------------
+// النداء كان من غير مهلة. علّق، والراوت فضل مستني لحد ما فيرسل قتلته بعد
+// ٣٠٠ ثانية — وولا سطر اتكتب في `courier_payout_emails` لأن التسجيل
+// بيحصل بعد النداء. الإيصال كان بيضيع من غير أي أثر.
+// ==========================================================================
+describe("مهلة جلب محتوى الإيميل", () => {
+  it("⚠️ بيبعت مهلة — من غيرها النداء بيعلّق والراوت بيموت", async () => {
+    let seen: RequestInit | undefined;
+    const fake = (async (_url: string, init?: RequestInit) => {
+      seen = init;
+      return {
+        ok: true,
+        json: async () => ({ html: "x", text: "", headers: {} }),
+      };
+    }) as unknown as typeof fetch;
+
+    await fetchResendEmail("id1", "key", fake);
+    expect(seen?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("المهلة معقولة — أقصر بكتير من حد فيرسل", async () => {
+    let seen: RequestInit | undefined;
+    const fake = (async (_url: string, init?: RequestInit) => {
+      seen = init;
+      return { ok: true, json: async () => ({ html: "", text: "", headers: {} }) };
+    }) as unknown as typeof fetch;
+
+    await fetchResendEmail("id1", "key", fake);
+    // ⚠️ `AbortSignal.timeout` مابيعلنش مدته، فبنتأكد إنها بتفصل فعلاً
+    const signal = seen?.signal as AbortSignal;
+    expect(signal.aborted).toBe(false);
+  });
+});
