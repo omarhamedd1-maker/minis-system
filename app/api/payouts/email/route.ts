@@ -32,6 +32,18 @@ import { dkimPassed, fetchResendEmail, readInbound } from "@/lib/resend-inbound"
 import { verifySvix } from "@/lib/svix-verify";
 
 export const dynamic = "force-dynamic";
+/**
+ * ⚠️⚠️ **من غير ده الشغل في الخلفية بيتقطع** (١١ نوفمبر ٢٠٢٦).
+ *
+ * `after()` بيشتغل بعد ما الرد يروح، بس الدالة لازم تفضل عايشة — والحد
+ * الافتراضي ١٠ ثواني. والشغل هنا بيجيب نص الإيميل من ريسِند ويقرا
+ * أوردرات البيزنس ويطابق، وده بيعدّيها.
+ *
+ * والنتيجة كانت أسوأ من الـtimeout اللي قبله: ريسِند بتشوف ٢٠٠ وتعتبرها
+ * نجحت، والتحويل مايتسجّلش ومحدش ياخد باله. راوت بوسطة معاه ٣٠٠ من
+ * زمان لنفس السبب — وده فات.
+ */
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   // ⚠️ **الجسم الخام الأول** — التوقيع بيتحسب عليه بالحرف، والتحويل
