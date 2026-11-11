@@ -69,17 +69,41 @@ function byOldest(a: PayoutCandidate, b: PayoutCandidate) {
  * في المجموعة = ١٤٢ ألف احتمال). بنوقف بعد ما نلاقي احتمالين: الاتنين
  * كفاية عشان نقول «مش متأكدين» ونرجّع لعمر.
  */
+/**
+ * ⚠️⚠️ **سقف خطوات البحث — من غيره الراوت بيموت** (١١ نوفمبر ٢٠٢٦).
+ *
+ * «بيوقف بعد احتمالين» مش كفاية: لو مفيش ولا احتمال، البحث بيلف على
+ * **كل** التوافيق قبل ما يقول «مفيش». حصل فعلًا في ٢ سِك: ٣٠٥ أوردر
+ * متسلّم غير مربوط، وإيصال بـ١٢ أوردر = ‎C(305,12) ≈ 10²¹‎ احتمال.
+ * الراوت فضل يلف ٣٠٠ ثانية لحد ما فيرسل قتلته، وريسِند شافتها
+ * `request timed out`، **وولا سطر اتسجّل** — فإيصالات ٩ و١٠ نوفمبر
+ * ضاعت من غير أثر.
+ *
+ * واللغم ده كان نايم من الأول: طول ما أغلب الأوردرات مربوطة بتحويلات
+ * المرشحين قليلين. أول ما التحويلات اتصفّرت، الكل بقى مرشّح والبحث انفجر.
+ *
+ * ٢٠٠ ألف خطوة = أقل من ثانية. واللي يعدّيها بيرجّع `gaveUp` والتحويل
+ * يتسجّل من غير ربط أوردرات — **التسجيل أهم من الربط**.
+ */
+export const SEARCH_BUDGET = 200_000;
+
 function search(
   items: PayoutCandidate[],
   count: number,
   gross: number,
   limit = 2
-): string[][] {
+): { found: string[][]; gaveUp: boolean } {
   const found: string[][] = [];
   const pick: PayoutCandidate[] = [];
+  let steps = 0;
+  let gaveUp = false;
 
   const walk = (start: number, left: number, remaining: number) => {
-    if (found.length >= limit) return;
+    if (gaveUp || found.length >= limit) return;
+    if (++steps > SEARCH_BUDGET) {
+      gaveUp = true;
+      return;
+    }
     if (left === 0) {
       if (eq(remaining, 0)) found.push(pick.map((p) => p.orderId));
       return;
@@ -90,12 +114,12 @@ function search(
       pick.push(items[i]);
       walk(i + 1, left - 1, remaining - items[i].cod);
       pick.pop();
-      if (found.length >= limit) return;
+      if (gaveUp || found.length >= limit) return;
     }
   };
 
   walk(0, count, gross);
-  return found;
+  return { found, gaveUp };
 }
 
 /**
@@ -131,8 +155,13 @@ export function matchPayout(
     }
 
     // ٢) بحث عن أي مجموعة بنفس العدد والمجموع
-    const hits = search(sorted, count, gross);
-    if (hits.length === 1) return { ok: true, orderIds: hits[0], how: "search" };
+    const full = search(sorted, count, gross);
+    const hits = full.found;
+    // ⚠️ احتمال واحد بيتقبل بس لو البحث **خلص** — لو وقف عند السقف،
+    // ممكن يكون فيه احتمال تاني ماوصلناش له، فمش «مؤكد»
+    if (!full.gaveUp && hits.length === 1) {
+      return { ok: true, orderIds: hits[0], how: "search" };
+    }
 
     // ٣) محاولة أخيرة: نافذة زمنية حوالين تاريخ التحويل.
     // ⚠️ **بتتجرّب كمان لما يبقى فيه أكتر من احتمال** — النافذة هي اللي
@@ -141,9 +170,16 @@ export function matchPayout(
     if (payout.date) {
       const near = sorted.filter((c) => withinDays(c.deliveredAt, payout.date!, WINDOW_DAYS));
       if (near.length >= count) {
-        const hit = search(near, count, gross, 1);
+        const hit = search(near, count, gross, 1).found;
         if (hit.length === 1) return { ok: true, orderIds: hit[0], how: "window" };
       }
+    }
+
+    if (full.gaveUp) {
+      return {
+        ok: false,
+        reason: `الأوردرات المتاحة كتير (${sorted.length}) — المطابقة التلقائية مش ممكنة، اربطهم من «دوّر على أوردراته»`,
+      };
     }
 
     if (hits.length > 1) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { linkToManualCash, matchPayout, type PayoutCandidate } from "./payout-match";
+import { linkToManualCash, matchPayout, SEARCH_BUDGET, type PayoutCandidate } from "./payout-match";
 
 const o = (id: string, cod: number, day: string): PayoutCandidate => ({
   orderId: id,
@@ -196,5 +196,42 @@ describe("⚠️ الفرق الكبير مش «فرق» — ده تحويل م�
   it("والنسبة بتحمي المبالغ الكبيرة — ١٠٪ فأكتر مش تقريب", () => {
     const big = [{ id: "m3", amount: 5000, date: "2026-08-13" }];
     expect(linkToManualCash({ net: 10000, date: "2026-08-13" }, big, new Set(), 1).kind).toBe("gap");
+  });
+});
+
+// ==========================================================================
+// ⚠️⚠️ سقف البحث — اللغم اللي وقّف إيصالات التحويل (١١ نوفمبر ٢٠٢٦)
+// --------------------------------------------------------------------------
+// ٢ سِك: ٣٠٥ أوردر متسلّم غير مربوط + إيصال بـ١٢ أوردر = ‎10²¹‎ احتمال.
+// الراوت لفّ ٣٠٠ ثانية وفيرسل قتلته، وولا سطر اتسجّل.
+// ==========================================================================
+describe("سقف البحث التوافيقي", () => {
+  const many = Array.from({ length: 305 }, (_, i) => ({
+    orderId: `o${i}`,
+    // مبالغ متنوعة بكسور عشان مفيش مجموعة تقفل على الرقم المطلوب
+    cod: 500 + ((i * 37) % 900) + 0.37,
+    deliveredAt: `2026-0${1 + (i % 9)}-1${i % 9}T10:00:00Z`,
+  }));
+
+  it("⚠️ ٣٠٥ مرشح و١٢ في الإيصال = بيرد في ثواني مش بيعلّق", () => {
+    const t0 = Date.now();
+    const r = matchPayout({ gross: 7302.13, count: 12 }, many);
+    expect(Date.now() - t0).toBeLessThan(5000);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toContain("305");
+  });
+
+  it("السقف مابيأثرش على الحالة العادية — عدد قليل بيتطابق زي ما هو", () => {
+    const few = [
+      { orderId: "a", cod: 100, deliveredAt: "2026-11-01T10:00:00Z" },
+      { orderId: "b", cod: 250, deliveredAt: "2026-11-02T10:00:00Z" },
+      { orderId: "c", cod: 400, deliveredAt: "2026-11-03T10:00:00Z" },
+    ];
+    const r = matchPayout({ gross: 500, count: 2 }, few);
+    expect(r).toMatchObject({ ok: true, orderIds: ["a", "c"], how: "search" });
+  });
+
+  it("السقف رقم معقول — أقل من ثانية شغل", () => {
+    expect(SEARCH_BUDGET).toBeLessThanOrEqual(1_000_000);
   });
 });
