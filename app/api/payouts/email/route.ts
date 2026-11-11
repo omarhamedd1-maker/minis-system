@@ -22,7 +22,7 @@
 //      مطفية**، والشاشة في الإعدادات بتقول كده.
 // ==========================================================================
 
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { keyFromAddress } from "@/lib/payout-address";
 import { parsePayoutEmail } from "@/lib/payout-email";
@@ -90,6 +90,41 @@ export async function POST(req: Request) {
   const tenantId = (cred?.tenant_id as string | undefined) ?? null;
   if (!tenantId) return NextResponse.json({ error: "العنوان مش معروف" }, { status: 404 });
 
+  /*
+    ⚠️⚠️ **الرد بيروح فورًا والشغل بيكمّل بعده** (١١ نوفمبر ٢٠٢٦).
+
+    ريسِند بتستنى ثواني معدودة. والراوت ده بيجيب نص الإيميل بنداء تاني
+    لريسِند، وبعدين يقرا أوردرات البيزنس كلها ويطابق ويكتب — وده أطول
+    من صبرها. النتيجة: `request timed out` و٥ محاولات فاشلة لكل إيصال،
+    وإيصالات ٩ و١٠ نوفمبر ضاعت كده.
+
+    ⚠️ **ومش حل مؤقت** — ده نفس اللي عامله راوت بوسطة من زمان لنفس
+    السبب بالظبط. الويب هوك بيتأكد من هويته ويرد، والشغل بيكمّل في
+    الخلفية. لو الشغل وقع، السطر بيتسجّل في `courier_payout_emails`
+    زي ما كان.
+  */
+  after(() => handleInbound({ db, tenantId, inbound, from, subject, body }));
+  return NextResponse.json({ ok: true, queued: true });
+}
+
+/** الشغل التقيل — بيجري بعد ما الرد اتبعت */
+async function handleInbound({
+  db,
+  tenantId,
+  inbound,
+  from,
+  subject,
+  body,
+}: {
+  db: ReturnType<typeof createAdminClient>;
+  tenantId: string;
+  inbound: ReturnType<typeof readInbound>;
+  from: string | null;
+  subject: string | null;
+  /** الحمولة الخام — بتتخزّن لو جلب المحتوى من ريسِند فشل */
+  body: unknown;
+}) {
+
   // ⚠️ **الويب هوك مابيبعتش الجسم** — بيتجاب بنداء تاني بمفتاح Resend
   let raw = inbound.body;
   let dkimOk: boolean | null = inbound.dkim ? /pass/i.test(inbound.dkim) : null;
@@ -98,7 +133,7 @@ export async function POST(req: Request) {
   if (!raw && inbound.emailId) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "RESEND_API_KEY ناقص" }, { status: 500 });
+      return;
     }
     try {
       const mail = await fetchResendEmail(inbound.emailId, apiKey);
@@ -140,7 +175,7 @@ export async function POST(req: Request) {
       parsed_ok: false,
       error: fetchError ? `${fetchError} (فالمحتوى ناقص)` : parsed.reason,
     });
-    return NextResponse.json({ ok: true, skipped: fetchError ?? parsed.reason });
+    return;
   }
   const p = parsed.payout;
 
@@ -153,7 +188,7 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (already) {
     await log({ parsed_ok: true, payout_id: already.id as string, error: "متسجّل قبل كده" });
-    return NextResponse.json({ ok: true, duplicate: p.invoiceNumber });
+    return;
   }
 
   // المطابقة بالأوردرات — **السماح صفر هنا**، الإيميل بيدّي الرقم الصحيح
@@ -204,7 +239,7 @@ export async function POST(req: Request) {
 
   if (error || !payout) {
     await log({ parsed_ok: true, error: "معرفناش نسجّل التحويل: " + (error?.message ?? "") });
-    return NextResponse.json({ error: "معرفناش نسجّل التحويل" }, { status: 500 });
+    return;
   }
 
   if (match.ok && match.orderIds.length > 0) {
@@ -285,11 +320,4 @@ export async function POST(req: Request) {
 
   await log({ parsed_ok: true, payout_id: payout.id as string });
 
-  return NextResponse.json({
-    ok: true,
-    invoice: p.invoiceNumber,
-    status: cashId ? "confirmed" : "needs_review",
-    orders: match.ok ? match.orderIds.length : 0,
-    cash: cashId ? p.net : 0,
-  });
 }
