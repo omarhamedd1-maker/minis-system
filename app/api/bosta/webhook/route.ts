@@ -130,7 +130,12 @@ export async function POST(req: Request) {
     const startedAt = Date.now();
     const admin = createAdminClient();
     try {
-      const summary = await runBostaSync({ db: admin, tenantId });
+      // ⚠️ الشحنة اللي رنّت بس — مش كل شحنات البيزنس. اقرا `onlyTracking`
+      const summary = await runBostaSync({
+        db: admin,
+        tenantId,
+        onlyTracking: tracking,
+      });
       // ⚠️ **التسجيل مش رفاهية**: المهلة فوق بتقرا من الجدول ده، ومن غير
       // التسجيل كل رنّة هتلاقي «مافيش مزامنة» وتشتغل — يعني المهلة تبقى
       // موجودة في الكود وميتة في الواقع. وبيخلّي الجرس نفسه يبان شغّال.
