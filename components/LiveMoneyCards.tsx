@@ -122,10 +122,29 @@ export function LiveMoneyCards({
     }
 
     load();
-    const id = setInterval(load, 20000); // تحديث كل 20 ثانية
+
+    /*
+      ⚠️ **دقيقة مش ٢٠ ثانية** (٩ نوفمبر ٢٠٢٦) — فيرسل وقّف المشروع لما
+      الاستخدام عدّى الباقة المجانية. الداشبورد المفتوحة كانت بتنده
+      الداتابيز ١٨٠ مرة في الساعة، وده بيتضاعف بعدد الشاشات المفتوحة.
+
+      ⚠️ **وبتوقف وهي مخفية.** التاب المفتوح في الخلفية كان بيفضل بينده
+      طول اليوم ومحدش بيبص عليه — وده كان أغبى استهلاك في السيستم.
+    */
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, 60_000);
+
+    // وأول ما ترجع للتاب، حدّث على طول بدل ما تستنى الدقيقة
+    const onShow = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onShow);
+
     return () => {
       active = false;
       clearInterval(id);
+      document.removeEventListener("visibilitychange", onShow);
     };
   }, [period, from, to, tenantId]);
 

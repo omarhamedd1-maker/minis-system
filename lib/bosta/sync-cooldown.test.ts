@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COOLDOWN_MS, shouldSyncNow } from "./sync-cooldown";
+import { COOLDOWN_MS, PERIODIC_COOLDOWN_MS, shouldSyncNow } from "./sync-cooldown";
 
 const now = new Date("2026-08-18T05:00:00.000Z");
 const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
@@ -37,9 +37,10 @@ describe("مهلة المزامنة", () => {
   });
 
   it("بتقبل `Date` زي النص", () => {
-    expect(shouldSyncNow(new Date(now.getTime() - 90_000), now)).toEqual({
-      run: true,
-    });
+    // ⚠️ بالثابت مش برقم مكتوب — المهلة اتغيّرت والاختبار وقع (٩ نوفمبر ٢٠٢٦)
+    expect(
+      shouldSyncNow(new Date(now.getTime() - COOLDOWN_MS - 1_000), now)
+    ).toEqual({ run: true });
   });
 
   it("**رشقة رنّات بتتجمّع في مزامنة واحدة**", () => {
@@ -55,5 +56,36 @@ describe("مهلة المزامنة", () => {
       }
     }
     expect(runs).toBe(1);
+  });
+});
+
+// ==========================================================================
+// ⚠️ المهلة الدورية — فيرسل وقّف المشروع (٩ نوفمبر ٢٠٢٦)
+// --------------------------------------------------------------------------
+// الراوت الدوري ماكانش فيه مهلة خالص، والكرون بينده كل ١٥ دقيقة:
+// ٥٬٧٦٤ لفة و٢٢.٢ ساعة في ٣٠ يوم على باقة حدها ٤ ساعات.
+// ==========================================================================
+describe("المهلة الدورية", () => {
+  const now = new Date("2026-11-09T12:00:00Z");
+  const ago = (ms: number) => new Date(now.getTime() - ms).toISOString();
+
+  it("ساعة — عشان الكرون كل ربع ساعة يعدّي تلات مرات من أربعة", () => {
+    expect(PERIODIC_COOLDOWN_MS).toBe(3_600_000);
+    for (const minutes of [15, 30, 45]) {
+      expect(
+        shouldSyncNow(ago(minutes * 60_000), now, PERIODIC_COOLDOWN_MS).run
+      ).toBe(false);
+    }
+    expect(shouldSyncNow(ago(60 * 60_000), now, PERIODIC_COOLDOWN_MS)).toEqual({
+      run: true,
+    });
+  });
+
+  it("⚠️ أطول من مهلة الويب هوك — الدورية شبكة أمان مش المصدر الأساسي", () => {
+    expect(PERIODIC_COOLDOWN_MS).toBeGreaterThan(COOLDOWN_MS);
+  });
+
+  it("مفيش لفة قبل كده؟ بنزامن — المهلة مش عذر للسكوت", () => {
+    expect(shouldSyncNow(null, now, PERIODIC_COOLDOWN_MS)).toEqual({ run: true });
   });
 });

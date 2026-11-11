@@ -11,6 +11,7 @@
 // ==========================================================================
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { COOLDOWN_MS } from "@/lib/bosta/sync-cooldown";
 
 const sync = vi.fn();
 let row: { tenant_id: string } | null = null;
@@ -207,7 +208,8 @@ describe("مهلة المزامنة في المسار", () => {
   });
 
   it("عدّت المهلة؟ بنزامن", async () => {
-    lastRunAt = new Date(Date.now() - 120_000).toISOString();
+    // ⚠️ بالثابت مش برقم مكتوب — المهلة بقت ٥ دقايق (٩ نوفمبر ٢٠٢٦)
+    lastRunAt = new Date(Date.now() - COOLDOWN_MS - 60_000).toISOString();
     await ring();
 
     expect(sync).toHaveBeenCalledTimes(1);
