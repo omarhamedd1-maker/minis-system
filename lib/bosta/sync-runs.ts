@@ -126,3 +126,28 @@ export function syncHealthMessage(h: SyncHealth): string | null {
         : `المزامنة مع بوسطة واقفة من ${h.minutesAgo} دقيقة (المفروض كل ١٥ دقيقة) — الحالات والتحصيل مش بيتحدّثوا.`;
   }
 }
+
+/**
+ * وقت آخر مزامنة حقيقية (مش تجربة جافة) — لحارس المهلة في الراوت.
+ *
+ * ⚠️ **بترجّع `null` لو القراءة فشلت** — والحارس بيترجم ده «زامن».
+ * أمان المزامنة إنها تشتغل، مش إنها تسكت على شك.
+ */
+export async function lastSyncAt(
+  db: SupabaseClient,
+  tenantId: string,
+  source: "bosta" | "shopify" = "bosta"
+): Promise<string | null> {
+  const { data, error } = await db
+    .from("sync_runs")
+    .select("created_at")
+    .eq("tenant_id", tenantId)
+    .eq("dry", false)
+    .eq("source", source)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return null;
+  return (data?.created_at as string | undefined) ?? null;
+}

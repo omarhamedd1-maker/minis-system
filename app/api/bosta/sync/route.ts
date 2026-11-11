@@ -10,7 +10,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BostaNotLinked, runBostaSync, type SyncSummary } from "@/lib/bosta/sync";
-import { recordSyncRun } from "@/lib/bosta/sync-runs";
+import { lastSyncAt, recordSyncRun } from "@/lib/bosta/sync-runs";
+import { PERIODIC_COOLDOWN_MS, shouldSyncNow } from "@/lib/bosta/sync-cooldown";
 import { activeTenantIds } from "@/lib/tenant-settings";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,31 @@ export async function GET(request: Request) {
       SyncSummary | { error: string } | { skipped: string }
     > = {};
 
+    /*
+      ⚠️⚠️ **حارس المهلة** — فيرسل وقّف المشروع ٩ نوفمبر ٢٠٢٦ لما
+      الاستخدام عدّى الباقة المجانية. الراوت ده كان بيزامن كل بيزنس
+      كامل في **كل** نداء، والكرون بينده كل ١٥ دقيقة: ٥٬٧٦٤ لفة و٢٢.٢
+      ساعة في ٣٠ يوم.
+
+      ⚠️ **و`force=1` موجودة عشان الزرار اليدوي** — اللي بيدوس «زامن
+      دلوقتي» عايزها تشتغل دلوقتي، مش يتقاله استنى.
+    */
+    const force = url.searchParams.get("force") === "1" || Boolean(one);
+    const skippedByCooldown: string[] = [];
+
     for (const tenantId of tenants) {
+      if (!force && !dry) {
+        const last = await lastSyncAt(db, tenantId);
+        const decision = shouldSyncNow(last, new Date(), PERIODIC_COOLDOWN_MS);
+        if (!decision.run) {
+          skippedByCooldown.push(tenantId);
+          results[tenantId] = {
+            skipped: `المهلة — فاضل ${Math.ceil(decision.waitMs / 60000)} دقيقة`,
+          };
+          continue;
+        }
+      }
+
       const startedAt = Date.now();
       try {
         const summary = await runBostaSync({ db, tenantId, dry });
@@ -82,7 +107,13 @@ export async function GET(request: Request) {
       return NextResponse.json(only, { status: failed ? 502 : 200 });
     }
 
-    return NextResponse.json({ dry, tenants: tenants.length, results });
+    return NextResponse.json({
+      dry,
+      tenants: tenants.length,
+      // عشان اللي بينده يعرف إن اللفة عدّت بسرعة بسبب المهلة مش بسبب عطل
+      cooledDown: skippedByCooldown.length,
+      results,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "المزامنة وقعت" },
