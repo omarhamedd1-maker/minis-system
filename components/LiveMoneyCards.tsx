@@ -156,7 +156,19 @@ export function LiveMoneyCards({
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      {/* على الشاشة الكبيرة: المبيعات وصافي الربح كروت كبيرة، والباقي بيتقسّم 4 في الصف */}
+      {/*
+        ⚠️ **تلات صفوف كاملة، مفيش خانة فاضية** (١٢ نوفمبر ٢٠٢٦).
+
+        الشبكة ٤ على الكمبيوتر و٢ على الموبايل، والكروت لازم مجموع
+        خاناتها يقفل الصف. كرت «قطع اتباعت» لما اتضاف خلّى المجموع ١٣،
+        فآخر صف بقى فيه كرت لوحده وجنبه فراغ.
+
+          ١) المبيعات (٢) · عدد الأوردرات · قطع اتباعت
+          ٢) صافي الربح (٢) · أرباح المنتجات · المصاريف
+          ٣) أوردرات اتسلمت · متوسط الأوردر · شحن محصّل · فرق الشحن
+
+        اللي يضيف كرت جديد يعدّ الخانات: المجموع لازم يقبل القسمة على ٤.
+      */}
       <Card
         label="المبيعات"
         className="col-span-2"
@@ -167,7 +179,10 @@ export function LiveMoneyCards({
           <CountUp key={key} baseline={base} value={s.grossSales} format={money} />
         </span>
       </Card>
-      <Card label="عدد الأوردرات">
+      <Card
+        label="عدد الأوردرات"
+        className={s.unitsSold === null ? "col-span-2" : ""}
+      >
         <span className="text-ink">
           <CountUp
             key={key}
@@ -197,6 +212,22 @@ export function LiveMoneyCards({
           </span>
         </Card>
       )}
+      {/* الصف التاني: الربح — الصافي كبير، وجنبه الرقمين اللي بيتحسب منهم */}
+      <Card label="صافي الربح" className="col-span-2" hero>
+        <span className={s.netProfit >= 0 ? "text-success" : "text-danger"}>
+          <CountUp
+            key={key}
+            baseline={base}
+            value={s.netProfit}
+            format={money}
+          />
+        </span>
+      </Card>
+      <Card label="أرباح المنتجات">
+        <span className="text-success">
+          <CountUp key={key} baseline={base} value={s.profit} format={money} />
+        </span>
+      </Card>
       <Card
         label="المصاريف"
         hint={
@@ -214,21 +245,7 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
-      <Card label="أرباح المنتجات">
-        <span className="text-success">
-          <CountUp key={key} baseline={base} value={s.profit} format={money} />
-        </span>
-      </Card>
-      <Card label="صافي الربح" className="lg:col-span-2" hero>
-        <span className={s.netProfit >= 0 ? "text-success" : "text-danger"}>
-          <CountUp
-            key={key}
-            baseline={base}
-            value={s.netProfit}
-            format={money}
-          />
-        </span>
-      </Card>
+      {/* الصف التالت: التحصيل والشحن — أربع كروت قد بعض */}
       <Card label="أوردرات اتسلمت">
         <span className="text-success">
           <CountUp key={key} baseline={base} value={s.cod} format={money} />
@@ -268,7 +285,6 @@ export function LiveMoneyCards({
             ? "رسوم بوسطة أكتر من اللي العميل دفعه — الفرق بيتخصم من صافي الربح"
             : "العميل دفع شحن أكتر من رسوم بوسطة — الفرق بيتضاف لصافي الربح"
         }
-        className="lg:col-span-2"
       >
         <span className={s.netShipping >= 0 ? "text-danger" : "text-success"}>
           <CountUp
