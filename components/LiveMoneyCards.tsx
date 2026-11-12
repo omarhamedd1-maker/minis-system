@@ -177,6 +177,26 @@ export function LiveMoneyCards({
           />
         </span>
       </Card>
+      {/*
+        ⚠️ **الكرت بيختفي لو الرقم مش موجود** بدل ما يوري صفر — الصفر
+        هنا بيتقرا «مفيش مبيعات» وده كذب. بيحصل لو دالة الداتابيز لسه
+        القديمة (قبل `sql/profit-headline-units.sql`).
+      */}
+      {s.unitsSold !== null && (
+        <Card
+          label="قطع اتباعت"
+          hint="مجموع القطع في أوردرات الفترة — من غير الملغي والمرتجع، والقطعة اللي رجعت بعد التسليم متخصومة"
+        >
+          <span className="text-ink">
+            <CountUp
+              key={key}
+              baseline={base}
+              value={s.unitsSold}
+              format={plain}
+            />
+          </span>
+        </Card>
+      )}
       <Card
         label="المصاريف"
         hint={

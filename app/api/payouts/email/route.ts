@@ -50,20 +50,7 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   // ⚠️ **الجسم الخام الأول** — التوقيع بيتحسب عليه بالحرف، والتحويل
   // لـJSON والرجوع بيكسره (`lib/svix-verify.ts`)
-  /*
-    ⚠️ **العلامات دي مؤقتة — للتشخيص.**
-
-    الراوت بيعلّق ٣٠٠ ثانية وفيرسل بتقتله، وولا سطر بيتكتب في
-    `courier_payout_emails` فمفيش أثر يقول عند فين وقف. تلات محاولات
-    إصلاح اتبنوا على تخمين وكلهم فشلوا. العلامات دي بتدي الإجابة
-    بالظبط من سجلات فيرسل، وبتتشال بعدها.
-  */
-  const t0 = Date.now();
-  const mark = (step: string) =>
-    console.log(`[payout-email] ${step} @${Date.now() - t0}ms`);
-  mark("بدأ");
   const rawBody = await req.text();
-  mark("قرا الجسم");
 
   // ===== الطبقة ٦: توقيع Resend نفسه =====
   //
@@ -94,7 +81,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "الجسم مش JSON" }, { status: 400 });
   }
 
-  mark("حوّل لJSON");
   const inbound = readInbound(body);
   const from = inbound.from;
   const subject = inbound.subject;
@@ -105,13 +91,11 @@ export async function POST(req: Request) {
     const k = keyFromAddress(address);
     if (k) { key = k; break; }
   }
-  mark("قرا الحمولة");
   const db = createAdminClient();
 
   // ⚠️ **المفتاح هو اللي بيحدد البيزنس** — من غيره مفيش مكان نسجّل فيه أصلًا
   if (!key) return NextResponse.json({ error: "العنوان مش معروف" }, { status: 404 });
 
-  mark("عميل الداتابيز");
   const { data: cred } = await db
     .from("tenant_credentials")
     .select("tenant_id")
@@ -121,7 +105,6 @@ export async function POST(req: Request) {
   if (!tenantId) return NextResponse.json({ error: "العنوان مش معروف" }, { status: 404 });
 
   // ⚠️ **الويب هوك مابيبعتش الجسم** — بيتجاب بنداء تاني بمفتاح Resend
-  mark("لقى البيزنس");
   let raw = inbound.body;
   let dkimOk: boolean | null = inbound.dkim ? /pass/i.test(inbound.dkim) : null;
   /** سبب إننا مجبناش المحتوى — بيتسجّل وبيتعرض في الإعدادات */
@@ -132,9 +115,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "RESEND_API_KEY ناقص" }, { status: 500 });
     }
     try {
-      mark("قبل جلب المحتوى من ريسِند");
       const mail = await fetchResendEmail(inbound.emailId, apiKey);
-      mark("بعد جلب المحتوى");
       raw = mail.html || mail.text;
       dkimOk = dkimPassed(mail.headers);
     } catch (e) {
@@ -150,12 +131,9 @@ export async function POST(req: Request) {
     }
   }
 
-  mark("قبل التحليل");
   const parsed = parsePayoutEmail(raw);
-  mark("بعد التحليل");
 
   const log = async (fields: Record<string, unknown>) => {
-    mark("قبل الكتابة في سجل الإيميلات");
     // ⚠️ **الإيميل بيتسجّل حتى لو اترفض** — من غير السجل، اللي مااشتغلش
     // مالوش أثر ومحدش يعرف إنه جه
     const { error: logError } = await db.from("courier_payout_emails").insert({
@@ -168,7 +146,7 @@ export async function POST(req: Request) {
       ...fields,
     });
     // ⚠️ الكتابة كانت بتفشل في صمت — الخطأ ماكانش بيتقرا أصلًا
-    mark(logError ? "الكتابة فشلت: " + logError.message : "الكتابة نجحت");
+    if (logError) console.error(`[payout-email] سجل الإيميلات ماتكتبش: ${logError.message}`);
   };
 
   if (!parsed.ok) {
@@ -209,7 +187,6 @@ export async function POST(req: Request) {
       .overrideTypes<{ order_id: string }[]>()),
   ]);
   const taken = new Set((linked ?? []).map((r) => r.order_id));
-  mark("قبل المطابقة");
   const match = matchPayout(
     { gross: p.gross, count: p.orderCount, date: p.date },
     (orders ?? [])

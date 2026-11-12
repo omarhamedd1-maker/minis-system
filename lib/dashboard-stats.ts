@@ -3,6 +3,7 @@ import { AT_CARRIER_STATUSES, EXCLUDED_STATUSES } from "./format";
 import { splitExpenses } from "./profit-exclusions";
 import {
   itemCost,
+  itemKept,
   orderNetTotal,
   orderRefund,
   type MoneyItem,
@@ -176,6 +177,8 @@ export type Headline = {
   netProfit: number;
   cod: number;
   orderCount: number;
+  /** عدد القطع المباعة بعد المرتجع — `null` لو الدالة القديمة لسه في الداتابيز */
+  unitsSold: number | null;
   avgOrder: number;
 };
 
@@ -263,6 +266,18 @@ export function computeHeadline(
   const netShipping = bostaShippingTotal - shippingRevenue;
   // الشحن المحصّل مش بيتضاف للربح (محسوب ضمن توتال الأوردر) — بنخصم الزيادة بس
   const netProfit = profit - expensesTotal - netShipping;
+  /**
+   * ⚠️ **عدد القطع اللي اتباعت فعلًا — بعد المرتجع** (طلب عمر ١١ نوفمبر
+   * ٢٠٢٦).
+   *
+   * نفس أوردرات المبيعات (من غير الملغي والمرتجع)، والقطعة اللي رجعت
+   * بعد التسليم بتتخصم. من غير الخصم ده الكرت يقول «اتباع ١٠٠» والمخزن
+   * شايف ٩٥ — ورقمين على نفس الشاشة مابيتفقوش.
+   */
+  const unitsSold = validOrders.reduce(
+    (s, o) => s + o.order_items.reduce((n, i) => n + itemKept(o, i).qty, 0),
+    0
+  );
   const orderCount = validOrders.length;
   const avgOrder = orderCount > 0 ? sales / orderCount : 0;
 
@@ -297,6 +312,7 @@ export function computeHeadline(
     netProfit,
     cod,
     orderCount,
+    unitsSold,
     avgOrder,
   };
 }
