@@ -31,6 +31,8 @@ type Row = {
   order_count: number | string;
   /** ممكن ميكونش موجود — الدالة القديمة في الداتابيز مكانتش بترجّعه */
   lost_value?: number | string | null;
+  /** زي اللي فوق — بيتضاف في `sql/profit-headline-units.sql` */
+  units_sold?: number | string | null;
 };
 
 export function headlineFromRow(row: Row | undefined): Headline {
@@ -57,6 +59,11 @@ export function headlineFromRow(row: Row | undefined): Headline {
     netProfit: n("net_profit"),
     cod: n("cod"),
     orderCount,
+    /*
+      ⚠️ **`null` لو الدالة القديمة لسه في الداتابيز** — والكرت بيختفي
+      ساعتها بدل ما يوري صفر. الصفر هنا كذب: معناه «مفيش مبيعات».
+    */
+    unitsSold: row?.units_sold == null ? null : n("units_sold"),
     avgOrder: orderCount > 0 ? sales / orderCount : 0,
   };
 }

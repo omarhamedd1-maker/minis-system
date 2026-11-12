@@ -60,6 +60,20 @@ describe("قراية الصف", () => {
     expect(h.avgOrder).toBeCloseTo(250.125);
   });
 
+  // ⚠️ الصفر هنا كذب («مفيش مبيعات») — الدالة القديمة مابترجّعش العمود
+  // أصلًا، فالكرت لازم يختفي مش يوري صفر
+  it("عدد القطع: null لو الدالة قديمة، والرقم لو موجود", () => {
+    const base = {
+      sales: "0", gross_sales: "0", profit: "0", expenses_total: "0",
+      expenses_excluded: "0", shipping_revenue: "0", shipped_count: "0",
+      bosta_shipping_total: "0", net_shipping: "0", net_profit: "0",
+      cod: "0", order_count: "0",
+    };
+    expect(headlineFromRow(base).unitsSold).toBeNull();
+    expect(headlineFromRow({ ...base, units_sold: "37" }).unitsSold).toBe(37);
+    expect(headlineFromRow({ ...base, units_sold: 0 }).unitsSold).toBe(0);
+  });
+
   it("مفيش صف = أصفار من غير قسمة على صفر", () => {
     const h = headlineFromRow(undefined);
     expect(h.sales).toBe(0);

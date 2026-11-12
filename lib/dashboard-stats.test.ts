@@ -273,6 +273,28 @@ describe("الإجمالي بالملغي والمرتجع", () => {
     expect(h.grossSales).toBe(h.sales);
   });
 
+  // كرت «قطع اتباعت» (١١ نوفمبر ٢٠٢٦) — نفس أوردرات المبيعات، والقطعة
+  // اللي رجعت بعد التسليم متخصومة عشان الرقم يتفق مع المخزن
+  it("القطع المباعة: من غير الملغي والمرتجع، والراجع بعد التسليم متخصوم", () => {
+    const h = computeHeadline(
+      [
+        order({ order_items: [item(3, 100), item(2, 50)] }),
+        order({ order_status: "cancelled", order_items: [item(5, 100)] }),
+        order({ order_status: "returned", order_items: [item(4, 100)] }),
+        order({
+          order_status: "returned_after_delivery",
+          order_items: [
+            { quantity: 2, sale_price_at_order: 500, cost_price_at_order: 0, returned_quantity: 1 },
+          ],
+        }),
+      ],
+      [empty],
+      day,
+      day
+    );
+    expect(h.unitsSold).toBe(6); // 3 + 2 + (2 − 1)
+  });
+
   it("كله سليم؟ الإجمالي يساوي المبيعات", () => {
     const h = computeHeadline(
       [order({ order_items: [item(2, 150)] })],

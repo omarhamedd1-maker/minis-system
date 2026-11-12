@@ -8,7 +8,6 @@ import { PayoutReview } from "@/components/PayoutReview";
 import { linkToManualCash } from "@/lib/payout-match";
 import { stalePayouts } from "@/lib/payout-health";
 import { liveManualCash } from "@/lib/payout-cash";
-import { courierAging, moneyAtCourier } from "@/lib/money-at-courier";
 import { breakdownFees, GROUP_LABEL } from "@/lib/courier-fees";
 import {
   acceptPayoutDiff,
@@ -176,43 +175,6 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
   // ⚠️ فروق التقريب فرق حقيقي في الرصيد — الحركات اليدوية مكتوبة بالجنيه
   const rounding =
     Math.round(all.reduce((s, r) => s + Number(r.rounding_diff ?? 0), 0) * 100) / 100;
-  /**
-   * «فلوس عند بوسطة» — اللي اتسلّم **بعد آخر تحويل** (TRANSFERS §١٠).
-   *
-   * ⚠️ **مش مجموع كل اللي مش متعلّم عليه** — ده كان بيطلع ٤٥٥ ألف على
-   * مينيز، وفلوسه وصلت من زمان. والربط بالأوردرات مش شرط للرقم ده.
-   */
-  const lastPayout = all.length
-    ? all.map((r) => r.payout_date).sort().slice(-1)[0]
-    : null;
-  const { data: deliveredRows } = await allRows(db
-    .from("orders")
-    .select("bosta_cod, delivered_at")
-    .eq("tenant_id", user.tenantId)
-    .eq("order_status", "delivered")
-    .overrideTypes<{ bosta_cod: number | null; delivered_at: string | null }[]>());
-  const atCourier = moneyAtCourier({
-    orders: (deliveredRows ?? []).map((o) => ({
-      cod: Number(o.bosta_cod ?? 0),
-      deliveredAt: o.delivered_at,
-    })),
-    lastPayoutDate: lastPayout,
-    today: cairoToday(),
-  });
-  /**
-   * «فلوس بوسطة بالعمر» (MONEY §١.٥) — نفس المجموعة مقسّمة بالقِدَم.
-   *
-   * ⚠️ **على نفس المجموعة بالظبط** اللي الرقم فوق بيتحسب منها — رقم فوق
-   * وتفصيل تحته بيقولوا حاجتين مختلفين بيخلّي الاتنين مش موثوقين.
-   */
-  const aging = courierAging({
-    orders: (deliveredRows ?? []).map((o) => ({
-      cod: Number(o.bosta_cod ?? 0),
-      deliveredAt: o.delivered_at,
-    })),
-    lastPayoutDate: lastPayout,
-    today: cairoToday(),
-  });
 
   /**
    * تفصيل الرسوم من بنود الكشف (§٧.١).
@@ -314,49 +276,6 @@ export async function TransfersTab({ user }: { user: SessionUser }) {
                 متخصومة على كل أوردر أصلًا، فمابتتطرحش تاني من الربح
               </p>
             </div>
-          )}
-        </div>
-
-        {/*
-          ⚠️⚠️ **فلوس عند بوسطة = اللي اتسلّم بعد آخر تحويل.** مش مجموع كل
-          اللي مش متعلّم عليه — ده كان بيطلع ٤٥٥ ألف وفلوسه وصلت من زمان.
-        */}
-        <div className="text-end">
-          <p className="text-xs text-ink-muted">فلوس عند بوسطة</p>
-          <p
-            className={`mt-0.5 text-xl font-bold tabular-nums sm:text-2xl ${
-              atCourier.total > 0 ? "text-warning" : "text-success"
-            }`}
-          >
-            {formatMoney(atCourier.total)}
-          </p>
-          <p className="text-[11px] text-ink-faint">
-            {atCourier.count > 0
-              ? `${atCourier.count} أوردر اتسلّموا بعد آخر تحويل`
-              : "كل اللي اتسلّم اتحوّل"}
-          </p>
-          {/*
-            «فلوس بوسطة بالعمر» (MONEY §١.٥) — بيبان لما يكون فيه فلوس بس.
-            ⚠️ العمر هو اللي بيفرّق بين «طبيعي» و«فيه حاجة واقفة»: يومين
-            عادي، وأسبوعين معناها حاجة محتاجة سؤال.
-          */}
-          {atCourier.count > 0 && (
-            <div className="mt-1 space-y-0.5">
-              {aging
-                .filter((b) => b.count > 0)
-                .map((b) => (
-                  <p key={b.label} className="text-[11px] text-ink-muted">
-                    {b.label}: <span className="tabular-nums">{formatMoney(b.amount)}</span>
-                    <span className="text-ink-faint"> ({b.count})</span>
-                  </p>
-                ))}
-            </div>
-          )}
-          {/* ⚠️ الرقم معتمد على آخر تحويل — لو التحويل وقف بيكبر كذب */}
-          {atCourier.warning && (
-            <p className="mt-1 max-w-56 rounded-control bg-warning-soft px-2 py-1 text-[11px] text-warning">
-              {atCourier.warning}
-            </p>
           )}
         </div>
       </div>
